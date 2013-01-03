@@ -52,6 +52,7 @@
 
 
 <script type="text/javascript">
+"use strict"
 
 // -------------------------------------------------
 // --------------- Terminal Emulator ---------------
@@ -2358,11 +2359,11 @@ function MainLoop()
 */	
 }
 
-term = new Terminal(25, 80, "Terminal");
+var term = new Terminal(25, 80, "Terminal");
 DebugMessage("Terminal initialized");
 new TerminalInput();
 DebugMessage("Terminal input initialized");
-fb = new Framebuffer();
+var fb = new Framebuffer();
 DebugMessage("Framebuffer initialized");
 var ram = new RAM(0x2000000);
 DebugMessage("RAM initialized");
@@ -2373,7 +2374,7 @@ DebugMessage("CPU initialized");
 
 DebugMessage("Loading Image");
 var str = "Loading Image from Web Server (5 MB). Please wait ..."
-for (i=0;i < str.length; i++) term.PutChar(str.charCodeAt(i));
+for (var i=0;i < str.length; i++) term.PutChar(str.charCodeAt(i));
 
 //LoadBinaryResource("trace"+ntrace+".dat", TraceFinish);
 LoadBinaryResource("vmlinux.bin", ImageFinished);
