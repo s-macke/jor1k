@@ -44,4 +44,4 @@ Emulation chain x86 -> JavaScript -> or1k -> MOS6502 -> Z-Machine
 
 
 ### Developer
-Sebastian Macke [simulationcorner.net](simulationcorner.net)
+Sebastian Macke [simulationcorner.net](http://simulationcorner.net)
