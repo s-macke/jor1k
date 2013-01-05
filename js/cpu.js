@@ -50,9 +50,9 @@ function CPU() {
     //this.ins=0x0; // current instruction to handle
 
     this.jump = 0x0; // jump address
-    this.jumpdelayed = false; // if true then: the jump is delayed by one instruction. This is used for saving in the step function
+    this.jumpdelayed = false; // if true then the jump is delayed by one instruction.
 
-    this.delayedins = false; // the current instruction is an delayed instruction, ine cycle before a jump
+    this.delayedins = false; // the current instruction is an delayed instruction, one cycle before a jump
     this.interrupt_pending = false;
 
     // current instruction tlb, needed for fast lookup
@@ -63,8 +63,8 @@ function CPU() {
     this.TTMR = 0x0; // Tick timer mode register
     this.TTCR = 0x0; // Tick timer count register
 
-    this.PICMR = 0x3; // interrupt controller mode register??? (use nmi)
-    this.PICSR = 0x0; // interrupt controller set register???
+    this.PICMR = 0x3; // interrupt controller mode register (use nmi)
+    this.PICSR = 0x0; // interrupt controller set register
 
     // flags
     this.SR_SM = true; // supervisor mode
@@ -93,11 +93,6 @@ function CPU() {
 }
 
 CPU.prototype.SetFlags = function(x) {
-    /*
-    if (this.SR_SM != ((x&1)?true:false)) {
-        DebugMessage("Supervisor: " + this.SR_SM);
-    }
-    */
     this.SR_SM = (x & (1 << 0)) ? true : false;
     this.SR_TEE = (x & (1 << 1)) ? true : false;
     var old_SR_IEE = this.SR_IEE;
@@ -181,7 +176,7 @@ CPU.prototype.RaiseInterrupt = function(line) {
     var lmask = 1 << line;
     if (this.PICSR & lmask) {
         // Interrupt already signaled and pending
-        //		DebugMessage("Warning: Int pending, ignored");
+        // DebugMessage("Warning: Int pending, ignored");
     }
     this.PICSR |= lmask;
     this.CheckForInterrupt();
@@ -220,7 +215,7 @@ CPU.prototype.SetSPR = function(idx, x) {
             // check immediate for interrupt
             if (this.SR_IEE) {
                 if (this.PICMR & this.PICSR) {
-                    DebugMessage("Error in SetSPR: Direct triggering interrupt exception not supported? What the hell?");
+                    DebugMessage("Error in SetSPR: Direct triggering of interrupt exception not supported?");
                     abort();
                 }
             }
@@ -243,7 +238,7 @@ CPU.prototype.SetSPR = function(idx, x) {
                 DebugMessage("Error in SetSPR: Timer mode other than continuous not supported");
                 abort();
             }
-            // for compatbility with or1ksim. Strange. Disable TTMR when in continous mode and cycles match. 
+            // for compatbility with or1ksim. Strange. Disable TTMR when in continous mode and cycles match.
             // we solve it by totally disable the timer. Seems to work with Linux
             if ((this.TTMR & 0xFFFFFF) == (this.TTCR & 0xFFFFFF)) {
                 this.TTMR &= 0x3FFFFFFF;
@@ -414,6 +409,7 @@ CPU.prototype.Exception = function(excepttype, addr) {
     this.SR_IME = false;
 };
 
+// disassembled dtlb miss exception handler arch/openrisc/kernel/head.S, kernel dependent
 CPU.prototype.DTLBRefill = function(addr, nsets) {
 
     if (ram.uint32mem[0x900 >>> 2] != 0x000005C0) {
@@ -422,7 +418,7 @@ CPU.prototype.DTLBRefill = function(addr, nsets) {
     }
     var r2, r3, r5, r4;
     r2 = addr;
-    // get_current_PGD  using r3 and r5 // it is saved in 0xc03c80a4
+    // get_current_PGD  using r3 and r5 
     r3 = ram.uint32mem[0x004aa0a4 >>> 2]; // current pgd
     r4 = (r2 >>> 0x18) << 2;
     r5 = r4 + r3;
@@ -432,7 +428,6 @@ CPU.prototype.DTLBRefill = function(addr, nsets) {
     r3 = ram.uint32mem[r4 >>> 2];
 
     if (r3 == 0) {
-        //DebugMessage("Error in DTLBRefill: Page fault 1\n");
         this.Exception(EXCEPT_DPF, addr);
         return false;
         //abort();
@@ -453,7 +448,6 @@ CPU.prototype.DTLBRefill = function(addr, nsets) {
     r2 = ram.uint32mem[r3 >>> 2];
 
     if ((r2 & 1) == 0) {
-        //DebugMessage("Error in DTLBRefill: pte not pressent\n");
         this.Exception(EXCEPT_DPF, addr);
         return false;
         //d_pmd_none:
@@ -480,6 +474,7 @@ CPU.prototype.DTLBRefill = function(addr, nsets) {
     return true;
 };
 
+// disassembled itlb miss exception handler arch/openrisc/kernel/head.S, kernel dependent
 CPU.prototype.ITLBRefill = function(addr, nsets) {
 
     if (ram.uint32mem[0xA00 >>> 2] != 0x000005C2) {
@@ -567,24 +562,20 @@ CPU.prototype.DTLBLookup = function(addr, write) {
     var tlmbr = this.group1[0x200 | setindex]; // match register
     if (((tlmbr & 1) == 0) || ((tlmbr & 0xFFF80000) != (addr & 0xFFF80000))) {
         // use tlb refill to fasten up
-        // return ((cpu_state.sprs[SPR_ITLBTR_BASE(minway) + set] & SPR_ITLBTR_PPN) >> 12) * immu->pagesize + (virtaddr % immu->pagesize); 
-        //define SPR_ITLBTR_BASE(WAY)        (SPRGROUP_IMMU + 0x280 + (WAY) * 0x100) 
-        //return (((this.group1[0x280 + setindex] & 0xffffe000) >>> 12) << 13) + (addr & 0x1FFF); 
-
         if (cpu.DTLBRefill(addr, 64)) {
             tlmbr = this.group1[0x200 + setindex];
         }
         else {
             return 0xFFFFFFFF;
         }
-
-        //cpu.Exception(EXCEPT_DTLBMISS, addr); // if you don't use hardware
+		// slow version
+        //cpu.Exception(EXCEPT_DTLBMISS, addr);
         //return 0xFFFFFFFF;
     }
-    /*	
+    /* skipped this check
 	// set lru 
 	if (tlmbr & 0xC0) {
-		DebugMessage("Error: LRU ist nor supported");
+		DebugMessage("Error: LRU ist not supported");
 		abort();		
 	}
     */
@@ -615,7 +606,7 @@ CPU.prototype.DTLBLookup = function(addr, write) {
     return ((tlbtr & 0xFFFFE000) | (addr & 0x1FFF)) >>> 0;
 };
 
-// the slow version
+// the slow and safe version
 CPU.prototype.GetInstruction = function(addr) {
     if (!this.SR_IME) {
         return ram.ReadMemory32(uint32(addr));
@@ -647,7 +638,7 @@ CPU.prototype.GetInstruction = function(addr) {
     }
     // set lru
     if (tlmbr & 0xC0) {
-        DebugMessage("Error: LRU ist nor supported");
+        DebugMessage("Error: LRU ist not supported");
         abort();
     }
 
@@ -668,7 +659,6 @@ CPU.prototype.GetInstruction = function(addr) {
             return 0xFFFFFFFF;
         }
     }
-
     return ram.ReadMemory32(uint32((tlbtr & 0xFFFFE000) | (addr & 0x1FFF)));
 };
 

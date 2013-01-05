@@ -46,8 +46,8 @@ function UART() {
     this.fifo = new Array(); // receive fifo buffer
 }
 
-// this function is maybe too simple. No buffer. The char will be overwritten
-// but if the code some cycles to process. So the FIFO is done by the operating system
+// this function is maybe too simple. No buffer. The character may be overwritten
+// if the code needs some cycles to process. So the FIFO is done by the operating system
 UART.prototype.ReceiveChar = function(x) {
     this.fifo.push(x);
     if (this.fifo.length >= 1) {
@@ -191,7 +191,6 @@ UART.prototype.WriteRegister = function(addr, x) {
         this.NextInterrupt();
         break;
     case UART_FCR:
-
         this.FCR = x;
         if (this.FCR & 2) {
             this.fifo = new Array(); // clear receive fifo buffer

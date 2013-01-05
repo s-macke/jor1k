@@ -45,7 +45,6 @@ function Terminal(rows, columns, elemId) {
 }
 
 Terminal.prototype.Blink = function() {
-    // DebugMessage("Blink");
     this.cursorvisible = !this.cursorvisible;
     var colortemp = this.color[this.cursory][this.cursorx];
 
@@ -55,14 +54,7 @@ Terminal.prototype.Blink = function() {
     this.PlotRow(this.cursory);
     this.color[this.cursory][this.cursorx] = colortemp;
 
-    /*
-    if ((this.cursorblink) && (this.cursory == row) && (this.cursory == row)) {
-        this.Blink does not seems to work. Hack but works
-    }
-    */
-    window.setTimeout(function() {
-        term.Blink();
-    }, 1000); // update every second
+    window.setTimeout(function() { term.Blink(); }, 1000); // update every second
 };
 
 Terminal.prototype.DeleteRow = function(row) {
@@ -96,7 +88,6 @@ Terminal.prototype.PlotRow = function(row) {
             if (ccolor != 0x7) {
                 line += "<span style=\"color:#" + Colors[ccolor & 0x1F] + ";background-color:#" + Colors[(ccolor >>> 8) & 0x1F] + "\">";
                 spanactive = true;
-                //line += "<span style=\"color:#" + Colors[ccolor&0x1F] + "\">";                
             }
         }
         if (this.screen[row][i] == 0x0) {
@@ -123,14 +114,6 @@ Terminal.prototype.ScreenUpdate = function() {
 };
 
 Terminal.prototype.LineFeed = function() {
-    /*
-    for(var i=this.cursorx;i<this.ncolumns;i++) 
-    {
-    	this.screen[this.nrows-1][i] = 0x0;
-		this.color[this.nrows-1][i] = this.currentcolor;
-	}
-    */
-    //this.cursorx = 0;
     if (this.cursory != this.nrows - 1) {
         this.cursory++;
         return;
@@ -233,7 +216,7 @@ Terminal.prototype.HandleEscapeSequence = function() {
     // colors
     if (lastsign == "m") {
         this.ChangeColor(numbers);
-    }
+    }	
     // cursor
     else if ((lastsign == "H") || (lastsign == "d")) {
         this.ChangeCursor(numbers);
@@ -362,7 +345,6 @@ Terminal.prototype.PutChar = function(c) {
         this.cursorx = 0;
     }
 
-    //this.screen[this.cursorx][this.cursory] = Number(c);
     var cx = this.cursorx;
     var cy = this.cursory;
     this.screen[cy][cx] = c;

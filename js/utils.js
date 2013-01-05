@@ -3,19 +3,11 @@
 // -------------------------------------------------
 
 function DebugMessage(message) {
-    /*
-	var Table = document.getElementById("Debug");
-	var TR = Table.insertRow(-1);
-	var TD = document.createElement("td");
-	var TDtext = document.createTextNode(message);
-	TD.appendChild(TDtext);
-	TR.appendChild(TD);
-	*/
     console.log(message);
 }
 
 function abort() {
-    DebugMessage("Aborting execution.")
+    DebugMessage("Abort execution.")
     PrintState();
     throw new Error('Abort javascript');
 }
@@ -25,10 +17,12 @@ function Swap32(val) {
     return ((val & 0xFF) << 24) | ((val & 0xFF00) << 8) | ((val >>> 8) & 0xFF00) | ((val >>> 24) & 0xFF);
 }
 
+// cast an integer so a signed integer
 function int32(val) {
     return (val >> 0);
 }
 
+// cast an integer so a unsigned integer
 function uint32(val) {
     return (val >>> 0);
 }
@@ -54,15 +48,13 @@ function PrintState() {
             hex8(cpu.r[i + 2]) + "   r" + (i + 3) + ": " +
             hex8(cpu.r[i + 3]));
     }
-    /*
+    
     if (cpu.jumpdelayed) {
         DebugMessage("delayed jump");
-    }
-    */
+    }    
     if (cpu.delayedins) {
         DebugMessage("delayed instruction");
     }
-
     if (cpu.SR_SM) {
         DebugMessage("Supervisor mode");
     }

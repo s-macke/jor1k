@@ -11,6 +11,7 @@ function RAM(memsize) {
     this.uint8mem = new Uint8Array(this.mem);
 }
 
+// To emulate the non-exsistent ethernet controller.
 var ethreg0 = 0xa000;
 var ethreg38 = 0x22;
 
@@ -42,12 +43,6 @@ RAM.prototype.ReadMemory32 = function(addr) {
 };
 
 RAM.prototype.WriteMemory32 = function(addr, x) {
-    /*
-	if ((addr >= 0x900) && (addr <= 0xAFF))  {
-	    DebugMessage("Write at " + hex8(addr) + ": " + hex8(x) + " clock: " + cpu.clock);
-	    //abort();
-	}
-    */
     if (addr > this.memsize - 4) {
         //eth
         if ((addr >= 0x92000000) && (addr <= 0x92001000 - 4)) {
@@ -61,9 +56,6 @@ RAM.prototype.WriteMemory32 = function(addr, x) {
             if (addr == 0x91000014) {
                 fb.SetAddr(Swap32(x));
             }
-            //fb.addr = Swap32(x);
-            //	fb.Update();
-            //DebugMessage("WriteMemory32: FB addr " + hex8(addr) + ": " + hex8(x));
             return;
         }
         else {
@@ -76,11 +68,6 @@ RAM.prototype.WriteMemory32 = function(addr, x) {
 
 
 RAM.prototype.ReadMemory8 = function(addr) {
-    /*
-    if (cpu.clock >= 0x001C6CB0) {
-        DebugMessage(hex8(addr) + " " + addr);
-    }
-    */
     if (addr > this.memsize - 1) {
         if ((addr >= 0x90000000) && (addr <= 0x90000006)) {
             return uart.ReadRegister(addr - 0x90000000);
@@ -106,7 +93,6 @@ RAM.prototype.ReadMemory8 = function(addr) {
 
 RAM.prototype.WriteMemory8 = function(addr, x) {
     if (addr > this.memsize - 1) {
-        //Exception(EXCEPT_BUSERR, addr);
         if ((addr >= 0x90000000) && (addr <= 0x90000006)) {
             uart.WriteRegister(addr - 0x90000000, x);
             return;
@@ -115,6 +101,7 @@ RAM.prototype.WriteMemory8 = function(addr, x) {
             DebugMessage("Error in WriteMemory8: RAM region is not accessible");
             abort();
         }
+        //Exception(EXCEPT_BUSERR, addr);		
     }
     // consider that the data is saved in little endian	
     switch (addr & 3) {
@@ -131,7 +118,6 @@ RAM.prototype.WriteMemory8 = function(addr, x) {
         this.uint8mem[(addr & ~3) | 0] = x & 0xFF;
         break;
     }
-    //this.uint8mem[addr] = x&0xFF;	
 };
 
 RAM.prototype.ReadMemory16 = function(addr) {
@@ -146,8 +132,6 @@ RAM.prototype.ReadMemory16 = function(addr) {
     else {
         return (this.uint8mem[(addr & ~3) | 3] << 8) | this.uint8mem[(addr & ~3) | 2];
     }
-
-    //return (this.uint8mem[addr]<<8) | this.uint8mem[addr+1];
 };
 
 RAM.prototype.WriteMemory16 = function(addr, x) {
@@ -164,6 +148,4 @@ RAM.prototype.WriteMemory16 = function(addr, x) {
         this.uint8mem[(addr & ~3) | 3] = (x >>> 8) & 0xFF;
         this.uint8mem[(addr & ~3) | 2] = x & 0xFF;
     }
-    //this.uint8mem[addr] = (x>>>8)&0xFF;
-    //this.uint8mem[addr+1] = x&0xFF;
 };
