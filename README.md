@@ -44,6 +44,7 @@ the Linux kernel.
 
 ### Links
 
+ * A project [demo][project demo] is available
  * [Bugtracker][project issues] to report any issues or feature requests
  * [Wiki][project wiki] containing more detailed descriptions
 
@@ -55,5 +56,6 @@ Sebastian Macke [simulationcorner.net](http://simulationcorner.net)
 Gerard Braad [gbraad.nl](http://gbraad.nl)
 
 [or1k specification]: http://opencores.org/or1k/Main_Page
+[project demo]: http://s-macke.github.com/jor1k/
 [project issues]: https://github.com/s-macke/jor1k/issues
 [project wiki]: https://github.com/s-macke/jor1k/wiki
