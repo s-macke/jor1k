@@ -62,7 +62,9 @@ Terminal.prototype.Blink = function() {
         this.Blink does not seems to work. Hack but works
     }
     */
-    window.setTimeout("term.Blink()", 1000);
+    window.setTimeout(function() {
+        term.Blink();
+    }, 1000); // update every second
 };
 
 Terminal.prototype.DeleteRow = function(row) {
@@ -503,7 +505,9 @@ Framebuffer.prototype.Update = function() {
     this.imageData.data.set(this.buf8);
     this.c.putImageData(this.imageData, 0, 0); // at coords 0,0
     // hack, because this.Update does not work
-    window.setTimeout("fb.Update()", 500); // update every second
+    window.setTimeout(function() {
+        fb.Update();
+    }, 500); // update every half a second
 };
 
 
