@@ -797,14 +797,12 @@ CPU.prototype.Step = function(steps) {
         switch (ins >>> 26) {
         case 0x0:
             // j
-            //imm |= (imm&0x8000000)?0xF0000000:0;
             this.jump = pc + (((ins & 0x3FFFFFF) << 6) >> 4);
             this.jumpdelayed = true;
             break;
 
         case 0x1:
             // jal
-            //imm |= (imm&0x8000000)?0xF0000000:0;
             this.jump = pc + (((ins & 0x3FFFFFF) << 6) >> 4);
             r[9] = this.nextpc + 4;
             this.jumpdelayed = true;
@@ -815,7 +813,6 @@ CPU.prototype.Step = function(steps) {
             if (this.SR_F) {
                 break;
             }
-            //imm |= (imm&0x8000000)?0xF0000000:0;
             this.jump = pc + (((ins & 0x3FFFFFF) << 6) >> 4);
             this.jumpdelayed = true;
             break;
@@ -825,7 +822,6 @@ CPU.prototype.Step = function(steps) {
             if (!this.SR_F) {
                 break;
             }
-            //imm |= (imm&0x8000000)?0xF0000000:0;
             this.jump = pc + (((ins & 0x3FFFFFF) << 6) >> 4);
             this.jumpdelayed = true;
             break;
@@ -879,7 +875,6 @@ CPU.prototype.Step = function(steps) {
 
         case 0x21:
             // lwz 
-            //imm |= (imm&0x8000)?0xFFFF0000:0;
             rA = r[(ins >>> 16) & 0x1F] + (((ins & 0xFFFF) << 16) >> 16);
             if ((rA & 3) != 0) {
                 DebugMessage("Error: no unaligned access allowed");
@@ -894,7 +889,6 @@ CPU.prototype.Step = function(steps) {
 
         case 0x23:
             // lbz
-            //imm |= (imm&0x8000)?0xFFFF0000:0;
             rA = r[(ins >>> 16) & 0x1F] + (((ins & 0xFFFF) << 16) >> 16);
             imm = this.DTLBLookup(rA, false);
             if (imm == 0xFFFFFFFF) {
@@ -905,7 +899,6 @@ CPU.prototype.Step = function(steps) {
 
         case 0x24:
             // lbs 
-            //			imm |= (imm&0x8000)?0xFFFF0000:0;
             rA = r[(ins >>> 16) & 0x1F] + (((ins & 0xFFFF) << 16) >> 16);
             imm = this.DTLBLookup(rA, false);
             if (imm == 0xFFFFFFFF) {
@@ -913,12 +906,10 @@ CPU.prototype.Step = function(steps) {
             }
             rD = (ins >>> 21) & 0x1F;
             r[rD] = ((ram.ReadMemory8(imm)) << 24) >> 24;
-            //r[rD] |= (r[rD]&0x80)?0xFFFFFF00:0;
             break;
 
         case 0x25:
             // lhz 
-            //			imm |= (imm&0x8000)?0xFFFF0000:0;
             rA = r[(ins >>> 16) & 0x1F] + (((ins & 0xFFFF) << 16) >> 16);
             imm = this.DTLBLookup(rA, false);
             if (imm == 0xFFFFFFFF) {
@@ -929,7 +920,6 @@ CPU.prototype.Step = function(steps) {
 
         case 0x26:
             // lhs 
-            //			imm |= (imm&0x8000)?0xFFFF0000:0;
             rA = r[(ins >>> 16) & 0x1F] + (((ins & 0xFFFF) << 16) >> 16);
             imm = this.DTLBLookup(rA, false);
             if (imm == 0xFFFFFFFF) {
@@ -937,15 +927,12 @@ CPU.prototype.Step = function(steps) {
             }
             rD = (ins >>> 21) & 0x1F;
             r[rD] = (ram.ReadMemory16(imm) << 16) >> 16;
-            //r[rD] |= (r[rD]&0x8000)?0xFFFF0000:0;
             break;
 
 
         case 0x27:
             // addi signed 
             imm = ((ins & 0xFFFF) << 16) >> 16;
-            //			imm |= (imm&0x8000)?0xFFFF0000:0;
-            //			imm = (imm>>0);
             rA = r[(ins >>> 16) & 0x1F];
             rD = (ins >>> 21) & 0x1F;
             r[rD] = rA + imm;
@@ -969,7 +956,6 @@ CPU.prototype.Step = function(steps) {
         case 0x2B:
             // xori
             imm = ((ins & 0xFFFF) << 16) >> 16;
-            //			imm |= (imm&0x8000)?0xFFFF0000:0;
             rA = r[(ins >>> 16) & 0x1F];
             r[(ins >>> 21) & 0x1F] = rA ^ (((ins & 0xFFFF) << 16) >> 16);
             break;
@@ -1002,8 +988,6 @@ CPU.prototype.Step = function(steps) {
 
         case 0x2F:
             // sf...i
-            //imm = ins&0xFFFF;
-            //imm |= (ins&0x8000)?0xFFFF0000:0;			
             imm = ((ins & 0xFFFF) << 16) >> 16;
             switch ((ins >>> 21) & 0x1F) {
             case 0x0:
@@ -1062,7 +1046,6 @@ CPU.prototype.Step = function(steps) {
         case 0x35:
             // sw
             imm = ((((ins >>> 10) & 0xF800) | (ins & 0x7FF)) << 16) >> 16;
-            //imm |= (imm&0x8000)?0xFFFF0000:0;
             rA = r[(ins >>> 16) & 0x1F] + imm;
             if (rA & 0x3) {
                 DebugMessage("Error: not aligned memory access");
@@ -1078,7 +1061,6 @@ CPU.prototype.Step = function(steps) {
         case 0x36:
             // sb
             imm = ((((ins >>> 10) & 0xF800) | (ins & 0x7FF)) << 16) >> 16;
-            //imm |= (imm&0x8000)?0xFFFF0000:0;
             rA = r[(ins >>> 16) & 0x1F] + imm;
             imm = this.DTLBLookup(rA, true);
             if (imm == 0xFFFFFFFF) {
@@ -1090,7 +1072,6 @@ CPU.prototype.Step = function(steps) {
         case 0x37:
             // sh
             imm = ((((ins >>> 10) & 0xF800) | (ins & 0x7FF)) << 16) >> 16;
-            //imm |= (imm&0x8000)?0xFFFF0000:0;
             rA = r[(ins >>> 16) & 0x1F] + imm;
             imm = this.DTLBLookup(rA, true);
             if (imm == 0xFFFFFFFF) {
@@ -1206,8 +1187,6 @@ CPU.prototype.Step = function(steps) {
                 break;
             case 0x30a:
                 // divu (specification seems to be wrong)
-                //DebugMessage("divu signed not supported");
-                //abort();				
                 this.SR_CY = rB == 0;
                 this.SR_OV = 0;
                 if (!this.SR_CY) {
@@ -1216,8 +1195,6 @@ CPU.prototype.Step = function(steps) {
                 break;
             case 0x309:
                 // div (specification seems to be wrong)
-                //DebugMessage("div not supported");
-                //abort();					
                 this.SR_CY = rB == 0;
                 this.SR_OV = 0;
                 if (!this.SR_CY) {
