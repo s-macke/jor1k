@@ -28,12 +28,17 @@ li, ul {
     padding-left: 14px;
 }
 
-.term {
+.terminal {
+    border: 2px solid black;
     font-family: courier,fixed,swiss,monospace,sans-serif;
     font-size: 12px;
     color: #bbbbbb;
     background: #000000;   
     border-collapse: collapse
+}
+
+.screen {
+    border: 2px solid lightgray;   
 }
 
 #infobox {

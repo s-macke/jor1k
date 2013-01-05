@@ -11,10 +11,10 @@ var Colors = new Array(
     "5555FF", "FF55FF", "55FFFF", "55FFFF");
 
 // constructor
-function Terminal(rows, columns, Table) {
+function Terminal(rows, columns, elemId) {
     this.nrows = rows;
     this.ncolumns = columns;
-    this.Table = document.getElementById(Table);
+    this.Table = document.getElementById(elemId);
     this.rowelements = new Array(this.nrows);
     this.cursorvisible = false;
     this.line = "";
@@ -477,8 +477,8 @@ TerminalInput.prototype.KeyDown = function(e) {
 // -------------------------------------------------
 
 // constructor
-function Framebuffer() {
-    var element = document.getElementById("canvas1");
+function Framebuffer(elemId) {
+    var element = document.getElementById(elemId);
     this.c = element.getContext("2d");
     // read the width and height of the canvas
     this.width = element.width;
@@ -2413,11 +2413,11 @@ function MainLoop() {
     */
 }
 
-var term = new Terminal(25, 80, "Terminal");
+var term = new Terminal(25, 80, "tty");
 DebugMessage("Terminal initialized");
 new TerminalInput();
 DebugMessage("Terminal input initialized");
-var fb = new Framebuffer();
+var fb = new Framebuffer("fb");
 DebugMessage("Framebuffer initialized");
 var ram = new RAM(0x2000000);
 DebugMessage("RAM initialized");
