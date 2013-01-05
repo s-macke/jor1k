@@ -1,0 +1,33 @@
+{
+  "name": "jor1k",
+  "version": "0.0.1",
+  "description": "jor1k: OR1000 Javascript Emulator Running Linux",
+  "contributors": [
+    { "name": "Sebastian Macke", "email": "sebastian@macke.de" },
+    { "name": "Gerard Braad", "email": "me@gbraad.nl" }
+  ],
+  "keywords": [
+    "or1k",
+    "emulation"
+  ],
+  "author": "Sebastian Macke",
+  "license": "",
+  "bugs": {
+    "url": "https://github.com/s-macke/jor1k/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/s-macke/jor1k.git"
+  },
+  "main": "index.html",
+  "dependencies": {
+  },
+  "devDependencies": {
+    "grunt": "~0.3.8",
+    "jshint": "latest"
+  },
+  "scripts": {
+    "test": "grunt travis --verbose"
+  },
+  "engines": { "node": ">= 0.8.0" }
+}

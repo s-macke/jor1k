@@ -1,64 +1,10 @@
-<!DOCTYPE html>
-<html>
-<head>
-<meta http-equiv="content-type" content="text/html; charset=UTF-8">
-<title>jor1k: OR1000 Javascript Emulator Running Linux</title>
-<meta name="keywords" content="opencore, emulation, or1000, javascript, linux">
-<meta name="author" content="Sebastian Macke" >
-
-<style>
-.term {
-    font-family: courier,fixed,swiss,monospace,sans-serif;
-    font-size: 12px;
-    color: #bbbbbb;
-	background: #000000;   
-	border-collapse: collapse
-}
-</style>
-
-
-</head>
-<body>
-
-<table>
-<tr>
-	<td>
-	<table id="Terminal" class="term" border="0"></table>
-	</td>
-	<td valign="top" style="border:medium solid black">
-		Framebuffer (0.5s refresh):<br>
-		<canvas id="canvas1" width="320", height="240"></canvas>
-		<br>
-		<form>
-			<select id="selectbox" onchange="OnSelect();">
-				<option>Explore the Emulator</option>
-				<option>Get information about the system</option>
-				<option>Fun with the framebuffer</option>
-				<option>Play games</option>
-				<option>Screensaver worm</option>
-				<option>Use the arbitrary precision calculator</option>
-				<option>Destroy the system</option>
-				</select>
-			<div style="width:320px" id="infobox">
-			</div>
-	</form>
-	</td>
-</tr>
-</table>
-<a href="/index.php?page=jor1k"> Back to my website </a> - Written by Sebastian Macke - Tested under Firefox and Chrome
-
-<table id="Debug">
-</table>
-
-
-<script type="text/javascript">
 "use strict"
 
 // -------------------------------------------------
 // --------------- Terminal Emulator ---------------
 // -------------------------------------------------
 
-var Colors = new Array(	"000000", "BB0000", "00BB00", "BBBB00", 
+var Colors = new Array(    "000000", "BB0000", "00BB00", "BBBB00", 
 						"0000BB", "BB00BB", "00BBBB", "BBBBBB", 
 						"555555", "FF5555", "55FF55", "FFFF55", 
 						"5555FF", "FF55FF", "55FFFF", "55FFFF");
@@ -2379,59 +2325,3 @@ for (var i=0;i < str.length; i++) term.PutChar(str.charCodeAt(i));
 //LoadBinaryResource("trace"+ntrace+".dat", TraceFinish);
 LoadBinaryResource("vmlinux.bin", ImageFinished);
 
-
-function OnSelect()
-{
-	var selectbox = document.getElementById("selectbox");
-	var infobox = document.getElementById("infobox");
-    //var selectedValue = selectbox.options[selectbox.selectedIndex].value;
-	var str = "";
-	switch(selectbox.selectedIndex)
-	{
-		default:
-		case 0:
-		str += "Don't know what to do? <br>Try this list of options.";
-		str += " But first wait until the operating system<br> finished booting.";
-		str += " Then press enter.";
-		break;
-		
-		case 1:
-		str += "Information about the running system<br>can be achieved by the /proc filesystem.<br>";
-		str += "<b>cat /proc/cpuinfo</b><br> shows the details about the cpu.<br>";
-		str += "<b>cat /proc/meminfo</b><br> shows the details about the memory.<br>";
-		str += "<b>top</b> shows all running processes. Stop this program by pressing q.<br>";
-		break;
-		case 2:
-		str += "First try to find out the details about the framebuffer by the software <b>fbset</b><br>";
-		str += "There is a graphic demo demo available called <b>fbinfo</b>. Close the program by pressing CTRL+c .<br>";
-		str += "You can fill the buffer manually with random data by executing <br><b>dd if=/dev/urandom of=/dev/fb0</b><br>";
-		break;
-		case 3:
-		str += "Games are available. Try<br><b>hanoi<br>bs<br>knight</b><br>";
-		str += "Close the program by pressing CTRL+c <br>";
-		break;
-		case 4:
-		str += "Enter <b>worm</b><br> and watch a few worms travelling on your screen.";
-		str += "Close the program by pressing CTRL+c <br>";
-		break;
-		case 5:
-		str += "By executing <b>bc -l</b> you can open a calculator.<br>";
-		str += "Try <b>2^1000</b> to calculate a big power or <br>";
-		str += "<b>4.*a(1)</b> to calculate Pi.<br>";
-		break;
-		case 6:
-		str += "Ever wanted to see what happens if you execute <b>rm / -r -f</b><br>Try it now. It's safe.";
-		break;
-		
-		
-	}
-	infobox.innerHTML = str;
-}
-OnSelect();
-
-
-</script>
-
-
-
-</body></html>

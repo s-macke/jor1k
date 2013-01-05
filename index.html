@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+        <title>jor1k: OR1000 Javascript Emulator Running Linux</title>
+        <meta name="keywords" content="opencore, emulation, or1000, javascript, linux">
+        <meta name="author" content="Sebastian Macke">
+        <style>
+            .term {
+                font-family: courier,fixed,swiss,monospace,sans-serif;
+                font-size: 12px;
+                color: #bbbbbb;
+                background: #000000;   
+    	        border-collapse: collapse
+            }
+        </style>
+    </head>
+    <body>
+        <h1>jor1k: OR1000 Javascript Emulator Running Linux</h1>
+    
+        <table>
+            <tr>
+            	<td>
+	                <table id="Terminal" class="term" border="0" title="tty0"></table>
+	            </td>
+	            <td valign="top">
+                    <canvas id="canvas1" width="320", height="240" title="fb0"></canvas>
+	            </td>
+            </tr>
+        </table>
+        
+        <table id="Debug">
+        </table>
+
+        <div id="infobox">
+            <h3>Specifications</h3>
+            <p>
+                <ul>
+                    <li>32-Bit OR1000 Emulator with MMU, TICK counter and PIC (Hack for TLB Hardware Refill)</li>
+                    <li>32 MB Ram</li>
+                    <li>UART 16550</li>
+                    <li>ocfb Framebuffer 320x240 32bpp</li>
+                    <li>Terminal Emulator</li>
+                    <li>5 MB image running Linux 3.1 and buszbox 1.19 (and much more)</li>
+                    <li><b>Only 2300 lines of Javascript code! </b></li>
+                    <li>Tested under Firefox and Chrome</li>
+                </ul>
+            </p>
+        
+            <h3>Explore the Emulator</h3>
+            <p>
+                First wait until the operating system finished booting. Then press enter.
+            </p>
+
+            <h3>Get information about the system</h3>
+            <p>
+                Information about the running system<br>can be achieved by the /proc filesystem.<br>
+                <b>cat /proc/cpuinfo</b><br> shows the details about the cpu.<br>
+                <b>cat /proc/meminfo</b><br> shows the details about the memory.<br>
+                <b>top</b> shows all running processes. Stop this program by pressing q.<br>
+            </p>
+
+            <h3>Fun with the framebuffer</h3>
+            <p>
+                First try to find out the details about the framebuffer by the software <b>fbset</b><br>
+                There is a graphic demo demo available called <b>fbinfo</b>. Close the program by pressing CTRL+c .<br>
+                You can fill the buffer manually with random data by executing <br><b>dd if=/dev/urandom of=/dev/fb0</b><br>
+            </p>
+
+            <h3>Play games</h3>
+            <p>
+                Games are available. Try<br>
+                <ul>
+                    <li><b>hanoi</b></li>
+                    <li><b>bs</b></li>
+                    <li><b>knight</b></li>
+                </ul>
+                Close the program by pressing CTRL+c <br>
+            </p>
+
+            <h3>Screensaver worm</h3>
+            <p>
+                Enter <b>worm</b><br> and watch a few worms travelling on your screen.
+                Close the program by pressing CTRL+c <br>
+            </p>
+
+            <h3>Use the arbitrary precision calculator</h3>
+            <p>
+                By executing <b>bc -l</b> you can open a calculator.<br>
+                <b>2^1000</b> to calculate a big power or <br>
+                <b>4.*a(1)</b> to calculate Pi.<br>
+            </p>
+
+            <h3>Destroy the system</h3>
+            <p>
+                Ever wanted to see what happens if you execute <b>rm / -r -f</b><br>Try it now. It's safe.
+            </p>
+        </div>
+    </body>
+    
+    <script src="js/jor1k.js"></script>
+</html>
