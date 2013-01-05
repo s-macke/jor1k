@@ -23,15 +23,13 @@ Framebuffer.prototype.Update = function() {
     if (!this.buf8) {
         return;
     }
-    // copy the image data back onto the canvas
+	
+	// remove alpha channel. The buffer can then be used directly.	
     for (var i = 3; i < this.width * this.height * 4; i += 4) {
         this.buf8[i] = 0xFF;
     }
 
     this.imageData.data.set(this.buf8);
     this.c.putImageData(this.imageData, 0, 0); // at coords 0,0
-    // hack, because this.Update does not work
-    window.setTimeout(function() {
-        fb.Update();
-    }, 500); // update every half a second
+    window.setTimeout(function() { fb.Update(); }, 500); // update every half a second
 };
