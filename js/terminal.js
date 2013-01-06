@@ -54,7 +54,7 @@ Terminal.prototype.Blink = function() {
     this.PlotRow(this.cursory);
     this.color[this.cursory][this.cursorx] = colortemp;
 
-    window.setTimeout(function() { term.Blink(); }, 1000); // update every second
+    window.setTimeout(this.Blink.bind(this), 1000); // update every second
 };
 
 Terminal.prototype.DeleteRow = function(row) {

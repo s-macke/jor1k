@@ -25,9 +25,9 @@ var EXCEPT_TICK = 0x500; // tick counter interrupt
 var EXCEPT_INT = 0x800; // interrupt of external devices
 var EXCEPT_SYSCALL = 0xc00; // syscall, jump into supervisor mode
 
-
 // constructor
-function CPU() {
+function CPU(ram) {
+	this.ram = ram;
     //registers
     var array = new ArrayBuffer(32 << 2);
     this.r = new Uint32Array(array);
@@ -412,20 +412,20 @@ CPU.prototype.Exception = function(excepttype, addr) {
 // disassembled dtlb miss exception handler arch/openrisc/kernel/head.S, kernel dependent
 CPU.prototype.DTLBRefill = function(addr, nsets) {
 
-    if (ram.uint32mem[0x900 >>> 2] != 0x000005C0) {
-        cpu.Exception(EXCEPT_DTLBMISS, addr);
+    if (this.ram.uint32mem[0x900 >>> 2] != 0x000005C0) {
+        this.Exception(EXCEPT_DTLBMISS, addr);
         return false;
     }
     var r2, r3, r5, r4;
     r2 = addr;
     // get_current_PGD  using r3 and r5 
-    r3 = ram.uint32mem[0x004aa0a4 >>> 2]; // current pgd
+    r3 = this.ram.uint32mem[0x004aa0a4 >>> 2]; // current pgd
     r4 = (r2 >>> 0x18) << 2;
     r5 = r4 + r3;
 
     r4 = (0x40000000 + r5) & 0xFFFFFFFF; //r4 = phys(r5)
 
-    r3 = ram.uint32mem[r4 >>> 2];
+    r3 = this.ram.uint32mem[r4 >>> 2];
 
     if (r3 == 0) {
         this.Exception(EXCEPT_DPF, addr);
@@ -439,13 +439,13 @@ CPU.prototype.DTLBRefill = function(addr, nsets) {
     r3 = 0xffffe000;
     //d_pmd_good:
 
-    r4 = ram.uint32mem[r4 >>> 2]; // get pmd value
+    r4 = this.ram.uint32mem[r4 >>> 2]; // get pmd value
     r4 = r4 & r3; // & PAGE_MASK
     r5 = r2 >>> 0xD;
     r3 = r5 & 0x7FF;
     r3 = r3 << 0x2;
     r3 = r3 + r4;
-    r2 = ram.uint32mem[r3 >>> 2];
+    r2 = this.ram.uint32mem[r3 >>> 2];
 
     if ((r2 & 1) == 0) {
         this.Exception(EXCEPT_DPF, addr);
@@ -477,8 +477,8 @@ CPU.prototype.DTLBRefill = function(addr, nsets) {
 // disassembled itlb miss exception handler arch/openrisc/kernel/head.S, kernel dependent
 CPU.prototype.ITLBRefill = function(addr, nsets) {
 
-    if (ram.uint32mem[0xA00 >>> 2] != 0x000005C2) {
-        cpu.Exception(EXCEPT_ITLBMISS, addr);
+    if (this.ram.uint32mem[0xA00 >>> 2] != 0x000005C2) {
+        this.Exception(EXCEPT_ITLBMISS, addr);
         return false;
     }
     var r2 = 0x0,
@@ -488,12 +488,12 @@ CPU.prototype.ITLBRefill = function(addr, nsets) {
 
     r2 = addr;
     // get_current_PGD  using r3 and r5
-    r3 = ram.uint32mem[0x004aa0a4 >>> 2]; // current pgd
+    r3 = this.ram.uint32mem[0x004aa0a4 >>> 2]; // current pgd
     r4 = (r2 >>> 0x18) << 2;
     r5 = r4 + r3;
 
     r4 = (0x40000000 + r5) & 0xFFFFFFFF; //r4 = phys(r5)
-    r3 = ram.uint32mem[r4 >>> 2];
+    r3 = this.ram.uint32mem[r4 >>> 2];
 
     if (r3 == 0) {
         this.Exception(EXCEPT_DPF, addr);
@@ -506,13 +506,13 @@ CPU.prototype.ITLBRefill = function(addr, nsets) {
     r3 = 0xffffe000; // or 0xffffe3fa ??? PAGE_MASK
     //i_pmd_good:
 
-    r4 = ram.uint32mem[r4 >>> 2]; // get pmd value
+    r4 = this.ram.uint32mem[r4 >>> 2]; // get pmd value
     r4 = r4 & r3; // & PAGE_MASK
     r5 = r2 >>> 0xD;
     r3 = r5 & 0x7FF;
     r3 = r3 << 0x2;
     r3 = r3 + r4;
-    r2 = ram.uint32mem[r3 >>> 2];
+    r2 = this.ram.uint32mem[r3 >>> 2];
 
     if ((r2 & 1) == 0) {
         this.Exception(EXCEPT_IPF, addr);
@@ -562,14 +562,14 @@ CPU.prototype.DTLBLookup = function(addr, write) {
     var tlmbr = this.group1[0x200 | setindex]; // match register
     if (((tlmbr & 1) == 0) || ((tlmbr & 0xFFF80000) != (addr & 0xFFF80000))) {
         // use tlb refill to fasten up
-        if (cpu.DTLBRefill(addr, 64)) {
+        if (this.DTLBRefill(addr, 64)) {
             tlmbr = this.group1[0x200 + setindex];
         }
         else {
             return 0xFFFFFFFF;
         }
 		// slow version
-        //cpu.Exception(EXCEPT_DTLBMISS, addr);
+        //this.Exception(EXCEPT_DTLBMISS, addr);
         //return 0xFFFFFFFF;
     }
     /* skipped this check
@@ -609,7 +609,7 @@ CPU.prototype.DTLBLookup = function(addr, write) {
 // the slow and safe version
 CPU.prototype.GetInstruction = function(addr) {
     if (!this.SR_IME) {
-        return ram.ReadMemory32(uint32(addr));
+        return this.ram.ReadMemory32(uint32(addr));
     }
 
     // pagesize is 8192 bytes
@@ -626,7 +626,7 @@ CPU.prototype.GetInstruction = function(addr) {
         ((tlmbr & 1) == 0) || //test if valid
         ((tlmbr & 0xFFF80000) != (addr & 0xFFF80000))) {
         /*
-		if (cpu.ITLBRefill(addr, 64)) {
+		if (this.ITLBRefill(addr, 64)) {
 			tlmbr = this.group2[0x200 | setindex];
 		}
         else {
@@ -659,7 +659,7 @@ CPU.prototype.GetInstruction = function(addr) {
             return 0xFFFFFFFF;
         }
     }
-    return ram.ReadMemory32(uint32((tlbtr & 0xFFFFE000) | (addr & 0x1FFF)));
+    return this.ram.ReadMemory32(uint32((tlbtr & 0xFFFFE000) | (addr & 0x1FFF)));
 };
 
 CPU.prototype.Step = function(steps) {
@@ -671,7 +671,8 @@ CPU.prototype.Step = function(steps) {
 
     // local variables could be faster
     var r = this.r;
-    var uint32mem = ram.uint32mem;
+	var ram = this.ram;
+    var uint32mem = this.ram.uint32mem;
     var group2 = this.group2;
 
     // to get the instruction
@@ -834,7 +835,7 @@ CPU.prototype.Step = function(steps) {
 
         case 0x8:
             //sys
-            cpu.Exception(EXCEPT_SYSCALL, this.group0[SPR_EEAR_BASE]);
+            this.Exception(EXCEPT_SYSCALL, this.group0[SPR_EEAR_BASE]);
             break;
 
         case 0x9:
@@ -1072,8 +1073,8 @@ CPU.prototype.Step = function(steps) {
 
         case 0x38:
             // three operands commands
-            rA = cpu.r[(ins >>> 16) & 0x1F];
-            rB = cpu.r[(ins >>> 11) & 0x1F];
+            rA = r[(ins >>> 16) & 0x1F];
+            rB = r[(ins >>> 11) & 0x1F];
             rD = (ins >>> 21) & 0x1F;
             switch ((ins >>> 0) & 0x3CF) {
             case 0x0:

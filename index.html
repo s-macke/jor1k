@@ -7,7 +7,7 @@
         <meta name="author" content="Sebastian Macke">
         <link rel="stylesheet" href="css/default.css">
     </head>
-    <body>
+    <body onload="Start()">
         <h1>jor1k: OR1000 Javascript Emulator Running Linux</h1>
     
         <table>
@@ -55,5 +55,13 @@
     <script src="js/uart.js"></script>
     <script src="js/ram.js"></script>
     <script src="js/cpu.js"></script>
-    <script src="js/system.js"></script>    
+    <script src="js/system.js"></script> 	
+
+<script>
+function Start() {
+    var sys = new System("tty", "fb");
+    sys.LoadImageAndStart('bin/vmlinux.bin');
+}
+</script>
+
 </html>

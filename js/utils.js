@@ -8,7 +8,7 @@ function DebugMessage(message) {
 
 function abort() {
     DebugMessage("Abort execution.")
-    PrintState();
+    sys.PrintState();
     throw new Error('Abort javascript');
 }
 
@@ -31,63 +31,8 @@ function hex8(x) {
     return ("0x" + ("00000000" + x.toString(16)).substr(-8).toUpperCase());
 }
 
-function PrintState() {
-    DebugMessage("Current state of the machine")
-    //DebugMessage("clock: " + hex8(cpu.clock));
-    DebugMessage("PC: " + hex8(cpu.pc));
-    DebugMessage("next PC: " + hex8(cpu.nextpc));
-    //DebugMessage("ins: " + hex8(cpu.ins));
-    //DebugMessage("main opcode: " + hex8(cpu.ins>>>26));
-    //DebugMessage("sf... opcode: " + hex8((cpu.ins>>>21)&0x1F));
-    //DebugMessage("op38. opcode: " + hex8((cpu.ins>>>0)&0x3CF));
-
-    for (var i = 0; i < 32; i += 4) {
-        DebugMessage("   r" + (i + 0) + ": " +
-            hex8(cpu.r[i + 0]) + "   r" + (i + 1) + ": " +
-            hex8(cpu.r[i + 1]) + "   r" + (i + 2) + ": " +
-            hex8(cpu.r[i + 2]) + "   r" + (i + 3) + ": " +
-            hex8(cpu.r[i + 3]));
-    }
-    
-    if (cpu.jumpdelayed) {
-        DebugMessage("delayed jump");
-    }    
-    if (cpu.delayedins) {
-        DebugMessage("delayed instruction");
-    }
-    if (cpu.SR_SM) {
-        DebugMessage("Supervisor mode");
-    }
-    else {
-        DebugMessage("User mode");
-    }
-    if (cpu.SR_TEE) {
-        DebugMessage("tick timer exception enabled");
-    }
-    if (cpu.SR_IEE) {
-        DebugMessage("interrupt exception enabled");
-    }
-    if (cpu.SR_DME) {
-        DebugMessage("data mmu enabled");
-    }
-    if (cpu.SR_IME) {
-        DebugMessage("instruction mmu enabled");
-    }
-    if (cpu.SR_LEE) {
-        DebugMessage("little endian enabled");
-    }
-    if (cpu.SR_CID) {
-        DebugMessage("context id enabled");
-    }
-    if (cpu.SR_F) {
-        DebugMessage("flag set");
-    }
-    if (cpu.SR_CY) {
-        DebugMessage("carry set");
-    }
-    if (cpu.SR_OV) {
-        DebugMessage("overflow set");
-    }
+function CopyBinary(to, from, size, buffersrc, bufferdest) {
+    for (var i = 0; i < size; i++) bufferdest[to + i] = buffersrc[from + i];
 }
 
 function LoadBinaryResource(url, OnLoadFunction) {

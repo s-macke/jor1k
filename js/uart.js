@@ -31,7 +31,7 @@ var UART_MSR = 6; /* R: Modem Status Register */
 
 
 // constructor
-function UARTDev(outputdev) {
+function UARTDev(outputdev, intdev) {
     this.LCR = 0x3; // Line Control, reset, character has 8 bits
     this.LSR = UART_LSR_TRANSMITTER_EMPTY | UART_LSR_FIFO_EMPTY; // Line Status register, Transmitter serial register empty and Transmitter buffer register empty
     this.MSR = 0; // modem status register
@@ -44,6 +44,7 @@ function UARTDev(outputdev) {
     this.MCR = 0x0; // Modem Control
     this.input = 0;
     this.odev = outputdev;
+    this.intdev = intdev;
     this.fifo = new Array(); // receive fifo buffer
 }
 
@@ -66,7 +67,7 @@ UARTDev.prototype.ThrowCTI = function() {
     }
     if ((this.IIR != UART_IIR_RLSI) && (this.IIR != UART_IIR_RDI)) {
         this.IIR = UART_IIR_CTI;
-        cpu.RaiseInterrupt(0x2);
+        this.intdev.RaiseInterrupt(0x2);
     }
 };
 
@@ -77,7 +78,7 @@ UARTDev.prototype.ThrowTHRI = function() {
     }
     if ((this.IIR & UART_IIR_NO_INT) || (this.IIR == UART_IIR_MSI) || (this.IIR == UART_IIR_THRI)) {
         this.IIR = UART_IIR_THRI;
-        cpu.RaiseInterrupt(0x2);
+        this.intdev.RaiseInterrupt(0x2);
     }
 };
 
@@ -90,7 +91,7 @@ UARTDev.prototype.NextInterrupt = function() {
     }
     else {
         this.IIR = UART_IIR_NO_INT;
-        cpu.ClearInterrupt(0x2);
+        this.intdev.ClearInterrupt(0x2);
     }
 };
 

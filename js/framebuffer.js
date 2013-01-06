@@ -3,7 +3,8 @@
 // -------------------------------------------------
 
 // constructor
-function FBDev(elemId) {
+function FBDev(elemId, ram) {
+    this.ram = ram;
     var element = document.getElementById(elemId);
     this.c = element.getContext("2d");
     // read the width and height of the canvas
@@ -31,7 +32,7 @@ FBDev.prototype.WriteReg32 = function(addr, value) {
 }
 
 FBDev.prototype.SetAddr = function(addr) {
-    this.buf8 = new Uint8ClampedArray(ram.mem, addr, this.imageData.data.length);
+    this.buf8 = new Uint8ClampedArray(this.ram.mem, addr, this.imageData.data.length);
     this.Update();
 };
 
