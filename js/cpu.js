@@ -10,8 +10,8 @@ var SPR_EPCR_BASE = 32; // exception pc register
 var SPR_ESR_BASE = 64; // exception sr register
 var SPR_IMMUCFGR = 4; // Instruction MMU Configuration register
 var SPR_DMMUCFGR = 3; // Data MMU Configuration register
-var SPR_ICCFGR = 6; // Instruction Cache configuration register	
-var SPR_DCCFGR = 5; // Data Cache Configuration register	
+var SPR_ICCFGR = 6; // Instruction Cache configuration register
+var SPR_DCCFGR = 5; // Data Cache Configuration register
 var SPR_VR = 0; // Version register
 
 // exception types and addresses
@@ -27,21 +27,21 @@ var EXCEPT_SYSCALL = 0xc00; // syscall, jump into supervisor mode
 
 // constructor
 function CPU(ram) {
-	this.ram = ram;
+    this.ram = ram;
     //registers
     var array = new ArrayBuffer(32 << 2);
     this.r = new Uint32Array(array);
 
     // special purpose registers
-    var array = new ArrayBuffer(1024 << 2);
+    array = new ArrayBuffer(1024 << 2);
     this.group0 = new Uint32Array(array);
 
     // data tlb
-    var array = new ArrayBuffer(1024 << 2);
+    array = new ArrayBuffer(1024 << 2);
     this.group1 = new Uint32Array(array);
 
     // instruction tlb
-    var array = new ArrayBuffer(1024 << 2);
+    array = new ArrayBuffer(1024 << 2);
     this.group2 = new Uint32Array(array);
 
     // define variables and initialize
@@ -92,7 +92,7 @@ function CPU(ram) {
     this.Exception(EXCEPT_RESET, 0x0); // set pc values
 }
 
-CPU.prototype.SetFlags = function(x) {
+CPU.prototype.SetFlags = function (x) {
     this.SR_SM = (x & (1 << 0)) ? true : false;
     this.SR_TEE = (x & (1 << 1)) ? true : false;
     var old_SR_IEE = this.SR_IEE;
@@ -133,7 +133,7 @@ CPU.prototype.SetFlags = function(x) {
     }
 };
 
-CPU.prototype.GetFlags = function() {
+CPU.prototype.GetFlags = function () {
     var x = 0x0;
     x |= this.SR_SM ? (1 << 0) : 0;
     x |= this.SR_TEE ? (1 << 1) : 0;
@@ -156,7 +156,7 @@ CPU.prototype.GetFlags = function() {
     return x;
 };
 
-CPU.prototype.CheckForInterrupt = function() {
+CPU.prototype.CheckForInterrupt = function () {
     if (!this.SR_IEE) {
         return;
     }
@@ -164,29 +164,31 @@ CPU.prototype.CheckForInterrupt = function() {
         if (this.PICSR) {
             this.interrupt_pending = true;
             /*
-		    // Do it here. Save one comparison in the main loop
-		    this.Exception(EXCEPT_INT, this.group0[SPR_EEAR_BASE]);
-		    this.delayedins = false;		
-		    */
+                    // Do it here. Save one comparison in the main loop
+                    this.Exception(EXCEPT_INT, this.group0[SPR_EEAR_BASE]);
+                    this.delayedins = false;
+            */
         }
     }
 };
 
-CPU.prototype.RaiseInterrupt = function(line) {
+CPU.prototype.RaiseInterrupt = function (line) {
     var lmask = 1 << line;
+/*
     if (this.PICSR & lmask) {
         // Interrupt already signaled and pending
         // DebugMessage("Warning: Int pending, ignored");
     }
+*/
     this.PICSR |= lmask;
     this.CheckForInterrupt();
 };
 
-CPU.prototype.ClearInterrupt = function(line) {
-    this.PICSR &= ~ (1 << line);
+CPU.prototype.ClearInterrupt = function (line) {
+    this.PICSR &= ~(1 << line);
 };
 
-CPU.prototype.SetSPR = function(idx, x) {
+CPU.prototype.SetSPR = function (idx, x) {
     var address = idx & 0x7FF;
     var group = (idx >>> 11) & 0x1F;
 
@@ -195,18 +197,15 @@ CPU.prototype.SetSPR = function(idx, x) {
         // Data MMU
         this.group1[address] = x;
         return;
-        break;
     case 2:
         // ins MMU
         this.group2[address] = x;
         return;
-        break;
     case 3:
         // data cache, not supported
     case 4:
         // ins cache, not supported
         return;
-        break;
     case 9:
         // pic
         switch (address) {
@@ -228,7 +227,6 @@ CPU.prototype.SetSPR = function(idx, x) {
             abort();
         }
         return;
-        break;
     case 10:
         //tick timer
         switch (address) {
@@ -244,14 +242,12 @@ CPU.prototype.SetSPR = function(idx, x) {
                 this.TTMR &= 0x3FFFFFFF;
             }
             break;
-        case 1:
         default:
             DebugMessage("Error in SetSPR: Tick timer address not supported");
             abort();
             break;
         }
         return;
-        break;
 
     default:
         break;
@@ -281,20 +277,18 @@ CPU.prototype.SetSPR = function(idx, x) {
     }
 };
 
-CPU.prototype.GetSPR = function(idx) {
+CPU.prototype.GetSPR = function (idx) {
     var address = idx & 0x7FF;
     var group = (idx >>> 11) & 0x1F;
 
     switch (group) {
     case 9:
-        // pic		
+        // pic
         switch (address) {
         case 0:
             return this.PICMR;
-            break;
         case 2:
             return this.PICSR;
-            break;
         default:
             DebugMessage("Error in GetSPR: PIC address unknown");
             abort();
@@ -307,10 +301,8 @@ CPU.prototype.GetSPR = function(idx) {
         switch (address) {
         case 0:
             return this.TTMR;
-            break;
         case 1:
             return this.TTCR; // or clock
-            break;
         default:
             DebugMessage("Error in GetSPR: Tick timer address unknown");
             abort();
@@ -329,16 +321,14 @@ CPU.prototype.GetSPR = function(idx) {
     switch (idx) {
     case SPR_SR:
         return this.GetFlags();
-        break;
 
     case SPR_UPR:
-        return 0x619;
         // UPR present
         // data mmu present
         // instruction mmu present
         // PIC present (architecture manual seems to be wrong here)
         // Tick timer present
-        break;
+        return 0x619;
 
     case SPR_IMMUCFGR:
     case SPR_DMMUCFGR:
@@ -346,23 +336,19 @@ CPU.prototype.GetSPR = function(idx) {
     case SPR_EPCR_BASE:
     case SPR_ESR_BASE:
         return this.group0[idx];
-        break;
     case SPR_ICCFGR:
         return 0x48;
-        break;
     case SPR_DCCFGR:
         return 0x48;
-        break;
     case SPR_VR:
         return 0x12000001;
-        break;
     default:
         DebugMessage("Error in GetSPR: address unknown");
         abort();
     }
 };
 
-CPU.prototype.Exception = function(excepttype, addr) {
+CPU.prototype.Exception = function (excepttype, addr) {
     var except_vector = excepttype | (this.SR_EPH ? 0xf0000000 : 0x00000000);
     //DebugMessage("Info: Raising Exception " + hex8(excepttype));
 
@@ -410,7 +396,7 @@ CPU.prototype.Exception = function(excepttype, addr) {
 };
 
 // disassembled dtlb miss exception handler arch/openrisc/kernel/head.S, kernel dependent
-CPU.prototype.DTLBRefill = function(addr, nsets) {
+CPU.prototype.DTLBRefill = function (addr, nsets) {
 
     if (this.ram.uint32mem[0x900 >>> 2] != 0x000005C0) {
         this.Exception(EXCEPT_DTLBMISS, addr);
@@ -430,14 +416,14 @@ CPU.prototype.DTLBRefill = function(addr, nsets) {
     if (r3 == 0) {
         this.Exception(EXCEPT_DPF, addr);
         return false;
-        //abort();
-        //	d_pmd_none:
-        //	page fault
+        // abort();
+        // d_pmd_none:
+        // page fault
     }
 
     //r3 = r3 & ~PAGE_MASK // 0x1fff // sense? delayed jump???
     r3 = 0xffffe000;
-    //d_pmd_good:
+    // d_pmd_good:
 
     r4 = this.ram.uint32mem[r4 >>> 2]; // get pmd value
     r4 = r4 & r3; // & PAGE_MASK
@@ -465,7 +451,7 @@ CPU.prototype.DTLBRefill = function(addr, nsets) {
     this.group1[0x280 | r5] = r4;
     //SPR_DTLBTR_BASE(0)|r5 = r4 // SPR_DTLBTR_BASE = 0x280 * (WAY*0x100)
 
-    //fill DTLBMR register
+    // fill DTLBMR register
     r2 = addr;
     r4 = r2 & 0xFFFFE000;
     r4 = r4 | 0x1;
@@ -475,7 +461,7 @@ CPU.prototype.DTLBRefill = function(addr, nsets) {
 };
 
 // disassembled itlb miss exception handler arch/openrisc/kernel/head.S, kernel dependent
-CPU.prototype.ITLBRefill = function(addr, nsets) {
+CPU.prototype.ITLBRefill = function (addr, nsets) {
 
     if (this.ram.uint32mem[0xA00 >>> 2] != 0x000005C2) {
         this.Exception(EXCEPT_ITLBMISS, addr);
@@ -498,8 +484,8 @@ CPU.prototype.ITLBRefill = function(addr, nsets) {
     if (r3 == 0) {
         this.Exception(EXCEPT_DPF, addr);
         return false;
-        //	d_pmd_none:
-        //	page fault
+        // d_pmd_none:
+        // page fault
     }
 
     //r3 = r3 & ~PAGE_MASK // 0x1fff // sense? delayed jump???
@@ -531,7 +517,7 @@ CPU.prototype.ITLBRefill = function(addr, nsets) {
         //r6 = (this.group0[SPR_IMMUCFGR] & 0x1C) >>> 0x2;
         //r3 = 1 << r6; // number of DMMU sets
         //r6 = r3 - 1; // mask register
-        //r5 &= r6;	
+        //r5 &= r6;
         r5 &= nsets - 1;
         //itlb_tr_fill_workaround:
         r4 |= 0xc0; // SPR_ITLBTR_UXE | ITLBTR_SXE
@@ -549,7 +535,7 @@ CPU.prototype.ITLBRefill = function(addr, nsets) {
     return true;
 };
 
-CPU.prototype.DTLBLookup = function(addr, write) {
+CPU.prototype.DTLBLookup = function (addr, write) {
     if (!this.SR_DME) {
         return addr >>> 0;
     }
@@ -564,20 +550,19 @@ CPU.prototype.DTLBLookup = function(addr, write) {
         // use tlb refill to fasten up
         if (this.DTLBRefill(addr, 64)) {
             tlmbr = this.group1[0x200 + setindex];
-        }
-        else {
+        } else {
             return 0xFFFFFFFF;
         }
-		// slow version
-        //this.Exception(EXCEPT_DTLBMISS, addr);
-        //return 0xFFFFFFFF;
+        // slow version
+        // this.Exception(EXCEPT_DTLBMISS, addr);
+        // return 0xFFFFFFFF;
     }
     /* skipped this check
-	// set lru 
-	if (tlmbr & 0xC0) {
-		DebugMessage("Error: LRU ist not supported");
-		abort();		
-	}
+        // set lru 
+        if (tlmbr & 0xC0) {
+            DebugMessage("Error: LRU ist not supported");
+            abort();
+        }
     */
     var tlbtr = this.group1[0x280 | setindex]; // translate register
 
@@ -588,26 +573,25 @@ CPU.prototype.DTLBLookup = function(addr, write) {
     if (this.SR_SM) {
         if (
             ((!write) && (!(tlbtr & 0x100))) || // check if SRE
-            ((write) && (!(tlbtr & 0x200))) // check if SWE
-        ) {
+            ((write) && (!(tlbtr & 0x200)))     // check if SWE
+           ) {
             this.Exception(EXCEPT_DPF, addr);
             return 0xFFFFFFFF;
-        }
-    }
-    else {
+           }
+    } else {
         if (
-            ((!write) && (!(tlbtr & 0x40))) || // check if URE
-            ((write) && (!(tlbtr & 0x80))) // check if UWE
-        ) {
+               ((!write) && (!(tlbtr & 0x40))) || // check if URE
+               ((write) && (!(tlbtr & 0x80)))     // check if UWE
+           ) {
             this.Exception(EXCEPT_DPF, addr);
             return 0xFFFFFFFF;
-        }
+           }
     }
     return ((tlbtr & 0xFFFFE000) | (addr & 0x1FFF)) >>> 0;
 };
 
 // the slow and safe version
-CPU.prototype.GetInstruction = function(addr) {
+CPU.prototype.GetInstruction = function (addr) {
     if (!this.SR_IME) {
         return this.ram.ReadMemory32(uint32(addr));
     }
@@ -626,12 +610,11 @@ CPU.prototype.GetInstruction = function(addr) {
         ((tlmbr & 1) == 0) || //test if valid
         ((tlmbr & 0xFFF80000) != (addr & 0xFFF80000))) {
         /*
-		if (this.ITLBRefill(addr, 64)) {
-			tlmbr = this.group2[0x200 | setindex];
-		}
-        else {
-            return 0xFFFFFFFF;
-		}
+        if (this.ITLBRefill(addr, 64)) {
+                    tlmbr = this.group2[0x200 | setindex];
+                } else {
+                    return 0xFFFFFFFF;
+        }
         */
         this.Exception(EXCEPT_ITLBMISS, this.pc);
         return 0xFFFFFFFF;
@@ -651,8 +634,7 @@ CPU.prototype.GetInstruction = function(addr) {
             this.Exception(EXCEPT_IPF, this.pc);
             return 0xFFFFFFFF;
         }
-    }
-    else {
+    } else {
         // check if supervisor read enable is not set (SRE)
         if (!(tlbtr & 0x80)) {
             this.Exception(EXCEPT_IPF, this.pc);
@@ -662,16 +644,17 @@ CPU.prototype.GetInstruction = function(addr) {
     return this.ram.ReadMemory32(uint32((tlbtr & 0xFFFFE000) | (addr & 0x1FFF)));
 };
 
-CPU.prototype.Step = function(steps) {
+CPU.prototype.Step = function (steps) {
     var ins = 0x0;
     var imm = 0x0;
+    var i = 0;
     var rD = 0x0,
         rA = 0x0,
         rB = 0x0;
 
     // local variables could be faster
     var r = this.r;
-	var ram = this.ram;
+    var ram = this.ram;
     var uint32mem = this.ram.uint32mem;
     var group2 = this.group2;
 
@@ -692,8 +675,7 @@ CPU.prototype.Step = function(steps) {
             this.nextpc = this.jump;
             this.jumpdelayed = false;
             this.delayedins = true;
-        }
-        else {
+        } else {
             this.nextpc += 4;
             this.delayedins = false;
         }
@@ -723,8 +705,7 @@ CPU.prototype.Step = function(steps) {
             if ((this.SR_TEE) && (this.TTMR & (1 << 28))) {
                 this.Exception(EXCEPT_TICK, this.group0[SPR_EEAR_BASE]);
                 this.delayedins = false;
-            }
-            else {
+            } else {
                 // the interrupt is executed immediately. Saves one comparison
                 // test it here instead every time,
                 if (this.interrupt_pending) {
@@ -738,19 +719,17 @@ CPU.prototype.Step = function(steps) {
             }
         }
 
-        // Get Instruction Fast version	
+        // Get Instruction Fast version
         // short check if it is still the correct page
         if (!((pc ^ this.pc) & 0xFFFFE000)) {
             pc = this.pc;
             ins = uint32mem[(this.instlb ^ pc) >>> 2];
-        }
-        else {
+        } else {
             pc = this.pc;
             if (!this.SR_IME) {
                 ins = uint32mem[pc >>> 2];
                 this.instlb = 0x0;
-            }
-            else {
+            } else {
                 setindex = (pc >>> 13) & 63; // check this values
                 tlmbr = group2[0x200 | setindex];
                 // test if tlmbr is valid
@@ -759,8 +738,7 @@ CPU.prototype.Step = function(steps) {
                     ((tlmbr & 0xFFF80000) != (pc & 0xFFF80000))) {
                     if (this.ITLBRefill(pc, 64)) {
                         tlmbr = group2[0x200 | setindex]; // reload the new value
-                    }
-                    else {
+                    } else {
                         this.delayedins = false;
                         this.jumpdelayed = false;
                         continue;
@@ -773,16 +751,16 @@ CPU.prototype.Step = function(steps) {
             }
         }
 
-        /*	
+        /*
         // for the slow variant
-	    pc = this.pc;
-	    ins = this.GetInstruction(this.pc)
-	    if (ins == 0xFFFFFFFF) {
-		    this.delayedins = false;
-		    this.jumpdelayed = false;
-		    continue;
-	    }
-	    this.ins = ins; // copy for Status of cpu
+        pc = this.pc;
+        ins = this.GetInstruction(this.pc)
+        if (ins == 0xFFFFFFFF) {
+            this.delayedins = false;
+            this.jumpdelayed = false;
+            continue;
+        }
+        this.ins = ins; // copy for Status of cpu
         */
 
         switch (ins >>> 26) {
@@ -829,8 +807,9 @@ CPU.prototype.Step = function(steps) {
             if (ins & 0x10000) {
                 DebugMessage("Error: macrc not supported\n");
                 abort();
+            } else {
+                r[rD] = ((ins & 0xFFFF) << 16); // movhi
             }
-            else r[rD] = ((ins & 0xFFFF) << 16); // movhi
             break;
 
         case 0x8:
@@ -854,13 +833,6 @@ CPU.prototype.Step = function(steps) {
             // jalr
             this.jump = r[(ins >>> 11) & 0x1F];
             r[9] = this.nextpc + 4;
-            this.jumpdelayed = true;
-            break;
-
-
-        case 0x11:
-            // jr
-            this.jump = r[(ins >>> 11) & 0x1F];
             this.jumpdelayed = true;
             break;
 
@@ -986,7 +958,7 @@ CPU.prototype.Step = function(steps) {
                 this.SR_F = (r[(ins >>> 16) & 0x1F] == (imm >>> 0)) ? true : false;
                 break;
             case 0x1:
-                // sfnei					
+                // sfnei
                 this.SR_F = (r[(ins >>> 16) & 0x1F] != (imm >>> 0)) ? true : false;
                 break;
             case 0x2:
@@ -1129,10 +1101,11 @@ CPU.prototype.Step = function(steps) {
             case 0xf:
                 // ff1
                 r[rD] = 0;
-                for (var i = 0; i < 32; i++)
-                if (rA & (1 << i)) {
-                    r[rD] = i + 1;
-                    break;
+                for (i = 0; i < 32; i++) {
+                    if (rA & (1 << i)) {
+                        r[rD] = i + 1;
+                        break;
+                    }
                 }
                 break;
             case 0x88:
@@ -1143,11 +1116,12 @@ CPU.prototype.Step = function(steps) {
             case 0x10f:
                 // fl1
                 r[rD] = 0;
-                for (var i = 31; i >= 0; i--)
-                if (rA & (1 << i)) {
-                    r[rD] = i + 1;
-                    break;
-                }
+                for (i = 31; i >= 0; i--) {
+                    if (rA & (1 << i)) {
+                        r[rD] = i + 1;
+                        break;
+                    }
+				}
                 break;
             case 0x306:
                 // mul signed (specification seems to be wrong)
@@ -1157,23 +1131,11 @@ CPU.prototype.Step = function(steps) {
                     var rAl = rA & 0xFFFF;
                     var rBl = rB & 0xFFFF;
                     r[rD] = r[rD] & 0xFFFF0000 | ((rAl * rBl) & 0xFFFF);
-                    //DebugMessage("Multiplying " +int32(rA) + " " + int32(rB)+ " " + r[rD]);
                     var result = Number(int32(rA)) * Number(int32(rB));
                     //r[rD] = result;
                     this.SR_OV = (result < (-2147483647 - 1)) || (result > (2147483647));
                     var uresult = uint32(rA) * uint32(rB);
                     this.SR_CY = (uresult > (4294967295));
-                    /*
-					int64_t result = int64_t(int32(rA)) * int64_t(int32(rB));
-					//cpu->r[rD] =  int32(rA) * int32(rB);
-					cpu->r[rD] =  uint32(result&0xFFFFFFFFLL);
-			        cpu->SR_OV = ((result < (int64_t)INT32_MIN) || (result > (int64_t)INT32_MAX));
-					uint64_t uresult = uint64_t(rA) * uint64_t(rB);
-					cpu->SR_CY = (uresult > (uint64_t)UINT32_MAX);
-					//warning TODO overflow and carry
-					*/
-                    //DebugMessage("mul signed not supported");
-                    //abort();
                 }
                 break;
             case 0x30a:
@@ -1255,6 +1217,6 @@ CPU.prototype.Step = function(steps) {
             break;
         }
 
-    } while (steps--); // main loop	
+    } while (steps--); // main loop
 };
 
