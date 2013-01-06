@@ -22,8 +22,6 @@ var term = new Terminal(25, 80, "tty");
 DebugMessage("Terminal initialized");
 new TerminalInput();
 DebugMessage("Terminal input initialized");
-var fb = new Framebuffer("fb");
-DebugMessage("Framebuffer initialized");
 var ram = new RAM(0x2000000);
 DebugMessage("RAM initialized");
 var uart = new UART();
@@ -32,6 +30,8 @@ var cpu = new CPU();
 DebugMessage("CPU initialized");
 
 ram.AddDevice(new EthDev(), 0x92000000, 0x1000);
+ram.AddDevice(new FBDev("fb"), 0x91000000, 0x1000);
+
 
 
 DebugMessage("Loading Image");
