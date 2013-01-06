@@ -2,11 +2,12 @@
 // -------------- Terminal Input -------------------
 // -------------------------------------------------
 
-function TerminalInput() {
+function TerminalInput(uartdev) {
     this.CTRLpressed = false;
-    document.onkeypress = this.KeyPress;
-    document.onkeydown = this.KeyDown;
-    document.onkeyup = this.KeyUp;
+	this.uart = uartdev;
+    document.onkeypress = this.KeyPress.bind(this);
+    document.onkeydown = this.KeyDown.bind(this);
+    document.onkeyup = this.KeyUp.bind(this);	
 }
 
 TerminalInput.prototype.KeyPress = function(e) {
@@ -21,7 +22,7 @@ TerminalInput.prototype.KeyPress = function(e) {
     if ((this.CTRLpressed) && (((key >= 0x41) && (key <= 0x5A)) || ((key >= 0x61) && (key <= 0x7A)))) {
         key &= 0x1F;
     }
-    uart.ReceiveChar(key);
+    this.uart.ReceiveChar(key);
     return false;
 };
 
@@ -48,25 +49,25 @@ TerminalInput.prototype.KeyDown = function(e) {
         break;
     case 38:
         // up
-        uart.ReceiveChar(0x10);
+        this.uart.ReceiveChar(0x10);
         e.preventDefault();
         return false;
         break;
     case 37:
         // left
-        uart.ReceiveChar(0x2);
+        this.uart.ReceiveChar(0x2);
         e.preventDefault();
         return false;
         break;
     case 40:
         // down
-        uart.ReceiveChar(0x0E);
+        this.uart.ReceiveChar(0x0E);
         e.preventDefault();
         return false;
         break;
     case 39:
         // right
-        uart.ReceiveChar(0x6);
+        this.uart.ReceiveChar(0x6);
         e.preventDefault();
         return false;
         break;
@@ -80,7 +81,7 @@ TerminalInput.prototype.KeyDown = function(e) {
     case 67:
         // CTRL + c key handling for chrome
         if (this.CTRLpressed == true) {
-            uart.ReceiveChar(99 & 0x1F);
+            this.uart.ReceiveChar(99 & 0x1F);
             e.preventDefault();
             return false;
         }
@@ -88,7 +89,7 @@ TerminalInput.prototype.KeyDown = function(e) {
     }
 
     if ((keycode != 0) && (keycode <= 0x1F)) {
-        uart.ReceiveChar(keycode);
+        this.uart.ReceiveChar(keycode);
         e.preventDefault();
         return false;
     }

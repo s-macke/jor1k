@@ -53,56 +53,57 @@ RAM.prototype.WriteMemory32 = function(addr, x) {
 
 
 RAM.prototype.ReadMemory8 = function(addr) {
-    if (addr > this.memsize - 1) {
-        if ((addr >= 0x90000000) && (addr <= 0x90000006)) {
-            return uart.ReadRegister(addr - 0x90000000);
-        }
-        else {
-            DebugMessage("Error in ReadMemory8: RAM region is not accessible");
-            abort();
+    if (addr <= this.memsize - 1) {
+        // consider that the data is saved in little endian
+        switch (addr & 3) {
+        case 0:
+             return this.uint8mem[(addr & ~3) | 3];
+        case 1:
+            return this.uint8mem[(addr & ~3) | 2];
+        case 2:
+            return this.uint8mem[(addr & ~3) | 1];
+        case 3:
+            return this.uint8mem[(addr & ~3) | 0];
         }
     }
-    // consider that the data is saved in little endian
-    switch (addr & 3) {
-    case 0:
-        return this.uint8mem[(addr & ~3) | 3];
-    case 1:
-        return this.uint8mem[(addr & ~3) | 2];
-    case 2:
-        return this.uint8mem[(addr & ~3) | 1];
-    case 3:
-        return this.uint8mem[(addr & ~3) | 0];
+	
+    for(var i=0; i<this.devices.length; i++) {
+        if ((addr >= this.devices[i].deviceaddr) && (addr < (this.devices[i].deviceaddr+this.devices[i].devicesize))) {
+            return this.devices[i].ReadReg8(addr - this.devices[i].deviceaddr);
+        }
     }
-    //return this.uint8mem[addr];
+    DebugMessage("Error in ReadMemory8: RAM region is not accessible");
+    abort();    
 };
 
 RAM.prototype.WriteMemory8 = function(addr, x) {
-    if (addr > this.memsize - 1) {
-        if ((addr >= 0x90000000) && (addr <= 0x90000006)) {
-            uart.WriteRegister(addr - 0x90000000, x);
+    if (addr <= this.memsize - 1) {
+    // consider that the data is saved in little endian	
+        switch (addr & 3) {
+        case 0:
+            this.uint8mem[(addr & ~3) | 3] = x & 0xFF;
+            break;
+        case 1:
+            this.uint8mem[(addr & ~3) | 2] = x & 0xFF;
+            break;
+        case 2:
+            this.uint8mem[(addr & ~3) | 1] = x & 0xFF;
+            break;
+        case 3:
+            this.uint8mem[(addr & ~3) | 0] = x & 0xFF;
+            break;
+        }
+        return;
+	}
+    for(var i=0; i<this.devices.length; i++) {
+        if ((addr >= this.devices[i].deviceaddr) && (addr < (this.devices[i].deviceaddr+this.devices[i].devicesize))) {
+            this.devices[i].WriteReg8(addr - this.devices[i].deviceaddr, x);
             return;
         }
-        else {
-            DebugMessage("Error in WriteMemory8: RAM region is not accessible");
-            abort();
-        }
-        //Exception(EXCEPT_BUSERR, addr);		
     }
-    // consider that the data is saved in little endian	
-    switch (addr & 3) {
-    case 0:
-        this.uint8mem[(addr & ~3) | 3] = x & 0xFF;
-        break;
-    case 1:
-        this.uint8mem[(addr & ~3) | 2] = x & 0xFF;
-        break;
-    case 2:
-        this.uint8mem[(addr & ~3) | 1] = x & 0xFF;
-        break;
-    case 3:
-        this.uint8mem[(addr & ~3) | 0] = x & 0xFF;
-        break;
-    }
+    DebugMessage("Error in WriteMemory8: RAM region is not accessible");
+    abort();
+    // Exception(EXCEPT_BUSERR, addr);    
 };
 
 RAM.prototype.ReadMemory16 = function(addr) {

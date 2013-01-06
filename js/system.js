@@ -20,19 +20,23 @@ function MainLoop() {
 
 var term = new Terminal(25, 80, "tty");
 DebugMessage("Terminal initialized");
-new TerminalInput();
-DebugMessage("Terminal input initialized");
 var ram = new RAM(0x2000000);
 DebugMessage("RAM initialized");
-var uart = new UART();
-DebugMessage("UART initialized");
 var cpu = new CPU();
 DebugMessage("CPU initialized");
 
-ram.AddDevice(new EthDev(), 0x92000000, 0x1000);
-ram.AddDevice(new FBDev("fb"), 0x91000000, 0x1000);
+var uartdev = new UARTDev();
+var ethdev = new EthDev();
+var fbdev = new FBDev("fb");
+DebugMessage("Devices initialized");
 
+ram.AddDevice(uartdev, 0x90000000, 0x7);
+ram.AddDevice(ethdev, 0x92000000, 0x1000);
+ram.AddDevice(fbdev, 0x91000000, 0x1000);
+DebugMessage("Devices added");
 
+var terminput = new TerminalInput(uartdev);
+DebugMessage("Terminal input initialized");
 
 DebugMessage("Loading Image");
 var str = "Loading Image from Web Server (5 MB). Please wait ..."

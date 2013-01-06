@@ -31,7 +31,7 @@ var UART_MSR = 6; /* R: Modem Status Register */
 
 
 // constructor
-function UART() {
+function UARTDev() {
     this.LCR = 0x3; // Line Control, reset, character has 8 bits
     this.LSR = UART_LSR_TRANSMITTER_EMPTY | UART_LSR_FIFO_EMPTY; // Line Status register, Transmitter serial register empty and Transmitter buffer register empty
     this.MSR = 0; // modem status register
@@ -48,7 +48,7 @@ function UART() {
 
 // this function is maybe too simple. No buffer. The character may be overwritten
 // if the code needs some cycles to process. So the FIFO is done by the operating system
-UART.prototype.ReceiveChar = function(x) {
+UARTDev.prototype.ReceiveChar = function(x) {
     this.fifo.push(x);
     if (this.fifo.length >= 1) {
         this.input = this.fifo.shift()
@@ -58,7 +58,7 @@ UART.prototype.ReceiveChar = function(x) {
     }
 };
 
-UART.prototype.ThrowCTI = function() {
+UARTDev.prototype.ThrowCTI = function() {
     this.ints |= 1 << UART_IIR_CTI;
     if (!(this.IER & UART_IER_RDI)) {
         return;
@@ -69,7 +69,7 @@ UART.prototype.ThrowCTI = function() {
     }
 };
 
-UART.prototype.ThrowTHRI = function() {
+UARTDev.prototype.ThrowTHRI = function() {
     this.ints |= 1 << UART_IIR_THRI;
     if (!(this.IER & UART_IER_THRI)) {
         return;
@@ -80,7 +80,7 @@ UART.prototype.ThrowTHRI = function() {
     }
 };
 
-UART.prototype.NextInterrupt = function() {
+UARTDev.prototype.NextInterrupt = function() {
     if ((this.ints & (1 << UART_IIR_CTI)) && (this.IER & UART_IER_RDI)) {
         this.ThrowCTI();
     }
@@ -93,7 +93,7 @@ UART.prototype.NextInterrupt = function() {
     }
 };
 
-UART.prototype.ClearInterrupt = function(line) {
+UARTDev.prototype.ClearInterrupt = function(line) {
     this.ints &= ~ (1 << line);
     this.IIR = UART_IIR_NO_INT;
     if (line != this.IIR) {
@@ -102,7 +102,7 @@ UART.prototype.ClearInterrupt = function(line) {
     this.NextInterrupt();
 };
 
-UART.prototype.ReadRegister = function(addr) {
+UARTDev.prototype.ReadReg8 = function(addr) {
     if (this.LCR & UART_LCR_DLAB) {
         switch (addr) {
         case UART_DLL:
@@ -161,7 +161,7 @@ UART.prototype.ReadRegister = function(addr) {
     }
 };
 
-UART.prototype.WriteRegister = function(addr, x) {
+UARTDev.prototype.WriteReg8 = function(addr, x) {
     x &= 0xFF;
     if (this.LCR & UART_LCR_DLAB) {
         switch (addr) {
