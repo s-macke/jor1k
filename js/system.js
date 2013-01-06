@@ -25,7 +25,7 @@ DebugMessage("RAM initialized");
 var cpu = new CPU();
 DebugMessage("CPU initialized");
 
-var uartdev = new UARTDev();
+var uartdev = new UARTDev(term);
 var ethdev = new EthDev();
 var fbdev = new FBDev("fb");
 DebugMessage("Devices initialized");

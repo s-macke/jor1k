@@ -31,7 +31,7 @@ var UART_MSR = 6; /* R: Modem Status Register */
 
 
 // constructor
-function UARTDev() {
+function UARTDev(outputdev) {
     this.LCR = 0x3; // Line Control, reset, character has 8 bits
     this.LSR = UART_LSR_TRANSMITTER_EMPTY | UART_LSR_FIFO_EMPTY; // Line Status register, Transmitter serial register empty and Transmitter buffer register empty
     this.MSR = 0; // modem status register
@@ -43,6 +43,7 @@ function UARTDev() {
     this.FCR = 0x0; // FIFO Control;
     this.MCR = 0x0; // Modem Control
     this.input = 0;
+    this.odev = outputdev;
     this.fifo = new Array(); // receive fifo buffer
 }
 
@@ -179,7 +180,7 @@ UARTDev.prototype.WriteReg8 = function(addr, x) {
     switch (addr) {
     case 0:
         this.LSR &= ~UART_LSR_FIFO_EMPTY;
-        term.PutChar(x);
+        this.odev.PutChar(x);
         // Data is send with a latency of zero!
         this.LSR |= UART_LSR_FIFO_EMPTY; // send buffer is empty					
         this.ThrowTHRI();
