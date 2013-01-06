@@ -7,7 +7,7 @@ function DebugMessage(message) {
 }
 
 function abort() {
-    DebugMessage("Abort execution.")
+    DebugMessage("Abort execution.");
     sys.PrintState();
     throw new Error('Abort javascript');
 }
@@ -32,36 +32,39 @@ function hex8(x) {
 }
 
 function CopyBinary(to, from, size, buffersrc, bufferdest) {
-    for (var i = 0; i < size; i++) bufferdest[to + i] = buffersrc[from + i];
+    var i = 0;
+    for (i = 0; i < size; i++) {
+        bufferdest[to + i] = buffersrc[from + i];
+    }
 }
 
 function LoadBinaryResource(url, OnLoadFunction) {
     var req = new XMLHttpRequest();
     req.open('GET', url, true);
     req.responseType = "arraybuffer";
-    req.onreadystatechange = function() {
+    req.onreadystatechange = function () {
         if (req.readyState != 4) {
             return;
         }
         if ((req.status != 200) && (req.status != 0)) {
             DebugMessage("Error: Could not load file " + url);
             return;
-        };
+        }
         var arrayBuffer = req.response;
         if (arrayBuffer) {
             OnLoadFunction(arrayBuffer);
         }
-    }
+    };
     /*
-	req.onload = function(e)
-	{
-		var arrayBuffer = req.response;
-		if (arrayBuffer)
-		{	
-			OnLoadFunction(arrayBuffer);
-		}
-	} 
+        req.onload = function(e)
+        {
+                var arrayBuffer = req.response;
+                if (arrayBuffer) {
+                    OnLoadFunction(arrayBuffer);
+                }
+        };
     */
     req.send(null);
 }
+
 
