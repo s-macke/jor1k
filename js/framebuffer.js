@@ -41,7 +41,7 @@ FBDev.prototype.Update = function() {
     }
 	
     // remove alpha channel. The buffer can then be used directly.	
-    for (var i = 3; i < this.width * this.height * 4; i += 4) {
+    for (var i = 3,n=this.width * this.height * 4; i < n; i += 4) {
         this.buf8[i] = 0xFF;
     }
 
