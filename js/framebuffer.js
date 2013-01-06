@@ -15,34 +15,32 @@ function FBDev(elemId, ram) {
     this.imageData = this.c.createImageData(this.width, this.height);
 }
 
-FBDev.prototype.ReadReg32 = function(addr) {
-	return 0x0;
-}
+FBDev.prototype.ReadReg32 = function (addr) {
+    return 0x0;
+};
 
-FBDev.prototype.WriteReg32 = function(addr, value) {
-    switch(addr)
-    {
-        case 0x14:
-            this.SetAddr(Swap32(value));
+FBDev.prototype.WriteReg32 = function (addr, value) {
+    switch (addr) {
+    case 0x14:
+        this.SetAddr(Swap32(value));
         break;
-        default:
-            return 0x0;
-        break;        
+    default:
+        return 0x0;
     }
-}
+};
 
-FBDev.prototype.SetAddr = function(addr) {
+FBDev.prototype.SetAddr = function (addr) {
     this.buf8 = new Uint8ClampedArray(this.ram.mem, addr, this.imageData.data.length);
     this.Update();
 };
 
-FBDev.prototype.Update = function() {
+FBDev.prototype.Update = function () {
     if (!this.buf8) {
         return;
     }
-	
-    // remove alpha channel. The buffer can then be used directly.	
-    for (var i = 3, n=this.width*this.height*4; i < n; i += 4) {
+    // remove alpha channel. The buffer can then be used directly.
+    var i, n = this.width * this.height * 4;
+    for (i = 3; i < n; i += 4) {
         this.buf8[i] = 0xFF;
     }
 
