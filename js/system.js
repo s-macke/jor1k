@@ -31,6 +31,9 @@ DebugMessage("UART initialized");
 var cpu = new CPU();
 DebugMessage("CPU initialized");
 
+ram.AddDevice(new EthDev(), 0x92000000, 0x1000);
+
+
 DebugMessage("Loading Image");
 var str = "Loading Image from Web Server (5 MB). Please wait ..."
 for (var i = 0; i < str.length; i++) {

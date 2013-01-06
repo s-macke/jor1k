@@ -9,61 +9,50 @@ function RAM(memsize) {
     this.mem = new ArrayBuffer(memsize);
     this.uint32mem = new Uint32Array(this.mem);
     this.uint8mem = new Uint8Array(this.mem);
+	this.devices = [];
 }
 
-// To emulate the non-exsistent ethernet controller.
-var ethreg0 = 0xa000;
-var ethreg38 = 0x22;
+RAM.prototype.AddDevice = function(device, devaddr, devsize)
+{
+    device.deviceaddr = devaddr;
+    device.devicesize = devsize;
+    this.devices.push(device);
+}
 
 RAM.prototype.ReadMemory32 = function(addr) {
-    if (addr > this.memsize - 4) {
-        if ((addr >= 0x92000000) && (addr <= 0x92001000 - 4)) //eth
-        {
-            if (addr == 0x92000000) {
-                return ethreg0;
-            }
-            if (addr == 0x92000038) {
-                var ret = ethreg38;
-                if (ethreg38 == 0x1613) {
-                    ethreg38 = 0xffff;
-                }
-                if (ethreg38 == 0x22) {
-                    ethreg38 = 0x1613;
-                }
-                return ret;
-            }
-            return 0x0;
-        }
-        else {
-            DebugMessage("Error in ReadMemory32: RAM region " + hex8(addr) + " is not accessible");
-            abort();
+    if (addr <= this.memsize - 4) {
+        return this.uint32mem[addr >>> 2];
+	}
+    for(var i=0; i<this.devices.length; i++) {
+        if ((addr >= this.devices[i].deviceaddr) && (addr < (this.devices[i].deviceaddr+this.devices[i].devicesize))) {
+            return this.devices[i].ReadReg32(addr - this.devices[i].deviceaddr);
         }
     }
-    return this.uint32mem[addr >>> 2];
+    DebugMessage("Error in ReadMemory32: RAM region " + hex8(addr) + " is not accessible");
+    abort();
 };
 
 RAM.prototype.WriteMemory32 = function(addr, x) {
-    if (addr > this.memsize - 4) {
-        //eth
-        if ((addr >= 0x92000000) && (addr <= 0x92001000 - 4)) {
-            if (addr == 0x92000000) {
-                ethreg0 = x;
-            }
-            return;
-        }
-        //fb
-        else if ((addr >= 0x91000000) && (addr <= 0x91101000 - 4)) {
-            if (addr == 0x91000014) {
-                fb.SetAddr(Swap32(x));
-            }
-            return;
-        }
-        else {
-            DebugMessage("Error in WriteMemory32: RAM region " + hex8(addr) + " is not accessible");
-            abort();
+    if (addr <= this.memsize - 4) {
+        this.uint32mem[addr >>> 2] = x;
+        return;
+    }
+    for(var i=0; i<this.devices.length; i++) {
+        if ((addr >= this.devices[i].deviceaddr) && (addr < (this.devices[i].deviceaddr+this.devices[i].devicesize))) {
+            return this.devices[i].WriteReg32(addr - this.devices[i].deviceaddr);
         }
     }
-    this.uint32mem[addr >>> 2] = x;
+
+    //fb
+    if ((addr >= 0x91000000) && (addr <= 0x91101000 - 4)) {
+        if (addr == 0x91000014) {
+            fb.SetAddr(Swap32(x));
+        }
+        return;
+    }
+    DebugMessage("Error in WriteMemory32: RAM region " + hex8(addr) + " is not accessible");
+    abort();
+    
 };
 
 

@@ -2,13 +2,13 @@
 // ----------------- Ethernet ----------------------
 // -------------------------------------------------
 
-// Emulation of the basics of the non-exsistent ethernet controller.
+// Emulation of the basics of the dummy ethernet controller.
 
 function EthDev() {
     this.ethreg0 = 0xa000;
     this.ethreg38 = 0x22;	
     this.ReadReg32 = function(r) {
-    switch(r)
+        switch(r)
         {
             case 0x0:
                 return this.ethreg0;
