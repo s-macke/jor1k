@@ -40,8 +40,8 @@ TerminalInput.prototype.KeyUp = function(e) {
 TerminalInput.prototype.KeyDown = function(e) {
     var keycode = e.keyCode;
     var unicode = e.charCode;
-    DebugMessage("KeyDown: keyCode = " + e.keyCode);
-    DebugMessage("KeyDown: charCode = " + e.charCode);
+    //DebugMessage("KeyDown: keyCode = " + e.keyCode);
+    //DebugMessage("KeyDown: charCode = " + e.charCode);
     switch (keycode) {
     case 16:
         // shift

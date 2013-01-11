@@ -46,15 +46,8 @@ function Terminal(rows, columns, elemId) {
 
 Terminal.prototype.Blink = function() {
     this.cursorvisible = !this.cursorvisible;
-    var colortemp = this.color[this.cursory][this.cursorx];
-
-    if (this.cursorvisible) {
-        this.color[this.cursory][this.cursorx] |= 0x600;
-    }
-    this.PlotRow(this.cursory);
-    this.color[this.cursory][this.cursorx] = colortemp;
-
-    window.setTimeout(this.Blink.bind(this), 1000); // update every second
+	this.PlotRow(this.cursory);
+    window.setTimeout(this.Blink.bind(this), 500); // update every second
 };
 
 Terminal.prototype.DeleteRow = function(row) {
@@ -79,6 +72,12 @@ Terminal.prototype.PlotRow = function(row) {
     var ccolor = 0x7;
     var spanactive = false;
     var line = "";
+
+    var colortemp = this.color[this.cursory][this.cursorx];
+    if (this.cursorvisible) {
+        this.color[this.cursory][this.cursorx] |= 0x600;
+    }
+
     for (var i = 0; i < this.ncolumns; i++) {
         if (ccolor != this.color[row][i]) {
             if (spanactive) {
@@ -90,10 +89,7 @@ Terminal.prototype.PlotRow = function(row) {
                 spanactive = true;
             }
         }
-        if (this.screen[row][i] == 0x0) {
-            line += "&nbsp;";
-        }
-        else if (this.screen[row][i] == 0x20) {
+        if ((this.screen[row][i] == 0x0) || (this.screen[row][i] == 0x20)) {
             line += "&nbsp;";
         }
         else {
@@ -104,6 +100,9 @@ Terminal.prototype.PlotRow = function(row) {
         line += "</span>";
         spanactive = false;
     }
+
+    this.color[this.cursory][this.cursorx] = colortemp;
+
     this.rowelements[this.nrows - row - 1].innerHTML = line;
 };
 
@@ -116,6 +115,10 @@ Terminal.prototype.ScreenUpdate = function() {
 Terminal.prototype.LineFeed = function() {
     if (this.cursory != this.nrows - 1) {
         this.cursory++;
+        if (this.cursorvisible) {
+            this.PlotRow(this.cursory-1); // delete old cursor position
+            this.PlotRow(this.cursory); // show new cursor position
+        }
         return;
     }
     for (var i = 1; i < this.nrows; i++) {
@@ -129,7 +132,7 @@ Terminal.prototype.LineFeed = function() {
 };
 
 Terminal.prototype.ChangeCursor = function(Numbers) {
-    switch (Numbers.length) {
+	switch (Numbers.length) {
     case 0:
         this.cursorx = 0;
         this.cursory = 0;
@@ -142,7 +145,6 @@ Terminal.prototype.ChangeCursor = function(Numbers) {
         // TODO check for boundaries
         this.cursory = Numbers[0];
         this.cursorx = Numbers[1];
-
         break;
     }
 };
@@ -183,7 +185,7 @@ Terminal.prototype.ChangeColor = function(Numbers) {
 
 Terminal.prototype.HandleEscapeSequence = function() {
     //DebugMessage("Escape sequence:'" + this.escapestring+"'");
-
+    var i = 0;
     if (this.escapestring == "[J") {
         this.DeleteArea(this.cursory, this.cursorx, this.cursory, this.ncolumns - 1);
         this.DeleteArea(this.cursory + 1, 0., this.nrows - 1, this.ncolumns - 1);
@@ -212,62 +214,80 @@ Terminal.prototype.HandleEscapeSequence = function() {
     if (numbers[0].length == 0) {
         numbers = [];
     }
+    // the array must contain of numbers and not strings. Make this sure
+    for (i=0; i<numbers.length; i++) {
+        numbers[i] = Number(numbers[i]);
+    }
+    switch(lastsign) {
+        case 'm': // colors
+            this.ChangeColor(numbers);
+            return;
 
-    // colors
-    if (lastsign == "m") {
-        this.ChangeColor(numbers);
-    }	
-    // cursor
-    else if ((lastsign == "H") || (lastsign == "d")) {
+        case 'C': // move cursor right
+            if (numbers.length == 0) {
+                this.cursorx++;
+            }
+            else this.cursorx += numbers[0];
+            return;
+    
+        case 'D': // move cursor left
+            if (numbers.length == 0) {
+                this.cursorx--;
+            }
+            else this.cursorx -= numbers[0];
+            return;
+    
+        case 'G': // change cursor column
+            this.cursorx = numbers[0];
+            return;
+
+        case 'r': // set scrolling region
+            // ignore
+            return;
+        
+        case 'X': // erase only number of characters in current line    
+            for (var j = this.cursorx; j < this.cursorx + numbers[0]; j++) {
+                this.screen[this.cursory][j] = 0x0;
+            }
+            this.PlotRow(this.cursory);
+            // this.DeleteArea(this.cursory, this.cursorx, this.cursory, this.cursorx+numbers[0]);
+            // this.DeleteArea(this.cursory, 0, this.cursory, numbers[0]);
+        break;
+    }
+
+    // Now test the part which can change the y position of the cursor
+    var oldcursory = this.cursory;
+
+    switch(lastsign) {
+    case 'H': // cursor
+    case 'd':
         this.ChangeCursor(numbers);
-    }
-    // change cursor column
-    else if ((lastsign == "G")) {
-        this.cursorx = numbers[0];
-    }
-    // move cursor up
-    else if (lastsign == "A") {
+        break;
+    
+    case 'A': // move cursor up
         if (numbers.length == 0) {
             this.cursory--;
         }
         else this.cursory -= numbers[0];
-    }
+        break;
+    
     // move cursor down
-    else if (lastsign == "E") {
+    case 'E':
         if (numbers.length == 0) {
             this.cursory++;
         }
         else this.cursory += numbers[0];
-    }
-    // move cursor right
-    else if (lastsign == "C") {
-        if (numbers.length == 0) {
-            this.cursorx++;
-        }
-        else this.cursorx += numbers[0];
-    }
-    // move cursor left
-    else if (lastsign == "D") {
-        if (numbers.length == 0) {
-            this.cursorx--;
-        }
-        else this.cursorx -= numbers[0];
-    }
-    // erase only number of characters in current line
-    else if (lastsign == "X") {
-        for (var j = this.cursorx; j < this.cursorx + numbers[0]; j++) {
-            this.screen[this.cursory][j] = 0x0;
-        }
-        //this.DeleteArea(this.cursory, this.cursorx, this.cursory, this.cursorx+numbers[0]);
-        //this.DeleteArea(this.cursory, 0, this.cursory, numbers[0]);
-    }
-    // set scrolling region
-    else if (lastsign == "r") {
-        // ignore
-    }
-    else {
+        break;
+
+        default:
         DebugMessage("Escape sequence unknown:'" + this.escapestring + "'");
+
     }
+
+    if (this.cursorvisible) {
+        this.PlotRow(oldcursory); // delete old cursor position
+    }
+
 };
 
 Terminal.prototype.PutChar = function(c) {
@@ -367,6 +387,6 @@ Terminal.prototype.PutChar = function(c) {
     var cy = this.cursory;
     this.screen[cy][cx] = c;
     this.color[cy][cx] = this.currentcolor;
-    this.PlotRow(this.cursory);
     this.cursorx++;
+    this.PlotRow(this.cursory);
 };
