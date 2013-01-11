@@ -271,6 +271,7 @@ Terminal.prototype.HandleEscapeSequence = function() {
 };
 
 Terminal.prototype.PutChar = function(c) {
+    var i = 0;
     //DebugMessage("Char:" + c + " " +  String.fromCharCode(c));
     // escape sequence (CS)
     if (this.escapetype == 2) {
@@ -327,15 +328,32 @@ Terminal.prototype.PutChar = function(c) {
         return;
         break;
 
+    case 0x9:
+        // horizontal tab
+        do
+        {
+            if (this.cursorx >= this.ncolumns) {
+                this.PlotRow(this.cursory);
+                this.LineFeed();
+                this.cursorx = 0;
+            }
+            this.screen[this.cursory][this.cursorx] = 32;
+            this.color[this.cursory][this.cursorx] = this.currentcolor;	
+            this.cursorx++;
+        } while((this.cursorx%8) != 0);
+        this.PlotRow(this.cursory);
+        return;
+        break;
+
+
     case 0x00:  case 0x01:  case 0x02:  case 0x03:
-	case 0x04:  case 0x05:  case 0x06:
-                case 0x09:              case 0x0B:
-	case 0x0C:  case 0x0E:  case 0x0F:
-	case 0x10:  case 0x11:  case 0x12:  case 0x13:
-	case 0x14:  case 0x15:  case 0x16:  case 0x17:
-	case 0x18:  case 0x19:  case 0x1A:  case 0x1B:
-	case 0x1C:  case 0x1D:  case 0x1E:  case 0x1F:
-        DebugMessage("unknown command " + hex8(c));
+    case 0x04:  case 0x05:  case 0x06:  case 0x0B:
+    case 0x0C:  case 0x0E:  case 0x0F:
+    case 0x10:  case 0x11:  case 0x12:  case 0x13:
+    case 0x14:  case 0x15:  case 0x16:  case 0x17:
+    case 0x18:  case 0x19:  case 0x1A:  case 0x1B:
+    case 0x1C:  case 0x1D:  case 0x1E:  case 0x1F:
+        DebugMessage("unknown character " + hex8(c));
         return;
         break;
     }
