@@ -11,8 +11,8 @@ function TerminalInput(uartdev) {
 }
 
 TerminalInput.prototype.KeyPress = function(e) {
-    //DebugMessage("Keypress: keyCode = " + e.keyCode);
-    //DebugMessage("Keypress: charCode = " + e.charCode);
+    // DebugMessage("Keypress: keyCode = " + e.keyCode);
+    // DebugMessage("Keypress: charCode = " + e.charCode);
     var key = 0;
     key = e.charCode;
     if (key == 0) {
@@ -40,8 +40,8 @@ TerminalInput.prototype.KeyUp = function(e) {
 TerminalInput.prototype.KeyDown = function(e) {
     var keycode = e.keyCode;
     var unicode = e.charCode;
-    //DebugMessage("KeyDown: keyCode = " + e.keyCode);
-    //DebugMessage("KeyDown: charCode = " + e.charCode);
+    DebugMessage("KeyDown: keyCode = " + e.keyCode);
+    DebugMessage("KeyDown: charCode = " + e.charCode);
     switch (keycode) {
     case 16:
         // shift
@@ -65,9 +65,39 @@ TerminalInput.prototype.KeyDown = function(e) {
         e.preventDefault();
         return false;
         break;
+    case 36:
+        // pos1
+        this.uart.ReceiveChar(0x01);
+        e.preventDefault();
+        return false;
+        break;
+    case 35:
+        // end
+        this.uart.ReceiveChar(0x05);
+        e.preventDefault();
+        return false;
+        break;
+    case 33:
+        // Page up
+        this.uart.ReceiveChar(0x15);
+        e.preventDefault();
+        return false;
+        break;
+    case 34:
+        // Page down
+        this.uart.ReceiveChar(0x16);
+        e.preventDefault();
+        return false;
+        break;
     case 39:
         // right
         this.uart.ReceiveChar(0x6);
+        e.preventDefault();
+        return false;
+        break;
+    case 46:
+        // del
+        this.uart.ReceiveChar(0x4);
         e.preventDefault();
         return false;
         break;
