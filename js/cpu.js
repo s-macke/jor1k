@@ -536,7 +536,7 @@ CPU.prototype.ITLBRefill = function (addr, nsets) {
 
 CPU.prototype.DTLBLookup = function (addr, write) {
     if (!this.SR_DME) {
-        return addr >>> 0;
+        return addr;
     }
 
     // pagesize is 8192 bytes
@@ -550,7 +550,7 @@ CPU.prototype.DTLBLookup = function (addr, write) {
         if (this.DTLBRefill(addr, 64)) {
             tlmbr = this.group1[0x200 + setindex];
         } else {
-            return 0xFFFFFFFF;
+            return -1;
         }
         // slow version
         // this.Exception(EXCEPT_DTLBMISS, addr);
@@ -575,7 +575,7 @@ CPU.prototype.DTLBLookup = function (addr, write) {
             ((write) && (!(tlbtr & 0x200)))     // check if SWE
            ) {
             this.Exception(EXCEPT_DPF, addr);
-            return 0xFFFFFFFF;
+            return -1;
            }
     } else {
         if (
@@ -583,10 +583,10 @@ CPU.prototype.DTLBLookup = function (addr, write) {
                ((write) && (!(tlbtr & 0x80)))     // check if UWE
            ) {
             this.Exception(EXCEPT_DPF, addr);
-            return 0xFFFFFFFF;
+            return -1;
            }
     }
-    return ((tlbtr & 0xFFFFE000) | (addr & 0x1FFF)) >>> 0;
+    return ((tlbtr & 0xFFFFE000) | (addr & 0x1FFF));
 };
 
 // the slow and safe version
@@ -681,7 +681,7 @@ CPU.prototype.Step = function (steps) {
         }
 
         // do this not so often
-        if ((steps & 7) == 0) {
+        if (!(steps & 7)) {
 
             // ---------- TICK ----------
             // timer enabled
@@ -844,7 +844,7 @@ CPU.prototype.Step = function (steps) {
                 abort();
             }
             imm = this.DTLBLookup(addr, false);
-            if (imm == 0xFFFFFFFF) {
+            if (imm == -1) {
                 break;
             }
             r[(ins >> 21) & 0x1F] = ram.ReadMemory32(imm);
@@ -854,7 +854,7 @@ CPU.prototype.Step = function (steps) {
             // lbz
             addr = (r[(ins >> 16) & 0x1F]>>0) + (((ins & 0xFFFF) << 16) >> 16);
             imm = this.DTLBLookup(addr, false);
-            if (imm == 0xFFFFFFFF) {
+            if (imm == -1) {
                 break;
             }
             r[(ins >> 21) & 0x1F] = ram.ReadMemory8(imm);
@@ -864,7 +864,7 @@ CPU.prototype.Step = function (steps) {
             // lbs 
             addr = (r[(ins >> 16) & 0x1F]>>0) + (((ins & 0xFFFF) << 16) >> 16);
             imm = this.DTLBLookup(addr, false);
-            if (imm == 0xFFFFFFFF) {
+            if (imm == -1) {
                 break;
             }
             rindex = (ins >> 21) & 0x1F;
@@ -875,7 +875,7 @@ CPU.prototype.Step = function (steps) {
             // lhz 
             addr = (r[(ins >> 16) & 0x1F]>>0) + (((ins & 0xFFFF) << 16) >> 16);
             imm = this.DTLBLookup(addr, false);
-            if (imm == 0xFFFFFFFF) {
+            if (imm == -1) {
                 break;
             }
             r[(ins >> 21) & 0x1F] = ram.ReadMemory16(imm);
@@ -885,7 +885,7 @@ CPU.prototype.Step = function (steps) {
             // lhs 
             addr = (r[(ins >> 16) & 0x1F]>>0) + (((ins & 0xFFFF) << 16) >> 16);
             imm = this.DTLBLookup(addr, false);
-            if (imm == 0xFFFFFFFF) {
+            if (imm == -1) {
                 break;
             }
             rindex = (ins >> 21) & 0x1F;
@@ -1015,7 +1015,7 @@ CPU.prototype.Step = function (steps) {
                 abort();
             }
             imm = this.DTLBLookup(addr, true);
-            if (imm == 0xFFFFFFFF) {
+            if (imm == -1) {
                 break;
             }
             ram.WriteMemory32(imm, r[(ins >> 11) & 0x1F]);
@@ -1026,7 +1026,7 @@ CPU.prototype.Step = function (steps) {
             imm = ((((ins >> 10) & 0xF800) | (ins & 0x7FF)) << 16) >> 16;
             addr = (r[(ins >> 16) & 0x1F]>>0) + imm;
             imm = this.DTLBLookup(addr, true);
-            if (imm == 0xFFFFFFFF) {
+            if (imm == -1) {
                 break;
             }
             ram.WriteMemory8(imm, r[(ins >> 11) & 0x1F]);
@@ -1037,7 +1037,7 @@ CPU.prototype.Step = function (steps) {
             imm = ((((ins >> 10) & 0xF800) | (ins & 0x7FF)) << 16) >> 16;
             addr = (r[(ins >> 16) & 0x1F]>>0) + imm;
             imm = this.DTLBLookup(addr, true);
-            if (imm == 0xFFFFFFFF) {
+            if (imm == -1) {
                 break;
             }
             ram.WriteMemory16(imm, r[(ins >> 11) & 0x1F]);
