@@ -38,11 +38,11 @@ function CPU(ram) {
 
     // data tlb
     array = new ArrayBuffer(1024 << 2);
-    this.group1 = new Uint32Array(array);
+    this.group1 = new Int32Array(array);
 
     // instruction tlb
     array = new ArrayBuffer(1024 << 2);
-    this.group2 = new Uint32Array(array);
+    this.group2 = new Int32Array(array);
 
     // define variables and initialize
     this.pc = 0x0; // instruction pointer
@@ -349,7 +349,7 @@ CPU.prototype.GetSPR = function (idx) {
 };
 
 CPU.prototype.Exception = function (excepttype, addr) {
-    var except_vector = excepttype | (this.SR_EPH ? 0xf0000000 : 0x00000000);
+    var except_vector = excepttype | (this.SR_EPH ? 0xf0000000 : 0x0);
     //DebugMessage("Info: Raising Exception " + hex8(excepttype));
 
     this.SetSPR(SPR_EEAR_BASE, addr);
@@ -647,8 +647,8 @@ CPU.prototype.Step = function (steps) {
     var ins = 0x0;
     var imm = 0x0;
     var i = 0;
-    var rD = 0x0,
-        rA = 0x0,
+    var rindex = 0x0;
+    var rA = 0x0,
         rB = 0x0;
     var addr = 0x0;
 
@@ -802,13 +802,13 @@ CPU.prototype.Step = function (steps) {
 
         case 0x6:
             // movhi or macrc
-            rD = (ins >> 21) & 0x1F;
+            rindex = (ins >> 21) & 0x1F;
             // if 16th bit is set
             if (ins & 0x10000) {
                 DebugMessage("Error: macrc not supported\n");
                 abort();
             } else {
-                r[rD] = ((ins & 0xFFFF) << 16); // movhi
+                r[rindex] = ((ins & 0xFFFF) << 16); // movhi
             }
             break;
 
@@ -867,8 +867,8 @@ CPU.prototype.Step = function (steps) {
             if (imm == 0xFFFFFFFF) {
                 break;
             }
-            rD = (ins >> 21) & 0x1F;
-            r[rD] = ((ram.ReadMemory8(imm)) << 24) >> 24;
+            rindex = (ins >> 21) & 0x1F;
+            r[rindex] = ((ram.ReadMemory8(imm)) << 24) >> 24;
             break;
 
         case 0x25:
@@ -888,8 +888,8 @@ CPU.prototype.Step = function (steps) {
             if (imm == 0xFFFFFFFF) {
                 break;
             }
-            rD = (ins >> 21) & 0x1F;
-            r[rD] = (ram.ReadMemory16(imm) << 16) >> 16;
+            rindex = (ins >> 21) & 0x1F;
+            r[rindex] = (ram.ReadMemory16(imm) << 16) >> 16;
             break;
 
 
@@ -897,10 +897,10 @@ CPU.prototype.Step = function (steps) {
             // addi signed 
             imm = ((ins & 0xFFFF) << 16) >> 16;
             rA = r[(ins >> 16) & 0x1F];
-            rD = (ins >> 21) & 0x1F;
-            r[rD] = rA + imm;
-            this.SR_CY = r[rD] < rA;
-            this.SR_OV = (((rA ^ imm ^ -1) & (rA ^ r[rD])) & 0x80000000)?true:false;
+            rindex = (ins >> 21) & 0x1F;
+            r[rindex] = rA + imm;
+            this.SR_CY = r[rindex] < rA;
+            this.SR_OV = (((rA ^ imm ^ -1) & (rA ^ r[rindex])) & 0x80000000)?true:false;
             //TODO overflow and carry
             // maybe wrong
             break;
@@ -1047,16 +1047,16 @@ CPU.prototype.Step = function (steps) {
             // three operands commands
             rA = r[(ins >> 16) & 0x1F];
             rB = r[(ins >> 11) & 0x1F];
-            rD = (ins >> 21) & 0x1F;
+            rindex = (ins >> 21) & 0x1F;
             switch (ins & 0x3CF) {
             case 0x0:
                 // add signed 
                 if ((ins & 0x300) != 0) {
                     break;
                 }
-                r[rD] = rA + rB;
-                this.SR_CY = r[rD] < rA;
-                this.SR_OV = (((rA ^ rB ^ -1) & (rA ^ r[rD])) & 0x80000000)?true:false;
+                r[rindex] = rA + rB;
+                this.SR_CY = r[rindex] < rA;
+                this.SR_OV = (((rA ^ rB ^ -1) & (rA ^ r[rindex])) & 0x80000000)?true:false;
                 //TODO overflow and carry
                 break;
             case 0x2:
@@ -1064,9 +1064,9 @@ CPU.prototype.Step = function (steps) {
                 if ((ins & 0x300) != 0) {
                     break;
                 }
-                r[rD] = rA - rB;
+                r[rindex] = rA - rB;
                 this.SR_CY = (rB > rA);
-                this.SR_OV = (((rA ^ rB) & (rA ^ r[rD])) & 0x80000000)?true:false;
+                this.SR_OV = (((rA ^ rB) & (rA ^ r[rindex])) & 0x80000000)?true:false;
                 //TODO overflow and carry
                 break;
             case 0x3:
@@ -1074,51 +1074,51 @@ CPU.prototype.Step = function (steps) {
                 if ((ins & 0x300) != 0) {
                     break;
                 }
-                r[rD] = rA & rB;
+                r[rindex] = rA & rB;
                 break;
             case 0x4:
                 // or
                 if ((ins & 0x300) != 0) {
                     break;
                 }
-                r[rD] = rA | rB;
+                r[rindex] = rA | rB;
                 break;
             case 0x5:
                 // or
                 if ((ins & 0x300) != 0) {
                     break;
                 }
-                r[rD] = rA ^ rB;
+                r[rindex] = rA ^ rB;
                 break;
             case 0x8:
                 // sll
-                r[rD] = rA << (rB & 0x1F);
+                r[rindex] = rA << (rB & 0x1F);
                 break;
             case 0x48:
                 // srl not signed
-                r[rD] = rA >>> (rB & 0x1F);
+                r[rindex] = rA >>> (rB & 0x1F);
                 break;
             case 0xf:
                 // ff1
-                r[rD] = 0;
+                r[rindex] = 0;
                 for (i = 0; i < 32; i++) {
                     if (rA & (1 << i)) {
-                        r[rD] = i + 1;
+                        r[rindex] = i + 1;
                         break;
                     }
                 }
                 break;
             case 0x88:
                 // sra signed
-                r[rD] = rA >> (rB & 0x1F);
+                r[rindex] = rA >> (rB & 0x1F);
                 // be carefull here and check
                 break;
             case 0x10f:
                 // fl1
-                r[rD] = 0;
+                r[rindex] = 0;
                 for (i = 31; i >= 0; i--) {
                     if (rA & (1 << i)) {
-                        r[rD] = i + 1;
+                        r[rindex] = i + 1;
                         break;
                     }
 				}
@@ -1127,12 +1127,12 @@ CPU.prototype.Step = function (steps) {
                 // mul signed (specification seems to be wrong)
                 {
                     // this is a hack to do 32 bit signed multiply. Seems to work but needs to be tested. 
-                    r[rD] = int32(rA >> 0) * int32(rB);
+                    r[rindex] = int32(rA >> 0) * int32(rB);
                     var rAl = rA & 0xFFFF;
                     var rBl = rB & 0xFFFF;
-                    r[rD] = r[rD] & 0xFFFF0000 | ((rAl * rBl) & 0xFFFF);
+                    r[rindex] = r[rindex] & 0xFFFF0000 | ((rAl * rBl) & 0xFFFF);
                     var result = Number(int32(rA)) * Number(int32(rB));
-                    //r[rD] = result;
+                    //r[rindex] = result;
                     this.SR_OV = (result < (-2147483647 - 1)) || (result > (2147483647));
                     var uresult = uint32(rA) * uint32(rB);
                     this.SR_CY = (uresult > (4294967295));
@@ -1143,7 +1143,7 @@ CPU.prototype.Step = function (steps) {
                 this.SR_CY = rB == 0;
                 this.SR_OV = false;
                 if (!this.SR_CY) {
-                    r[rD] = /*Math.floor*/(rA / rB);
+                    r[rindex] = /*Math.floor*/(rA / rB);
                 }
                 break;
             case 0x309:
@@ -1151,7 +1151,7 @@ CPU.prototype.Step = function (steps) {
                 this.SR_CY = rB == 0;
                 this.SR_OV = false;
                 if (!this.SR_CY) {
-                    r[rD] = int32(rA) / int32(rB);
+                    r[rindex] = int32(rA) / int32(rB);
                 }
 
                 break;
