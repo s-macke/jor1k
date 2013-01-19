@@ -402,12 +402,11 @@ CPU.prototype.DTLBRefill = function (addr, nsets) {
         this.Exception(EXCEPT_DTLBMISS, addr);
         return false;
     }
-    var r2, r3, r5, r4;
-    r2 = addr;
+    var r2 = addr;
     // get_current_PGD  using r3 and r5 
-    r3 = this.ram.int32mem[0x004aa0a4 >> 2]; // current pgd
-    r4 = (r2 >>> 0x18) << 2;
-    r5 = r4 + r3;
+    var r3 = this.ram.int32mem[0x004aa0a4 >> 2]; // current pgd
+    var r4 = (r2 >>> 0x18) << 2;
+    var r5 = r4 + r3;
 
     r4 = (0x40000000 + r5) & 0xFFFFFFFF; //r4 = phys(r5)
 
@@ -651,6 +650,7 @@ CPU.prototype.Step = function (steps) {
     var rD = 0x0,
         rA = 0x0,
         rB = 0x0;
+    var addr = 0x0;
 
     // local variables could be faster
     var r = this.r;
@@ -838,12 +838,12 @@ CPU.prototype.Step = function (steps) {
 
         case 0x21:
             // lwz 
-            rA = r[(ins >> 16) & 0x1F] + (((ins & 0xFFFF) << 16) >> 16);
-            if ((rA & 3) != 0) {
+            addr = (r[(ins >> 16) & 0x1F]>>0) + (((ins & 0xFFFF) << 16) >> 16);
+            if ((addr & 3) != 0) {
                 DebugMessage("Error: no unaligned access allowed");
                 abort();
             }
-            imm = this.DTLBLookup(rA, false);
+            imm = this.DTLBLookup(addr, false);
             if (imm == 0xFFFFFFFF) {
                 break;
             }
@@ -852,8 +852,8 @@ CPU.prototype.Step = function (steps) {
 
         case 0x23:
             // lbz
-            rA = r[(ins >> 16) & 0x1F] + (((ins & 0xFFFF) << 16) >> 16);
-            imm = this.DTLBLookup(rA, false);
+            addr = (r[(ins >> 16) & 0x1F]>>0) + (((ins & 0xFFFF) << 16) >> 16);
+            imm = this.DTLBLookup(addr, false);
             if (imm == 0xFFFFFFFF) {
                 break;
             }
@@ -862,8 +862,8 @@ CPU.prototype.Step = function (steps) {
 
         case 0x24:
             // lbs 
-            rA = r[(ins >> 16) & 0x1F] + (((ins & 0xFFFF) << 16) >> 16);
-            imm = this.DTLBLookup(rA, false);
+            addr = (r[(ins >> 16) & 0x1F]>>0) + (((ins & 0xFFFF) << 16) >> 16);
+            imm = this.DTLBLookup(addr, false);
             if (imm == 0xFFFFFFFF) {
                 break;
             }
@@ -873,8 +873,8 @@ CPU.prototype.Step = function (steps) {
 
         case 0x25:
             // lhz 
-            rA = r[(ins >> 16) & 0x1F] + (((ins & 0xFFFF) << 16) >> 16);
-            imm = this.DTLBLookup(rA, false);
+            addr = (r[(ins >> 16) & 0x1F]>>0) + (((ins & 0xFFFF) << 16) >> 16);
+            imm = this.DTLBLookup(addr, false);
             if (imm == 0xFFFFFFFF) {
                 break;
             }
@@ -883,8 +883,8 @@ CPU.prototype.Step = function (steps) {
 
         case 0x26:
             // lhs 
-            rA = r[(ins >> 16) & 0x1F] + (((ins & 0xFFFF) << 16) >> 16);
-            imm = this.DTLBLookup(rA, false);
+            addr = (r[(ins >> 16) & 0x1F]>>0) + (((ins & 0xFFFF) << 16) >> 16);
+            imm = this.DTLBLookup(addr, false);
             if (imm == 0xFFFFFFFF) {
                 break;
             }
@@ -900,7 +900,7 @@ CPU.prototype.Step = function (steps) {
             rD = (ins >> 21) & 0x1F;
             r[rD] = rA + imm;
             this.SR_CY = r[rD] < rA;
-            this.SR_OV = ((rA ^ imm ^ -1) & (rA ^ r[rD])) & 0x80000000;
+            this.SR_OV = (((rA ^ imm ^ -1) & (rA ^ r[rD])) & 0x80000000)?true:false;
             //TODO overflow and carry
             // maybe wrong
             break;
@@ -1009,12 +1009,12 @@ CPU.prototype.Step = function (steps) {
         case 0x35:
             // sw
             imm = ((((ins >> 10) & 0xF800) | (ins & 0x7FF)) << 16) >> 16;
-            rA = r[(ins >> 16) & 0x1F] + imm;
-            if (rA & 0x3) {
+            addr = (r[(ins >> 16) & 0x1F]>>0) + imm;
+            if (addr & 0x3) {
                 DebugMessage("Error: not aligned memory access");
                 abort();
             }
-            imm = this.DTLBLookup(rA, true);
+            imm = this.DTLBLookup(addr, true);
             if (imm == 0xFFFFFFFF) {
                 break;
             }
@@ -1024,8 +1024,8 @@ CPU.prototype.Step = function (steps) {
         case 0x36:
             // sb
             imm = ((((ins >> 10) & 0xF800) | (ins & 0x7FF)) << 16) >> 16;
-            rA = r[(ins >> 16) & 0x1F] + imm;
-            imm = this.DTLBLookup(rA, true);
+            addr = (r[(ins >> 16) & 0x1F]>>0) + imm;
+            imm = this.DTLBLookup(addr, true);
             if (imm == 0xFFFFFFFF) {
                 break;
             }
@@ -1035,8 +1035,8 @@ CPU.prototype.Step = function (steps) {
         case 0x37:
             // sh
             imm = ((((ins >> 10) & 0xF800) | (ins & 0x7FF)) << 16) >> 16;
-            rA = r[(ins >> 16) & 0x1F] + imm;
-            imm = this.DTLBLookup(rA, true);
+            addr = (r[(ins >> 16) & 0x1F]>>0) + imm;
+            imm = this.DTLBLookup(addr, true);
             if (imm == 0xFFFFFFFF) {
                 break;
             }
@@ -1056,7 +1056,7 @@ CPU.prototype.Step = function (steps) {
                 }
                 r[rD] = rA + rB;
                 this.SR_CY = r[rD] < rA;
-                this.SR_OV = ((rA ^ rB ^ -1) & (rA ^ r[rD])) & 0x80000000;
+                this.SR_OV = (((rA ^ rB ^ -1) & (rA ^ r[rD])) & 0x80000000)?true:false;
                 //TODO overflow and carry
                 break;
             case 0x2:
@@ -1066,7 +1066,7 @@ CPU.prototype.Step = function (steps) {
                 }
                 r[rD] = rA - rB;
                 this.SR_CY = (rB > rA);
-                this.SR_OV = ((rA ^ rB) & (rA ^ r[rD])) & 0x80000000;
+                this.SR_OV = (((rA ^ rB) & (rA ^ r[rD])) & 0x80000000)?true:false;
                 //TODO overflow and carry
                 break;
             case 0x3:
@@ -1141,7 +1141,7 @@ CPU.prototype.Step = function (steps) {
             case 0x30a:
                 // divu (specification seems to be wrong)
                 this.SR_CY = rB == 0;
-                this.SR_OV = 0;
+                this.SR_OV = false;
                 if (!this.SR_CY) {
                     r[rD] = /*Math.floor*/(rA / rB);
                 }
@@ -1149,7 +1149,7 @@ CPU.prototype.Step = function (steps) {
             case 0x309:
                 // div (specification seems to be wrong)
                 this.SR_CY = rB == 0;
-                this.SR_OV = 0;
+                this.SR_OV = false;
                 if (!this.SR_CY) {
                     r[rD] = int32(rA) / int32(rB);
                 }
