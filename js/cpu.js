@@ -544,7 +544,7 @@ CPU.prototype.DTLBLookup = function (addr, write) {
     // nways are 1
     // nsets are 64
 
-    var setindex = (addr >>> 13) & 63; // check this values
+    var setindex = (addr >> 13) & 63; // check this values
     var tlmbr = this.group1[0x200 | setindex]; // match register
     if (((tlmbr & 1) == 0) || ((tlmbr & 0xFFF80000) != (addr & 0xFFF80000))) {
         // use tlb refill to fasten up
@@ -721,16 +721,16 @@ CPU.prototype.Step = function (steps) {
 
         // Get Instruction Fast version
         // short check if it is still the correct page
-        if (!((pc ^ this.pc) & 0xFFFFE000)) {
+        if (!((pc ^ this.pc) >> 13)) {
             pc = this.pc;
-            ins = int32mem[(this.instlb ^ pc) >>> 2];
+            ins = int32mem[(this.instlb ^ pc) >> 2];
         } else {
             pc = this.pc;
             if (!this.SR_IME) {
-                ins = int32mem[pc >>> 2];
+                ins = int32mem[pc >> 2];
                 this.instlb = 0x0;
             } else {
-                setindex = (pc >>> 13) & 63; // check this values
+                setindex = (pc >> 13) & 63; // check this values
                 tlmbr = group2[0x200 | setindex];
                 // test if tlmbr is valid
                 if (
@@ -747,7 +747,7 @@ CPU.prototype.Step = function (steps) {
                 tlbtr = group2[0x280 | setindex];
                 this.instlb = (tlbtr ^ tlmbr) & 0xFFFFE000;
                 //ins = int32mem[((tlbtr&0xFFFFE000) | (pc & 0x1FFF))>>>2];
-                ins = int32mem[(this.instlb ^ pc) >>> 2];
+                ins = int32mem[(this.instlb ^ pc) >> 2];
             }
         }
 
@@ -819,19 +819,19 @@ CPU.prototype.Step = function (steps) {
 
         case 0x9:
             // rfe
-            this.nextpc = this.GetSPR(SPR_EPCR_BASE);
+            this.nextpc = this.GetSPR(SPR_EPCR_BASE)>>0;
             this.SetFlags(this.GetSPR(SPR_ESR_BASE));
             break;
 
         case 0x11:
             // jr
-            this.jump = r[(ins >> 11) & 0x1F];
+            this.jump = r[(ins >> 11) & 0x1F]>>0;
             this.jumpdelayed = true;
             break;
 
         case 0x12:
             // jalr
-            this.jump = r[(ins >> 11) & 0x1F];
+            this.jump = r[(ins >> 11) & 0x1F]>>0;
             r[9] = this.nextpc + 4;
             this.jumpdelayed = true;
             break;
