@@ -7,7 +7,7 @@ function RAM(memsize) {
     //use typed arrays
     this.memsize = memsize;
     this.mem = new ArrayBuffer(memsize);
-    this.uint32mem = new Uint32Array(this.mem);
+    this.int32mem = new Int32Array(this.mem);
     this.uint8mem = new Uint8Array(this.mem);
 	this.devices = [];
 }
@@ -21,7 +21,7 @@ RAM.prototype.AddDevice = function(device, devaddr, devsize)
 
 RAM.prototype.ReadMemory32 = function(addr) {
     if (addr <= this.memsize - 4) {
-        return this.uint32mem[addr >>> 2];
+        return this.int32mem[addr >>> 2];
 	}
 	
     for(var i=0; i<this.devices.length; i++) {
@@ -36,7 +36,7 @@ RAM.prototype.ReadMemory32 = function(addr) {
 
 RAM.prototype.WriteMemory32 = function(addr, x) {
     if (addr <= this.memsize - 4) {
-        this.uint32mem[addr >>> 2] = x;
+        this.int32mem[addr >>> 2] = x;
         return;
     }
 	

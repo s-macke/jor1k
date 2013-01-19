@@ -102,7 +102,7 @@ System.prototype.ImageFinished = function(buffer) {
     var buffer8 = new Uint8Array(buffer);
     DebugMessage("Image loaded: " + buffer8.length + " bytes");
     for (var i = 0; i < buffer8.length; i++) this.ram.uint8mem[i] = buffer8[i];
-    for (var i = 0; i < buffer8.length >>> 2; i++) this.ram.uint32mem[i] = Swap32(this.ram.uint32mem[i]); // big endian to little endian
+    for (var i = 0; i < buffer8.length >>> 2; i++) this.ram.int32mem[i] = Swap32(this.ram.int32mem[i]); // big endian to little endian
     DebugMessage("Starting emulation");
     this.MainLoop();
 }

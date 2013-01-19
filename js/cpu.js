@@ -398,20 +398,20 @@ CPU.prototype.Exception = function (excepttype, addr) {
 // disassembled dtlb miss exception handler arch/openrisc/kernel/head.S, kernel dependent
 CPU.prototype.DTLBRefill = function (addr, nsets) {
 
-    if (this.ram.uint32mem[0x900 >>> 2] != 0x000005C0) {
+    if (this.ram.int32mem[0x900 >> 2] != 0x000005C0) {
         this.Exception(EXCEPT_DTLBMISS, addr);
         return false;
     }
     var r2, r3, r5, r4;
     r2 = addr;
     // get_current_PGD  using r3 and r5 
-    r3 = this.ram.uint32mem[0x004aa0a4 >>> 2]; // current pgd
+    r3 = this.ram.int32mem[0x004aa0a4 >> 2]; // current pgd
     r4 = (r2 >>> 0x18) << 2;
     r5 = r4 + r3;
 
     r4 = (0x40000000 + r5) & 0xFFFFFFFF; //r4 = phys(r5)
 
-    r3 = this.ram.uint32mem[r4 >>> 2];
+    r3 = this.ram.int32mem[r4 >>> 2];
 
     if (r3 == 0) {
         this.Exception(EXCEPT_DPF, addr);
@@ -425,13 +425,13 @@ CPU.prototype.DTLBRefill = function (addr, nsets) {
     r3 = 0xffffe000;
     // d_pmd_good:
 
-    r4 = this.ram.uint32mem[r4 >>> 2]; // get pmd value
+    r4 = this.ram.int32mem[r4 >>> 2]; // get pmd value
     r4 = r4 & r3; // & PAGE_MASK
     r5 = r2 >>> 0xD;
     r3 = r5 & 0x7FF;
     r3 = r3 << 0x2;
     r3 = r3 + r4;
-    r2 = this.ram.uint32mem[r3 >>> 2];
+    r2 = this.ram.int32mem[r3 >>> 2];
 
     if ((r2 & 1) == 0) {
         this.Exception(EXCEPT_DPF, addr);
@@ -463,7 +463,7 @@ CPU.prototype.DTLBRefill = function (addr, nsets) {
 // disassembled itlb miss exception handler arch/openrisc/kernel/head.S, kernel dependent
 CPU.prototype.ITLBRefill = function (addr, nsets) {
 
-    if (this.ram.uint32mem[0xA00 >>> 2] != 0x000005C2) {
+    if (this.ram.int32mem[0xA00 >>> 2] != 0x000005C2) {
         this.Exception(EXCEPT_ITLBMISS, addr);
         return false;
     }
@@ -474,12 +474,12 @@ CPU.prototype.ITLBRefill = function (addr, nsets) {
 
     r2 = addr;
     // get_current_PGD  using r3 and r5
-    r3 = this.ram.uint32mem[0x004aa0a4 >>> 2]; // current pgd
+    r3 = this.ram.int32mem[0x004aa0a4 >>> 2]; // current pgd
     r4 = (r2 >>> 0x18) << 2;
     r5 = r4 + r3;
 
     r4 = (0x40000000 + r5) & 0xFFFFFFFF; //r4 = phys(r5)
-    r3 = this.ram.uint32mem[r4 >>> 2];
+    r3 = this.ram.int32mem[r4 >>> 2];
 
     if (r3 == 0) {
         this.Exception(EXCEPT_DPF, addr);
@@ -492,13 +492,13 @@ CPU.prototype.ITLBRefill = function (addr, nsets) {
     r3 = 0xffffe000; // or 0xffffe3fa ??? PAGE_MASK
     //i_pmd_good:
 
-    r4 = this.ram.uint32mem[r4 >>> 2]; // get pmd value
+    r4 = this.ram.int32mem[r4 >>> 2]; // get pmd value
     r4 = r4 & r3; // & PAGE_MASK
     r5 = r2 >>> 0xD;
     r3 = r5 & 0x7FF;
     r3 = r3 << 0x2;
     r3 = r3 + r4;
-    r2 = this.ram.uint32mem[r3 >>> 2];
+    r2 = this.ram.int32mem[r3 >>> 2];
 
     if ((r2 & 1) == 0) {
         this.Exception(EXCEPT_IPF, addr);
@@ -655,7 +655,7 @@ CPU.prototype.Step = function (steps) {
     // local variables could be faster
     var r = this.r;
     var ram = this.ram;
-    var uint32mem = this.ram.uint32mem;
+    var int32mem = this.ram.int32mem;
     var group2 = this.group2;
 
     // to get the instruction
@@ -723,11 +723,11 @@ CPU.prototype.Step = function (steps) {
         // short check if it is still the correct page
         if (!((pc ^ this.pc) & 0xFFFFE000)) {
             pc = this.pc;
-            ins = uint32mem[(this.instlb ^ pc) >>> 2];
+            ins = int32mem[(this.instlb ^ pc) >>> 2];
         } else {
             pc = this.pc;
             if (!this.SR_IME) {
-                ins = uint32mem[pc >>> 2];
+                ins = int32mem[pc >>> 2];
                 this.instlb = 0x0;
             } else {
                 setindex = (pc >>> 13) & 63; // check this values
@@ -746,8 +746,8 @@ CPU.prototype.Step = function (steps) {
                 }
                 tlbtr = group2[0x280 | setindex];
                 this.instlb = (tlbtr ^ tlmbr) & 0xFFFFE000;
-                //ins = uint32mem[((tlbtr&0xFFFFE000) | (pc & 0x1FFF))>>>2];
-                ins = uint32mem[(this.instlb ^ pc) >>> 2];
+                //ins = int32mem[((tlbtr&0xFFFFE000) | (pc & 0x1FFF))>>>2];
+                ins = int32mem[(this.instlb ^ pc) >>> 2];
             }
         }
 
