@@ -545,7 +545,7 @@ CPU.prototype.DTLBLookup = function (addr, write) {
 
     var setindex = (addr >> 13) & 63; // check this values
     var tlmbr = this.group1[0x200 | setindex]; // match register
-    if (((tlmbr & 1) == 0) || ((tlmbr & 0xFFF80000) != (addr & 0xFFF80000))) {
+    if (((tlmbr & 1) == 0) || ((tlmbr >> 19) != (addr >> 19))) {
         // use tlb refill to fasten up
         if (this.DTLBRefill(addr, 64)) {
             tlmbr = this.group1[0x200 + setindex];
@@ -685,7 +685,7 @@ CPU.prototype.Step = function (steps) {
 
             // ---------- TICK ----------
             // timer enabled
-            if ((this.TTMR >>> 30) != 0) {
+            if ((this.TTMR >> 30) != 0) {
                 this.TTCR += 16;
                 //this.TTCR++;
                 //if ((this.TTCR & 0xFFFFFFF) >= (this.TTMR & 0xFFFFFFF)) {
@@ -735,7 +735,7 @@ CPU.prototype.Step = function (steps) {
                 // test if tlmbr is valid
                 if (
                     ((tlmbr & 1) == 0) || //test if valid
-                    ((tlmbr & 0xFFF80000) != (pc & 0xFFF80000))) {
+                    ((tlmbr >> 19) != (pc >> 19))) {
                     if (this.ITLBRefill(pc, 64)) {
                         tlmbr = group2[0x200 | setindex]; // reload the new value
                     } else {
