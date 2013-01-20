@@ -1,6 +1,7 @@
 # jor1k
 
-jor1k is an  OR1K emulator written in JavaScrip running Linux. It runs in common web browser.
+jor1k is a OpenRISC 1000 emulator written in JavaScript running Linux. It runs in almost any modern web browser. 
+Have a try and see if it runs in your browser by opening the [demo][project demo].
 
 ### Installation instruction
 Download the content from the repisotory and open index.html in your browser. Currently the program is tested under following browsers
