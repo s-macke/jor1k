@@ -723,22 +723,18 @@ CPU.prototype.Step = function (steps) {
 
         // Get Instruction Fast version
         // short check if it is still the correct page
-        if (!((pc ^ this.pc) >> 13)) {
-            pc = this.pc;
-            ins = int32mem[(this.instlb ^ pc) >> 2];
-        } else {
-            pc = this.pc;
-            if (!this.SR_IME) {
-                ins = int32mem[pc >> 2];
+        if ((pc ^ this.pc) >> 13) 
+        {            
+            if (!this.SR_IME) {                
                 this.instlb = 0x0;
             } else {
-                setindex = (pc >> 13) & 63; // check this values
+                setindex = (this.pc >> 13) & 63; // check this values
                 tlmbr = group2[0x200 | setindex];
                 // test if tlmbr is valid
                 if (
                     ((tlmbr & 1) == 0) || //test if valid
-                    ((tlmbr >> 19) != (pc >> 19))) {
-                    if (this.ITLBRefill(pc, 64)) {
+                    ((tlmbr >> 19) != (this.pc >> 19))) {
+                    if (this.ITLBRefill(this.pc, 64)) {
                         tlmbr = group2[0x200 | setindex]; // reload the new value
                     } else {
                         this.delayedins = false;
@@ -748,12 +744,12 @@ CPU.prototype.Step = function (steps) {
                 }
                 tlbtr = group2[0x280 | setindex];
                 //this.instlb = (tlbtr ^ tlmbr) & 0xFFFFE000;
-                this.instlb = ((tlbtr ^ tlmbr) >> 13) << 13;
-                //ins = int32mem[((tlbtr&0xFFFFE000) | (pc & 0x1FFF))>>>2];
-                ins = int32mem[(this.instlb ^ pc) >> 2];
+                this.instlb = ((tlbtr ^ tlmbr) >> 13) << 13;                
             }
         }
-
+        pc = this.pc;
+        ins = int32mem[(this.instlb ^ pc) >> 2];
+        
         /*
         // for the slow variant
         pc = this.pc;
