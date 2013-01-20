@@ -117,13 +117,7 @@ System.prototype.StatsLoop = function()
 }
 
 System.prototype.MainLoop = function() {
-    //var start = new Date().getTime();
-    //var start = Date.now();
     this.cpu.Step(0x10000);
     this.ips += 0x8000;
-    //var elapsed = Date.now() - start;
-    //var elapsed = new Date().getTime() - start;    
-    //DebugMessage(Math.floor(nins*1000/elapsed) + " ips");
-	//this.stats.innerHTML = Math.floor(nins*1000/elapsed) + " ips";
     window.setTimeout(this.MainLoop.bind(this), 0);
 }

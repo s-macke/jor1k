@@ -382,8 +382,6 @@ CPU.prototype.Exception = function (excepttype, addr) {
     case EXCEPT_TICK:
     case EXCEPT_INT:
         this.SetSPR(SPR_EPCR_BASE, this.pc - (this.delayedins ? 4 : 0));
-        this.pc = this.nextpc;
-        this.nextpc = this.pc + 4;
         break;
     case EXCEPT_SYSCALL:
         this.SetSPR(SPR_EPCR_BASE, this.pc + 4 - (this.delayedins ? 4 : 0));
@@ -705,6 +703,8 @@ CPU.prototype.Step = function (steps) {
             if ((this.SR_TEE) && (this.TTMR & (1 << 28))) {
                 this.Exception(EXCEPT_TICK, this.group0[SPR_EEAR_BASE]);
                 this.delayedins = false;
+                this.pc = this.nextpc;
+                this.nextpc = this.pc + 4;                
             } else {
                 // the interrupt is executed immediately. Saves one comparison
                 // test it here instead every time,
@@ -714,6 +714,8 @@ CPU.prototype.Step = function (steps) {
                     if ((this.PICSR) && (this.SR_IEE)) {
                         this.Exception(EXCEPT_INT, this.group0[SPR_EEAR_BASE]);
                         this.delayedins = false;
+                        this.pc = this.nextpc;
+                        this.nextpc = this.pc + 4;                        
                     }
                 }
             }
