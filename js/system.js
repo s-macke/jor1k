@@ -2,7 +2,7 @@
 // ------------------- SYSTEM ----------------------
 // -------------------------------------------------
 
-function System(termid, fbid) {
+function System(termid, fbid, statsid) {
     this.term = new Terminal(25, 80, termid);
     DebugMessage("Terminal initialized");
 
@@ -20,11 +20,15 @@ function System(termid, fbid) {
     this.ram.AddDevice(this.uartdev, 0x90000000, 0x7);
     this.ram.AddDevice(this.ethdev, 0x92000000, 0x1000);
     this.ram.AddDevice(this.fbdev, 0x91000000, 0x1000);
-    DebugMessage("Devices added");
+    DebugMessage("Devices added");    
 
     var terminput = new TerminalInput(this.uartdev);
     DebugMessage("Terminal input initialized");
-
+    
+    this.stats = document.getElementById(statsid);
+    this.ips = 0x0; // number of instructions executed in a second
+    window.setTimeout(this.StatsLoop.bind(this), 1000);
+	
     sys = this; // one global variable used by the abort() function
 }
 
@@ -87,8 +91,6 @@ System.prototype.PrintState = function() {
     }
 }
 
-
-
 System.prototype.LoadImageAndStart = function(filename) {
     DebugMessage("Loading Image");
     var str = "Loading Image from Web Server (5 MB). Please wait ..."
@@ -107,7 +109,21 @@ System.prototype.ImageFinished = function(buffer) {
     this.MainLoop();
 }
 
+System.prototype.StatsLoop = function()
+{
+    this.stats.innerHTML = Math.floor(this.ips) + " ips";
+    this.ips = 0;
+    window.setTimeout(this.StatsLoop.bind(this), 1000);
+}
+
 System.prototype.MainLoop = function() {
+    //var start = new Date().getTime();
+    //var start = Date.now();
     this.cpu.Step(0x10000);
+    this.ips += 0x8000;
+    //var elapsed = Date.now() - start;
+    //var elapsed = new Date().getTime() - start;    
+    //DebugMessage(Math.floor(nins*1000/elapsed) + " ips");
+	//this.stats.innerHTML = Math.floor(nins*1000/elapsed) + " ips";
     window.setTimeout(this.MainLoop.bind(this), 0);
 }

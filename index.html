@@ -21,6 +21,10 @@
                     </canvas>
 	            </td>
             </tr>
+			<tr>
+			<td id="stats">
+			</td>
+			</tr>
         </table>
         
         <table id="Debug">
@@ -59,7 +63,7 @@
 
 <script>
 function Start() {
-    var sys = new System("tty", "fb");
+    var sys = new System("tty", "fb", "stats");
     sys.LoadImageAndStart('bin/vmlinux.bin');
 }
 </script>
