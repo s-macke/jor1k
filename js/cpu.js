@@ -45,11 +45,11 @@ function CPU(ram) {
     this.group2 = new Int32Array(array);
 
     // define variables and initialize
-    this.pc = 0x0; // instruction pointer
-    this.nextpc = 0x0; // pointer to next instruction
+    this.pc = 0x0; // instruction pointer in multiples of four
+    this.nextpc = 0x0; // pointer to next instruction in multiples of four
     //this.ins=0x0; // current instruction to handle
 
-    this.jump = 0x0; // jump address
+    this.jump = 0x0; // jump address in multiples of four
     this.jumpdelayed = false; // if true then the jump is delayed by one instruction.
 
     this.delayedins = false; // the current instruction is an delayed instruction, one cycle before a jump
@@ -363,7 +363,7 @@ CPU.prototype.Exception = function (excepttype, addr) {
 
     this.instlb = 0x0;
 
-    this.nextpc = except_vector;
+    this.nextpc = except_vector>>2;
 
     switch (excepttype) {
     case EXCEPT_RESET:
@@ -376,15 +376,15 @@ CPU.prototype.Exception = function (excepttype, addr) {
     case EXCEPT_DTLBMISS:
     case EXCEPT_DPF:
     case EXCEPT_BUSERR:
-        this.SetSPR(SPR_EPCR_BASE, this.pc - (this.delayedins ? 4 : 0));
+        this.SetSPR(SPR_EPCR_BASE, (this.pc<<2) - (this.delayedins ? 4 : 0));
         break;
 
     case EXCEPT_TICK:
     case EXCEPT_INT:
-        this.SetSPR(SPR_EPCR_BASE, this.pc - (this.delayedins ? 4 : 0));
+        this.SetSPR(SPR_EPCR_BASE, (this.pc<<2) - (this.delayedins ? 4 : 0));
         break;
     case EXCEPT_SYSCALL:
-        this.SetSPR(SPR_EPCR_BASE, this.pc + 4 - (this.delayedins ? 4 : 0));
+        this.SetSPR(SPR_EPCR_BASE, (this.pc<<2) + 4 - (this.delayedins ? 4 : 0));
         break;
     default:
         DebugMessage("Error in Exception: exception type not supported");
@@ -612,7 +612,7 @@ CPU.prototype.GetInstruction = function (addr) {
                     return 0xFFFFFFFF;
         }
         */
-        this.Exception(EXCEPT_ITLBMISS, this.pc);
+        this.Exception(EXCEPT_ITLBMISS, this.pc<<2);
         return 0xFFFFFFFF;
     }
     // set lru
@@ -627,13 +627,13 @@ CPU.prototype.GetInstruction = function (addr) {
     if (this.SR_SM) {
         // check if user read enable is not set(URE)
         if (!(tlbtr & 0x40)) {
-            this.Exception(EXCEPT_IPF, this.pc);
+            this.Exception(EXCEPT_IPF, this.pc<<2);
             return 0xFFFFFFFF;
         }
     } else {
         // check if supervisor read enable is not set (SRE)
         if (!(tlbtr & 0x80)) {
-            this.Exception(EXCEPT_IPF, this.pc);
+            this.Exception(EXCEPT_IPF, this.pc<<2);
             return 0xFFFFFFFF;
         }
     }
@@ -674,7 +674,7 @@ CPU.prototype.Step = function (steps) {
             this.jumpdelayed = false;
             this.delayedins = true;
         } else {
-            this.nextpc += 4;
+            this.nextpc++;
             this.delayedins = false;
         }
 
@@ -704,7 +704,7 @@ CPU.prototype.Step = function (steps) {
                 this.Exception(EXCEPT_TICK, this.group0[SPR_EEAR_BASE]);
                 this.delayedins = false;
                 this.pc = this.nextpc;
-                this.nextpc = this.pc + 4;                
+                this.nextpc = this.pc + 1;                
             } else {
                 // the interrupt is executed immediately. Saves one comparison
                 // test it here instead every time,
@@ -715,7 +715,7 @@ CPU.prototype.Step = function (steps) {
                         this.Exception(EXCEPT_INT, this.group0[SPR_EEAR_BASE]);
                         this.delayedins = false;
                         this.pc = this.nextpc;
-                        this.nextpc = this.pc + 4;                        
+                        this.nextpc = this.pc + 1;                        
                     }
                 }
             }
@@ -723,18 +723,18 @@ CPU.prototype.Step = function (steps) {
 
         // Get Instruction Fast version
         // short check if it is still the correct page
-        if ((pc ^ this.pc) >> 13) 
+        if ((pc ^ this.pc) >> 11) 
         {
             if (!this.SR_IME) {
                 this.instlb = 0x0;
             } else {
-                setindex = (this.pc >> 13) & 63; // check this values
+                setindex = (this.pc >> 11) & 63; // check this values
                 tlmbr = group2[0x200 | setindex];
                 // test if tlmbr is valid
                 if (
                     ((tlmbr & 1) == 0) || //test if valid
-                    ((tlmbr >> 19) != (this.pc >> 19))) {
-                    if (this.ITLBRefill(this.pc, 64)) {
+                    ((tlmbr >> 19) != (this.pc >> 17))) {
+                    if (this.ITLBRefill(this.pc<<2, 64)) {
                         tlmbr = group2[0x200 | setindex]; // reload the new value
                     } else {
                         this.delayedins = false;
@@ -744,16 +744,16 @@ CPU.prototype.Step = function (steps) {
                 }
                 tlbtr = group2[0x280 | setindex];
                 //this.instlb = (tlbtr ^ tlmbr) & 0xFFFFE000;
-                this.instlb = ((tlbtr ^ tlmbr) >> 13) << 13;
+                this.instlb = ((tlbtr ^ tlmbr) >> 13) << 11;
             }
         }
         pc = this.pc;
-        ins = int32mem[(this.instlb ^ pc) >> 2];
+        ins = int32mem[(this.instlb ^ pc)];
         
         /*
         // for the slow variant
         pc = this.pc;
-        ins = this.GetInstruction(this.pc)
+        ins = this.GetInstruction(this.pc<<2)
         if (ins == 0xFFFFFFFF) {
             this.delayedins = false;
             this.jumpdelayed = false;
@@ -765,14 +765,14 @@ CPU.prototype.Step = function (steps) {
         switch ((ins >> 26)&0x3F) {
         case 0x0:
             // j
-            this.jump = pc + (((ins & 0x3FFFFFF) << 6) >> 4);
+            this.jump = pc + (((ins & 0x3FFFFFF) << 6) >> 6);
             this.jumpdelayed = true;
             break;
 
         case 0x1:
             // jal
-            this.jump = pc + (((ins & 0x3FFFFFF) << 6) >> 4);
-            r[9] = this.nextpc + 4;
+            this.jump = pc + (((ins & 0x3FFFFFF) << 6) >> 6);
+            r[9] = (this.nextpc<<2) + 4;
             this.jumpdelayed = true;
             break;
 
@@ -781,7 +781,7 @@ CPU.prototype.Step = function (steps) {
             if (this.SR_F) {
                 break;
             }
-            this.jump = pc + (((ins & 0x3FFFFFF) << 6) >> 4);
+            this.jump = pc + (((ins & 0x3FFFFFF) << 6) >> 6);
             this.jumpdelayed = true;
             break;
 
@@ -790,7 +790,7 @@ CPU.prototype.Step = function (steps) {
             if (!this.SR_F) {
                 break;
             }
-            this.jump = pc + (((ins & 0x3FFFFFF) << 6) >> 4);
+            this.jump = pc + (((ins & 0x3FFFFFF) << 6) >> 6);
             this.jumpdelayed = true;
             break;
 
@@ -818,20 +818,20 @@ CPU.prototype.Step = function (steps) {
 
         case 0x9:
             // rfe
-            this.nextpc = this.GetSPR(SPR_EPCR_BASE)>>0;
+            this.nextpc = this.GetSPR(SPR_EPCR_BASE)>>2;
             this.SetFlags(this.GetSPR(SPR_ESR_BASE));
             break;
 
         case 0x11:
             // jr
-            this.jump = r[(ins >> 11) & 0x1F]>>0;
+            this.jump = r[(ins >> 11) & 0x1F]>>2;
             this.jumpdelayed = true;
             break;
 
         case 0x12:
             // jalr
-            this.jump = r[(ins >> 11) & 0x1F]>>0;
-            r[9] = this.nextpc + 4;
+            this.jump = r[(ins >> 11) & 0x1F]>>2;
+            r[9] = (this.nextpc<<2) + 4;
             this.jumpdelayed = true;
             break;
 
@@ -896,8 +896,8 @@ CPU.prototype.Step = function (steps) {
             rA = r[(ins >> 16) & 0x1F];
             rindex = (ins >> 21) & 0x1F;
             r[rindex] = rA + imm;
-            this.SR_CY = r[rindex] < rA;
-            this.SR_OV = (((rA ^ imm ^ -1) & (rA ^ r[rindex])) & 0x80000000)?true:false;
+            //this.SR_CY = r[rindex] < rA;
+            //this.SR_OV = (((rA ^ imm ^ -1) & (rA ^ r[rindex])) & 0x80000000)?true:false;
             //TODO overflow and carry
             // maybe wrong
             break;
@@ -1052,8 +1052,8 @@ CPU.prototype.Step = function (steps) {
                     break;
                 }
                 r[rindex] = rA + rB;
-                this.SR_CY = r[rindex] < rA;
-                this.SR_OV = (((rA ^ rB ^ -1) & (rA ^ r[rindex])) & 0x80000000)?true:false;
+                //this.SR_CY = r[rindex] < rA;
+                //this.SR_OV = (((rA ^ rB ^ -1) & (rA ^ r[rindex])) & 0x80000000)?true:false;
                 //TODO overflow and carry
                 break;
             case 0x2:
@@ -1062,9 +1062,9 @@ CPU.prototype.Step = function (steps) {
                     break;
                 }
                 r[rindex] = rA - rB;
-                this.SR_CY = (rB > rA);
-                this.SR_OV = (((rA ^ rB) & (rA ^ r[rindex])) & 0x80000000)?true:false;
                 //TODO overflow and carry
+                //this.SR_CY = (rB > rA);
+                //this.SR_OV = (((rA ^ rB) & (rA ^ r[rindex])) & 0x80000000)?true:false;                
                 break;
             case 0x3:
                 // and
