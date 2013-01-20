@@ -536,7 +536,6 @@ CPU.prototype.DTLBLookup = function (addr, write) {
     if (!this.SR_DME) {
         return addr;
     }
-
     // pagesize is 8192 bytes
     // nways are 1
     // nsets are 64
@@ -648,7 +647,8 @@ CPU.prototype.Step = function (steps) {
     var rindex = 0x0;
     var rA = 0x0,
         rB = 0x0;
-    var addr = 0x0;
+    var vaddr = 0x0; // virtual address
+    var paddr = 0x0; // physical address
 
     // local variables could be faster
     var r = this.r;
@@ -724,8 +724,8 @@ CPU.prototype.Step = function (steps) {
         // Get Instruction Fast version
         // short check if it is still the correct page
         if ((pc ^ this.pc) >> 13) 
-        {            
-            if (!this.SR_IME) {                
+        {
+            if (!this.SR_IME) {
                 this.instlb = 0x0;
             } else {
                 setindex = (this.pc >> 13) & 63; // check this values
@@ -744,7 +744,7 @@ CPU.prototype.Step = function (steps) {
                 }
                 tlbtr = group2[0x280 | setindex];
                 //this.instlb = (tlbtr ^ tlmbr) & 0xFFFFE000;
-                this.instlb = ((tlbtr ^ tlmbr) >> 13) << 13;                
+                this.instlb = ((tlbtr ^ tlmbr) >> 13) << 13;
             }
         }
         pc = this.pc;
@@ -837,58 +837,56 @@ CPU.prototype.Step = function (steps) {
 
         case 0x21:
             // lwz 
-            addr = (r[(ins >> 16) & 0x1F]>>0) + (((ins & 0xFFFF) << 16) >> 16);
-            if ((addr & 3) != 0) {
+            vaddr = (r[(ins >> 16) & 0x1F]>>0) + (((ins & 0xFFFF) << 16) >> 16);
+            if ((vaddr & 3) != 0) {
                 DebugMessage("Error: no unaligned access allowed");
                 abort();
             }
-            imm = this.DTLBLookup(addr, false);
-            if (imm == -1) {
+            paddr = this.DTLBLookup(vaddr, false);
+            if (paddr == -1) {
                 break;
             }
-            r[(ins >> 21) & 0x1F] = ram.ReadMemory32(imm);
+            r[(ins >> 21) & 0x1F] = ram.ReadMemory32(paddr);
             break;
 
         case 0x23:
             // lbz
-            addr = (r[(ins >> 16) & 0x1F]>>0) + (((ins & 0xFFFF) << 16) >> 16);
-            imm = this.DTLBLookup(addr, false);
-            if (imm == -1) {
+            vaddr = (r[(ins >> 16) & 0x1F]>>0) + (((ins & 0xFFFF) << 16) >> 16);
+            paddr = this.DTLBLookup(vaddr, false);
+            if (paddr == -1) {
                 break;
             }
-            r[(ins >> 21) & 0x1F] = ram.ReadMemory8(imm);
+            r[(ins >> 21) & 0x1F] = ram.ReadMemory8(paddr);
             break;
 
         case 0x24:
             // lbs 
-            addr = (r[(ins >> 16) & 0x1F]>>0) + (((ins & 0xFFFF) << 16) >> 16);
-            imm = this.DTLBLookup(addr, false);
-            if (imm == -1) {
+            vaddr = (r[(ins >> 16) & 0x1F]>>0) + (((ins & 0xFFFF) << 16) >> 16);
+            paddr = this.DTLBLookup(vaddr, false);
+            if (paddr == -1) {
                 break;
             }
-            rindex = (ins >> 21) & 0x1F;
-            r[rindex] = ((ram.ReadMemory8(imm)) << 24) >> 24;
+            r[(ins >> 21) & 0x1F] = ((ram.ReadMemory8(paddr)) << 24) >> 24;
             break;
 
         case 0x25:
             // lhz 
-            addr = (r[(ins >> 16) & 0x1F]>>0) + (((ins & 0xFFFF) << 16) >> 16);
-            imm = this.DTLBLookup(addr, false);
-            if (imm == -1) {
+            vaddr = (r[(ins >> 16) & 0x1F]>>0) + (((ins & 0xFFFF) << 16) >> 16);
+            paddr = this.DTLBLookup(vaddr, false);
+            if (paddr == -1) {
                 break;
             }
-            r[(ins >> 21) & 0x1F] = ram.ReadMemory16(imm);
+            r[(ins >> 21) & 0x1F] = ram.ReadMemory16(paddr);
             break;
 
         case 0x26:
             // lhs 
-            addr = (r[(ins >> 16) & 0x1F]>>0) + (((ins & 0xFFFF) << 16) >> 16);
-            imm = this.DTLBLookup(addr, false);
-            if (imm == -1) {
+            vaddr = (r[(ins >> 16) & 0x1F]>>0) + (((ins & 0xFFFF) << 16) >> 16);
+            paddr = this.DTLBLookup(vaddr, false);
+            if (paddr == -1) {
                 break;
             }
-            rindex = (ins >> 21) & 0x1F;
-            r[rindex] = (ram.ReadMemory16(imm) << 16) >> 16;
+            r[(ins >> 21) & 0x1F] = (ram.ReadMemory16(paddr) << 16) >> 16;
             break;
 
 
@@ -1008,38 +1006,38 @@ CPU.prototype.Step = function (steps) {
         case 0x35:
             // sw
             imm = ((((ins >> 10) & 0xF800) | (ins & 0x7FF)) << 16) >> 16;
-            addr = (r[(ins >> 16) & 0x1F]>>0) + imm;
-            if (addr & 0x3) {
+            vaddr = (r[(ins >> 16) & 0x1F]>>0) + imm;
+            if (vaddr & 0x3) {
                 DebugMessage("Error: not aligned memory access");
                 abort();
             }
-            imm = this.DTLBLookup(addr, true);
-            if (imm == -1) {
+            paddr = this.DTLBLookup(vaddr, true);
+            if (paddr == -1) {
                 break;
             }
-            ram.WriteMemory32(imm, r[(ins >> 11) & 0x1F]);
+            ram.WriteMemory32(paddr, r[(ins >> 11) & 0x1F]);
             break;
 
         case 0x36:
             // sb
             imm = ((((ins >> 10) & 0xF800) | (ins & 0x7FF)) << 16) >> 16;
-            addr = (r[(ins >> 16) & 0x1F]>>0) + imm;
-            imm = this.DTLBLookup(addr, true);
-            if (imm == -1) {
+            vaddr = (r[(ins >> 16) & 0x1F]>>0) + imm;
+            paddr = this.DTLBLookup(vaddr, true);
+            if (paddr == -1) {
                 break;
             }
-            ram.WriteMemory8(imm, r[(ins >> 11) & 0x1F]);
+            ram.WriteMemory8(paddr, r[(ins >> 11) & 0x1F]);
             break;
 
         case 0x37:
             // sh
             imm = ((((ins >> 10) & 0xF800) | (ins & 0x7FF)) << 16) >> 16;
-            addr = (r[(ins >> 16) & 0x1F]>>0) + imm;
-            imm = this.DTLBLookup(addr, true);
-            if (imm == -1) {
+            vaddr = (r[(ins >> 16) & 0x1F]>>0) + imm;
+            paddr = this.DTLBLookup(vaddr, true);
+            if (paddr == -1) {
                 break;
             }
-            ram.WriteMemory16(imm, r[(ins >> 11) & 0x1F]);
+            ram.WriteMemory16(paddr, r[(ins >> 11) & 0x1F]);
             break;
 
         case 0x38:
