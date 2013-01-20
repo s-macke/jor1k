@@ -745,7 +745,8 @@ CPU.prototype.Step = function (steps) {
                     }
                 }
                 tlbtr = group2[0x280 | setindex];
-                this.instlb = (tlbtr ^ tlmbr) & 0xFFFFE000;
+                //this.instlb = (tlbtr ^ tlmbr) & 0xFFFFE000;
+                this.instlb = ((tlbtr ^ tlmbr) >> 13) << 13;
                 //ins = int32mem[((tlbtr&0xFFFFE000) | (pc & 0x1FFF))>>>2];
                 ins = int32mem[(this.instlb ^ pc) >> 2];
             }
@@ -1132,7 +1133,6 @@ CPU.prototype.Step = function (steps) {
                     var rBl = rB & 0xFFFF;
                     r[rindex] = r[rindex] & 0xFFFF0000 | ((rAl * rBl) & 0xFFFF);
                     var result = Number(int32(rA)) * Number(int32(rB));
-                    //r[rindex] = result;
                     this.SR_OV = (result < (-2147483647 - 1)) || (result > (2147483647));
                     var uresult = uint32(rA) * uint32(rB);
                     this.SR_CY = (uresult > (4294967295));
