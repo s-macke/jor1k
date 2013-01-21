@@ -49,9 +49,6 @@ function CPU(ram) {
     this.nextpc = 0x0; // pointer to next instruction in multiples of four
     //this.ins=0x0; // current instruction to handle
 
-    this.jump = 0x0; // jump address in multiples of four
-    this.jumpdelayed = false; // if true then the jump is delayed by one instruction.
-
     this.delayedins = false; // the current instruction is an delayed instruction, one cycle before a jump
     this.interrupt_pending = false;
 
@@ -90,6 +87,8 @@ function CPU(ram) {
     this.group0[SPR_DMMUCFGR] = 0x18; // 0 DTLB has one way and 64 sets
 
     this.Exception(EXCEPT_RESET, 0x0); // set pc values
+    this.pc = this.nextpc;
+    this.nextpc++;
 }
 
 CPU.prototype.SetFlags = function (x) {
@@ -662,21 +661,14 @@ CPU.prototype.Step = function (steps) {
     var tlbtr = 0x0;
     var pc = 0x0;
 
+    var jump = 0x0;
+
     // fast tlb, contains only the current page
     //var instlb = 0x0;
-
+    
     do {
         //this.clock++;
-        this.pc = this.nextpc;
 
-        if (this.jumpdelayed) {
-            this.nextpc = this.jump;
-            this.jumpdelayed = false;
-            this.delayedins = true;
-        } else {
-            this.nextpc++;
-            this.delayedins = false;
-        }
 
         // do this not so often
         if (!(steps & 7)) {
@@ -738,7 +730,8 @@ CPU.prototype.Step = function (steps) {
                         tlmbr = group2[0x200 | setindex]; // reload the new value
                     } else {
                         this.delayedins = false;
-                        this.jumpdelayed = false;
+                        this.pc = this.nextpc;
+                        this.nextpc++;
                         continue;
                     }
                 }
@@ -765,35 +758,41 @@ CPU.prototype.Step = function (steps) {
         switch ((ins >> 26)&0x3F) {
         case 0x0:
             // j
-            this.jump = pc + (((ins & 0x3FFFFFF) << 6) >> 6);
-            this.jumpdelayed = true;
-            break;
+            jump = pc + (((ins & 0x3FFFFFF) << 6) >> 6);
+            this.pc = this.nextpc;
+            this.nextpc = jump;
+            this.delayedins = true;
+            continue;
 
         case 0x1:
             // jal
-            this.jump = pc + (((ins & 0x3FFFFFF) << 6) >> 6);
+            jump = pc + (((ins & 0x3FFFFFF) << 6) >> 6);
             r[9] = (this.nextpc<<2) + 4;
-            this.jumpdelayed = true;
-            break;
+            this.pc = this.nextpc;
+            this.nextpc = jump;
+            this.delayedins = true;
+            continue;
 
         case 0x3:
             // bnf
             if (this.SR_F) {
                 break;
             }
-            this.jump = pc + (((ins & 0x3FFFFFF) << 6) >> 6);
-            this.jumpdelayed = true;
-            break;
-
+            jump = pc + (((ins & 0x3FFFFFF) << 6) >> 6);
+            this.pc = this.nextpc;
+            this.nextpc = jump;
+            this.delayedins = true;
+            continue;
         case 0x4:
             // bf
             if (!this.SR_F) {
                 break;
             }
-            this.jump = pc + (((ins & 0x3FFFFFF) << 6) >> 6);
-            this.jumpdelayed = true;
-            break;
-
+            jump = pc + (((ins & 0x3FFFFFF) << 6) >> 6);
+            this.pc = this.nextpc;
+            this.nextpc = jump;
+            this.delayedins = true;
+            continue;
         case 0x5:
             // nop
             break;
@@ -824,16 +823,19 @@ CPU.prototype.Step = function (steps) {
 
         case 0x11:
             // jr
-            this.jump = r[(ins >> 11) & 0x1F]>>2;
-            this.jumpdelayed = true;
-            break;
-
+            jump = r[(ins >> 11) & 0x1F]>>2;
+            this.pc = this.nextpc;
+            this.nextpc = jump;
+            this.delayedins = true;
+            continue;
         case 0x12:
             // jalr
-            this.jump = r[(ins >> 11) & 0x1F]>>2;
+            jump = r[(ins >> 11) & 0x1F]>>2;
             r[9] = (this.nextpc<<2) + 4;
-            this.jumpdelayed = true;
-            break;
+            this.pc = this.nextpc;
+            this.nextpc = jump;
+            this.delayedins = true;
+            continue;
 
         case 0x21:
             // lwz 
@@ -1212,6 +1214,10 @@ CPU.prototype.Step = function (steps) {
             abort();
             break;
         }
+
+        this.pc = this.nextpc;
+        this.nextpc++;
+        this.delayedins = false;
 
     } while (steps--); // main loop
 };

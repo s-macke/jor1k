@@ -50,9 +50,6 @@ System.prototype.PrintState = function() {
             hex8(this.cpu.r[i + 3]));
     }
     
-    if (this.cpu.jumpdelayed) {
-        DebugMessage("delayed jump");
-    }    
     if (this.cpu.delayedins) {
         DebugMessage("delayed instruction");
     }
