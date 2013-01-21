@@ -669,17 +669,16 @@ CPU.prototype.Step = function (steps) {
     do {
         //this.clock++;
 
-
         // do this not so often
-        if (!(steps & 7)) {
+        if (!(steps & 15)) {
 
             // ---------- TICK ----------
             // timer enabled
             if ((this.TTMR >> 30) != 0) {
-                this.TTCR += 16;
+                this.TTCR += 32;
                 //this.TTCR++;
                 //if ((this.TTCR & 0xFFFFFFF) >= (this.TTMR & 0xFFFFFFF)) {
-                if ((this.TTCR & 0xFFFFFF0) == (this.TTMR & 0xFFFFFF0)) {
+                if ((this.TTCR & 0xFFFFFE0) == (this.TTMR & 0xFFFFFE0)) {
                     if ((this.TTMR >>> 30) != 0x3) {
                         DebugMessage("Error: Timer mode other than continuous not supported");
                         abort();
@@ -796,8 +795,6 @@ CPU.prototype.Step = function (steps) {
         case 0x5:
             // nop
             break;
-
-
         case 0x6:
             // movhi or macrc
             rindex = (ins >> 21) & 0x1F;
@@ -1050,9 +1047,6 @@ CPU.prototype.Step = function (steps) {
             switch (ins & 0x3CF) {
             case 0x0:
                 // add signed 
-                if ((ins & 0x300) != 0) {
-                    break;
-                }
                 r[rindex] = rA + rB;
                 //this.SR_CY = r[rindex] < rA;
                 //this.SR_OV = (((rA ^ rB ^ -1) & (rA ^ r[rindex])) & 0x80000000)?true:false;
@@ -1060,9 +1054,6 @@ CPU.prototype.Step = function (steps) {
                 break;
             case 0x2:
                 // sub signed
-                if ((ins & 0x300) != 0) {
-                    break;
-                }
                 r[rindex] = rA - rB;
                 //TODO overflow and carry
                 //this.SR_CY = (rB > rA);
@@ -1070,23 +1061,14 @@ CPU.prototype.Step = function (steps) {
                 break;
             case 0x3:
                 // and
-                if ((ins & 0x300) != 0) {
-                    break;
-                }
                 r[rindex] = rA & rB;
                 break;
             case 0x4:
                 // or
-                if ((ins & 0x300) != 0) {
-                    break;
-                }
                 r[rindex] = rA | rB;
                 break;
             case 0x5:
                 // or
-                if ((ins & 0x300) != 0) {
-                    break;
-                }
                 r[rindex] = rA ^ rB;
                 break;
             case 0x8:
@@ -1120,7 +1102,7 @@ CPU.prototype.Step = function (steps) {
                         r[rindex] = i + 1;
                         break;
                     }
-				}
+                }
                 break;
             case 0x306:
                 // mul signed (specification seems to be wrong)
