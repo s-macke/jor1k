@@ -30,7 +30,7 @@ function CPU(ram) {
     this.ram = ram;
     //registers
     var array = new ArrayBuffer(32 << 2);
-    this.r = new Uint32Array(array);
+    this.r = new Int32Array(array);
 
     // special purpose registers
     array = new ArrayBuffer(1024 << 2);
@@ -836,7 +836,7 @@ CPU.prototype.Step = function (steps) {
 
         case 0x21:
             // lwz 
-            vaddr = (r[(ins >> 16) & 0x1F]>>0) + (((ins & 0xFFFF) << 16) >> 16);
+            vaddr = r[(ins >> 16) & 0x1F] + (((ins & 0xFFFF) << 16) >> 16);
             if ((vaddr & 3) != 0) {
                 DebugMessage("Error: no unaligned access allowed");
                 abort();
@@ -850,7 +850,7 @@ CPU.prototype.Step = function (steps) {
 
         case 0x23:
             // lbz
-            vaddr = (r[(ins >> 16) & 0x1F]>>0) + (((ins & 0xFFFF) << 16) >> 16);
+            vaddr = r[(ins >> 16) & 0x1F] + (((ins & 0xFFFF) << 16) >> 16);
             paddr = this.DTLBLookup(vaddr, false);
             if (paddr == -1) {
                 break;
@@ -860,7 +860,7 @@ CPU.prototype.Step = function (steps) {
 
         case 0x24:
             // lbs 
-            vaddr = (r[(ins >> 16) & 0x1F]>>0) + (((ins & 0xFFFF) << 16) >> 16);
+            vaddr = r[(ins >> 16) & 0x1F] + (((ins & 0xFFFF) << 16) >> 16);
             paddr = this.DTLBLookup(vaddr, false);
             if (paddr == -1) {
                 break;
@@ -870,7 +870,7 @@ CPU.prototype.Step = function (steps) {
 
         case 0x25:
             // lhz 
-            vaddr = (r[(ins >> 16) & 0x1F]>>0) + (((ins & 0xFFFF) << 16) >> 16);
+            vaddr = r[(ins >> 16) & 0x1F] + (((ins & 0xFFFF) << 16) >> 16);
             paddr = this.DTLBLookup(vaddr, false);
             if (paddr == -1) {
                 break;
@@ -880,7 +880,7 @@ CPU.prototype.Step = function (steps) {
 
         case 0x26:
             // lhs 
-            vaddr = (r[(ins >> 16) & 0x1F]>>0) + (((ins & 0xFFFF) << 16) >> 16);
+            vaddr = r[(ins >> 16) & 0x1F] + (((ins & 0xFFFF) << 16) >> 16);
             paddr = this.DTLBLookup(vaddr, false);
             if (paddr == -1) {
                 break;
@@ -921,7 +921,7 @@ CPU.prototype.Step = function (steps) {
 
         case 0x2D:
             // mfspr
-            r[(ins >> 21) & 0x1F] = this.GetSPR(r[(ins >> 16) & 0x1F] | (ins & 0xFFFF));
+            r[(ins >> 21) & 0x1F] = this.GetSPR((r[(ins >> 16) & 0x1F]>>>0) | (ins & 0xFFFF));
             break;
 
         case 0x2E:
@@ -936,7 +936,7 @@ CPU.prototype.Step = function (steps) {
                 break;
             case 2:
                 // srai
-                r[(ins >> 21) & 0x1F] = (r[(ins >> 16) & 0x1F] >> 0) >> (ins & 0x1F);
+                r[(ins >> 21) & 0x1F] = r[(ins >> 16) & 0x1F] >> (ins & 0x1F);
                 break;
             default:
                 DebugMessage("Error: opcode 2E function not implemented");
@@ -951,43 +951,43 @@ CPU.prototype.Step = function (steps) {
             switch ((ins >> 21) & 0x1F) {
             case 0x0:
                 // sfnei
-                this.SR_F = (r[(ins >> 16) & 0x1F] == (imm >>> 0)) ? true : false;
+                this.SR_F = (r[(ins >> 16) & 0x1F] == imm) ? true : false;
                 break;
             case 0x1:
                 // sfnei
-                this.SR_F = (r[(ins >> 16) & 0x1F] != (imm >>> 0)) ? true : false;
+                this.SR_F = (r[(ins >> 16) & 0x1F] != imm) ? true : false;
                 break;
             case 0x2:
                 // sfgtui
-                this.SR_F = (r[(ins >> 16) & 0x1F] > (imm >>> 0)) ? true : false;
+                this.SR_F = ((r[(ins >> 16) & 0x1F]>>>0) > (imm >>> 0)) ? true : false;
                 break;
             case 0x3:
                 // sfgeui
-                this.SR_F = (r[(ins >> 16) & 0x1F] >= (imm >>> 0)) ? true : false;
+                this.SR_F = ((r[(ins >> 16) & 0x1F]>>>0) >= (imm >>> 0)) ? true : false;
                 break;
             case 0x4:
                 // sfltui
-                this.SR_F = (r[(ins >> 16) & 0x1F] < (imm >>> 0)) ? true : false;
+                this.SR_F = ((r[(ins >> 16) & 0x1F]>>>0) < (imm >>> 0)) ? true : false;
                 break;
             case 0x5:
                 // sfleui
-                this.SR_F = (r[(ins >> 16) & 0x1F] <= (imm >>> 0)) ? true : false;
+                this.SR_F = ((r[(ins >> 16) & 0x1F]>>>0) <= (imm >>> 0)) ? true : false;
                 break;
             case 0xa:
                 // sfgtsi
-                this.SR_F = ((r[(ins >> 16) & 0x1F] >> 0) > (imm >> 0)) ? true : false;
+                this.SR_F = (r[(ins >> 16) & 0x1F] > imm) ? true : false;
                 break;
             case 0xb:
                 // sfgesi
-                this.SR_F = ((r[(ins >> 16) & 0x1F] >> 0) >= (imm >> 0)) ? true : false;
+                this.SR_F = (r[(ins >> 16) & 0x1F] >= imm) ? true : false;
                 break;
             case 0xc:
                 // sfltsi
-                this.SR_F = ((r[(ins >> 16) & 0x1F] >> 0) < (imm >> 0)) ? true : false;
+                this.SR_F = (r[(ins >> 16) & 0x1F] < imm) ? true : false;
                 break;
             case 0xd:
                 // sflesi
-                this.SR_F = ((r[(ins >> 16) & 0x1F] >> 0) <= (imm >> 0)) ? true : false;
+                this.SR_F = (r[(ins >> 16) & 0x1F] <= imm) ? true : false;
                 break;
             default:
                 DebugMessage("Error: sf...i not supported yet");
@@ -999,13 +999,13 @@ CPU.prototype.Step = function (steps) {
         case 0x30:
             // mtspr
             imm = (ins & 0x7FF) | ((ins >> 10) & 0xF800);
-            this.SetSPR(r[(ins >> 16) & 0x1F] | imm, r[(ins >> 11) & 0x1F]);
+            this.SetSPR((r[(ins >> 16) & 0x1F]>>>0) | imm, r[(ins >> 11) & 0x1F]>>>0);
             break;
 
         case 0x35:
             // sw
             imm = ((((ins >> 10) & 0xF800) | (ins & 0x7FF)) << 16) >> 16;
-            vaddr = (r[(ins >> 16) & 0x1F]>>0) + imm;
+            vaddr = r[(ins >> 16) & 0x1F] + imm;
             if (vaddr & 0x3) {
                 DebugMessage("Error: not aligned memory access");
                 abort();
@@ -1020,7 +1020,7 @@ CPU.prototype.Step = function (steps) {
         case 0x36:
             // sb
             imm = ((((ins >> 10) & 0xF800) | (ins & 0x7FF)) << 16) >> 16;
-            vaddr = (r[(ins >> 16) & 0x1F]>>0) + imm;
+            vaddr = r[(ins >> 16) & 0x1F] + imm;
             paddr = this.DTLBLookup(vaddr, true);
             if (paddr == -1) {
                 break;
@@ -1031,7 +1031,7 @@ CPU.prototype.Step = function (steps) {
         case 0x37:
             // sh
             imm = ((((ins >> 10) & 0xF800) | (ins & 0x7FF)) << 16) >> 16;
-            vaddr = (r[(ins >> 16) & 0x1F]>>0) + imm;
+            vaddr = r[(ins >> 16) & 0x1F] + imm;
             paddr = this.DTLBLookup(vaddr, true);
             if (paddr == -1) {
                 break;
@@ -1123,7 +1123,7 @@ CPU.prototype.Step = function (steps) {
                 this.SR_CY = rB == 0;
                 this.SR_OV = false;
                 if (!this.SR_CY) {
-                    r[rindex] = /*Math.floor*/(rA / rB);
+                    r[rindex] = /*Math.floor*/((rA>>>0) / (rB>>>0));
                 }
                 break;
             case 0x309:
@@ -1131,7 +1131,7 @@ CPU.prototype.Step = function (steps) {
                 this.SR_CY = rB == 0;
                 this.SR_OV = false;
                 if (!this.SR_CY) {
-                    r[rindex] = int32(rA) / int32(rB);
+                    r[rindex] = rA / rB;
                 }
 
                 break;
@@ -1155,35 +1155,35 @@ CPU.prototype.Step = function (steps) {
                 break;
             case 0x2:
                 // sfgtu
-                this.SR_F = (r[(ins >> 16) & 0x1F] > r[(ins >> 11) & 0x1F]) ? true : false;
+                this.SR_F = ((r[(ins >> 16) & 0x1F]>>>0) > (r[(ins >> 11) & 0x1F]>>>0)) ? true : false;
                 break;
             case 0x3:
                 // sfgeu
-                this.SR_F = (r[(ins >> 16) & 0x1F] >= r[(ins >> 11) & 0x1F]) ? true : false;
+                this.SR_F = ((r[(ins >> 16) & 0x1F]>>>0) >= (r[(ins >> 11) & 0x1F]>>>0)) ? true : false;
                 break;
             case 0x4:
                 // sfltu
-                this.SR_F = (r[(ins >> 16) & 0x1F] < r[(ins >> 11) & 0x1F]) ? true : false;
+                this.SR_F = ((r[(ins >> 16) & 0x1F]>>>0) < (r[(ins >> 11) & 0x1F]>>>0)) ? true : false;
                 break;
             case 0x5:
                 // sfleu
-                this.SR_F = (r[(ins >> 16) & 0x1F] <= r[(ins >> 11) & 0x1F]) ? true : false;
+                this.SR_F = ((r[(ins >> 16) & 0x1F]>>>0) <= (r[(ins >> 11) & 0x1F]>>>0)) ? true : false;
                 break;
             case 0xa:
                 // sfgts
-                this.SR_F = ((r[(ins >> 16) & 0x1F] >> 0) > (r[(ins >> 11) & 0x1F]) >> 0) ? true : false;
+                this.SR_F = (r[(ins >> 16) & 0x1F] > r[(ins >> 11) & 0x1F]) ? true : false;
                 break;
             case 0xb:
                 // sfges
-                this.SR_F = ((r[(ins >> 16) & 0x1F] >> 0) >= (r[(ins >> 11) & 0x1F]) >> 0) ? true : false;
+                this.SR_F = (r[(ins >> 16) & 0x1F] >= r[(ins >> 11) & 0x1F]) ? true : false;
                 break;
             case 0xc:
                 // sflts
-                this.SR_F = ((r[(ins >> 16) & 0x1F] >> 0) < (r[(ins >> 11) & 0x1F]) >> 0) ? true : false;
+                this.SR_F = (r[(ins >> 16) & 0x1F] < r[(ins >> 11) & 0x1F]) ? true : false;
                 break;
             case 0xd:
                 // sfles
-                this.SR_F = ((r[(ins >> 16) & 0x1F] >> 0) <= (r[(ins >> 11) & 0x1F]) >> 0) ? true : false;
+                this.SR_F = (r[(ins >> 16) & 0x1F] <= r[(ins >> 11) & 0x1F]) ? true : false;
                 break;
             default:
                 DebugMessage("Error: sf.... function supported yet");
