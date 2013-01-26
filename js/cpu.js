@@ -34,7 +34,7 @@ function CPU(ram) {
 
     // special purpose registers
     array = new ArrayBuffer(1024 << 2);
-    this.group0 = new Uint32Array(array);
+    this.group0 = new Int32Array(array);
 
     // data tlb
     array = new ArrayBuffer(1024 << 2);
@@ -110,7 +110,7 @@ CPU.prototype.SetFlags = function (x) {
     this.SR_EPH = (x & (1 << 14)) ? true : false;
     this.SR_FO = true;
     this.SR_SUMRA = (x & (1 << 16)) ? true : false;
-    this.SR_CID = (x >>> 28) & 0xF;
+    this.SR_CID = (x >> 28) & 0xF;
     if (this.SR_LEE) {
         DebugMessage("little endian not supported");
         abort();
@@ -189,7 +189,7 @@ CPU.prototype.ClearInterrupt = function (line) {
 
 CPU.prototype.SetSPR = function (idx, x) {
     var address = idx & 0x7FF;
-    var group = (idx >>> 11) & 0x1F;
+    var group = (idx >> 11) & 0x1F;
 
     switch (group) {
     case 1:
@@ -230,7 +230,7 @@ CPU.prototype.SetSPR = function (idx, x) {
         //tick timer
         switch (address) {
         case 0:
-            this.TTMR = x;
+            this.TTMR = x>>>0;
             if ((this.TTMR >>> 30) != 0x3) {
                 DebugMessage("Error in SetSPR: Timer mode other than continuous not supported");
                 abort();
@@ -278,7 +278,7 @@ CPU.prototype.SetSPR = function (idx, x) {
 
 CPU.prototype.GetSPR = function (idx) {
     var address = idx & 0x7FF;
-    var group = (idx >>> 11) & 0x1F;
+    var group = (idx >> 11) & 0x1F;
 
     switch (group) {
     case 9:
@@ -459,7 +459,7 @@ CPU.prototype.DTLBRefill = function (addr, nsets) {
 // disassembled itlb miss exception handler arch/openrisc/kernel/head.S, kernel dependent
 CPU.prototype.ITLBRefill = function (addr, nsets) {
 
-    if (this.ram.int32mem[0xA00 >>> 2] != 0x000005C2) {
+    if (this.ram.int32mem[0xA00 >> 2] != 0x000005C2) {
         this.Exception(EXCEPT_ITLBMISS, addr);
         return false;
     }
@@ -470,7 +470,7 @@ CPU.prototype.ITLBRefill = function (addr, nsets) {
 
     r2 = addr;
     // get_current_PGD  using r3 and r5
-    r3 = this.ram.int32mem[0x004aa0a4 >>> 2]; // current pgd
+    r3 = this.ram.int32mem[0x004aa0a4 >> 2]; // current pgd
     r4 = (r2 >>> 0x18) << 2;
     r5 = r4 + r3;
 
@@ -714,7 +714,7 @@ CPU.prototype.Step = function (steps) {
 
         // Get Instruction Fast version
         // short check if it is still the correct page
-        if ((pc ^ this.pc) >> 11) 
+        if ((pc ^ this.pc) >> 11)
         {
             if (!this.SR_IME) {
                 this.instlb = 0x0;
@@ -921,7 +921,7 @@ CPU.prototype.Step = function (steps) {
 
         case 0x2D:
             // mfspr
-            r[(ins >> 21) & 0x1F] = this.GetSPR((r[(ins >> 16) & 0x1F]>>>0) | (ins & 0xFFFF));
+            r[(ins >> 21) & 0x1F] = this.GetSPR(r[(ins >> 16) & 0x1F] | (ins & 0xFFFF));
             break;
 
         case 0x2E:
@@ -999,7 +999,7 @@ CPU.prototype.Step = function (steps) {
         case 0x30:
             // mtspr
             imm = (ins & 0x7FF) | ((ins >> 10) & 0xF800);
-            this.SetSPR((r[(ins >> 16) & 0x1F]>>>0) | imm, r[(ins >> 11) & 0x1F]>>>0);
+            this.SetSPR(r[(ins >> 16) & 0x1F] | imm, r[(ins >> 11) & 0x1F]);
             break;
 
         case 0x35:

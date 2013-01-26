@@ -115,6 +115,6 @@ System.prototype.StatsLoop = function()
 
 System.prototype.MainLoop = function() {
     this.cpu.Step(0x10000);
-    this.ips += 0x8000;
+    this.ips += 0x10000;
     window.setTimeout(this.MainLoop.bind(this), 0);
 }
