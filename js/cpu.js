@@ -755,7 +755,7 @@ CPU.prototype.Step = function (steps) {
         switch ((ins >> 26)&0x3F) {
         case 0x0:
             // j
-            jump = this.pc + (((ins & 0x3FFFFFF) << 6) >> 6);
+            jump = this.pc + ((ins << 6) >> 6);
             this.pc = this.nextpc;
             this.nextpc = jump;
             this.delayedins = true;
@@ -763,7 +763,7 @@ CPU.prototype.Step = function (steps) {
 
         case 0x1:
             // jal
-            jump = this.pc + (((ins & 0x3FFFFFF) << 6) >> 6);
+            jump = this.pc + ((ins << 6) >> 6);
             r[9] = (this.nextpc<<2) + 4;
             this.pc = this.nextpc;
             this.nextpc = jump;
@@ -775,7 +775,7 @@ CPU.prototype.Step = function (steps) {
             if (this.SR_F) {
                 break;
             }
-            jump = this.pc + (((ins & 0x3FFFFFF) << 6) >> 6);
+            jump = this.pc + ((ins << 6) >> 6);
             this.pc = this.nextpc;
             this.nextpc = jump;
             this.delayedins = true;
@@ -785,7 +785,7 @@ CPU.prototype.Step = function (steps) {
             if (!this.SR_F) {
                 break;
             }
-            jump = this.pc + (((ins & 0x3FFFFFF) << 6) >> 6);
+            jump = this.pc + ((ins << 6) >> 6);
             this.pc = this.nextpc;
             this.nextpc = jump;
             this.delayedins = true;
@@ -834,7 +834,7 @@ CPU.prototype.Step = function (steps) {
 
         case 0x21:
             // lwz 
-            vaddr = r[(ins >> 16) & 0x1F] + (((ins & 0xFFFF) << 16) >> 16);
+            vaddr = r[(ins >> 16) & 0x1F] + ((ins << 16) >> 16);
             if ((vaddr & 3) != 0) {
                 DebugMessage("Error: no unaligned access allowed");
                 abort();
@@ -848,7 +848,7 @@ CPU.prototype.Step = function (steps) {
 
         case 0x23:
             // lbz
-            vaddr = r[(ins >> 16) & 0x1F] + (((ins & 0xFFFF) << 16) >> 16);
+            vaddr = r[(ins >> 16) & 0x1F] + ((ins << 16) >> 16);
             paddr = this.DTLBLookup(vaddr, false);
             if (paddr == -1) {
                 break;
@@ -858,7 +858,7 @@ CPU.prototype.Step = function (steps) {
 
         case 0x24:
             // lbs 
-            vaddr = r[(ins >> 16) & 0x1F] + (((ins & 0xFFFF) << 16) >> 16);
+            vaddr = r[(ins >> 16) & 0x1F] + ((ins << 16) >> 16);
             paddr = this.DTLBLookup(vaddr, false);
             if (paddr == -1) {
                 break;
@@ -868,7 +868,7 @@ CPU.prototype.Step = function (steps) {
 
         case 0x25:
             // lhz 
-            vaddr = r[(ins >> 16) & 0x1F] + (((ins & 0xFFFF) << 16) >> 16);
+            vaddr = r[(ins >> 16) & 0x1F] + ((ins << 16) >> 16);
             paddr = this.DTLBLookup(vaddr, false);
             if (paddr == -1) {
                 break;
@@ -878,7 +878,7 @@ CPU.prototype.Step = function (steps) {
 
         case 0x26:
             // lhs 
-            vaddr = r[(ins >> 16) & 0x1F] + (((ins & 0xFFFF) << 16) >> 16);
+            vaddr = r[(ins >> 16) & 0x1F] + ((ins << 16) >> 16);
             paddr = this.DTLBLookup(vaddr, false);
             if (paddr == -1) {
                 break;
@@ -889,7 +889,7 @@ CPU.prototype.Step = function (steps) {
 
         case 0x27:
             // addi signed 
-            imm = ((ins & 0xFFFF) << 16) >> 16;
+            imm = (ins << 16) >> 16;
             rA = r[(ins >> 16) & 0x1F];
             rindex = (ins >> 21) & 0x1F;
             r[rindex] = rA + imm;
@@ -911,10 +911,9 @@ CPU.prototype.Step = function (steps) {
             break;
 
         case 0x2B:
-            // xori
-            imm = ((ins & 0xFFFF) << 16) >> 16;
+            // xori            
             rA = r[(ins >> 16) & 0x1F];
-            r[(ins >> 21) & 0x1F] = rA ^ (((ins & 0xFFFF) << 16) >> 16);
+            r[(ins >> 21) & 0x1F] = rA ^ ((ins << 16) >> 16);
             break;
 
         case 0x2D:
@@ -945,7 +944,7 @@ CPU.prototype.Step = function (steps) {
 
         case 0x2F:
             // sf...i
-            imm = ((ins & 0xFFFF) << 16) >> 16;
+            imm = (ins << 16) >> 16;
             switch ((ins >> 21) & 0x1F) {
             case 0x0:
                 // sfnei
