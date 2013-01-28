@@ -28,7 +28,7 @@ function System(termid, fbid, statsid) {
     this.stats = document.getElementById(statsid);
     this.ips = 0x0; // number of instructions executed in a second
     window.setTimeout(this.StatsLoop.bind(this), 1000);
-	
+
     sys = this; // one global variable used by the abort() function
 }
 

@@ -659,7 +659,7 @@ CPU.prototype.Step = function (steps) {
     var setindex = 0x0;
     var tlmbr = 0x0;
     var tlbtr = 0x0;
-    var pc = 0x0;
+    var checkpc = 0x0; // used to determine if we are still on the same page
 
     var jump = 0x0;
 
@@ -712,10 +712,10 @@ CPU.prototype.Step = function (steps) {
             }
         }
 
-        // Get Instruction Fast version
-        // short check if it is still the correct page
-        if ((pc ^ this.pc) >> 11)
+        // Get Instruction Fast version        
+        if ((checkpc ^ this.pc) >> 11) // short check if it is still the correct page
         {
+            checkpc = this.pc; // save the new page, lower 11 bits are ignored
             if (!this.SR_IME) {
                 this.instlb = 0x0;
             } else {
@@ -729,8 +729,7 @@ CPU.prototype.Step = function (steps) {
                         tlmbr = group2[0x200 | setindex]; // reload the new value
                     } else {
                         this.delayedins = false;
-                        this.pc = this.nextpc;
-                        this.nextpc++;
+                        this.pc = this.nextpc++;
                         continue;
                     }
                 }
@@ -738,9 +737,8 @@ CPU.prototype.Step = function (steps) {
                 //this.instlb = (tlbtr ^ tlmbr) & 0xFFFFE000;
                 this.instlb = ((tlbtr ^ tlmbr) >> 13) << 11;
             }
-        }
-        pc = this.pc;
-        ins = int32mem[(this.instlb ^ pc)];
+        }        
+        ins = int32mem[(this.instlb ^ this.pc)];
         
         /*
         // for the slow variant
@@ -757,7 +755,7 @@ CPU.prototype.Step = function (steps) {
         switch ((ins >> 26)&0x3F) {
         case 0x0:
             // j
-            jump = pc + (((ins & 0x3FFFFFF) << 6) >> 6);
+            jump = this.pc + (((ins & 0x3FFFFFF) << 6) >> 6);
             this.pc = this.nextpc;
             this.nextpc = jump;
             this.delayedins = true;
@@ -765,7 +763,7 @@ CPU.prototype.Step = function (steps) {
 
         case 0x1:
             // jal
-            jump = pc + (((ins & 0x3FFFFFF) << 6) >> 6);
+            jump = this.pc + (((ins & 0x3FFFFFF) << 6) >> 6);
             r[9] = (this.nextpc<<2) + 4;
             this.pc = this.nextpc;
             this.nextpc = jump;
@@ -777,7 +775,7 @@ CPU.prototype.Step = function (steps) {
             if (this.SR_F) {
                 break;
             }
-            jump = pc + (((ins & 0x3FFFFFF) << 6) >> 6);
+            jump = this.pc + (((ins & 0x3FFFFFF) << 6) >> 6);
             this.pc = this.nextpc;
             this.nextpc = jump;
             this.delayedins = true;
@@ -787,7 +785,7 @@ CPU.prototype.Step = function (steps) {
             if (!this.SR_F) {
                 break;
             }
-            jump = pc + (((ins & 0x3FFFFFF) << 6) >> 6);
+            jump = this.pc + (((ins & 0x3FFFFFF) << 6) >> 6);
             this.pc = this.nextpc;
             this.nextpc = jump;
             this.delayedins = true;
@@ -1197,8 +1195,7 @@ CPU.prototype.Step = function (steps) {
             break;
         }
 
-        this.pc = this.nextpc;
-        this.nextpc++;
+        this.pc = this.nextpc++;
         this.delayedins = false;
 
     } while (steps--); // main loop
