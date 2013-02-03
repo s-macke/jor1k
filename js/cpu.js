@@ -612,7 +612,7 @@ CPU.prototype.GetInstruction = function (addr) {
         }
         */
         this.Exception(EXCEPT_ITLBMISS, this.pc<<2);
-        return 0xFFFFFFFF;
+        return -1;
     }
     // set lru
     if (tlmbr & 0xC0) {
@@ -633,7 +633,7 @@ CPU.prototype.GetInstruction = function (addr) {
         // check if supervisor read enable is not set (SRE)
         if (!(tlbtr & 0x80)) {
             this.Exception(EXCEPT_IPF, this.pc<<2);
-            return 0xFFFFFFFF;
+            return -1;
         }
     }
     return this.ram.ReadMemory32(uint32((tlbtr & 0xFFFFE000) | (addr & 0x1FFF)));
@@ -742,14 +742,12 @@ CPU.prototype.Step = function (steps) {
         
         /*
         // for the slow variant
-        pc = this.pc;
         ins = this.GetInstruction(this.pc<<2)
-        if (ins == 0xFFFFFFFF) {
+        if (ins == -1) {
             this.delayedins = false;
-            this.jumpdelayed = false;
+            this.pc = this.nextpc++;
             continue;
         }
-        this.ins = ins; // copy for Status of cpu
         */
 
         switch ((ins >> 26)&0x3F) {
