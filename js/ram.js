@@ -72,7 +72,7 @@ RAM.prototype.ReadMemory8 = function(addr) {
             return this.devices[i].ReadReg8(uaddr - this.devices[i].deviceaddr);
         }
     }
-    DebugMessage("Error in ReadMemory8: RAM region is not accessible");
+    DebugMessage("Error in ReadMemory8: RAM region " + hex8(addr) + " is not accessible");
     abort();    
 };
 
@@ -102,14 +102,14 @@ RAM.prototype.WriteMemory8 = function(addr, x) {
             return;
         }
     }
-    DebugMessage("Error in WriteMemory8: RAM region is not accessible");
+    DebugMessage("Error in WriteMemory8: RAM region " + hex8(addr) + " is not accessible");
     abort();
     // Exception(EXCEPT_BUSERR, addr);    
 };
 
 RAM.prototype.ReadMemory16 = function(addr) {
     if (addr < 0) {
-        DebugMessage("Error in ReadMemory16: RAM region is not accessible");
+        DebugMessage("Error in ReadMemory16: RAM region " + hex8(addr) + " is not accessible");
         abort();
     }
     // consider that the data is saved in little endian	
@@ -123,7 +123,7 @@ RAM.prototype.ReadMemory16 = function(addr) {
 
 RAM.prototype.WriteMemory16 = function(addr, x) {
     if (addr < 0) {
-        DebugMessage("Error in WriteMemory16: RAM region is not accessible");
+        DebugMessage("Error in WriteMemory16: RAM region " + hex8(addr) + " is not accessible");
         abort();
     }
     // consider that the data is saved in little endian	

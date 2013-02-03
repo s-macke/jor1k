@@ -28,7 +28,8 @@ function uint32(val) {
 }
 
 function hex8(x) {
-    return ("0x" + ("00000000" + x.toString(16)).substr(-8).toUpperCase());
+    var val = uint32(x);
+    return ("0x" + ("00000000" + val.toString(16)).substr(-8).toUpperCase());
 }
 
 function CopyBinary(to, from, size, buffersrc, bufferdest) {
