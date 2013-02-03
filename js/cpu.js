@@ -271,7 +271,7 @@ CPU.prototype.SetSPR = function (idx, x) {
         this.group0[SPR_ESR_BASE] = x;
         break;
     default:
-        DebugMessage("Error in SetSPR: address not found");
+        DebugMessage("Error in SetSPR: address " + hex8(address) + " not found");
         abort();
     }
 };
@@ -604,15 +604,15 @@ CPU.prototype.GetInstruction = function (addr) {
     if (
         ((tlmbr & 1) == 0) || //test if valid
         ((tlmbr & 0xFFF80000) != (addr & 0xFFF80000))) {
-        /*
+        
         if (this.ITLBRefill(addr, 64)) {
                     tlmbr = this.group2[0x200 | setindex];
                 } else {
-                    return 0xFFFFFFFF;
+                    return -1;
         }
-        */
-        this.Exception(EXCEPT_ITLBMISS, this.pc<<2);
-        return -1;
+        
+        //this.Exception(EXCEPT_ITLBMISS, this.pc<<2);
+        //return -1;
     }
     // set lru
     if (tlmbr & 0xC0) {
