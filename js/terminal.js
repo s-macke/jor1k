@@ -40,7 +40,7 @@ function Terminal(rows, columns, elemId) {
 
 Terminal.prototype.Blink = function() {
     this.cursorvisible = !this.cursorvisible;
-	this.PlotRow(this.cursory);
+    this.PlotRow(this.cursory);
     window.setTimeout(this.Blink.bind(this), 500); // update every half second
 };
 
@@ -123,7 +123,7 @@ Terminal.prototype.LineFeed = function() {
 };
 
 Terminal.prototype.ChangeCursor = function(Numbers) {
-	switch (Numbers.length) {
+    switch (Numbers.length) {
     case 0:
         this.cursorx = 0;
         this.cursory = 0;
@@ -273,9 +273,9 @@ Terminal.prototype.HandleEscapeSequence = function() {
      if (this.cursorvisible) {
         this.PlotRow(this.cursory);
         if (this.cursory != oldcursory) {
-		    this.PlotRow(oldcursory);
+            this.PlotRow(oldcursory);
         }
-	}
+    }
 };
 
 Terminal.prototype.PutChar = function(c) {

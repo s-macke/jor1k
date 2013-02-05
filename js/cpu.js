@@ -389,6 +389,7 @@ CPU.prototype.Exception = function (excepttype, addr) {
         DebugMessage("Error in Exception: exception type not supported");
         abort();
     }
+    this.delayedins = false;
     this.SR_IME = false;
 };
 
@@ -550,7 +551,7 @@ CPU.prototype.DTLBLookup = function (addr, write) {
         }
         // slow version
         // this.Exception(EXCEPT_DTLBMISS, addr);
-        // return 0xFFFFFFFF;
+        // return -1;
     }
     /* skipped this check
         // set lru 
@@ -627,7 +628,7 @@ CPU.prototype.GetInstruction = function (addr) {
         // check if user read enable is not set(URE)
         if (!(tlbtr & 0x40)) {
             this.Exception(EXCEPT_IPF, this.pc<<2);
-            return 0xFFFFFFFF;
+            return -1;
         }
     } else {
         // check if supervisor read enable is not set (SRE)
@@ -693,9 +694,7 @@ CPU.prototype.Step = function (steps) {
             // check if pending and check if interrupt must be triggered
             if ((this.SR_TEE) && (this.TTMR & (1 << 28))) {
                 this.Exception(EXCEPT_TICK, this.group0[SPR_EEAR_BASE]);
-                this.delayedins = false;
-                this.pc = this.nextpc;
-                this.nextpc = this.pc + 1;                
+                this.pc = this.nextpc++;                
             } else {
                 // the interrupt is executed immediately. Saves one comparison
                 // test it here instead every time,
@@ -704,9 +703,7 @@ CPU.prototype.Step = function (steps) {
                     // check again because there could be another exception during this one cycle
                     if ((this.PICSR) && (this.SR_IEE)) {
                         this.Exception(EXCEPT_INT, this.group0[SPR_EEAR_BASE]);
-                        this.delayedins = false;
-                        this.pc = this.nextpc;
-                        this.nextpc = this.pc + 1;                        
+                        this.pc = this.nextpc++;
                     }
                 }
             }
@@ -728,7 +725,6 @@ CPU.prototype.Step = function (steps) {
                     if (this.ITLBRefill(this.pc<<2, 64)) {
                         tlmbr = group2[0x200 | setindex]; // reload the new value
                     } else {
-                        this.delayedins = false;
                         this.pc = this.nextpc++;
                         continue;
                     }
@@ -744,7 +740,6 @@ CPU.prototype.Step = function (steps) {
         // for the slow variant
         ins = this.GetInstruction(this.pc<<2)
         if (ins == -1) {
-            this.delayedins = false;
             this.pc = this.nextpc++;
             continue;
         }
