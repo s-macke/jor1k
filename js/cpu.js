@@ -160,14 +160,11 @@ CPU.prototype.CheckForInterrupt = function () {
         return;
     }
     if (this.PICMR & this.PICSR) {
-        if (this.PICSR) {
             this.interrupt_pending = true;
             /*
                     // Do it here. Save one comparison in the main loop
                     this.Exception(EXCEPT_INT, this.group0[SPR_EEAR_BASE]);
-                    this.delayedins = false;
             */
-        }
     }
 };
 
@@ -699,9 +696,10 @@ CPU.prototype.Step = function (steps) {
                 // the interrupt is executed immediately. Saves one comparison
                 // test it here instead every time,
                 if (this.interrupt_pending) {
-                    this.interrupt_pending = false;
+                    
                     // check again because there could be another exception during this one cycle
                     if ((this.PICSR) && (this.SR_IEE)) {
+                        this.interrupt_pending = false;
                         this.Exception(EXCEPT_INT, this.group0[SPR_EEAR_BASE]);
                         this.pc = this.nextpc++;
                     }
