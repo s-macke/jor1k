@@ -29,7 +29,6 @@ RAM.prototype.ReadMemory32 = function(addr) {
             return this.devices[i].ReadReg32(uaddr - this.devices[i].deviceaddr);
         }
     }
-
     DebugMessage("Error in ReadMemory32: RAM region " + hex8(addr) + " is not accessible");
     abort();
 };
@@ -108,31 +107,47 @@ RAM.prototype.WriteMemory8 = function(addr, x) {
 };
 
 RAM.prototype.ReadMemory16 = function(addr) {
-    if (addr < 0) {
-        DebugMessage("Error in ReadMemory16: RAM region " + hex8(addr) + " is not accessible");
-        abort();
+    if (addr >= 0) {
+        // consider that the data is saved in little endian	
+        if (addr & 2) {
+            return (this.uint8mem[(addr & ~3) | 1] << 8) | this.uint8mem[(addr & ~3)];
+        }
+        else {
+            return (this.uint8mem[(addr & ~3) | 3] << 8) | this.uint8mem[(addr & ~3) | 2];
+        }
     }
-    // consider that the data is saved in little endian	
-    if (addr & 2) {
-        return (this.uint8mem[(addr & ~3) | 1] << 8) | this.uint8mem[(addr & ~3)];
+    var uaddr = uint32(addr);
+    for(var i=0; i<this.devices.length; i++) {
+        if ((uaddr >= this.devices[i].deviceaddr) && (uaddr < (this.devices[i].deviceaddr+this.devices[i].devicesize))) {
+            return this.devices[i].ReadReg16(uaddr - this.devices[i].deviceaddr);
+        }
     }
-    else {
-        return (this.uint8mem[(addr & ~3) | 3] << 8) | this.uint8mem[(addr & ~3) | 2];
-    }
+    DebugMessage("Error in ReadMemory16: RAM region " + hex8(addr) + " is not accessible");
+    abort();
 };
 
 RAM.prototype.WriteMemory16 = function(addr, x) {
-    if (addr < 0) {
-        DebugMessage("Error in WriteMemory16: RAM region " + hex8(addr) + " is not accessible");
-        abort();
+    if (addr >= 0) {
+        // consider that the data is saved in little endian	
+        if (addr & 2) {
+            this.uint8mem[(addr & ~3) | 1] = (x >> 8) & 0xFF;
+            this.uint8mem[(addr & ~3)] = x & 0xFF;
+            return;
+        }
+        else {
+            this.uint8mem[(addr & ~3) | 3] = (x >> 8) & 0xFF;
+            this.uint8mem[(addr & ~3) | 2] = x & 0xFF;
+            return;
+        }
     }
-    // consider that the data is saved in little endian	
-    if (addr & 2) {
-        this.uint8mem[(addr & ~3) | 1] = (x >> 8) & 0xFF;
-        this.uint8mem[(addr & ~3)] = x & 0xFF;
+    var uaddr = uint32(addr);
+    for(var i=0; i<this.devices.length; i++) {
+        if ((uaddr >= this.devices[i].deviceaddr) && (uaddr < (this.devices[i].deviceaddr+this.devices[i].devicesize))) {
+            this.devices[i].WriteReg16(uaddr - this.devices[i].deviceaddr, x);
+            return;
+        }
     }
-    else {
-        this.uint8mem[(addr & ~3) | 3] = (x >> 8) & 0xFF;
-        this.uint8mem[(addr & ~3) | 2] = x & 0xFF;
-    }
+    DebugMessage("Error in WriteMemory16: RAM region " + hex8(addr) + " is not accessible");
+    abort();
+
 };
