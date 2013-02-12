@@ -15,8 +15,10 @@ function System(termid, fbid, statsid) {
     this.uartdev = new UARTDev(this.term, this.cpu);
     this.ethdev = new EthDev();
     this.fbdev = new FBDev(fbid, this.ram);
+    this.atadev = new ATADev(this.cpu);
     DebugMessage("Devices initialized");
 
+    this.ram.AddDevice(this.atadev, 0x9e000000, 0x1000);
     this.ram.AddDevice(this.uartdev, 0x90000000, 0x7);
     this.ram.AddDevice(this.ethdev, 0x92000000, 0x1000);
     this.ram.AddDevice(this.fbdev, 0x91000000, 0x1000);
