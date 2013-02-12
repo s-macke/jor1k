@@ -17,6 +17,10 @@ function Swap32(val) {
     return ((val & 0xFF) << 24) | ((val & 0xFF00) << 8) | ((val >>> 8) & 0xFF00) | ((val >>> 24) & 0xFF);
 }
 
+function Swap16(val) {
+    return ((val & 0xFF) << 8) | ((val >> 8) & 0xFF);
+}
+
 // cast an integer so a signed integer
 function int32(val) {
     return (val >> 0);
