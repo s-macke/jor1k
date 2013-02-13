@@ -91,6 +91,13 @@ function CPU(ram) {
     this.nextpc++;
 }
 
+CPU.prototype.AnalyzeImage = function() // get addresses for fast refill
+{
+    this.boot_dtlb_misshandler_address = this.ram.int32mem[0x900 >> 2];
+    this.boot_itlb_misshandler_address = this.ram.int32mem[0xA00 >> 2];
+    this.current_pgd = ((this.ram.int32mem[0x2018>>2]&0xFFF)<<16) | (this.ram.int32mem[0x201C>>2] & 0xFFFF);
+}
+
 CPU.prototype.SetFlags = function (x) {
     this.SR_SM = (x & (1 << 0)) ? true : false;
     this.SR_TEE = (x & (1 << 1)) ? true : false;
@@ -393,13 +400,13 @@ CPU.prototype.Exception = function (excepttype, addr) {
 // disassembled dtlb miss exception handler arch/openrisc/kernel/head.S, kernel dependent
 CPU.prototype.DTLBRefill = function (addr, nsets) {
 
-    if (this.ram.int32mem[0x900 >> 2] != 0x000005C0) {
+    if (this.ram.int32mem[0x900 >> 2] == this.boot_dtlb_misshandler_address) {
         this.Exception(EXCEPT_DTLBMISS, addr);
         return false;
     }
     var r2 = addr;
     // get_current_PGD  using r3 and r5 
-    var r3 = this.ram.int32mem[0x004aa0a4 >> 2]; // current pgd
+    var r3 = this.ram.int32mem[this.current_pgd >> 2]; // current pgd
     var r4 = (r2 >>> 0x18) << 2;
     var r5 = r4 + r3;
 
@@ -457,7 +464,7 @@ CPU.prototype.DTLBRefill = function (addr, nsets) {
 // disassembled itlb miss exception handler arch/openrisc/kernel/head.S, kernel dependent
 CPU.prototype.ITLBRefill = function (addr, nsets) {
 
-    if (this.ram.int32mem[0xA00 >> 2] != 0x000005C2) {
+    if (this.ram.int32mem[0xA00 >> 2] == this.boot_itlb_misshandler_address) {
         this.Exception(EXCEPT_ITLBMISS, addr);
         return false;
     }
@@ -468,7 +475,7 @@ CPU.prototype.ITLBRefill = function (addr, nsets) {
 
     r2 = addr;
     // get_current_PGD  using r3 and r5
-    r3 = this.ram.int32mem[0x004aa0a4 >> 2]; // current pgd
+    r3 = this.ram.int32mem[this.current_pgd >> 2]; // current pgd
     r4 = (r2 >>> 0x18) << 2;
     r5 = r4 + r3;
 
@@ -695,8 +702,7 @@ CPU.prototype.Step = function (steps) {
             } else {
                 // the interrupt is executed immediately. Saves one comparison
                 // test it here instead every time,
-                if (this.interrupt_pending) {
-                    
+                if (this.interrupt_pending) {                    
                     // check again because there could be another exception during this one cycle
                     if ((this.PICSR) && (this.SR_IEE)) {
                         this.interrupt_pending = false;
