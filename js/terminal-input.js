@@ -42,6 +42,14 @@ TerminalInput.prototype.KeyDown = function(e) {
     var unicode = e.charCode;
     //DebugMessage("KeyDown: keyCode = " + e.keyCode);
     //DebugMessage("KeyDown: charCode = " + e.charCode);
+
+    // CTRL + x key handling for chrome 
+    if ((this.CTRLpressed) && (keycode >= 65) && (keycode <= 90)) {
+        this.uart.ReceiveChar((keycode-32) & 0x1F);
+        e.preventDefault();
+        return false;
+    }
+
     switch (keycode) {
     case 16:
         // shift
@@ -107,14 +115,6 @@ TerminalInput.prototype.KeyDown = function(e) {
         //e.preventDefault();
         //return false;
         return;
-        break;
-    case 67:
-        // CTRL + c key handling for chrome
-        if (this.CTRLpressed == true) {
-            this.uart.ReceiveChar(99 & 0x1F);
-            e.preventDefault();
-            return false;
-        }
         break;
     }
 
