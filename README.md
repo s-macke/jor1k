@@ -2,11 +2,7 @@
 
 jor1k is a OpenRISC 1000 emulator written in JavaScript running Linux. It runs in almost any modern web browser. 
 Have a try and see if it runs in your browser by opening the [demo][project demo].
-<<<<<<< HEAD
-For more information take a look in the [Wiki][project wiki].
-=======
 More information can be found on the [Wiki][project wiki] pages. 
->>>>>>> dc2011538554e2925506c5453d503fcc7dbc694d
 
 ### Links
 
