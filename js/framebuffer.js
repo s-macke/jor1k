@@ -30,7 +30,8 @@ FBDev.prototype.WriteReg32 = function (addr, value) {
 };
 
 FBDev.prototype.SetAddr = function (addr) {
-    this.buf8 = new Uint8ClampedArray(this.ram.mem, addr, this.imageData.data.length);
+    if (typeof Uint8ClampedArray === 'undefined') return; // no framebuffer output available
+	this.buf8 = new Uint8ClampedArray(this.ram.mem, addr, this.imageData.data.length);
     this.Update();
 };
 
