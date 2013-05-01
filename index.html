@@ -13,21 +13,21 @@
         <table>
             <tr>
             	<td>
-                    <canvas id="tty" class="screen" width="640", height="400">
+                    <canvas id="tty" class="screen" width="640" height="400">
                         Terminal uses canvas
                     </canvas>
 <!--
 	                <table id="tty" class="terminal" border="0" title="tty0"></table>
 -->
 					</td>
-	            <td valign="top">
-                    <canvas id="fb" class="screen" width="320", height="240">
+	            <td style="vertical-align: top">
+                    <canvas id="fb" class="screen" width="320" height="240">
                         Framebuffer uses canvas
                     </canvas>
 	            </td>
             </tr>
 			<tr>
-			<td id="stats">
+			<td id="stats" colspan="2">
 			</td>
 			</tr>
         </table>
@@ -42,20 +42,20 @@
             </p>
 
             <h3>Links</h3>
-            <p>
+            <ul>
                 <li><a href="https://github.com/s-macke/jor1k/">Project</a> page at github</li>
                 <li><a href="https://github.com/s-macke/jor1k/issues">Bugtracker</a> to report any issues or feature requests</li>
                 <li><a href="https://github.com/s-macke/jor1k/wiki">Wiki</a> containing more detailed descriptions</li>
-            </p>
+            </ul>
 
             <h4>Developer and contributors</h4>
-            <p>
+            <ul>
                 <li>Sebastian Macke <a href="http://simulationcorner.net/">simulationcorner.net</a></li>
                 <li>Gerard Braad <a href="http://gbraad.nl">gbraad.nl</a></li>
-            </p>
+            </ul>
 
         </div>
-    </body>
+
     <script src="js/terminal.js"></script>
     <script src="js/terminal-input.js"></script>
     <script src="js/framebuffer.js"></script>
@@ -74,4 +74,5 @@ function Start() {
 }
 </script>
 
+    </body>
 </html>
