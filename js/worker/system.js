@@ -106,7 +106,7 @@ System.prototype.ImageFinished = function(buffer) {
 }
 
 System.prototype.MainLoop = function() {
-    this.cpu.Step(0x10000);
-    this.ips += 0x10000;
+    this.cpu.Step(0x20000);
+    this.ips += 0x20000;
     // go to idle state that onmessage is executed    
 }
