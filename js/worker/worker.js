@@ -2,7 +2,7 @@
 // -------------------- Worker ---------------------
 // -------------------------------------------------
 
-importScripts('utils.js', 'framebuffer.js', 'eth.js', 'ata.js', 'uart.js', 'ram.js', 'cpu.js', 'system.js');
+importScripts('utils.js', 'framebuffer.js', 'eth.js', 'ata.js', 'uart.js', 'ram.js', 'cpu.js', 'system.js', 'bzip2.js');
 
 // The normal Terminal Device cannot be used here because it needs a canvas element
 // Therefore a small terminal device is emulated here which sends all characters received to the master.

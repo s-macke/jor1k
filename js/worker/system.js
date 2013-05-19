@@ -85,17 +85,24 @@ System.prototype.PrintState = function() {
     }
 }
 
-System.prototype.LoadImageAndStart = function(filename) {
-    DebugMessage("Loading Image " + filename);
-    var str = "Loading Image from Web Server (5 MB). Please wait ..."
+
+System.prototype.SendStringToTerminal = function(str)
+{
     for (var i = 0; i < str.length; i++) {
         this.term.PutChar(str.charCodeAt(i));
     }
+}
+
+System.prototype.LoadImageAndStart = function(filename) {
+    DebugMessage("Loading Image " + filename);
+    this.SendStringToTerminal("Loading Image from Web Server (2 MB). Please wait ...\r\n");
     LoadBinaryResource(filename, this.ImageFinished.bind(this));
 }
 
 System.prototype.ImageFinished = function(buffer) {
     var buffer8 = new Uint8Array(buffer);
+    this.SendStringToTerminal("Decompressing ...\r\n");
+    buffer8 = bzip2.simple(bzip2.array(buffer8));
     DebugMessage("Image loaded: " + buffer8.length + " bytes");
     for (var i = 0; i < buffer8.length; i++) this.ram.uint8mem[i] = buffer8[i];
     for (var i = 0; i < buffer8.length >>> 2; i++) this.ram.int32mem[i] = Swap32(this.ram.int32mem[i]); // big endian to little endian
