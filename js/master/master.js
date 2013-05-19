@@ -58,13 +58,14 @@ jor1kGUI.prototype.OnMessage = function(e) {
 }
 
 jor1kGUI.prototype.UpdateFramebuffer = function(buffer) {
-	var i=0, n = buffer.length;
+    var i=0, n = buffer.length;
     var data = this.fbimageData.data;
-   	for (i = 0; i < n; ++i) {
+    for (i = 0; i < n; ++i) {
         data[i] = buffer[i];
     }
+    // data.set(buffer);
     // remove alpha channel.
-  	for (i = 3; i < n; i += 4) {
+    for (i = 3; i < n; i += 4) {
         data[i] = 0xFF;
     }
     this.fbctx.putImageData(this.fbimageData, 0, 0); // at coords 0,0
