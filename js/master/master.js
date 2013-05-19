@@ -16,7 +16,7 @@ function UARTDev(worker)
 
 function jor1kGUI(termid, fbid, statsid, imageurl)
 {
-    this.worker = new Worker('js/worker.js');
+    this.worker = new Worker('js/worker/worker.js');
     
     this.SendToWorker = function(command, data)
     {
