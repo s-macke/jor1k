@@ -3,18 +3,14 @@
 // -------------------------------------------------
 
 // constructor
-function FBDev(elemId, ram) {
+function FBDev(ram) {
     this.ram = ram;
-    var element = document.getElementById(elemId);
-    this.c = element.getContext("2d");
-    // read the width and height of the canvas
-    this.width = element.width;
-    this.height = element.height;
-    // create a new batch of pixels with the same
-    // dimensions as the image:
-    this.imageData = this.c.createImageData(this.width, this.height);
-    // address in ram where the pixeldata resides 
-    this.addr = 0x0;
+    this.width = 320;
+    this.height = 240;
+    this.addr = 16000000;
+    this.n = this.width * this.height * 4;
+    this.buffer = new Uint8Array(this.n);
+    //this.buffer = new Uint8Array(0);
 }
 
 FBDev.prototype.ReadReg32 = function (addr) {
@@ -22,42 +18,26 @@ FBDev.prototype.ReadReg32 = function (addr) {
 };
 
 FBDev.prototype.WriteReg32 = function (addr, value) {
+
     switch (addr) {
-    case 0x14:
-        this.SetAddr(Swap32(value));
+    case 0x14: 
+        this.addr = Swap32(value);
+        //this.buffer = new Uint8Array(this.ram.mem, this.addr, this.n);
         break;
     default:
-        return 0x0;
+        return;
     }
 };
 
-FBDev.prototype.SetAddr = function (addr) {
-    this.addr = addr;
-    if (typeof Uint8ClampedArray !== 'undefined')  {
-        this.buf8 = new Uint8ClampedArray(this.ram.mem, addr, this.imageData.data.length);
+FBDev.prototype.GetBuffer = function () {
+    //return this.buffer;
+    var i=0, n = this.buffer.length;
+    var data = this.buffer;
+    var mem = this.ram.uint8mem;
+    var addr = this.addr;
+   	for (i = 0; i < n; ++i) {
+        data[i] = mem[addr+i];
     }
-    this.Update();
-};
+    return this.buffer;
+}
 
-FBDev.prototype.Update = function () {
-    var i=0, n = this.width * this.height * 4;
-    var data = this.imageData.data;
-    if (!this.buf8) { 
-        // copy the framebuffer byte by byte
-        var mem = this.ram.uint8mem;
-   	    for (i = 0; i < n; ++i) {
-            data[i] = mem[this.addr+i];
-        }
-    } else
-    {
-        // otherwise use set
-        data.set(this.buf8);
-    }
-
-    // remove alpha channel.
-  	for (i = 3; i < n; i += 4) {
-        data[i] = 0xFF;
-    }
-    this.c.putImageData(this.imageData, 0, 0); // at coords 0,0
-    window.setTimeout(this.Update.bind(this), 100); // update 10 times a second. Maybe use requestAnimationFrame
-};

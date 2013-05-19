@@ -2,35 +2,30 @@
 // ------------------- SYSTEM ----------------------
 // -------------------------------------------------
 
-function System(termid, fbid, statsid) {
-    this.term = new Terminal(25, 80, termid);
-    DebugMessage("Terminal initialized");
+function System() {
 
+    DebugMessage("Init Terminal");    
+    this.term = new Terminal();
+
+    DebugMessage("Init RAM");
     this.ram = new RAM(0x2000000);
-    DebugMessage("RAM initialized");
 
+    DebugMessage("Init CPU");
     this.cpu = new CPU(this.ram);
-    DebugMessage("CPU initialized");
 
+    DebugMessage("Init Devices");
     this.uartdev = new UARTDev(this.term, this.cpu);
     this.ethdev = new EthDev();
-    this.fbdev = new FBDev(fbid, this.ram);
+    this.fbdev = new FBDev(this.ram);
     this.atadev = new ATADev(this.cpu);
-    DebugMessage("Devices initialized");
 
+    DebugMessage("Add Devices");    
     this.ram.AddDevice(this.atadev, 0x9e000000, 0x1000);
     this.ram.AddDevice(this.uartdev, 0x90000000, 0x7);
     this.ram.AddDevice(this.ethdev, 0x92000000, 0x1000);
     this.ram.AddDevice(this.fbdev, 0x91000000, 0x1000);
-    DebugMessage("Devices added");    
 
-    var terminput = new TerminalInput(this.uartdev);
-    DebugMessage("Terminal input initialized");
-    
-    this.stats = document.getElementById(statsid);
-    this.ips = 0x0; // number of instructions executed in a second
-    window.setTimeout(this.StatsLoop.bind(this), 1000);
-
+    this.ips = 0; // inctruction per second counter
     sys = this; // one global variable used by the abort() function
 }
 
@@ -91,7 +86,7 @@ System.prototype.PrintState = function() {
 }
 
 System.prototype.LoadImageAndStart = function(filename) {
-    DebugMessage("Loading Image");
+    DebugMessage("Loading Image " + filename);
     var str = "Loading Image from Web Server (5 MB). Please wait ..."
     for (var i = 0; i < str.length; i++) {
         this.term.PutChar(str.charCodeAt(i));
@@ -106,18 +101,12 @@ System.prototype.ImageFinished = function(buffer) {
     for (var i = 0; i < buffer8.length >>> 2; i++) this.ram.int32mem[i] = Swap32(this.ram.int32mem[i]); // big endian to little endian
     this.cpu.AnalyzeImage();
     DebugMessage("Starting emulation");
+    SendToMaster("execute", 0);
     this.MainLoop();
-}
-
-System.prototype.StatsLoop = function()
-{
-    this.stats.innerHTML = Math.floor(this.ips) + " ips";
-    this.ips = 0;
-    window.setTimeout(this.StatsLoop.bind(this), 1000);
 }
 
 System.prototype.MainLoop = function() {
     this.cpu.Step(0x10000);
     this.ips += 0x10000;
-    window.setTimeout(this.MainLoop.bind(this), 0);
+    // go to idle state that onmessage is executed    
 }

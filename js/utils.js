@@ -2,14 +2,24 @@
 // ------------------ Utils ------------------------
 // -------------------------------------------------
 
+function SendToMaster(command, data) {
+    postMessage(
+    {
+        "command" : command,
+        "data" : data
+    }
+    );
+}
+
 function DebugMessage(message) {
-    console.log(message);
+    //console.log(message);
+    SendToMaster("debug", message);
 }
 
 function abort() {
     DebugMessage("Abort execution.");
     sys.PrintState();
-    throw new Error('Abort javascript');
+    throw new Error('Kill worker');
 }
 
 // big endian to little endian and vice versa
@@ -21,12 +31,12 @@ function Swap16(val) {
     return ((val & 0xFF) << 8) | ((val >> 8) & 0xFF);
 }
 
-// cast an integer so a signed integer
+// cast an integer to a signed integer
 function int32(val) {
     return (val >> 0);
 }
 
-// cast an integer so a unsigned integer
+// cast an integer to a unsigned integer
 function uint32(val) {
     return (val >>> 0);
 }
@@ -58,6 +68,9 @@ function LoadBinaryResource(url, OnLoadFunction) {
         var arrayBuffer = req.response;
         if (arrayBuffer) {
             OnLoadFunction(arrayBuffer);
+        } else
+        {
+            DebugMessage("Error: No data received" + url);
         }
     };
     /*
@@ -69,6 +82,7 @@ function LoadBinaryResource(url, OnLoadFunction) {
                 }
         };
     */
+
     req.send(null);
 }
 

@@ -58,19 +58,11 @@
 
     <script src="js/terminal.js"></script>
     <script src="js/terminal-input.js"></script>
-    <script src="js/framebuffer.js"></script>
-    <script src="js/eth.js"></script>
-    <script src="js/utils.js"></script>
-    <script src="js/ata.js"></script>
-    <script src="js/uart.js"></script>
-    <script src="js/ram.js"></script>
-    <script src="js/cpu.js"></script>
-    <script src="js/system.js"></script> 	
+    <script src="js/master.js"></script>
 
 <script>
 function Start() {
-    var sys = new System("tty", "fb", "stats");
-    sys.LoadImageAndStart('bin/vmlinux.bin');
+    jor1kgui = new jor1kGUI("tty", "fb", "stats", "../bin/vmlinux.bin");    
 }
 </script>
 
