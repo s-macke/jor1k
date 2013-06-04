@@ -5,11 +5,11 @@
 // constructor
 function FBDev(ram) {
     this.ram = ram;
-    this.width = 320;
-    this.height = 240;
+    this.width = 640;
+    this.height = 400;
     this.addr = 16000000;
-    this.n = this.width * this.height * 4;
-    this.buffer = new Uint8Array(this.n);
+    this.n = this.width * this.height;
+    this.buffer = new Int32Array(this.n);
     //this.buffer = new Uint8Array(0);
 }
 
@@ -33,8 +33,8 @@ FBDev.prototype.GetBuffer = function () {
     //return this.buffer;
     var i=0, n = this.buffer.length;
     var data = this.buffer;
-    var mem = this.ram.uint8mem;
-    var addr = this.addr;
+    var mem = this.ram.int32mem;
+    var addr = this.addr>>2;
    	for (i = 0; i < n; ++i) {
         data[i] = mem[addr+i];
     }
