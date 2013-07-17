@@ -483,7 +483,7 @@ CPU.prototype.ITLBRefill = function (addr, nsets) {
     r3 = this.ram.int32mem[r4 >>> 2];
 
     if (r3 == 0) {
-        this.Exception(EXCEPT_DPF, addr);
+        this.Exception(EXCEPT_IPF, addr);
         return false;
         // d_pmd_none:
         // page fault
