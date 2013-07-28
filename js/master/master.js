@@ -40,19 +40,22 @@ function jor1kGUI(termid, fbid, statsid, imageurl)
     this.fbimageData = this.fbctx.createImageData(this.fbcanvas.width, this.fbcanvas.height);
     
     // Init Statsline 
-	this.stats = document.getElementById(statsid);
+    this.stats = document.getElementById(statsid);
 
+    this.stop = false;
     this.SendToWorker("LoadAndStart", imageurl);
     window.setInterval(function(){this.SendToWorker("getips", 0)}.bind(this), 1000);
     window.setInterval(function(){this.SendToWorker("getfb", 0)}.bind(this), 100);
 }
 
 jor1kGUI.prototype.OnMessage = function(e) {    
+    if (this.stop) return;
     if (e.data.command == "execute") this.SendToWorker("execute", 0); else
     if (e.data.command == "tty") this.term.PutChar(e.data.data); else
     if (e.data.command == "getfb") this.UpdateFramebuffer(e.data.data); else
+    if (e.data.command == "stop") {console.log("Received stop signal"); this.stop = true;} else
     if (e.data.command == "getips") {        
-        this.stats.innerHTML = Math.floor(e.data.data) + " ips";
+        this.stats.innerHTML = (Math.floor(e.data.data/100000)/10.) + " MIPS";
     } else
     if (e.data.command == "debug") console.log(e.data.data);
 }

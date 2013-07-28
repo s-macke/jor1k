@@ -19,6 +19,7 @@ function DebugMessage(message) {
 function abort() {
     DebugMessage("Abort execution.");
     sys.PrintState();
+    SendToMaster("stop");
     throw new Error('Kill worker');
 }
 
