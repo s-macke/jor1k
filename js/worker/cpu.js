@@ -739,7 +739,7 @@ CPU.prototype.Step = function (steps) {
             }
         }        
         ins = int32mem[(this.instlb ^ this.pc)];
-        
+
         /*
         // for the slow variant
         ins = this.GetInstruction(this.pc<<2)
@@ -840,7 +840,7 @@ CPU.prototype.Step = function (steps) {
             if (paddr == -1) {
                 break;
             }
-            r[(ins >> 21) & 0x1F] = ram.ReadMemory32(paddr);
+            r[(ins >> 21) & 0x1F] = paddr>0?ram.int32mem[paddr >> 2]:ram.ReadMemory32(paddr);
             break;
 
         case 0x23:
@@ -1008,7 +1008,12 @@ CPU.prototype.Step = function (steps) {
             if (paddr == -1) {
                 break;
             }
-            ram.WriteMemory32(paddr, r[(ins >> 11) & 0x1F]);
+            
+            if (paddr>0) {
+                int32mem[paddr >> 2] = r[(ins >> 11) & 0x1F];
+            } else {
+                ram.WriteMemory32(paddr, r[(ins >> 11) & 0x1F]);
+            }
             break;
 
         case 0x36:
@@ -1194,6 +1199,6 @@ CPU.prototype.Step = function (steps) {
         this.pc = this.nextpc++;
         this.delayedins = false;
 
-    } while (steps--); // main loop
+    } while (--steps); // main loop
 };
 
