@@ -3,42 +3,50 @@
 // -------------------------------------------------
 
 function System() {
+    sys = this; // one global variable used by the abort() function
+    this.running = false;
+    this.Init();
+}
 
+System.prototype.Init = function(cputype) {
+    this.running = false;
     DebugMessage("Init Terminal");    
     this.term = new Terminal();
     
     DebugMessage("Init Heap");
     var ramoffset = 0x10000;
     // this must be a power of two. TODO: Give or1k only 31MB instead of 32MB
-    this.heap = new ArrayBuffer(0x4000000); 
-
+    if (typeof this.heap == "undefined") {
+        this.heap = new ArrayBuffer(0x4000000); 
+    }
     DebugMessage("Init RAM");
     this.ram = new RAM(this.heap, ramoffset);
 
     DebugMessage("Init CPU");
-
-    this.cpu = new CPU(this.ram);
-/*
-    var stdlib = {
-    Int32Array : Int32Array,
-    Uint8Array : Uint8Array,
-    Math : Math
-    };
-    var foreign = 
+    
+    if (!cputype) {
+        this.cpu = new CPU(this.ram);
+    } else
     {
-        DebugMessage: DebugMessage,
-        abort : abort,
-        ReadMemory32 : this.ram.ReadMemory32.bind(this.ram),
-        WriteMemory32 : this.ram.WriteMemory32.bind(this.ram),
-        ReadMemory16 : this.ram.ReadMemory16.bind(this.ram),
-        WriteMemory16 : this.ram.WriteMemory16.bind(this.ram),
-        ReadMemory8 : this.ram.ReadMemory8.bind(this.ram),
-        WriteMemory8 : this.ram.WriteMemory8.bind(this.ram)
-    };
-    this.cpu = FastCPU(stdlib, foreign, this.heap);
-    this.cpu.Init();
-*/
-
+        var stdlib = {
+            Int32Array : Int32Array,
+            Uint8Array : Uint8Array,
+            Math : Math
+        };
+        var foreign = 
+        {
+            DebugMessage: DebugMessage,
+            abort : abort,
+            ReadMemory32 : this.ram.ReadMemory32.bind(this.ram),
+            WriteMemory32 : this.ram.WriteMemory32.bind(this.ram),
+            ReadMemory16 : this.ram.ReadMemory16.bind(this.ram),
+            WriteMemory16 : this.ram.WriteMemory16.bind(this.ram),
+            ReadMemory8 : this.ram.ReadMemory8.bind(this.ram),
+            WriteMemory8 : this.ram.WriteMemory8.bind(this.ram)
+        };
+        this.cpu = FastCPU(stdlib, foreign, this.heap);
+        this.cpu.Init();
+    }
     DebugMessage("Init Devices");
     this.uartdev = new UARTDev(this.term, this.cpu);
     this.ethdev = new EthDev();
@@ -52,8 +60,9 @@ function System() {
     this.ram.AddDevice(this.fbdev, 0x91000000, 0x1000);
 
     this.ips = 0; // inctruction per second counter
-    sys = this; // one global variable used by the abort() function
 }
+
+
 
 System.prototype.PrintState = function() {
     DebugMessage("Current state of the machine")
@@ -128,16 +137,20 @@ System.prototype.ImageFinished = function(buffer) {
     var buffer8 = new Uint8Array(buffer);
     this.SendStringToTerminal("Decompressing ...\r\n");
     buffer8 = bzip2.simple(bzip2.array(buffer8));
+    this.SendStringToTerminal("Booting Kernel\r\n");
     DebugMessage("Image loaded: " + buffer8.length + " bytes");
     for (var i = 0; i < buffer8.length; i++) this.ram.uint8mem[i] = buffer8[i];
     for (var i = 0; i < buffer8.length >>> 2; i++) this.ram.int32mem[i] = Swap32(this.ram.int32mem[i]); // big endian to little endian
     this.cpu.AnalyzeImage();
     DebugMessage("Starting emulation");
     SendToMaster("execute", 0);
+    this.running = true;
     this.MainLoop();
 }
 
 System.prototype.MainLoop = function() {
+    if (!this.running) return;
+    SendToMaster("execute", 0);
     this.cpu.Step(0x20000);
     this.ips += 0x20000;
     // go to idle state that onmessage is executed    

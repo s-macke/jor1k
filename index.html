@@ -12,24 +12,32 @@
     
         <table>
             <tr>
-            	<td>
+                <td>
                     <canvas id="tty" class="screen" width="640" height="400">
                         Terminal uses canvas
                     </canvas>
 <!--
-	                <table id="tty" class="terminal" border="0" title="tty0"></table>
+                    <table id="tty" class="terminal" border="0" title="tty0"></table>
 -->
-					</td>
-	            <td style="vertical-align: top">
+                </td>
+                <td style="vertical-align: top">
                     <canvas id="fb" class="screen" width="640" height="400">
                         Framebuffer uses canvas
                     </canvas>
-	            </td>
+                </td>
             </tr>
-			<tr>
-			<td id="stats" colspan="2">
-			</td>
-			</tr>
+            <tr>
+                <td>
+                    <p>
+                        <span id="stats" style="float: right"></span>
+                        <span style="float: left">
+                            <a style="padding: 3px; color: white; background-color: black; cursor: pointer" onclick="jor1kgui.FastCore()">
+                                Restart with asm.js core
+                            </a>
+                        </span>
+                    </p>
+                </td>
+            </tr>
         </table>
         
         <table id="Debug">

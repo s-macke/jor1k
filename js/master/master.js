@@ -17,7 +17,6 @@ function UARTDev(worker)
 function jor1kGUI(termid, fbid, statsid, imageurl)
 {
     this.worker = new Worker('js/worker/worker.js');
-    
     this.SendToWorker = function(command, data)
     {
         this.worker.postMessage(
@@ -26,6 +25,10 @@ function jor1kGUI(termid, fbid, statsid, imageurl)
             "data": data
         });
     }
+    this.FastCore = function(command, data) {
+        this.SendToWorker("init", true);
+        this.SendToWorker("LoadAndStart", imageurl);
+    };
 
     this.term = new Terminal(25, 80, termid);
     this.terminput = new TerminalInput(new UARTDev(this));

@@ -17,25 +17,32 @@ DebugMessage("System initialized");
 
 onmessage = function(e) {
     if (e.data.command == "execute") {
-        SendToMaster("execute", 0);
         sys.MainLoop();
         return;
-    }
-    if (e.data.command == "tty") {
-        sys.uartdev.ReceiveChar(e.data.data);
+    } else
+    if (e.data.command == "init") {
+        sys.Init(e.data.data);
         return;
-    }
+    } else
+    if (e.data.command == "tty") {
+        if (typeof sys.uartdev != "undefined") {
+            sys.uartdev.ReceiveChar(e.data.data);
+        }
+        return;
+    } else
     if (e.data.command == "LoadAndStart") {
         sys.LoadImageAndStart(e.data.data);
         return;
-    }
+    } else
     if (e.data.command == "getips") {
         SendToMaster("getips", sys.ips);
         sys.ips = 0;
         return;
-    }
+    } else
     if (e.data.command == "getfb") {
-        SendToMaster("getfb", sys.fbdev.GetBuffer());
+        if (typeof sys.fbdev != "undefined") {
+            SendToMaster("getfb", sys.fbdev.GetBuffer());
+        }
         return;
     }
 }
