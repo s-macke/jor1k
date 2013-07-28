@@ -6,12 +6,38 @@ function System() {
 
     DebugMessage("Init Terminal");    
     this.term = new Terminal();
+    
+    DebugMessage("Init Heap");
+    var ramoffset = 0x10000;
+    // this must be a power of two. TODO: Give or1k only 31MB instead of 32MB
+    this.heap = new ArrayBuffer(0x4000000); 
 
     DebugMessage("Init RAM");
-    this.ram = new RAM(0x2000000);
+    this.ram = new RAM(this.heap, ramoffset);
 
     DebugMessage("Init CPU");
+
     this.cpu = new CPU(this.ram);
+/*
+    var stdlib = {
+    Int32Array : Int32Array,
+    Uint8Array : Uint8Array,
+    Math : Math
+    };
+    var foreign = 
+    {
+        DebugMessage: DebugMessage,
+        abort : abort,
+        ReadMemory32 : this.ram.ReadMemory32.bind(this.ram),
+        WriteMemory32 : this.ram.WriteMemory32.bind(this.ram),
+        ReadMemory16 : this.ram.ReadMemory16.bind(this.ram),
+        WriteMemory16 : this.ram.WriteMemory16.bind(this.ram),
+        ReadMemory8 : this.ram.ReadMemory8.bind(this.ram),
+        WriteMemory8 : this.ram.WriteMemory8.bind(this.ram)
+    };
+    this.cpu = FastCPU(stdlib, foreign, this.heap);
+    this.cpu.Init();
+*/
 
     DebugMessage("Init Devices");
     this.uartdev = new UARTDev(this.term, this.cpu);
@@ -19,7 +45,7 @@ function System() {
     this.fbdev = new FBDev(this.ram);
     this.atadev = new ATADev(this.cpu);
 
-    DebugMessage("Add Devices");    
+    DebugMessage("Add Devices");  
     this.ram.AddDevice(this.atadev, 0x9e000000, 0x1000);
     this.ram.AddDevice(this.uartdev, 0x90000000, 0x7);
     this.ram.AddDevice(this.ethdev, 0x92000000, 0x1000);
@@ -84,7 +110,6 @@ System.prototype.PrintState = function() {
         DebugMessage("overflow set");
     }
 }
-
 
 System.prototype.SendStringToTerminal = function(str)
 {

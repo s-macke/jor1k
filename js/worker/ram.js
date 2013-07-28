@@ -3,13 +3,12 @@
 // -------------------------------------------------
 
 // constructor
-function RAM(memsize) {
+function RAM(heap, ramoffset) {
     //use typed arrays
-    this.memsize = memsize;
-    this.mem = new ArrayBuffer(memsize);
-    this.int32mem = new Int32Array(this.mem);
-    this.uint8mem = new Uint8Array(this.mem);
-	this.devices = [];
+    this.mem = heap;
+    this.int32mem = new Int32Array(this.mem, ramoffset);
+    this.uint8mem = new Uint8Array(this.mem, ramoffset);
+    this.devices = [];
 }
 
 RAM.prototype.AddDevice = function(device, devaddr, devsize)
