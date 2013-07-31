@@ -136,11 +136,10 @@ System.prototype.LoadImageAndStart = function(filename) {
 System.prototype.ImageFinished = function(buffer) {
     var buffer8 = new Uint8Array(buffer);
     this.SendStringToTerminal("Decompressing ...\r\n");
-    buffer8 = bzip2.simple(bzip2.array(buffer8));
+    var length = bzip2.simple(bzip2.array(buffer8), this.ram.uint8mem);
+    DebugMessage("Image loaded: " + length + " bytes");
     this.SendStringToTerminal("Booting Kernel\r\n");
-    DebugMessage("Image loaded: " + buffer8.length + " bytes");
-    for (var i = 0; i < buffer8.length; i++) this.ram.uint8mem[i] = buffer8[i];
-    for (var i = 0; i < buffer8.length >>> 2; i++) this.ram.int32mem[i] = Swap32(this.ram.int32mem[i]); // big endian to little endian
+    for (var i = 0; i < length >> 2; i++) this.ram.int32mem[i] = Swap32(this.ram.int32mem[i]); // big endian to little endian
     this.cpu.AnalyzeImage();
     DebugMessage("Starting emulation");
     SendToMaster("execute", 0);
