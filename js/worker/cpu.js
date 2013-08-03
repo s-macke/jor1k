@@ -447,7 +447,7 @@ CPU.prototype.ITLBRefill = function (addr, nsets) {
     if (pte & 0x400) { // exec bit is set?
         tr |= 0xc0; // UXE and SXE bits
     }
-    this.group2[0x280 | idx] = pte & (0xffffe000|0x0FA);
+    this.group2[0x280 | idx] = tr;
     this.group2[0x200 | idx] = (addr & 0xffffe000) | 0x1;  // page_mask and valid bit
     return true;
 };
