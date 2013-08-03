@@ -399,60 +399,24 @@ CPU.prototype.DTLBRefill = function (addr, nsets) {
         this.Exception(EXCEPT_DTLBMISS, addr);
         return false;
     }
-    var r2 = addr;
-    // get_current_PGD  using r3 and r5 
-    var r3 = this.ram.int32mem[this.current_pgd >> 2]; // current pgd
-    var r4 = (r2 >>> 0x18) << 2;
-    var r5 = r4 + r3;
 
-    r4 = (0x40000000 + r5) & 0xFFFFFFFF; //r4 = phys(r5)
-
-    r3 = this.ram.int32mem[r4 >>> 2];
-
-    if (r3 == 0) {
+    var vpn = addr >>> 13;
+    var pgd_offset = (addr >>> 24) << 2;
+    var pte_offset = (vpn & 0x7FF) << 2;
+    var dmmucr = this.ram.int32mem[this.current_pgd >> 2] & 0x3FFFFFFF;
+    var pte_pointer = this.ram.int32mem[dmmucr + pgd_offset >> 2];
+    if (!pte_pointer) {
         this.Exception(EXCEPT_DPF, addr);
         return false;
-        // abort();
-        // d_pmd_none:
-        // page fault
     }
-
-    //r3 = r3 & ~PAGE_MASK // 0x1fff // sense? delayed jump???
-    r3 = 0xffffe000;
-    // d_pmd_good:
-
-    r4 = this.ram.int32mem[r4 >>> 2]; // get pmd value
-    r4 = r4 & r3; // & PAGE_MASK
-    r5 = r2 >>> 0xD;
-    r3 = r5 & 0x7FF;
-    r3 = r3 << 0x2;
-    r3 = r3 + r4;
-    r2 = this.ram.int32mem[r3 >>> 2];
-
-    if ((r2 & 1) == 0) {
+    var pte = this.ram.int32mem[(pte_pointer & 0xffffe000) + pte_offset >> 2];
+    if (!(pte&1)) { // pte present
         this.Exception(EXCEPT_DPF, addr);
         return false;
-        //d_pmd_none:
-        //page fault
     }
-    //r3 = 0xFFFFe3fa; // PAGE_MASK | DTLB_UP_CONVERT_MASK
-
-    // fill dtlb tr register
-    r4 = r2 & 0xFFFFe3fa;
-    //r6 = (this.group0[SPR_DMMUCFGR] & 0x1C) >>> 0x2;
-    //r3 = 1 << r6; // number of DMMU sets
-    //r6 = r3 - 1; // mask register
-    //r5 &= r6;
-    r5 &= nsets - 1;
-    this.group1[0x280 | r5] = r4;
-    //SPR_DTLBTR_BASE(0)|r5 = r4 // SPR_DTLBTR_BASE = 0x280 * (WAY*0x100)
-
-    // fill DTLBMR register
-    r2 = addr;
-    r4 = r2 & 0xFFFFE000;
-    r4 = r4 | 0x1;
-    this.group1[0x200 | r5] = r4;
-    // SPR_DTLBMR_BASE(0)|r5 = r4  // SPR_DTLBMR_BASE = 0x200 * (WAY*0x100)
+    var idx = vpn & (nsets-1);
+    this.group1[0x280 | idx] = pte & (0xffffe000|0x3FA);
+    this.group1[0x200 | idx] = (addr & 0xffffe000) | 0x1;  // page_mask and valid bit
     return true;
 };
 
@@ -463,71 +427,28 @@ CPU.prototype.ITLBRefill = function (addr, nsets) {
         this.Exception(EXCEPT_ITLBMISS, addr);
         return false;
     }
-    var r2 = 0x0,
-        r3 = 0x0,
-        r5 = 0x0,
-        r4 = 0x0;
 
-    r2 = addr;
-    // get_current_PGD  using r3 and r5
-    r3 = this.ram.int32mem[this.current_pgd >> 2]; // current pgd
-    r4 = (r2 >>> 0x18) << 2;
-    r5 = r4 + r3;
-
-    r4 = (0x40000000 + r5) & 0xFFFFFFFF; //r4 = phys(r5)
-    r3 = this.ram.int32mem[r4 >>> 2];
-
-    if (r3 == 0) {
+    var vpn = addr >>> 13;
+    var pgd_offset = (addr >>> 24) << 2;
+    var pte_offset = (vpn & 0x7FF) << 2;
+    var dmmucr = this.ram.int32mem[this.current_pgd >> 2] & 0x3FFFFFFF;
+    var pte_pointer = this.ram.int32mem[dmmucr + pgd_offset >> 2];
+    if (!pte_pointer) {
         this.Exception(EXCEPT_IPF, addr);
         return false;
-        // d_pmd_none:
-        // page fault
     }
-
-    //r3 = r3 & ~PAGE_MASK // 0x1fff // sense? delayed jump???
-    r3 = 0xffffe000; // or 0xffffe3fa ??? PAGE_MASK
-    //i_pmd_good:
-
-    r4 = this.ram.int32mem[r4 >>> 2]; // get pmd value
-    r4 = r4 & r3; // & PAGE_MASK
-    r5 = r2 >>> 0xD;
-    r3 = r5 & 0x7FF;
-    r3 = r3 << 0x2;
-    r3 = r3 + r4;
-    r2 = this.ram.int32mem[r3 >>> 2];
-
-    if ((r2 & 1) == 0) {
+    var pte = this.ram.int32mem[(pte_pointer & 0xffffe000) + pte_offset >> 2];
+    if (!(pte&1)) { // pte present
         this.Exception(EXCEPT_IPF, addr);
         return false;
-        //d_pmd_none:
-        //page fault
     }
-    //r3 = 0xFFFFe03a; // PAGE_MASK | ITLB_UP_CONVERT_MASK
-
-    // fill dtlb tr register
-    r4 = r2 & 0xFFFFe03a; // apply the mask
-    r3 = r2 & 0x7c0; // PAGE_EXEC, Page_SRE, PAGE_SWE, PAGE_URE, PAGE_UWE
-
-    if (r3 != 0x0) {
-        //not itlb_tr_fill....
-        //r6 = (this.group0[SPR_IMMUCFGR] & 0x1C) >>> 0x2;
-        //r3 = 1 << r6; // number of DMMU sets
-        //r6 = r3 - 1; // mask register
-        //r5 &= r6;
-        r5 &= nsets - 1;
-        //itlb_tr_fill_workaround:
-        r4 |= 0xc0; // SPR_ITLBTR_UXE | ITLBTR_SXE
+    var idx = vpn & (nsets-1);
+    var tr = pte & (0xffffe000|0x0FA);
+    if (pte & 0x400) { // exec bit is set?
+        tr |= 0xc0; // UXE and SXE bits
     }
-    // itlb_tr_fill:
-
-    this.group2[0x280 | r5] = r4; // SPR_ITLBTR_BASE(0)|r5 = r4 // SPR_ITLBTR_BASE = 0x280 * (WAY*0x100)
-
-    //fill ITLBMR register
-    r2 = addr;
-    // r3 = 
-    r4 = r2 & 0xFFFFE000;
-    r4 = r4 | 0x1;
-    this.group2[0x200 | r5] = r4; // SPR_DTLBMR_BASE(0)|r5 = r4  // SPR_DTLBMR_BASE = 0x200 * (WAY*0x100)
+    this.group2[0x280 | idx] = pte & (0xffffe000|0x0FA);
+    this.group2[0x200 | idx] = (addr & 0xffffe000) | 0x1;  // page_mask and valid bit
     return true;
 };
 
