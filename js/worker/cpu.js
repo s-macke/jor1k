@@ -239,11 +239,6 @@ CPU.prototype.SetSPR = function (idx, x) {
                 DebugMessage("Error in SetSPR: Timer mode other than continuous not supported");
                 abort();
             }
-            // for compatbility with or1ksim. Strange. Disable TTMR when in continous mode and cycles match.
-            // we solve it by totally disable the timer. Seems to work with Linux
-            if ((this.TTMR & 0xFFFFFF) == (this.TTCR & 0xFFFFFF)) {
-                this.TTMR &= 0x3FFFFFFF;
-            }
             break;
         default:
             DebugMessage("Error in SetSPR: Tick timer address not supported");
