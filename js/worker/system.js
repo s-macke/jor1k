@@ -131,7 +131,7 @@ System.prototype.SendStringToTerminal = function(str)
 
 System.prototype.LoadImageAndStart = function(filename) {
     DebugMessage("Loading Image " + filename);
-    this.SendStringToTerminal("Loading Image from Web Server (2 MB). Please wait ...\r\n");
+    this.SendStringToTerminal("Loading Image from Web Server (7 MB). Please wait ...\r\n");
     LoadBinaryResource(filename, this.ImageFinished.bind(this));
 }
 
