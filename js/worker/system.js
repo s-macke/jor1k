@@ -67,8 +67,8 @@ System.prototype.Init = function(cputype) {
 System.prototype.PrintState = function() {
     DebugMessage("Current state of the machine")
     //DebugMessage("clock: " + hex8(cpu.clock));
-    DebugMessage("PC: " + hex8(this.cpu.pc));
-    DebugMessage("next PC: " + hex8(this.cpu.nextpc));
+    DebugMessage("PC: " + hex8(this.cpu.pc<<2));
+    DebugMessage("next PC: " + hex8(this.cpu.nextpc<<2));
     //DebugMessage("ins: " + hex8(cpu.ins));
     //DebugMessage("main opcode: " + hex8(cpu.ins>>>26));
     //DebugMessage("sf... opcode: " + hex8((cpu.ins>>>21)&0x1F));
