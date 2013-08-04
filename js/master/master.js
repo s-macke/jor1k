@@ -41,7 +41,26 @@ function jor1kGUI(termid, fbid, statsid, imageurl)
     this.fbcanvas = document.getElementById(fbid);
     this.fbctx = this.fbcanvas.getContext("2d");
     this.fbimageData = this.fbctx.createImageData(this.fbcanvas.width, this.fbcanvas.height);
-    
+
+    this.fbcanvas.onmousedown = function(event) {
+        var rect = this.fbcanvas.getBoundingClientRect();
+        var x = event.clientX - rect.left;
+        var y = event.clientY - rect.top;
+        this.SendToWorker("tsmousedown", {x:x, y:y});
+    }.bind(this);
+    this.fbcanvas.onmouseup = function(event) {
+        var rect = this.fbcanvas.getBoundingClientRect();
+        var x = event.clientX - rect.left;
+        var y = event.clientY - rect.top;
+        this.SendToWorker("tsmouseup", {x:x, y:y});
+    }.bind(this);
+    this.fbcanvas.onmousemove = function(event) {
+        var rect = this.fbcanvas.getBoundingClientRect();
+        var x = event.clientX - rect.left;
+        var y = event.clientY - rect.top;
+        this.SendToWorker("tsmousemove", {x:x, y:y});
+    }.bind(this);
+
     // Init Statsline 
     this.stats = document.getElementById(statsid);
 
@@ -50,6 +69,7 @@ function jor1kGUI(termid, fbid, statsid, imageurl)
     window.setInterval(function(){this.SendToWorker("getips", 0)}.bind(this), 1000);
     window.setInterval(function(){this.SendToWorker("getfb", 0)}.bind(this), 100);
 }
+
 
 jor1kGUI.prototype.OnMessage = function(e) {    
     if (this.stop) return;

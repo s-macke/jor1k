@@ -2,7 +2,7 @@
 // -------------------- Worker ---------------------
 // -------------------------------------------------
 
-importScripts('utils.js', 'framebuffer.js', 'eth.js', 'ata.js', 'uart.js', 'ram.js', 'cpu.js', 'system.js', 'bzip2.js', 'fastcpu.js');
+importScripts('utils.js', 'framebuffer.js', 'eth.js', 'ata.js', 'uart.js', 'touchscreen.js', 'ram.js', 'cpu.js', 'system.js', 'bzip2.js', 'fastcpu.js');
 
 // The normal Terminal Device cannot be used here because it needs a canvas element
 // Therefore a small terminal device is emulated here which sends all characters received to the master.
@@ -43,6 +43,18 @@ onmessage = function(e) {
         if (typeof sys.fbdev != "undefined") {
             SendToMaster("getfb", sys.fbdev.GetBuffer());
         }
+        return;
+    } else
+    if (e.data.command == "tsmousedown") {
+        sys.tsdev.onmousedown(e.data.data);
+        return;
+    } else
+    if (e.data.command == "tsmouseup") {
+        sys.tsdev.onmouseup(e.data.data);
+        return;
+    } else
+    if (e.data.command == "tsmousemove") {
+        sys.tsdev.onmousemove(e.data.data);
         return;
     }
 }

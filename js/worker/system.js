@@ -52,12 +52,14 @@ System.prototype.Init = function(cputype) {
     this.ethdev = new EthDev();
     this.fbdev = new FBDev(this.ram);
     this.atadev = new ATADev(this.cpu);
+    this.tsdev = new TouchscreenDev(this.cpu);
 
     DebugMessage("Add Devices");  
     this.ram.AddDevice(this.atadev, 0x9e000000, 0x1000);
     this.ram.AddDevice(this.uartdev, 0x90000000, 0x7);
     this.ram.AddDevice(this.ethdev, 0x92000000, 0x1000);
     this.ram.AddDevice(this.fbdev, 0x91000000, 0x1000);
+    this.ram.AddDevice(this.tsdev, 0x93000000, 0x1000);
 
     this.ips = 0; // inctruction per second counter
 }
