@@ -280,6 +280,11 @@ CPU.prototype.GetSPR = function (idx) {
     var group = (idx >> 11) & 0x1F;
 
     switch (group) {
+    case 1:
+        return this.group1[address];
+    case 2:
+        return this.group2[address];
+
     case 9:
         // pic
         switch (address) {
@@ -312,7 +317,7 @@ CPU.prototype.GetSPR = function (idx) {
     }
 
     if (group != 0) {
-        DebugMessage("Error in GetSPR: group unknown");
+        DebugMessage("Error in GetSPR: group " + group +  " unknown");
         abort();
     }
 
