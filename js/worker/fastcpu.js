@@ -281,11 +281,6 @@ function SetSPR(idx, x) {
                 DebugMessage(ERROR_SETSPR_TIMER_MODE_NOT_CONTINUOUS|0);
                 abort();
             }
-            // for compatbility with or1ksim. Strange. Disable TTMR when in continous mode and cycles match.
-            // we solve it by totally disable the timer. Seems to work with Linux
-            if ((TTMR & 0xFFFFFF) == (TTCR & 0xFFFFFF)) {
-                TTMR = TTMR & 0x3FFFFFFF;
-            }
             break;
         default:
             //DebugMessage("Error in SetSPR: Tick timer address not supported");
@@ -328,6 +323,12 @@ function GetSPR(idx) {
     address = idx & 0x7FF;
     group = (idx >> 11) & 0x1F;
     switch (group|0) {
+    case 1:
+        return h[group1p+(address<<2) >> 2]|0;
+
+    case 2:
+        return h[group2p+(address<<2) >> 2]|0;
+
     case 9:
         // pic
         switch (address|0) {
