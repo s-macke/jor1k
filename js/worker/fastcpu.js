@@ -408,7 +408,7 @@ function Exception(excepttype, addr) {
     except_vector = excepttype | (SR_EPH ? 0xf0000000 : 0x0);
 
     SetSPR(SPR_EEAR_BASE, addr);
-    SetSPR(SPR_ESR_BASE, GetFlags());
+    SetSPR(SPR_ESR_BASE, GetFlags()|0);
 
     SR_OVE = 0;
     SR_SM = 1;
@@ -613,7 +613,7 @@ function DTLBLookup(addr, write) {
      
     if ((tlmbr & 1) == 0) {
         // use tlb refill to fasten up
-        if (DTLBRefill(addr, 64)) {
+        if (DTLBRefill(addr, 64)|0) {
             tlmbr = h[group1p + (0x200 + setindex << 2) >> 2]|0;
         } else {
             return -1|0;
@@ -624,7 +624,7 @@ function DTLBLookup(addr, write) {
     }
     if ((tlmbr >> 19) != (addr >> 19)) {
         // use tlb refill to fasten up
-        if (DTLBRefill(addr, 64)) {
+        if (DTLBRefill(addr, 64)|0) {
             tlmbr = h[group1p + (0x200 + setindex << 2) >> 2]|0;
         } else {
             return -1|0;
@@ -698,7 +698,7 @@ function GetInstruction(addr) {
 
     // test if tlmbr is valid
     if ((tlmbr & 1) == 0) {
-        if (ITLBRefill(addr, 64)) {
+        if (ITLBRefill(addr, 64)|0) {
             tlmbr = h[group2p+((0x200 | setindex) << 2) >> 2]|0;
         } else {
             return -1|0;
@@ -708,7 +708,7 @@ function GetInstruction(addr) {
     }
 
     if ((tlmbr & 0xFFF80000) != (addr & 0xFFF80000)) {
-        if (ITLBRefill(addr, 64)) {
+        if (ITLBRefill(addr, 64)|0) {
             tlmbr = h[group2p+((0x200 | setindex) << 2) >> 2]|0;
         } else {
             return -1|0;
@@ -823,7 +823,7 @@ function Step(steps) {
                 tlmbr = h[group2p + ((0x200 | setindex) << 2) >> 2]|0;
                 // test if tlmbr is valid
                 if ((tlmbr & 1) == 0) {
-                    if (ITLBRefill(pc<<2, 64)) {
+                    if (ITLBRefill(pc<<2, 64)|0) {
                         tlmbr = h[group2p + ((0x200 | setindex)<<2) >> 2]|0; // reload the new value
                     } else {
                         pc = nextpc;
@@ -832,7 +832,7 @@ function Step(steps) {
                     }
                 }
                 if ((tlmbr >> 19) != (pc >> 17)) {
-                    if (ITLBRefill(pc<<2, 64)) {
+                    if (ITLBRefill(pc<<2, 64)|0) {
                         tlmbr = h[group2p + ((0x200 | setindex)<<2) >> 2]|0; // reload the new value
                     } else {
                         pc = nextpc;
@@ -925,7 +925,7 @@ function Step(steps) {
         case 0x9:
             // rfe
             nextpc = GetSPR(SPR_EPCR_BASE)>>2;
-            SetFlags(GetSPR(SPR_ESR_BASE));
+            SetFlags(GetSPR(SPR_ESR_BASE)|0);
             break;
 
         case 0x11:
@@ -954,7 +954,7 @@ function Step(steps) {
                 DebugMessage(ERROR_UNKNOWN|0);
                 abort();
             }
-            paddr = DTLBLookup(vaddr, 0);
+            paddr = DTLBLookup(vaddr, 0)|0;
             if ((paddr|0) == -1) {
                 break;
             }
@@ -964,7 +964,7 @@ function Step(steps) {
         case 0x23:
             // lbz
             vaddr = (r[((ins >> 14) & 0x7C)>>2]|0) + ((ins << 16) >> 16)|0;
-            paddr = DTLBLookup(vaddr, 0);
+            paddr = DTLBLookup(vaddr, 0)|0;
             if ((paddr|0) == -1) {
                 break;
             }
@@ -994,7 +994,7 @@ function Step(steps) {
         case 0x24:
             // lbs 
             vaddr = (r[((ins >> 14) & 0x7C)>>2]|0) + ((ins << 16) >> 16)|0;
-            paddr = DTLBLookup(vaddr, 0);
+            paddr = DTLBLookup(vaddr, 0)|0;
             if ((paddr|0) == -1) {
                 break;
             }
@@ -1022,7 +1022,7 @@ function Step(steps) {
         case 0x25:
             // lhz 
             vaddr = (r[((ins >> 14) & 0x7C)>>2]|0) + ((ins << 16) >> 16)|0;
-            paddr = DTLBLookup(vaddr, 0);
+            paddr = DTLBLookup(vaddr, 0)|0;
             if ((paddr|0) == -1) {
                 break;
             }
@@ -1032,7 +1032,7 @@ function Step(steps) {
         case 0x26:
             // lhs 
             vaddr = (r[((ins >> 14) & 0x7C)>>2]|0) + ((ins << 16) >> 16)|0;
-            paddr = DTLBLookup(vaddr, 0);
+            paddr = DTLBLookup(vaddr, 0)|0;
             if ((paddr|0) == -1) {
                 break;
             }
@@ -1071,7 +1071,7 @@ function Step(steps) {
 
         case 0x2D:
             // mfspr
-            r[((ins >> 19) & 0x7C)>>2] = GetSPR(r[((ins >> 14) & 0x7C)>>2] | (ins & 0xFFFF));
+            r[((ins >> 19) & 0x7C)>>2] = GetSPR(r[((ins >> 14) & 0x7C)>>2] | (ins & 0xFFFF))|0;
             break;
 
         case 0x2E:
@@ -1163,7 +1163,7 @@ function Step(steps) {
                 DebugMessage(ERROR_UNKNOWN|0);
                 abort();
             }
-            paddr = DTLBLookup(vaddr, 1);
+            paddr = DTLBLookup(vaddr, 1)|0;
             if ((paddr|0) == -1) {
                 break;
             }
@@ -1179,7 +1179,7 @@ function Step(steps) {
             // sb
             imm = ((((ins >> 10) & 0xF800) | (ins & 0x7FF)) << 16) >> 16;
             vaddr = (r[((ins >> 14) & 0x7C)>>2]|0) + imm|0;
-            paddr = DTLBLookup(vaddr|0, 1);
+            paddr = DTLBLookup(vaddr|0, 1)|0;
             if ((paddr|0) == -1) {
                 break;
             }
@@ -1190,7 +1190,7 @@ function Step(steps) {
             // sh
             imm = ((((ins >> 10) & 0xF800) | (ins & 0x7FF)) << 16) >> 16;
             vaddr = (r[((ins >> 14) & 0x7C)>>2]|0) + imm|0;
-            paddr = DTLBLookup(vaddr|0, 1);
+            paddr = DTLBLookup(vaddr|0, 1)|0;
             if ((paddr|0) == -1) {
                 break;
             }
