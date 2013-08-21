@@ -21,6 +21,8 @@ function Terminal(rows, columns, elemId) {
     this.escapestring = "";
     this.cursorx = 0;
     this.cursory = 0;
+    this.scrolltop = 0;
+    this.scrollbottom = this.nrows-1;
     this.currentcolor = 0x7;
 
     this.screen = new Array(this.nrows);
@@ -103,8 +105,31 @@ Terminal.prototype.ScreenUpdate = function() {
     }
 };
 
+Terminal.prototype.ScrollDown = function() {
+    if (this.cursory != this.scrolltop) {
+        this.cursory--;
+        if (this.cursorvisible) {
+            this.PlotRow(this.cursory+1); // delete old cursor position
+            this.PlotRow(this.cursory); // show new cursor position
+        }
+        return;
+    }
+
+    for (var i = this.scrollbottom-1; i >= this.scrolltop; i--) {
+        if (i == this.nrows-1) continue;
+        for (var j = 0; j < this.ncolumns; j++) {
+            this.screen[i + 1][j] = this.screen[i][j];
+            this.color[i + 1][j] = this.color[i][j];
+        }
+    }
+    this.DeleteRow(this.scrolltop);
+    this.ScreenUpdate();
+
+}
+
+
 Terminal.prototype.LineFeed = function() {
-    if (this.cursory != this.nrows - 1) {
+    if (this.cursory != this.scrollbottom) {
         this.cursory++;
         if (this.cursorvisible) {
             this.PlotRow(this.cursory-1); // delete old cursor position
@@ -112,13 +137,14 @@ Terminal.prototype.LineFeed = function() {
         }
         return;
     }
-    for (var i = 1; i < this.nrows; i++) {
+    for (var i = this.scrolltop+1; i <= this.scrollbottom; i++) {
+        if (i == 0) continue;
         for (var j = 0; j < this.ncolumns; j++) {
             this.screen[i - 1][j] = this.screen[i][j];
             this.color[i - 1][j] = this.color[i][j];
         }
     }
-    this.DeleteRow(this.nrows - 1);
+    this.DeleteRow(this.scrollbottom);
     this.ScreenUpdate();
 };
 
@@ -138,6 +164,8 @@ Terminal.prototype.ChangeCursor = function(Numbers) {
         this.cursorx = Numbers[1];
         break;
     }
+    if (this.cursorx) this.cursorx--;
+    if (this.cursory) this.cursory--;
 };
 
 Terminal.prototype.ChangeColor = function(Numbers) {
@@ -192,10 +220,16 @@ Terminal.prototype.HandleEscapeSequence = function() {
         this.DeleteArea(this.cursory, this.cursorx, this.cursory, this.ncolumns - 1);
         return;
     }
+    //Scroll up
+    else if (this.escapestring == "M") {
+        this.ScrollDown();
+        return;
+    }
 
     // Testing for [x;y;z
     var s = this.escapestring;
     if (s.charAt(0) != "[") {
+        DebugMessage("Escape sequence unknown:'" + this.escapestring + "'");
         return; // the short escape sequences must be handled earlier
     }
     s = s.substr(1); // delete first sign
@@ -233,9 +267,14 @@ Terminal.prototype.HandleEscapeSequence = function() {
 
         case 'G': // change cursor column
             this.cursorx = numbers[0];
+            if (this.cursorx) this.cursorx--;
             break;
+
         case 'r': // set scrolling region
-            // ignore
+            this.scrolltop = numbers[0];
+            this.scrollbottom = numbers[1];
+            if (this.scrolltop) this.scrolltop--;
+            if (this.scrollbottom) this.scrollbottom--;
             return;
 
         case 'X': // erase only number of characters in current line    
@@ -245,7 +284,8 @@ Terminal.prototype.HandleEscapeSequence = function() {
             // this.DeleteArea(this.cursory, this.cursorx, this.cursory, this.cursorx+numbers[0]);
             // this.DeleteArea(this.cursory, 0, this.cursory, numbers[0]);
             break;
-        case 'H': // cursor
+
+        case 'H': // cursor position
         case 'd':
             this.ChangeCursor(numbers);
             break;
@@ -314,10 +354,12 @@ Terminal.prototype.PutChar = function(c) {
     case 0xA:
         // line feed
         this.LineFeed();
+        //DebugMessage("LineFeed");
         return;
     case 0xD:
         // carriage return
         this.cursorx = 0;
+        //DebugMessage("Carriage Return");
         return;
     case 0x7:
         // beep
@@ -329,9 +371,12 @@ Terminal.prototype.PutChar = function(c) {
             this.cursorx = 0;
         }
         this.PlotRow(this.cursory);
+        //DebugMessage("backspace");
         return;
     case 0x9:
         // horizontal tab
+        //DebugMessage("tab");
+        var spaces = 8 - (this.cursorx&7);
         do
         {
             if (this.cursorx >= this.ncolumns) {
@@ -342,7 +387,7 @@ Terminal.prototype.PutChar = function(c) {
             this.screen[this.cursory][this.cursorx] = 32;
             this.color[this.cursory][this.cursorx] = this.currentcolor;	
             this.cursorx++;
-        } while((this.cursorx%8) != 0);
+        } while(spaces--);
         this.PlotRow(this.cursory);
         return;
 
@@ -365,6 +410,7 @@ Terminal.prototype.PutChar = function(c) {
     var cx = this.cursorx;
     var cy = this.cursory;
     this.screen[cy][cx] = c;
+    //DebugMessage("Write: " + String.fromCharCode(c));
     this.color[cy][cx] = this.currentcolor;
     this.cursorx++;
     this.PlotRow(this.cursory);

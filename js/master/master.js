@@ -30,7 +30,7 @@ function jor1kGUI(termid, fbid, statsid, imageurl)
         this.SendToWorker("LoadAndStart", imageurl);
     };
 
-    this.term = new Terminal(25, 80, termid);
+    this.term = new Terminal(24, 80, termid);
     this.terminput = new TerminalInput(new UARTDev(this));
     this.worker.onmessage = this.OnMessage.bind(this);   
     this.worker.onerror = function(e) {
