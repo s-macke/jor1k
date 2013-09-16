@@ -28,8 +28,11 @@ var EXCEPT_SYSCALL = 0xc00; // syscall, jump into supervisor mode
 // constructor
 function CPU(ram) {
     this.ram = ram;
-    //registers
-    var array = new ArrayBuffer(32 << 2);
+
+    // registers
+    // r[32] and r[33] are used to calculate the virtual address and physical address
+    // to make sure that they are not transformed accidently into a floating point number
+    var array = new ArrayBuffer(34 << 2);
     this.r = new Int32Array(array);
 
     // special purpose registers
@@ -52,8 +55,18 @@ function CPU(ram) {
     this.delayedins = false; // the current instruction is an delayed instruction, one cycle before a jump
     this.interrupt_pending = false;
 
-    // current instruction tlb, needed for fast lookup
-    this.instlb = 0x0;
+    // fast tlb lookup for instruction and data
+    // index 0: 32 bit instruction
+    // index 1: data read and write
+    array = new ArrayBuffer(2 << 2);
+    this.fasttlblookup = new Int32Array(array); 
+    this.fasttlblookup[0] = 0x0;
+    this.fasttlblookup[1] = 0x0;
+
+    array = new ArrayBuffer(2 << 2);
+    this.fasttlbcheck = new Int32Array(array); 
+    this.fasttlbcheck[0] = 0x0;
+    this.fasttlbcheck[1] = 0x0;
 
     //this.clock = 0x0;
 
@@ -105,7 +118,9 @@ CPU.prototype.SetFlags = function (x) {
     this.SR_IEE = (x & (1 << 2)) ? true : false;
     this.SR_DCE = (x & (1 << 3)) ? true : false;
     this.SR_ICE = (x & (1 << 4)) ? true : false;
+    var old_SR_DME = this.SR_DME;
     this.SR_DME = (x & (1 << 5)) ? true : false;
+    var old_SR_IME = this.SR_IME;
     this.SR_IME = (x & (1 << 6)) ? true : false;
     this.SR_LEE = (x & (1 << 7)) ? true : false;
     this.SR_CE = (x & (1 << 8)) ? true : false;
@@ -137,6 +152,15 @@ CPU.prototype.SetFlags = function (x) {
     if (this.SR_IEE && !old_SR_IEE) {
         this.CheckForInterrupt();
     }
+    if (!this.SR_IME && old_SR_IME) {
+        this.fasttlblookup[0] = 0x0;
+        this.fasttlbcheck[0] = 0x0;
+    }
+    if (!this.SR_DME && old_SR_DME) {
+        this.fasttlblookup[1] = 0x0;
+        this.fasttlbcheck[1] = 0x0;
+    }
+
 };
 
 CPU.prototype.GetFlags = function () {
@@ -364,7 +388,10 @@ CPU.prototype.Exception = function (excepttype, addr) {
     this.SR_TEE = false;
     this.SR_DME = false;
 
-    this.instlb = 0x0;
+    this.fasttlblookup[0] = 0x0;
+    this.fasttlblookup[1] = 0x0;
+    this.fasttlbcheck[0] = 0x0;
+    this.fasttlbcheck[1] = 0x0;
 
     this.nextpc = except_vector>>2;
 
@@ -487,9 +514,6 @@ CPU.prototype.DTLBLookup = function (addr, write) {
     */
     var tlbtr = this.group1[0x280 | setindex]; // translate register
 
-    // Test for page fault
-    // Skip this to be faster
-
     // check if supervisor mode
     if (this.SR_SM) {
         if (
@@ -532,9 +556,9 @@ CPU.prototype.GetInstruction = function (addr) {
         ((tlmbr & 0xFFF80000) != (addr & 0xFFF80000))) {
         
         if (this.ITLBRefill(addr, 64)) {
-                    tlmbr = this.group2[0x200 | setindex];
-                } else {
-                    return -1;
+            tlmbr = this.group2[0x200 | setindex];
+        } else {
+            return -1;
         }
         
         //this.Exception(EXCEPT_ITLBMISS, this.pc<<2);
@@ -572,11 +596,11 @@ CPU.prototype.Step = function (steps) {
     var rindex = 0x0;
     var rA = 0x0,
         rB = 0x0;
-    var vaddr = 0x0; // virtual address
-    var paddr = 0x0; // physical address
 
     // local variables could be faster
     var r = this.r;
+    var ftlb = this.fasttlblookup;
+    var ftlbcheck = this.fasttlbcheck;
     var ram = this.ram;
     var int32mem = this.ram.int32mem;
     var group2 = this.group2;
@@ -585,7 +609,6 @@ CPU.prototype.Step = function (steps) {
     var setindex = 0x0;
     var tlmbr = 0x0;
     var tlbtr = 0x0;
-    var checkpc = 0x0; // used to determine if we are still on the same page
 
     var jump = 0x0;
 
@@ -635,11 +658,10 @@ CPU.prototype.Step = function (steps) {
         }
 
         // Get Instruction Fast version        
-        if ((checkpc ^ this.pc) >> 11) // short check if it is still the correct page
-        {
-            checkpc = this.pc; // save the new page, lower 11 bits are ignored
+        if ((ftlbcheck[0] ^ this.pc) >> 11) { // short check if it is still the correct page
+            ftlbcheck[0] = this.pc; // save the new page, lower 11 bits are ignored
             if (!this.SR_IME) {
-                this.instlb = 0x0;
+                ftlb[0] = 0x0;
             } else {
                 setindex = (this.pc >> 11) & 63; // check this values
                 tlmbr = group2[0x200 | setindex];
@@ -656,10 +678,10 @@ CPU.prototype.Step = function (steps) {
                 }
                 tlbtr = group2[0x280 | setindex];
                 //this.instlb = (tlbtr ^ tlmbr) & 0xFFFFE000;
-                this.instlb = ((tlbtr ^ tlmbr) >> 13) << 11;
+                ftlb[0] = ((tlbtr ^ tlmbr) >> 13) << 11;
             }
-        }        
-        ins = int32mem[(this.instlb ^ this.pc)];
+        }
+        ins = int32mem[(ftlb[0] ^ this.pc)];
 
         /*
         // for the slow variant
@@ -751,59 +773,73 @@ CPU.prototype.Step = function (steps) {
             continue;
 
         case 0x21:
-            // lwz 
-            vaddr = r[(ins >> 16) & 0x1F] + ((ins << 16) >> 16);
-            if ((vaddr & 3) != 0) {
-                DebugMessage("Error: no unaligned access allowed");
+            // lwz
+            r[32] = r[(ins >> 16) & 0x1F] + ((ins << 16) >> 16);
+            if ((r[32] & 3) != 0) {
+                DebugMessage("Error in lwz: no unaligned access allowed");
                 abort();
             }
-            paddr = this.DTLBLookup(vaddr, false);
-            if (paddr == -1) {
-                break;
+            if ((ftlbcheck[1] ^ r[32]) >> 13) {
+                r[33] = this.DTLBLookup(r[32], false);
+                if (r[33] == -1) {
+                    break;
+                }
+                ftlbcheck[1] = r[32];
+                ftlb[1] = ((r[33]^r[32]) >> 13) << 13;
             }
-            r[(ins >> 21) & 0x1F] = paddr>0?ram.int32mem[paddr >> 2]:ram.ReadMemory32(paddr);
+            r[33] = ftlb[1] ^ r[32];
+            r[(ins >> 21) & 0x1F] = r[33]>0?ram.int32mem[r[33] >> 2]:ram.ReadMemory32(r[33]);
             break;
 
         case 0x23:
             // lbz
-            vaddr = r[(ins >> 16) & 0x1F] + ((ins << 16) >> 16);
-            paddr = this.DTLBLookup(vaddr, false);
-            if (paddr == -1) {
-                break;
+            r[32] = r[(ins >> 16) & 0x1F] + ((ins << 16) >> 16);
+            if ((ftlbcheck[1] ^ r[32]) >> 13) {
+                r[33] = this.DTLBLookup(r[32], false);
+                if (r[33] == -1) {
+                    break;
+                }
+                ftlbcheck[1] = r[32];
+                ftlb[1] = ((r[33]^r[32]) >> 13) << 13;
             }
-            r[(ins >> 21) & 0x1F] = ram.ReadMemory8(paddr);
+            r[33] = ftlb[1] ^ r[32];
+            r[(ins >> 21) & 0x1F] = ram.ReadMemory8(r[33]);
             break;
 
         case 0x24:
-            // lbs 
-            vaddr = r[(ins >> 16) & 0x1F] + ((ins << 16) >> 16);
-            paddr = this.DTLBLookup(vaddr, false);
-            if (paddr == -1) {
-                break;
+            // lbs
+            r[32] = r[(ins >> 16) & 0x1F] + ((ins << 16) >> 16);
+            if ((ftlbcheck[1] ^ r[32]) >> 13) {
+                r[33] = this.DTLBLookup(r[32], false);
+                if (r[33] == -1) {
+                    break;
+                }
+                ftlbcheck[1] = r[32];
+                ftlb[1] = ((r[33]^r[32]) >> 13) << 13;
             }
-            r[(ins >> 21) & 0x1F] = ((ram.ReadMemory8(paddr)) << 24) >> 24;
+            r[33] = ftlb[1] ^ r[32];
+            r[(ins >> 21) & 0x1F] = ((ram.ReadMemory8(r[33])) << 24) >> 24;
             break;
 
         case 0x25:
             // lhz 
-            vaddr = r[(ins >> 16) & 0x1F] + ((ins << 16) >> 16);
-            paddr = this.DTLBLookup(vaddr, false);
-            if (paddr == -1) {
+            r[32] = r[(ins >> 16) & 0x1F] + ((ins << 16) >> 16);
+            r[33] = this.DTLBLookup(r[32], false);
+            if (r[33] == -1) {
                 break;
             }
-            r[(ins >> 21) & 0x1F] = ram.ReadMemory16(paddr);
+            r[(ins >> 21) & 0x1F] = ram.ReadMemory16(r[33]);
             break;
 
         case 0x26:
-            // lhs 
-            vaddr = r[(ins >> 16) & 0x1F] + ((ins << 16) >> 16);
-            paddr = this.DTLBLookup(vaddr, false);
-            if (paddr == -1) {
+            // lhs
+            r[32] = r[(ins >> 16) & 0x1F] + ((ins << 16) >> 16);
+            r[33] = this.DTLBLookup(r[32], false);
+            if (r[33] == -1) {
                 break;
             }
-            r[(ins >> 21) & 0x1F] = (ram.ReadMemory16(paddr) << 16) >> 16;
+            r[(ins >> 21) & 0x1F] = (ram.ReadMemory16(r[33]) << 16) >> 16;
             break;
-
 
         case 0x27:
             // addi signed 
@@ -920,43 +956,52 @@ CPU.prototype.Step = function (steps) {
         case 0x35:
             // sw
             imm = ((((ins >> 10) & 0xF800) | (ins & 0x7FF)) << 16) >> 16;
-            vaddr = r[(ins >> 16) & 0x1F] + imm;
-            if (vaddr & 0x3) {
-                DebugMessage("Error: not aligned memory access");
+            r[32] = r[(ins >> 16) & 0x1F] + imm;
+            if (r[32] & 0x3) {
+                DebugMessage("Error in sw: no aligned memory access");
                 abort();
             }
-            paddr = this.DTLBLookup(vaddr, true);
-            if (paddr == -1) {
-                break;
+            if ((ftlbcheck[1] ^ r[32]) >> 13) {
+                r[33] = this.DTLBLookup(r[32], true);
+                if (r[33] == -1) {
+                    break;
+                }
+                ftlbcheck[1] = r[32];
+                ftlb[1] = ((r[33]^r[32]) >> 13) << 13;
             }
-            
-            if (paddr>0) {
-                int32mem[paddr >> 2] = r[(ins >> 11) & 0x1F];
+            r[33] = ftlb[1] ^ r[32];
+            if (r[33]>0) {
+                int32mem[r[33] >> 2] = r[(ins >> 11) & 0x1F];
             } else {
-                ram.WriteMemory32(paddr, r[(ins >> 11) & 0x1F]);
+                ram.WriteMemory32(r[33], r[(ins >> 11) & 0x1F]);
             }
             break;
 
+
         case 0x36:
             // sb
-            imm = ((((ins >> 10) & 0xF800) | (ins & 0x7FF)) << 16) >> 16;
-            vaddr = r[(ins >> 16) & 0x1F] + imm;
-            paddr = this.DTLBLookup(vaddr, true);
-            if (paddr == -1) {
-                break;
+            r[32] = r[(ins >> 16) & 0x1F] + (((((ins >> 10) & 0xF800) | (ins & 0x7FF)) << 16) >> 16);
+            if ((ftlbcheck[1] ^ r[32]) >> 13) {
+                r[33] = this.DTLBLookup(r[32], false);
+                if (r[33] == -1) {
+                    break;
+                }
+                ftlbcheck[1] = r[32];
+                ftlb[1] = ((r[33]^r[32]) >> 13) << 13;
             }
-            ram.WriteMemory8(paddr, r[(ins >> 11) & 0x1F]);
+            r[33] = ftlb[1] ^ r[32];
+            ram.WriteMemory8(r[33], r[(ins >> 11) & 0x1F]);
             break;
 
         case 0x37:
             // sh
             imm = ((((ins >> 10) & 0xF800) | (ins & 0x7FF)) << 16) >> 16;
-            vaddr = r[(ins >> 16) & 0x1F] + imm;
-            paddr = this.DTLBLookup(vaddr, true);
-            if (paddr == -1) {
+            r[32] = r[(ins >> 16) & 0x1F] + imm;
+            r[33] = this.DTLBLookup(r[32], true);
+            if (r[33] == -1) {
                 break;
             }
-            ram.WriteMemory16(paddr, r[(ins >> 11) & 0x1F]);
+            ram.WriteMemory16(r[33], r[(ins >> 11) & 0x1F]);
             break;
 
         case 0x38:
