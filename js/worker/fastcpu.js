@@ -924,7 +924,7 @@ function Step(steps) {
 
         case 0x9:
             // rfe
-            nextpc = GetSPR(SPR_EPCR_BASE)>>2;
+            nextpc = (GetSPR(SPR_EPCR_BASE)|0)>>2;
             SetFlags(GetSPR(SPR_ESR_BASE)|0);
             break;
 
@@ -1015,7 +1015,7 @@ function Step(steps) {
                     break;
                 }
             } else {
-                r[((ins >> 19) & 0x7C)>>2] = (ReadMemory8(paddr|0) << 24) >> 24;
+                r[((ins >> 19) & 0x7C)>>2] = ((ReadMemory8(paddr|0)|0) << 24) >> 24;
             }
             break;
 
@@ -1036,7 +1036,7 @@ function Step(steps) {
             if ((paddr|0) == -1) {
                 break;
             }
-            r[((ins >> 19) & 0x7C)>>2] = (ReadMemory16(paddr|0) << 16) >> 16;
+            r[((ins >> 19) & 0x7C)>>2] = ((ReadMemory16(paddr|0)|0) << 16) >> 16;
             break;
 
 
@@ -1267,7 +1267,7 @@ function Step(steps) {
                 {                    
                     // this is a hack to do 32 bit signed multiply. Seems to work but needs to be tested. 
                     //r[rindex<<2>>2] = (rA >> 0) * (rB >> 0);
-                    r[rindex>>2] = imul(rA, rB);
+                    r[rindex>>2] = imul(rA, rB)|0;
                     /*
                     var rAl = rA & 0xFFFF;
                     var rBl = rB & 0xFFFF;
