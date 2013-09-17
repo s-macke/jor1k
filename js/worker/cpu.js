@@ -57,16 +57,19 @@ function CPU(ram) {
 
     // fast tlb lookup for instruction and data
     // index 0: 32 bit instruction
-    // index 1: data read and write
-    array = new ArrayBuffer(2 << 2);
+    // index 1: data read
+    // index 2: data write
+    array = new ArrayBuffer(3 << 2);
     this.fasttlblookup = new Int32Array(array); 
     this.fasttlblookup[0] = 0x0;
     this.fasttlblookup[1] = 0x0;
+    this.fasttlblookup[2] = 0x0;
 
-    array = new ArrayBuffer(2 << 2);
+    array = new ArrayBuffer(3 << 2);
     this.fasttlbcheck = new Int32Array(array); 
     this.fasttlbcheck[0] = 0x0;
     this.fasttlbcheck[1] = 0x0;
+    this.fasttlbcheck[2] = 0x0;
 
     //this.clock = 0x0;
 
@@ -159,6 +162,8 @@ CPU.prototype.SetFlags = function (x) {
     if (!this.SR_DME && old_SR_DME) {
         this.fasttlblookup[1] = 0x0;
         this.fasttlbcheck[1] = 0x0;
+        this.fasttlblookup[2] = 0x0;
+        this.fasttlbcheck[2] = 0x0;
     }
 
 };
@@ -390,8 +395,10 @@ CPU.prototype.Exception = function (excepttype, addr) {
 
     this.fasttlblookup[0] = 0x0;
     this.fasttlblookup[1] = 0x0;
+    this.fasttlblookup[2] = 0x0;
     this.fasttlbcheck[0] = 0x0;
     this.fasttlbcheck[1] = 0x0;
+	this.fasttlbcheck[2] = 0x0;
 
     this.nextpc = except_vector>>2;
 
@@ -961,15 +968,15 @@ CPU.prototype.Step = function (steps) {
                 DebugMessage("Error in sw: no aligned memory access");
                 abort();
             }
-            if ((ftlbcheck[1] ^ r[32]) >> 13) {
+            if ((ftlbcheck[2] ^ r[32]) >> 13) {
                 r[33] = this.DTLBLookup(r[32], true);
                 if (r[33] == -1) {
                     break;
                 }
-                ftlbcheck[1] = r[32];
-                ftlb[1] = ((r[33]^r[32]) >> 13) << 13;
+                ftlbcheck[2] = r[32];
+                ftlb[2] = ((r[33]^r[32]) >> 13) << 13;
             }
-            r[33] = ftlb[1] ^ r[32];
+            r[33] = ftlb[2] ^ r[32];
             if (r[33]>0) {
                 int32mem[r[33] >> 2] = r[(ins >> 11) & 0x1F];
             } else {
@@ -980,16 +987,17 @@ CPU.prototype.Step = function (steps) {
 
         case 0x36:
             // sb
-            r[32] = r[(ins >> 16) & 0x1F] + (((((ins >> 10) & 0xF800) | (ins & 0x7FF)) << 16) >> 16);
-            if ((ftlbcheck[1] ^ r[32]) >> 13) {
+            imm = ((((ins >> 10) & 0xF800) | (ins & 0x7FF)) << 16) >> 16;
+            r[32] = r[(ins >> 16) & 0x1F] + imm;
+            if ((ftlbcheck[2] ^ r[32]) >> 13) {
                 r[33] = this.DTLBLookup(r[32], false);
                 if (r[33] == -1) {
                     break;
                 }
-                ftlbcheck[1] = r[32];
-                ftlb[1] = ((r[33]^r[32]) >> 13) << 13;
+                ftlbcheck[2] = r[32];
+                ftlb[2] = ((r[33]^r[32]) >> 13) << 13;
             }
-            r[33] = ftlb[1] ^ r[32];
+            r[33] = ftlb[2] ^ r[32];
             ram.WriteMemory8(r[33], r[(ins >> 11) & 0x1F]);
             break;
 
