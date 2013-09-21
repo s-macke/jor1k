@@ -50,8 +50,6 @@ var r = new stdlib.Int32Array(heap); // registers
 var h = new stdlib.Int32Array(heap);
 var b = new stdlib.Uint8Array(heap);
 
-//var r = new Int32Array(heap); // registers
-//var h = new Int32Array(heap);
 
 var rp = 0x0; // pointer to registers, not used
 var ramp = 0x10000;
@@ -67,8 +65,18 @@ var nextpc = 0x0; // pointer to next instruction in multiples of four
 var delayedins = 0; // the current instruction is an delayed instruction, one cycle before a jump
 var interrupt_pending = 0;
 
-// current instruction tlb, needed for fast lookup
-var instlb = 0x0;
+
+
+// fast tlb lookup tables
+var instlblookup = 0x0;
+var readtlblookup = 0x0;
+var writetlblookup = 0x0;
+
+var instlbcheck = 0x0;
+var readtlbcheck = 0x0;
+var writetlbcheck = 0x0;
+
+
 
 var TTMR = 0x0; // Tick timer mode register
 var TTCR = 0x0; // Tick timer count register
@@ -416,7 +424,9 @@ function Exception(excepttype, addr) {
     SR_TEE = 0;
     SR_DME = 0;
 
-    instlb = 0x0;
+    instlblookup = 0x0;
+    readtlblookup = 0x0;
+    writetlblookup = 0x0;
 
     nextpc = except_vector>>2;
 
@@ -764,11 +774,7 @@ function Step(steps) {
     var setindex = 0x0;
     var tlmbr = 0x0;
     var tlbtr = 0x0;
-    var checkpc = 0x0; // used to determine if we are still on the same page
     var jump = 0x0;
-
-    // fast tlb, contains only the current page
-    //var instlb = 0x0;
     
     do {
         // do this not so often
@@ -813,11 +819,12 @@ function Step(steps) {
         }
 
         // Get Instruction Fast version        
-        if ((checkpc ^ pc) >> 11) // short check if it is still the correct page
+        if ((instlbcheck ^ pc) >> 11) // short check if it is still the correct page
         {
-            checkpc = pc; // save the new page, lower 11 bits are ignored
+            instlbcheck = pc; // save the new page, lower 11 bits are ignored
             if (!SR_IME) {
-                instlb = 0x0;
+                instlblookup = 0x0;
+                instlbcheck = 0x0;
             } else {
                 setindex = (pc >> 11) & 63; // check this values
                 tlmbr = h[group2p + ((0x200 | setindex) << 2) >> 2]|0;
@@ -843,11 +850,10 @@ function Step(steps) {
 
 
                 tlbtr = h[group2p + ((0x280 | setindex) << 2) >> 2]|0;
-                //instlb = (tlbtr ^ tlmbr) & 0xFFFFE000;
-                instlb = ((tlbtr ^ tlmbr) >> 13) << 11;
+                instlblookup = ((tlbtr ^ tlmbr) >> 13) << 11;
             }
         }        
-        ins = h[ramp + ((instlb ^ pc)<<2) >> 2]|0;
+        ins = h[ramp + ((instlblookup ^ pc)<<2) >> 2]|0;
 /*
         // for the slow variant
         ins = GetInstruction(pc<<2);
@@ -954,20 +960,30 @@ function Step(steps) {
                 DebugMessage(ERROR_UNKNOWN|0);
                 abort();
             }
-            paddr = DTLBLookup(vaddr, 0)|0;
-            if ((paddr|0) == -1) {
-                break;
+            if ((readtlbcheck ^ vaddr) >> 13) {
+                paddr = DTLBLookup(vaddr, 0)|0;
+                if ((paddr|0) == -1) {
+                    break;
+                }
+                readtlbcheck = paddr;
+                readtlblookup = ((paddr^vaddr) >> 13) << 13;
             }
+            paddr = readtlblookup ^ vaddr;
             r[((ins >> 19) & 0x7C)>>2] = (paddr|0)>0?h[ramp+paddr >> 2]|0:ReadMemory32(paddr|0)|0;
             break;
 
         case 0x23:
             // lbz
             vaddr = (r[((ins >> 14) & 0x7C)>>2]|0) + ((ins << 16) >> 16)|0;
-            paddr = DTLBLookup(vaddr, 0)|0;
-            if ((paddr|0) == -1) {
-                break;
+            if ((readtlbcheck ^ vaddr) >> 13) {
+                paddr = DTLBLookup(vaddr, 0)|0;
+                if ((paddr|0) == -1) {
+                    break;
+                }
+                readtlbcheck = paddr;
+                readtlblookup = ((paddr^vaddr) >> 13) << 13;
             }
+            paddr = readtlblookup ^ vaddr;
             if ((paddr|0) >= 0) {
                 // consider that the data is saved in little endian
                 switch (paddr & 3) {
@@ -987,17 +1003,20 @@ function Step(steps) {
             } else {
                 r[((ins >> 19) & 0x7C)>>2] = ReadMemory8(paddr|0)|0;
             }
-
-            //r[((ins >> 19) & 0x7C)>>2] = ReadMemory8(paddr|0)|0;
             break;
 
         case 0x24:
             // lbs 
             vaddr = (r[((ins >> 14) & 0x7C)>>2]|0) + ((ins << 16) >> 16)|0;
-            paddr = DTLBLookup(vaddr, 0)|0;
-            if ((paddr|0) == -1) {
-                break;
+            if ((readtlbcheck ^ vaddr) >> 13) {
+                paddr = DTLBLookup(vaddr, 0)|0;
+                if ((paddr|0) == -1) {
+                    break;
+                }
+                readtlbcheck = paddr;
+                readtlblookup = ((paddr^vaddr) >> 13) << 13;
             }
+            paddr = readtlblookup ^ vaddr;
             if ((paddr|0) >= 0) {
                 // consider that the data is saved in little endian
                 switch (paddr & 3) {
@@ -1163,10 +1182,15 @@ function Step(steps) {
                 DebugMessage(ERROR_UNKNOWN|0);
                 abort();
             }
-            paddr = DTLBLookup(vaddr, 1)|0;
-            if ((paddr|0) == -1) {
-                break;
+            if ((writetlbcheck ^ vaddr) >> 13) {
+                paddr = DTLBLookup(vaddr, 1)|0;
+                if ((paddr|0) == -1) {
+                    break;
+                }
+                writetlbcheck = paddr;
+                writetlblookup = ((paddr^vaddr) >> 13) << 13;
             }
+            paddr = writetlblookup ^ vaddr;
             if ((paddr|0) > 0) {
                 h[ramp + paddr >> 2] = r[((ins >> 9) & 0x7C)>>2]|0;
             } else {
@@ -1179,11 +1203,34 @@ function Step(steps) {
             // sb
             imm = ((((ins >> 10) & 0xF800) | (ins & 0x7FF)) << 16) >> 16;
             vaddr = (r[((ins >> 14) & 0x7C)>>2]|0) + imm|0;
-            paddr = DTLBLookup(vaddr|0, 1)|0;
-            if ((paddr|0) == -1) {
-                break;
+            if ((writetlbcheck ^ vaddr) >> 13) {
+                paddr = DTLBLookup(vaddr, 1)|0;
+                if ((paddr|0) == -1) {
+                    break;
+                }
+                writetlbcheck = paddr;
+                writetlblookup = ((paddr^vaddr) >> 13) << 13;
             }
-            WriteMemory8(paddr|0, r[((ins >> 9) & 0x7C)>>2]|0);
+            paddr = writetlblookup ^ vaddr;
+            if ((paddr|0) > 0) {
+                // consider that the data is saved in little endian
+                switch (paddr & 3) {
+                case 0:
+                    b[ramp + ((paddr & ~3) | 3)|0] = r[((ins >> 9) & 0x7C)>>2]|0;
+                    break;
+                case 1:
+                    b[ramp + ((paddr & ~3) | 2)|0] = r[((ins >> 9) & 0x7C)>>2]|0;
+                    break;
+                case 2:
+                    b[ramp + ((paddr & ~3) | 1)|0] = r[((ins >> 9) & 0x7C)>>2]|0;
+                    break;
+                case 3:
+                    b[ramp + ((paddr & ~3) | 0)|0] = r[((ins >> 9) & 0x7C)>>2]|0;
+                    break;
+                }
+            } else {
+                WriteMemory8(paddr|0, r[((ins >> 9) & 0x7C)>>2]|0);
+            }
             break;
 
         case 0x37:
