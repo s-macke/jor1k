@@ -166,6 +166,8 @@ Terminal.prototype.ChangeCursor = function(Numbers) {
     }
     if (this.cursorx) this.cursorx--;
     if (this.cursory) this.cursory--;
+    if (this.cursorx >= this.ncolumns) this.cursorx = this.ncolumns - 1;
+    if (this.cursory >= this.nrows) this.cursory = this.nrows - 1;
 };
 
 Terminal.prototype.ChangeColor = function(Numbers) {
