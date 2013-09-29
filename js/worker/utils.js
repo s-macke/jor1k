@@ -54,7 +54,7 @@ function CopyBinary(to, from, size, buffersrc, bufferdest) {
     }
 }
 
-function LoadBinaryResource(url, OnLoadFunction) {
+function LoadBinaryResource(url, OnSuccess, OnError) {
     var req = new XMLHttpRequest();
     req.open('GET', url, true);
     req.responseType = "arraybuffer";
@@ -63,15 +63,14 @@ function LoadBinaryResource(url, OnLoadFunction) {
             return;
         }
         if ((req.status != 200) && (req.status != 0)) {
-            DebugMessage("Error: Could not load file " + url);
+            OnError("Error: Could not load file " + url);
             return;
         }
         var arrayBuffer = req.response;
         if (arrayBuffer) {
-            OnLoadFunction(arrayBuffer);
-        } else
-        {
-            DebugMessage("Error: No data received" + url);
+            OnSuccess(arrayBuffer);
+        } else {
+            OnError("Error: No data received from: " + url);
         }
     };
     /*
@@ -83,8 +82,34 @@ function LoadBinaryResource(url, OnLoadFunction) {
                 }
         };
     */
-
     req.send(null);
 }
 
-
+function DownloadAllAsync(urls, OnSuccess, OnError) {
+    var pending = urls.length;
+    var result = [];
+    if (pending === 0) {
+        setTimeout(onsuccess.bind(null, result), 0);
+        return;
+    }
+    urls.forEach(function(url, i)  {
+        LoadBinaryResource(
+            url, 
+            function(buffer) {
+                if (result) {
+                    result[i] = buffer;
+                    pending--;
+                    if (pending === 0) {
+                        OnSuccess(result);
+                    }
+                }
+            }, 
+            function(error) {
+                if (result) {
+                    result = null;
+                    OnError(error);
+                }
+            }
+        );
+    });
+}

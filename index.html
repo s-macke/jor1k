@@ -2,13 +2,13 @@
 <html>
     <head>
         <meta charset="utf-8">
-        <title>jor1k: OR1000 Javascript Emulator Running Linux</title>
+        <title>jor1k: OpenRISC OR1K Javascript Emulator Running Linux</title>
         <meta name="keywords" content="opencore, emulation, or1000, javascript, linux">
         <meta name="author" content="Sebastian Macke">
         <link rel="stylesheet" href="css/default.css">
     </head>
     <body onload="Start()">
-        <h1>jor1k: OR1000 Javascript Emulator Running Linux</h1>
+        <h1>jor1k: OpenRISC OR1K Javascript Emulator Running Linux</h1>
     
         <table>
             <tr>
@@ -79,7 +79,7 @@
   ga('send', 'pageview');
 
 function Start() {
-    jor1kgui = new jor1kGUI("tty", "fb", "stats", "../../bin/vmlinux.bin.bz2");    
+    jor1kgui = new jor1kGUI("tty", "fb", "stats", ["../../bin/vmlinux.bin.bz2", "../../bin/hddemo.bz2"]);
 }
 </script>
 

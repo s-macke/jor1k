@@ -17,7 +17,7 @@ System.prototype.Init = function(cputype) {
     var ramoffset = 0x10000;
     // this must be a power of two. TODO: Give or1k only 31MB instead of 32MB
     if (typeof this.heap == "undefined") {
-        this.heap = new ArrayBuffer(0x4000000); 
+        this.heap = new ArrayBuffer(0x2000000); 
     }
     DebugMessage("Init RAM");
     this.ram = new RAM(this.heap, ramoffset);
@@ -129,19 +129,32 @@ System.prototype.SendStringToTerminal = function(str)
     }
 }
 
-System.prototype.LoadImageAndStart = function(filename) {
-    DebugMessage("Loading Image " + filename);
-    this.SendStringToTerminal("Loading Image from Web Server (7 MB). Please wait ...\r\n");
-    LoadBinaryResource(filename, this.ImageFinished.bind(this));
+System.prototype.LoadImageAndStart = function(urls) {
+    DebugMessage("Loading urls " + urls);
+    this.SendStringToTerminal("Loading kernel and hard drive image from web server (7 MB). Please wait ...\r\n");
+    DownloadAllAsync(urls, this.ImageFinished.bind(this), function(error){DebugMessage(error);} );
 }
 
-System.prototype.ImageFinished = function(buffer) {
-    var buffer8 = new Uint8Array(buffer);
-    this.SendStringToTerminal("Decompressing ...\r\n");
-    var length = bzip2.simple(bzip2.array(buffer8), this.ram.uint8mem);
-    DebugMessage("Image loaded: " + length + " bytes");
+System.prototype.ImageFinished = function(result) {
+    result.forEach(function(buffer, i) {
+        var buffer8 = new Uint8Array(buffer);
+        if (i == 0) { // kernel image
+            this.SendStringToTerminal("Decompressing kernel...\r\n");
+            var length = bzip2.simple(bzip2.array(buffer8), this.ram.uint8mem);
+            for (var i = 0; i < length >> 2; i++) this.ram.int32mem[i] = Swap32(this.ram.int32mem[i]); // big endian to little endian
+            DebugMessage("File loaded: " + length + " bytes");
+        } else { // hard drive
+            this.SendStringToTerminal("Decompressing hard drive image...\r\n");
+            var drive = new ArrayBuffer(30*1024*1024); // bzip does not know the final size
+            var driveimage = new Uint8Array(drive);
+            var length = bzip2.simple(bzip2.array(buffer8), driveimage);
+            DebugMessage("File loaded: " + length + " bytes");
+            this.atadev.SetBuffer(drive);
+        }
+        
+    }.bind(this));
+
     this.SendStringToTerminal("Booting Kernel\r\n");
-    for (var i = 0; i < length >> 2; i++) this.ram.int32mem[i] = Swap32(this.ram.int32mem[i]); // big endian to little endian
     this.cpu.AnalyzeImage();
     DebugMessage("Starting emulation");
     SendToMaster("execute", 0);

@@ -68,22 +68,23 @@ function ATADev(intdev) {
     this.intdev = intdev;
     this.driveselected = true; // drive no 0
 
-    this.heads = 16;
-    this.sectors = 63;
-    this.cylinders = 16;
-    this.nsectors = this.heads*this.sectors*this.cylinders;
-
     var buffer = new ArrayBuffer(512);
     this.identifybuffer = new Uint16Array(buffer);
-    this.BuildIdentifyBuffer(this.identifybuffer);
-
     this.readbuffer = this.identifybuffer;
     this.readbufferindex = 0;
     this.readbuffermax = 256;
 
-    var buffer2 = new ArrayBuffer(this.nsectors*512);
-    this.diskbuffer = new Uint16Array(buffer2);
-    
+    var buffer = new ArrayBuffer(1*1024*1024); // 1MB
+    this.SetBuffer(buffer);    
+}
+
+ATADev.prototype.SetBuffer = function(buffer) {
+    this.diskbuffer = new Uint16Array(buffer);
+    this.heads = 16;
+    this.sectors = 64;
+    this.cylinders = buffer.byteLength/(this.heads*this.sectors*512);
+    this.nsectors = this.heads*this.sectors*this.cylinders;
+    this.BuildIdentifyBuffer(this.identifybuffer);   
 }
 
 ATADev.prototype.BuildIdentifyBuffer = function(buffer16)
