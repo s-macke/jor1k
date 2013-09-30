@@ -14,8 +14,9 @@ function UARTDev(worker)
     };
 }
 
-function jor1kGUI(termid, fbid, statsid, imageurl)
+function jor1kGUI(termid, fbid, statsid, imageurls)
 {
+    this.urls = imageurls;
     this.worker = new Worker('js/worker/worker.js');
     this.SendToWorker = function(command, data)
     {
@@ -25,10 +26,17 @@ function jor1kGUI(termid, fbid, statsid, imageurl)
             "data": data
         });
     }
-    this.FastCore = function(command, data) {
+    this.FastCore = function() {
         this.SendToWorker("init", true);
-        this.SendToWorker("LoadAndStart", imageurl);
+        this.SendToWorker("LoadAndStart", this.urls);
     };
+
+    this.ChangeImage = function(newurl) {
+        this.urls[1] = newurl;
+        this.SendToWorker("init", false);
+        this.SendToWorker("LoadAndStart", this.urls);
+    };
+
 
     this.term = new Terminal(24, 80, termid);
     this.terminput = new TerminalInput(new UARTDev(this));
@@ -65,7 +73,7 @@ function jor1kGUI(termid, fbid, statsid, imageurl)
     this.stats = document.getElementById(statsid);
 
     this.stop = false;
-    this.SendToWorker("LoadAndStart", imageurl);
+    this.SendToWorker("LoadAndStart", this.urls);
     window.setInterval(function(){this.SendToWorker("getips", 0)}.bind(this), 1000);
     window.setInterval(function(){this.SendToWorker("getfb", 0)}.bind(this), 100);
 }
