@@ -2,7 +2,9 @@
 // -------------------- Worker ---------------------
 // -------------------------------------------------
 
-importScripts('utils.js', 'framebuffer.js', 'eth.js', 'ata.js', 'uart.js', 'touchscreen.js', 'ram.js', 'cpu.js', 'system.js', 'bzip2.js', 'fastcpu.js');
+importScripts('utils.js', 'framebuffer.js', 'eth.js', 'ata.js',
+    'uart.js', 'touchscreen.js', 'ram.js', 'cpu/cpu.js', 
+    'system.js', 'bzip2.js', 'cpu/fastcpu.js', 'cpu/safecpu.js');
 
 // The normal Terminal Device cannot be used here because it needs a canvas element
 // Therefore a small terminal device is emulated here which sends all characters received to the master.
@@ -19,9 +21,11 @@ onmessage = function(e) {
     if (e.data.command == "execute") {
         sys.MainLoop();
         return;
-    } else
-    if (e.data.command == "init") {
-        sys.Init(e.data.data);
+    } else 
+    if (e.data.command == "GetFB") {
+        if (typeof sys.fbdev != "undefined") {
+            SendToMaster("GetFB", sys.fbdev.GetBuffer());
+        }
         return;
     } else
     if (e.data.command == "tty") {
@@ -30,19 +34,9 @@ onmessage = function(e) {
         }
         return;
     } else
-    if (e.data.command == "LoadAndStart") {
-        sys.LoadImageAndStart(e.data.data);
-        return;
-    } else
-    if (e.data.command == "getips") {
-        SendToMaster("getips", sys.ips);
+    if (e.data.command == "GetIPS") {
+        SendToMaster("GetIPS", sys.ips);
         sys.ips = 0;
-        return;
-    } else
-    if (e.data.command == "getfb") {
-        if (typeof sys.fbdev != "undefined") {
-            SendToMaster("getfb", sys.fbdev.GetBuffer());
-        }
         return;
     } else
     if (e.data.command == "tsmousedown") {
@@ -56,5 +50,19 @@ onmessage = function(e) {
     if (e.data.command == "tsmousemove") {
         sys.tsdev.onmousemove(e.data.data);
         return;
+    } else
+    if (e.data.command == "Reset") {
+        sys.Reset(e.data.data);
+        return;
+    } else
+    if (e.data.command == "ChangeCore") {
+        sys.ChangeCore(e.data.data, true);
+        return;
+    } else
+    if (e.data.command == "LoadAndStart") {
+        sys.LoadImageAndStart(e.data.data);
+        return;
     }
+
+
 }

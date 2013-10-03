@@ -9,6 +9,10 @@ function EthDev() {
     "use strict";
     this.ethreg0 = 0xA000;
     this.ethreg38 = 0x22;
+
+    this.Reset = function () {
+    };
+
     this.ReadReg32 = function (r) {
         switch (r) {
         case 0x0:

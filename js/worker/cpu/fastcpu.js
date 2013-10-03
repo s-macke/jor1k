@@ -65,18 +65,14 @@ var nextpc = 0x0; // pointer to next instruction in multiples of four
 var delayedins = 0; // the current instruction is an delayed instruction, one cycle before a jump
 var interrupt_pending = 0;
 
+// fast tlb lookup tables, invalidate
+var instlblookup = -1;
+var readtlblookup = -1;
+var writetlblookup = -1;
 
-
-// fast tlb lookup tables
-var instlblookup = 0x0;
-var readtlblookup = 0x0;
-var writetlblookup = 0x0;
-
-var instlbcheck = 0x0;
-var readtlbcheck = 0x0;
-var writetlbcheck = 0x0;
-
-
+var instlbcheck = -1;
+var readtlbcheck = -1;
+var writetlbcheck = -1;
 
 var TTMR = 0x0; // Tick timer mode register
 var TTCR = 0x0; // Tick timer count register
@@ -109,25 +105,67 @@ var boot_itlb_misshandler_address = 0x0;
 var current_pgd = 0x0;
 
 
-function Init()
-{
+function Init() {
+    AnalyzeImage();
+    Reset();
+}
+
+function Reset() {
+    TTMR = 0x0;
+    TTCR = 0x0;
+    PICMR = 0x3;
+    PICSR = 0x0;
+
     h[group0p+(SPR_IMMUCFGR<<2) >> 2] = 0x18|0; // 0 ITLB has one way and 64 sets
     h[group0p+(SPR_DMMUCFGR<<2) >> 2] = 0x18|0; // 0 DTLB has one way and 64 sets
-    
     Exception(EXCEPT_RESET, 0x0); // set pc values
     pc = nextpc|0;
     nextpc = nextpc + 1|0;
-    AnalyzeImage();
 }
 
-function GetStat()
-{
+function InvalidateTLB() {
+    instlblookup = -1;
+    readtlblookup = -1;
+    writetlblookup = -1;
+    instlbcheck = -1;
+    readtlbcheck = -1;
+    writetlbcheck = -1;
+}
+
+
+function GetStat() {
     return pc|0;
 }
 
+function PutState() {
+    pc = h[(0x100 + 0) >> 2]|0;
+    nextpc = h[(0x100 + 4) >> 2]|0;
+    delayedins = h[(0x100 + 8) >> 2]|0;
+    interrupt_pending = h[(0x100 + 12) >> 2]|0;
+    TTMR = h[(0x100 + 16) >> 2]|0;
+    TTCR = h[(0x100 + 20) >> 2]|0;
+    PICMR = h[(0x100 + 24) >> 2]|0;
+    PICSR = h[(0x100 + 28) >> 2]|0;
+    boot_dtlb_misshandler_address = h[(0x100 + 32) >> 2]|0;
+    boot_itlb_misshandler_address = h[(0x100 + 36) >> 2]|0;
+    current_pgd = h[(0x100 + 40) >> 2]|0;
+}
+function GetState() {
+    h[(0x100 + 0) >> 2] = pc|0;
+    h[(0x100 + 4) >> 2] = nextpc|0;
+    h[(0x100 + 8) >> 2] = delayedins|0;
+    h[(0x100 + 12) >> 2] = interrupt_pending|0;
+    h[(0x100 + 16) >> 2] = TTMR|0;
+    h[(0x100 + 20) >> 2] = TTCR|0;
+    h[(0x100 + 24) >> 2] = PICMR|0;
+    h[(0x100 + 28) >> 2] = PICSR|0;
+    h[(0x100 + 32) >> 2] = boot_dtlb_misshandler_address|0;
+    h[(0x100 + 36) >> 2] = boot_itlb_misshandler_address|0;
+    h[(0x100 + 40) >> 2] = current_pgd|0;
+}
 
-function AnalyzeImage() // get addresses for fast refill
-{
+
+function AnalyzeImage() { // get addresses for fast refill
     boot_dtlb_misshandler_address = h[ramp+0x900 >> 2]|0;
     boot_itlb_misshandler_address = h[ramp+0xA00 >> 2]|0;
     current_pgd = ((h[ramp+0x2018 >> 2]&0xFFF)<<16) | (h[ramp+0x201C >> 2] & 0xFFFF)|0;
@@ -427,6 +465,9 @@ function Exception(excepttype, addr) {
     instlblookup = 0x0;
     readtlblookup = 0x0;
     writetlblookup = 0x0;
+    instlbcheck = 0x0;
+    readtlbcheck = 0x0;
+    writetlbcheck = 0x0;
 
     nextpc = except_vector>>2;
 
@@ -1417,7 +1458,13 @@ function Step(steps) {
 
 return {
     Init: Init,
+    Reset: Reset,
+    InvalidateTLB: InvalidateTLB,
     Step: Step,
+    GetFlags: GetFlags,
+    SetFlags: SetFlags,
+    PutState: PutState,
+    GetState: GetState,
     RaiseInterrupt: RaiseInterrupt,
     ClearInterrupt: ClearInterrupt,
     AnalyzeImage: AnalyzeImage,

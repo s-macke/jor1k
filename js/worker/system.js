@@ -8,51 +8,158 @@ function System() {
     this.Init();
 }
 
-System.prototype.Init = function(cputype) {
+System.prototype.ChangeCore = function(coretype, change) {
+
+if (change) {
+    var oldcpu = this.cpu;
+}
+
+    if (coretype == "std") {
+        this.cpu = new CPU(this.ram);
+    } else 
+    if (coretype == "safe") {
+        this.cpu = new SafeCPU(this.ram);
+    } else 
+    if (coretype == "asm") {
+        this.cpu = this.fastcpu;
+        this.cpu.Init();
+    } else {
+        DebugMessage("Error: Core type unknown");
+    }
+
+    if (change) {
+        DebugMessage("Change Core");
+        this.cpu.InvalidateTLB(); // reset TLB
+        var f = oldcpu.GetFlags();
+        this.cpu.SetFlags(f|0);
+
+        if (this.currentcore == "asm") {
+            var h = new Int32Array(this.heap);
+            for(var i=0; i<32; i++) {
+                this.cpu.r[i] = h[0x0+i];
+            }
+            for(var i=0; i<1024; i++) {
+                this.cpu.group0[i] = h[0x800+i];
+                this.cpu.group1[i] = h[0x1800+i];
+                this.cpu.group2[i] = h[0x2800+i];
+            }
+            oldcpu.GetState();
+            this.cpu.pc = h[(0x40 + 0)];
+            this.cpu.nextpc = h[(0x40 + 1)];
+            this.cpu.delayedins = h[(0x40 + 2)]?true:false;
+            this.cpu.interrupt_pending = h[(0x40 + 3)]?true:false;
+            this.cpu.TTMR = h[(0x40 + 4)];
+            this.cpu.TTCR = h[(0x40 + 5)];
+            this.cpu.PICMR = h[(0x40 + 6)];
+            this.cpu.PICSR = h[(0x40 + 7)];
+            this.cpu.boot_dtlb_misshandler_address = h[(0x40 + 8)];
+            this.cpu.boot_itlb_misshandler_address = h[(0x40 + 9)];
+            this.cpu.current_pgd = h[(0x40 + 10)];
+        } else 
+        if (coretype == "asm") {
+            var h = new Int32Array(this.heap);
+            for(var i=0; i<32; i++) {
+                h[0x0+i] = oldcpu.r[i];
+            }
+            for(var i=0; i<1024; i++) {
+                h[0x800+i] = oldcpu.group0[i];
+                h[0x1800+i] = oldcpu.group1[i];
+                h[0x2800+i] = oldcpu.group2[i];
+            }
+            h[(0x40 + 0)] = oldcpu.pc;
+            h[(0x40 + 1)] = oldcpu.nextpc;
+            h[(0x40 + 2)] = oldcpu.delayedins;
+            h[(0x40 + 3)] = oldcpu.interrupt_pending;
+            h[(0x40 + 4)] = oldcpu.TTMR;
+            h[(0x40 + 5)] = oldcpu.TTCR;
+            h[(0x40 + 6)] = oldcpu.PICMR;
+            h[(0x40 + 7)] = oldcpu.PICSR;
+            h[(0x40 + 8)] = oldcpu.boot_dtlb_misshandler_address;
+            h[(0x40 + 9)] = oldcpu.boot_itlb_misshandler_address;
+            h[(0x40 + 10)] = oldcpu.current_pgd;
+            this.cpu.PutState();
+        } else {
+            for(var i=0; i<32; i++) {
+                this.cpu.r[i] = oldcpu.r[i];
+            }
+            for(var i=0; i<1024; i++) {
+                this.cpu.group0[i] = oldcpu.group0[i];
+                this.cpu.group1[i] = oldcpu.group1[i];
+                this.cpu.group2[i] = oldcpu.group2[i];
+            }
+
+            this.cpu.pc = oldcpu.pc;
+            this.cpu.nextpc = oldcpu.nextpc;
+            this.cpu.delayedins = oldcpu.delayedins;
+            this.cpu.interrupt_pending = oldcpu.interrupt_pending;
+            this.cpu.TTMR = oldcpu.TTMR;
+            this.cpu.TTCR = oldcpu.TTCR;
+            this.cpu.PICMR = oldcpu.PICMR;
+            this.cpu.PICSR = oldcpu.PICSR;
+            this.cpu.boot_dtlb_misshandler_address = oldcpu.boot_dtlb_misshandler_address;
+            this.cpu.boot_itlb_misshandler_address = oldcpu.itlb_misshandler_address;
+            this.cpu.current_pgd = oldcpu.current_pgd;
+        }
+    }
+    this.currentcore = coretype;
+
+}
+
+System.prototype.Reset = function() {
     this.running = false;
-    DebugMessage("Init Terminal");    
-    this.term = new Terminal();
-    
+    this.uartdev.Reset();
+    this.ethdev.Reset();
+    this.fbdev.Reset();
+    this.atadev.Reset();
+    this.tsdev.Reset();
+    this.cpu.Reset();
+    this.ips = 0;
+}
+
+System.prototype.Init = function() {
+    this.running = false;    
+   
+    // this must be a power of two.
     DebugMessage("Init Heap");
     var ramoffset = 0x10000;
-    // this must be a power of two. TODO: Give or1k only 31MB instead of 32MB
-    if (typeof this.heap == "undefined") {
-        this.heap = new ArrayBuffer(0x2000000); 
-    }
+    this.heap = new ArrayBuffer(0x2000000); 
     DebugMessage("Init RAM");
     this.ram = new RAM(this.heap, ramoffset);
 
-    DebugMessage("Init CPU");
-    
-    if (!cputype) {
-        this.cpu = new CPU(this.ram);
-    } else
+    // Create the asm.js core. Because of Firefox limitations it can only be created once.
+    var stdlib = {
+        Int32Array : Int32Array,
+        Uint8Array : Uint8Array,
+        Math : Math
+    };
+    var foreign = 
     {
-        var stdlib = {
-            Int32Array : Int32Array,
-            Uint8Array : Uint8Array,
-            Math : Math
-        };
-        var foreign = 
-        {
-            DebugMessage: DebugMessage,
-            abort : abort,
-            ReadMemory32 : this.ram.ReadMemory32.bind(this.ram),
-            WriteMemory32 : this.ram.WriteMemory32.bind(this.ram),
-            ReadMemory16 : this.ram.ReadMemory16.bind(this.ram),
-            WriteMemory16 : this.ram.WriteMemory16.bind(this.ram),
-            ReadMemory8 : this.ram.ReadMemory8.bind(this.ram),
-            WriteMemory8 : this.ram.WriteMemory8.bind(this.ram)
-        };
-        this.cpu = FastCPU(stdlib, foreign, this.heap);
-        this.cpu.Init();
-    }
+        DebugMessage: DebugMessage,
+        abort : abort,
+        ReadMemory32 : this.ram.ReadMemory32.bind(this.ram),
+        WriteMemory32 : this.ram.WriteMemory32.bind(this.ram),
+        ReadMemory16 : this.ram.ReadMemory16.bind(this.ram),
+        WriteMemory16 : this.ram.WriteMemory16.bind(this.ram),
+        ReadMemory8 : this.ram.ReadMemory8.bind(this.ram),
+        WriteMemory8 : this.ram.WriteMemory8.bind(this.ram)
+    };
+    this.fastcpu = FastCPU(stdlib, foreign, this.heap);
+    this.fastcpu.Init();
+
+
+    DebugMessage("Init CPU");
+    this.ChangeCore("std", false);
+
+
+    DebugMessage("Init Terminal");
+    this.term = new Terminal();
+
     DebugMessage("Init Devices");
-    this.uartdev = new UARTDev(this.term, this.cpu);
+    this.uartdev = new UARTDev(this.term, this);
     this.ethdev = new EthDev();
     this.fbdev = new FBDev(this.ram);
-    this.atadev = new ATADev(this.cpu);
-    this.tsdev = new TouchscreenDev(this.cpu);
+    this.atadev = new ATADev(this);
+    this.tsdev = new TouchscreenDev(this);
 
     DebugMessage("Add Devices");  
     this.ram.AddDevice(this.atadev, 0x9e000000, 0x1000);
@@ -64,6 +171,12 @@ System.prototype.Init = function(cputype) {
     this.ips = 0; // inctruction per second counter
 }
 
+System.prototype.RaiseInterrupt = function(line) {
+    this.cpu.RaiseInterrupt(line);
+}
+System.prototype.ClearInterrupt = function (line) {
+    this.cpu.ClearInterrupt(line);
+}
 
 
 System.prototype.PrintState = function() {

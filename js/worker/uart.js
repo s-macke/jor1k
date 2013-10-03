@@ -32,6 +32,12 @@ var UART_MSR = 6; /* R: Modem Status Register */
 
 // constructor
 function UARTDev(outputdev, intdev) {
+    this.intdev = intdev;
+    this.odev = outputdev;
+    this.Reset();  
+    this.fifo = new Array(); // receive fifo buffer
+}
+UARTDev.prototype.Reset = function() {
     this.LCR = 0x3; // Line Control, reset, character has 8 bits
     this.LSR = UART_LSR_TRANSMITTER_EMPTY | UART_LSR_FIFO_EMPTY; // Line Status register, Transmitter serial register empty and Transmitter buffer register empty
     this.MSR = 0; // modem status register
@@ -43,9 +49,6 @@ function UARTDev(outputdev, intdev) {
     this.FCR = 0x0; // FIFO Control;
     this.MCR = 0x0; // Modem Control
     this.input = 0;
-    this.odev = outputdev;
-    this.intdev = intdev;
-    this.fifo = new Array(); // receive fifo buffer
 }
 
 // this function is maybe too simple. No buffer. The character may be overwritten

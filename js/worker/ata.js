@@ -52,6 +52,17 @@ var ATA_SR_ERR  = 0x01;  // Error
 
 // constructor
 function ATADev(intdev) {
+    this.intdev = intdev;
+    var buffer = new ArrayBuffer(512);
+    this.identifybuffer = new Uint16Array(buffer);
+
+    this.Reset();
+
+    var buffer = new ArrayBuffer(1*1024*1024); // 1MB
+    this.SetBuffer(buffer);    
+    
+}
+ATADev.prototype.Reset = function() {
     this.DCR = 0x8; // fourth bis is always set
     this.DR = 0xA0; // some bits are always set to one
     this.SCR = 0x1;
@@ -65,17 +76,11 @@ function ATADev(intdev) {
     this.lcyl = 0x0;
     this.hcyl = 0x0;
     this.select = 0xA0;
-    this.intdev = intdev;
     this.driveselected = true; // drive no 0
 
-    var buffer = new ArrayBuffer(512);
-    this.identifybuffer = new Uint16Array(buffer);
     this.readbuffer = this.identifybuffer;
     this.readbufferindex = 0;
     this.readbuffermax = 256;
-
-    var buffer = new ArrayBuffer(1*1024*1024); // 1MB
-    this.SetBuffer(buffer);    
 }
 
 ATADev.prototype.SetBuffer = function(buffer) {

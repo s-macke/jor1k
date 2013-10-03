@@ -12,14 +12,13 @@ function SendToMaster(command, data) {
 }
 
 function DebugMessage(message) {
-    //console.log(message);
-    SendToMaster("debug", message);
+    SendToMaster("Debug", message);
 }
 
 function abort() {
     DebugMessage("Abort execution.");
     sys.PrintState();
-    SendToMaster("stop");
+    SendToMaster("Stop");
     throw new Error('Kill worker');
 }
 

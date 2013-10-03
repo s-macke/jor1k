@@ -61,15 +61,9 @@ function CPU(ram) {
     // index 2: data write
     array = new ArrayBuffer(3 << 2);
     this.fasttlblookup = new Int32Array(array); 
-    this.fasttlblookup[0] = 0x0;
-    this.fasttlblookup[1] = 0x0;
-    this.fasttlblookup[2] = 0x0;
-
     array = new ArrayBuffer(3 << 2);
     this.fasttlbcheck = new Int32Array(array); 
-    this.fasttlbcheck[0] = 0x0;
-    this.fasttlbcheck[1] = 0x0;
-    this.fasttlbcheck[2] = 0x0;
+    this.InvalidateTLB();
 
     //this.clock = 0x0;
 
@@ -99,13 +93,31 @@ function CPU(ram) {
     this.SR_SUMRA = false; // SPRS User Mode Read Access, or TRAP exception disable?
     this.SR_CID = 0x0; //Context ID
 
+    this.Reset();
+}
+
+CPU.prototype.Reset = function() {
+    this.TTMR = 0x0;
+    this.TTCR = 0x0;
+    this.PICMR = 0x3;
+    this.PICSR = 0x0;
+
     this.group0[SPR_IMMUCFGR] = 0x18; // 0 ITLB has one way and 64 sets
     this.group0[SPR_DMMUCFGR] = 0x18; // 0 DTLB has one way and 64 sets
-
     this.Exception(EXCEPT_RESET, 0x0); // set pc values
     this.pc = this.nextpc;
     this.nextpc++;
 }
+
+CPU.prototype.InvalidateTLB = function() {
+    this.fasttlblookup[0] = -1;
+    this.fasttlblookup[1] = -1;
+    this.fasttlblookup[2] = -1;
+    this.fasttlbcheck[0] = -1;
+    this.fasttlbcheck[1] = -1;
+    this.fasttlbcheck[2] = -1;
+}
+
 
 CPU.prototype.AnalyzeImage = function() // get addresses for fast refill
 {
@@ -165,7 +177,6 @@ CPU.prototype.SetFlags = function (x) {
         this.fasttlblookup[2] = 0x0;
         this.fasttlbcheck[2] = 0x0;
     }
-
 };
 
 CPU.prototype.GetFlags = function () {
@@ -618,9 +629,6 @@ CPU.prototype.Step = function (steps) {
     var tlbtr = 0x0;
 
     var jump = 0x0;
-
-    // fast tlb, contains only the current page
-    //var instlb = 0x0;
     
     do {
         //this.clock++;
@@ -689,7 +697,6 @@ CPU.prototype.Step = function (steps) {
             }
         }
         ins = int32mem[(ftlb[0] ^ this.pc)];
-
         /*
         // for the slow variant
         ins = this.GetInstruction(this.pc<<2)

@@ -26,17 +26,15 @@ function jor1kGUI(termid, fbid, statsid, imageurls)
             "data": data
         });
     }
-    this.FastCore = function() {
-        this.SendToWorker("init", true);
-        this.SendToWorker("LoadAndStart", this.urls);
+    this.ChangeCore = function(core) {
+        this.SendToWorker("ChangeCore", core);
     };
 
     this.ChangeImage = function(newurl) {
         this.urls[1] = newurl;
-        this.SendToWorker("init", false);
+        this.SendToWorker("Reset");
         this.SendToWorker("LoadAndStart", this.urls);
     };
-
 
     this.term = new Terminal(24, 80, termid);
     this.terminput = new TerminalInput(new UARTDev(this));
@@ -74,8 +72,8 @@ function jor1kGUI(termid, fbid, statsid, imageurls)
 
     this.stop = false;
     this.SendToWorker("LoadAndStart", this.urls);
-    window.setInterval(function(){this.SendToWorker("getips", 0)}.bind(this), 1000);
-    window.setInterval(function(){this.SendToWorker("getfb", 0)}.bind(this), 100);
+    window.setInterval(function(){this.SendToWorker("GetIPS", 0)}.bind(this), 1000);
+    window.setInterval(function(){this.SendToWorker("GetFB", 0)}.bind(this), 100);
 }
 
 
@@ -83,12 +81,12 @@ jor1kGUI.prototype.OnMessage = function(e) {
     if (this.stop) return;
     if (e.data.command == "execute") this.SendToWorker("execute", 0); else
     if (e.data.command == "tty") this.term.PutChar(e.data.data); else
-    if (e.data.command == "getfb") this.UpdateFramebuffer(e.data.data); else
-    if (e.data.command == "stop") {console.log("Received stop signal"); this.stop = true;} else
-    if (e.data.command == "getips") {        
+    if (e.data.command == "GetFB") this.UpdateFramebuffer(e.data.data); else
+    if (e.data.command == "Stop") {console.log("Received stop signal"); this.stop = true;} else
+    if (e.data.command == "GetIPS") {        
         this.stats.innerHTML = (Math.floor(e.data.data/100000)/10.) + " MIPS";
     } else
-    if (e.data.command == "debug") console.log(e.data.data);
+    if (e.data.command == "Debug") console.log(e.data.data);
 }
 
 jor1kGUI.prototype.UpdateFramebuffer = function(buffer) {

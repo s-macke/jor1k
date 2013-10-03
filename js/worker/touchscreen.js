@@ -28,16 +28,19 @@ LPC32XX_TSC_FIFO_TS_P_LEVEL = (1 << 31) // touched
 
 function TouchscreenDev(intdev) {
     this.intdev = intdev;
+    this.Reset();
+    }
+
+TouchscreenDev.prototype.Reset = function() {
     this.control = 0x0; // control register
     this.status = LPC32XX_TSC_STAT_FIFO_EMPTY;
     this.ispressed = false;
     this.mousemovecount = 0;
     this.fifo = 0x0;
     this.fifosize = 0x0;
-    }
+}
 
-TouchscreenDev.prototype.onmousedown = function(event)
-{
+TouchscreenDev.prototype.onmousedown = function(event) {
     if (!(this.control & LPC32XX_TSC_ADCCON_AUTO_EN)) return;
     var x = event.x;
     var y = event.y;
@@ -52,8 +55,7 @@ TouchscreenDev.prototype.onmousedown = function(event)
     this.intdev.RaiseInterrupt(0x9);
 }
 
-TouchscreenDev.prototype.onmousemove = function(event)
-{
+TouchscreenDev.prototype.onmousemove = function(event) {
     if (!(this.control & LPC32XX_TSC_ADCCON_AUTO_EN)) return;
     if (!this.ispressed) return;
     this.mousemovecount++;
@@ -69,8 +71,7 @@ TouchscreenDev.prototype.onmousemove = function(event)
 }
 
 
-TouchscreenDev.prototype.onmouseup = function(event)
-{
+TouchscreenDev.prototype.onmouseup = function(event) {
     if (!(this.control & LPC32XX_TSC_ADCCON_AUTO_EN)) return;
     var x = event.x;
     var y = event.y;

@@ -13,12 +13,31 @@
         <table>
             <tr>
                 <td style="vertical-align: top">
+                    <table>
+                    <tr><td>
                     <canvas id="tty" class="screen" width="640" height="384">
                         Terminal uses canvas
                     </canvas>
-<!--
-                    <table id="tty" class="terminal" border="0" title="tty0"></table>
--->
+                    </td></tr>
+                    <tr><td>
+                    <span style="float: left">
+                    <form>
+                        <select id="coreselect" onchange='jor1kgui.ChangeCore(this.options[this.selectedIndex].value)'>
+                            <option value="std">Standard Core</option>
+                            <option value="asm">asm.js (for Firefox)</option>
+                            <option value="safe">Safe Core (Slow)</option>
+                        </select>
+                        <select id="hdselect" onchange='jor1kgui.ChangeImage(this.options[this.selectedIndex].value)'>
+                            <option value="../../bin/hddemo.bz2">Graphic demos, games, and ScummVM (Monkey island) (7MB)</option>
+                            <option value="../../bin/hdgcc.bz2">Gnu C Compiler. Compile Frotz to play a text adventure (10 MB) </option>
+                            <option value="../../bin/hdX.bz2">Basic X window system running twm, glxgears and xeyes (8MB)</option>
+                        </select>
+                    </form>
+                    </span>
+                    <span id="stats" style="float: right"></span>
+                    </td></tr>
+                    </table>
+
                 </td>
                 <td style="vertical-align: top">
                     <canvas id="fb" class="screen" width="640" height="400">
@@ -26,32 +45,8 @@
                     </canvas>
                 </td>
             </tr>
-            <tr>
-                <td>
-                    <p>
-                        <span id="stats" style="float: right"></span>
-                        <span style="float: left">
-                            <a style="padding: 3px; color: white; background-color: black; cursor: pointer" onclick="jor1kgui.FastCore()">
-                                Restart with asm.js core
-                            </a>
-                        </span>
-                    </p>
-                    <form>
-                        <select id="hdselect" onchange='jor1kgui.ChangeImage(this.options[this.selectedIndex].value)'>
-                            <option value="../../bin/hddemo.bz2">Graphic demos, games, and ScummVM (Monkey island) (7MB)</option>
-                            <option value="../../bin/hdgcc.bz2">Gnu C Compiler. Compile Frotz to play a text adventure (10 MB) </option>
-                            <option value="../../bin/hdX.bz2">Basic X window system running twm, glxgears and xeyes (8MB)</option>
-                        </select>
-                    </form>
-
-
-                </td>
-
-            </tr>
         </table>
-        
-        <table id="Debug">
-        </table>
+       
 
         <div id="infobox">
             <h3>Don't know what to do?</h3>

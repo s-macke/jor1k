@@ -13,6 +13,10 @@ function FBDev(ram) {
     //this.buffer = new Uint8Array(0);
 }
 
+FBDev.prototype.Reset = function () {
+};
+
+
 FBDev.prototype.ReadReg32 = function (addr) {
     return 0x0;
 };
