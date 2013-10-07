@@ -997,7 +997,7 @@ CPU.prototype.Step = function (steps) {
             imm = ((((ins >> 10) & 0xF800) | (ins & 0x7FF)) << 16) >> 16;
             r[32] = r[(ins >> 16) & 0x1F] + imm;
             //if ((ftlbcheck[2] ^ r[32]) >> 13) {
-                r[33] = this.DTLBLookup(r[32], false);
+                r[33] = this.DTLBLookup(r[32], true);
                 if (r[33] == -1) {
                     break;
                 }
