@@ -3,7 +3,7 @@
 // -------------------------------------------------
 
 importScripts('utils.js', 'framebuffer.js', 'eth.js', 'ata.js',
-    'uart.js', 'touchscreen.js', 'ram.js', 'cpu/cpu.js', 
+    'uart.js', 'touchscreen.js', 'keyboard.js', 'ram.js', 'cpu/cpu.js', 
     'system.js', 'bzip2.js', 'cpu/fastcpu.js', 'cpu/safecpu.js');
 
 // The normal Terminal Device cannot be used here because it needs a canvas element
@@ -37,6 +37,18 @@ onmessage = function(e) {
     if (e.data.command == "GetIPS") {
         SendToMaster("GetIPS", sys.ips);
         sys.ips = 0;
+        return;
+    } else
+    if (e.data.command == "keydown") {
+        if (typeof sys.kbddev != "undefined") {
+            sys.kbddev.OnKeyDown(e.data.data);
+        }
+        return;
+    } else
+    if (e.data.command == "keyup") {
+        if (typeof sys.kbddev != "undefined") {
+            sys.kbddev.OnKeyUp(e.data.data);
+        }
         return;
     } else
     if (e.data.command == "tsmousedown") {

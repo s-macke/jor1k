@@ -102,7 +102,6 @@ if (change) {
         }
     }
     this.currentcore = coretype;
-
 }
 
 System.prototype.Reset = function() {
@@ -112,6 +111,7 @@ System.prototype.Reset = function() {
     this.fbdev.Reset();
     this.atadev.Reset();
     this.tsdev.Reset();
+    this.kbddev.Reset();
     this.cpu.Reset();
     this.ips = 0;
 }
@@ -146,10 +146,8 @@ System.prototype.Init = function() {
     this.fastcpu = FastCPU(stdlib, foreign, this.heap);
     this.fastcpu.Init();
 
-
     DebugMessage("Init CPU");
     this.ChangeCore("std", false);
-
 
     DebugMessage("Init Terminal");
     this.term = new Terminal();
@@ -160,6 +158,7 @@ System.prototype.Init = function() {
     this.fbdev = new FBDev(this.ram);
     this.atadev = new ATADev(this);
     this.tsdev = new TouchscreenDev(this);
+    this.kbddev = new KeyboardDev(this);
 
     DebugMessage("Add Devices");  
     this.ram.AddDevice(this.atadev, 0x9e000000, 0x1000);
@@ -167,6 +166,7 @@ System.prototype.Init = function() {
     this.ram.AddDevice(this.ethdev, 0x92000000, 0x1000);
     this.ram.AddDevice(this.fbdev, 0x91000000, 0x1000);
     this.ram.AddDevice(this.tsdev, 0x93000000, 0x1000);
+    this.ram.AddDevice(this.kbddev, 0x94000000, 0x100);
 
     this.ips = 0; // inctruction per second counter
 }
@@ -258,7 +258,7 @@ System.prototype.ImageFinished = function(result) {
             DebugMessage("File loaded: " + length + " bytes");
         } else { // hard drive
             this.SendStringToTerminal("Decompressing hard drive image...\r\n");
-            var drive = new ArrayBuffer(30*1024*1024); // bzip does not know the final size
+            var drive = new ArrayBuffer(40*1024*1024); // bzip does not know the final size
             var driveimage = new Uint8Array(drive);
             var length = bzip2.simple(bzip2.array(buffer8), driveimage);
             DebugMessage("File loaded: " + length + " bytes");
