@@ -322,8 +322,8 @@ function SetSPR(idx, x) {
         //tick timer
         switch (address|0) {
         case 0:
-            TTMR = x>>>0;
-            if ((TTMR >>> 30) != 0x3) {
+            TTMR = x|0;
+            if (((TTMR >> 30)&3) != 0x3) {
                 DebugMessage(ERROR_SETSPR_TIMER_MODE_NOT_CONTINUOUS|0);
                 abort();
             }
@@ -823,13 +823,8 @@ function Step(steps) {
             // ---------- TICK ----------
             // timer enabled
             if ((TTMR >> 30) != 0) {
-                TTCR = TTCR + 32|0;
+                TTCR = (TTCR + 32|0);
                 if ((TTCR & 0xFFFFFE0) == (TTMR & 0xFFFFFE0)) {
-                    if ((TTMR >>> 30) != 0x3) {
-                        DebugMessage(ERROR_UNKNOWN|0);
-                        //DebugMessage("Error: Timer mode other than continuous not supported");
-                        abort();
-                    }
                     // if interrupt enabled
                     if (TTMR & (1 << 29)) {
                         TTMR = TTMR | (1 << 28); // set pending interrupt

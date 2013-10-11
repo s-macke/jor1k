@@ -262,8 +262,8 @@ SafeCPU.prototype.SetSPR = function (idx, x) {
         //tick timer
         switch (address) {
         case 0:
-            this.TTMR = x>>>0;
-            if ((this.TTMR >>> 30) != 0x3) {
+            this.TTMR = x;
+            if (((this.TTMR >> 30)&3) != 0x3) {
                 DebugMessage("Error in SetSPR: Timer mode other than continuous not supported");
                 abort();
             }
@@ -543,18 +543,12 @@ SafeCPU.prototype.Step = function (steps) {
 
         // do this not so often
         if (!(steps & 15)) {
-
             // ---------- TICK ----------
             // timer enabled
             if ((this.TTMR >> 30) != 0) {
                 this.TTCR += 32;
-                //this.TTCR++;
-                //if ((this.TTCR & 0xFFFFFFF) >= (this.TTMR & 0xFFFFFFF)) {
+                this.TTCR &= 0xFFFFFFFF;
                 if ((this.TTCR & 0xFFFFFE0) == (this.TTMR & 0xFFFFFE0)) {
-                    if ((this.TTMR >>> 30) != 0x3) {
-                        DebugMessage("Error: Timer mode other than continuous not supported");
-                        abort();
-                    }
                     // if interrupt enabled
                     if (this.TTMR & (1 << 29)) {
                         this.TTMR |= (1 << 28); // set pending interrupt
@@ -565,11 +559,9 @@ SafeCPU.prototype.Step = function (steps) {
             // check if pending and check if interrupt must be triggered
             if ((this.SR_TEE) && (this.TTMR & (1 << 28))) {
                 this.Exception(EXCEPT_TICK, this.group0[SPR_EEAR_BASE]);
-                this.pc = this.nextpc++;                
+                this.pc = this.nextpc++;
             } else {
-                // the interrupt is executed immediately. Saves one comparison
-                // test it here instead every time,
-                if (this.interrupt_pending) {                    
+                if (this.interrupt_pending) {
                     // check again because there could be another exception during this one cycle
                     if ((this.PICSR) && (this.SR_IEE)) {
                         this.interrupt_pending = false;
