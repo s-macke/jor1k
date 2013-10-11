@@ -3,8 +3,9 @@
 // -------------------------------------------------
 
 importScripts('utils.js', 'framebuffer.js', 'eth.js', 'ata.js',
-    'uart.js', 'touchscreen.js', 'keyboard.js', 'ram.js', 'cpu/cpu.js', 
-    'system.js', 'bzip2.js', 'cpu/fastcpu.js', 'cpu/safecpu.js');
+    'uart.js', 'touchscreen.js', 'keyboard.js', 'ram.js', 'cpu/cpu.js',
+    'system.js', 'bzip2.js', 'cpu/fastcpu.js', 'cpu/safecpu.js'
+    );
 
 // The normal Terminal Device cannot be used here because it needs a canvas element
 // Therefore a small terminal device is emulated here which sends all characters received to the master.
@@ -23,15 +24,11 @@ onmessage = function(e) {
         return;
     } else 
     if (e.data.command == "GetFB") {
-        if (typeof sys.fbdev != "undefined") {
-            SendToMaster("GetFB", sys.fbdev.GetBuffer());
-        }
+        SendToMaster("GetFB", sys.fbdev.GetBuffer());
         return;
     } else
     if (e.data.command == "tty") {
-        if (typeof sys.uartdev != "undefined") {
-            sys.uartdev.ReceiveChar(e.data.data);
-        }
+        sys.uartdev.ReceiveChar(e.data.data);
         return;
     } else
     if (e.data.command == "GetIPS") {
@@ -40,15 +37,11 @@ onmessage = function(e) {
         return;
     } else
     if (e.data.command == "keydown") {
-        if (typeof sys.kbddev != "undefined") {
             sys.kbddev.OnKeyDown(e.data.data);
-        }
         return;
     } else
     if (e.data.command == "keyup") {
-        if (typeof sys.kbddev != "undefined") {
             sys.kbddev.OnKeyUp(e.data.data);
-        }
         return;
     } else
     if (e.data.command == "tsmousedown") {

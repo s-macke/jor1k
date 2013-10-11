@@ -4,15 +4,10 @@
 
 function TerminalInput(uartdev) {
     this.CTRLpressed = false;
-	this.uart = uartdev;
-    document.onkeypress = this.KeyPress.bind(this);
-    document.onkeydown = this.KeyDown.bind(this);
-    document.onkeyup = this.KeyUp.bind(this);	
+    this.uart = uartdev;
 }
 
-TerminalInput.prototype.KeyPress = function(e) {
-    // DebugMessage("Keypress: keyCode = " + e.keyCode);
-    // DebugMessage("Keypress: charCode = " + e.charCode);
+TerminalInput.prototype.OnKeyPress = function(e) {
     var key = 0;
     key = e.charCode;
     if (key == 0) {
@@ -26,22 +21,18 @@ TerminalInput.prototype.KeyPress = function(e) {
     return false;
 };
 
-TerminalInput.prototype.KeyUp = function(e) {
+TerminalInput.prototype.OnKeyUp = function(e) {
     var keycode = e.keyCode;
     var unicode = e.charCode;
     if (keycode == 17) {
         this.CTRLpressed = false;
     }
-    //DebugMessage("KeyUp: keyCode = " + e.keyCode);
-    //DebugMessage("KeyUp: charCode = " + e.charCode);
     return false;
 };
 
-TerminalInput.prototype.KeyDown = function(e) {
+TerminalInput.prototype.OnKeyDown = function(e) {
     var keycode = e.keyCode;
     var unicode = e.charCode;
-    //DebugMessage("KeyDown: keyCode = " + e.keyCode);
-    //DebugMessage("KeyDown: charCode = " + e.charCode);
 
     // CTRL + x key handling for chrome 
     if ((this.CTRLpressed) && (keycode >= 65) && (keycode <= 90)) {

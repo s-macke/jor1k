@@ -48,6 +48,22 @@ function jor1kGUI(termid, fbid, statsid, imageurls)
     this.fbctx = this.fbcanvas.getContext("2d");
     this.fbimageData = this.fbctx.createImageData(this.fbcanvas.width, this.fbcanvas.height);
 
+    document.onkeypress = function(event) {
+        this.SendToWorker("keypress", {keyCode:event.keyCode, charCode:event.charCode});
+        return this.terminput.OnKeyPress(event);      
+    }.bind(this);
+
+    document.onkeydown = function(event) {
+        //DebugMessage("" + event.keyCode);
+        this.SendToWorker("keydown", {keyCode:event.keyCode, charCode:event.charCode});
+        return this.terminput.OnKeyDown(event);
+    }.bind(this);
+
+    document.onkeyup = function(event) {
+        this.SendToWorker("keyup", {keyCode:event.keyCode, charCode:event.charCode});
+        return this.terminput.OnKeyUp(event);
+    }.bind(this);
+
     this.fbcanvas.onmousedown = function(event) {
         var rect = this.fbcanvas.getBoundingClientRect();
         var x = event.clientX - rect.left;
