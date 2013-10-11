@@ -258,7 +258,7 @@ System.prototype.ImageFinished = function(result) {
             DebugMessage("File loaded: " + length + " bytes");
         } else { // hard drive
             this.SendStringToTerminal("Decompressing hard drive image...\r\n");
-            var drive = new ArrayBuffer(40*1024*1024); // bzip does not know the final size
+            var drive = new ArrayBuffer(30*1024*1024); // bzip does not know the final size
             var driveimage = new Uint8Array(drive);
             var length = bzip2.simple(bzip2.array(buffer8), driveimage);
             DebugMessage("File loaded: " + length + " bytes");
