@@ -7,10 +7,11 @@ function DebugMessage(message) {
 }
 
 // small uart device
-function UARTDev(worker)
-{
+function UARTDev(worker) {
     this.ReceiveChar = function(c) {
-        worker.SendToWorker("tty", c);
+        if (!worker.fbfocus) { // check if framebuffer has focus
+            worker.SendToWorker("tty", c);
+        }
     };
 }
 
@@ -18,8 +19,8 @@ function jor1kGUI(termid, fbid, statsid, imageurls)
 {
     this.urls = imageurls;
     this.worker = new Worker('js/worker/worker.js');
-    this.SendToWorker = function(command, data)
-    {
+    this.fbfocus = false; // true: keyboard command are not send to tty
+    this.SendToWorker = function(command, data) {
         this.worker.postMessage(
         {
             "command": command,
@@ -42,7 +43,7 @@ function jor1kGUI(termid, fbid, statsid, imageurls)
     this.worker.onerror = function(e) {
         console.log("Error at " + e.filename + ":" + e.lineno + ": " + e.message);
     }
-
+    this.terminalcanvas = document.getElementById(termid);
     // Init Framebuffer
     this.fbcanvas = document.getElementById(fbid);
     this.fbctx = this.fbcanvas.getContext("2d");
@@ -64,7 +65,14 @@ function jor1kGUI(termid, fbid, statsid, imageurls)
         return this.terminput.OnKeyUp(event);
     }.bind(this);
 
+    this.terminalcanvas.onmousedown = function(event) {
+        this.fbfocus = false;
+        this.fbcanvas.style.border = "2px solid #000000";
+    }.bind(this);
+
     this.fbcanvas.onmousedown = function(event) {
+        this.fbcanvas.style.border = "2px solid #FF0000";
+        this.fbfocus = true;
         var rect = this.fbcanvas.getBoundingClientRect();
         var x = event.clientX - rect.left;
         var y = event.clientY - rect.top;
