@@ -12,20 +12,61 @@ body {
     line-height: 1.4;
     margin-top: 30px;
     margin-left: 30px;
+    margin-right: 30px;
+    background: #F0F0F0;
 }
 
 h1, h2, h3, h4, h5, h6 {
     margin: 20px 0 10px;
     padding: 0;
     font-weight: bold;
-    -webkit-font-smoothing: antialiased;
     cursor: text;
     position: relative;
+    color:#E0E0E0;
+    text-indent: 10px;
+}
+
+h1 {
+    text-indent: 10px;
+}
+
+.heading, .windows, .infobox {
+    margin-top: 0px;
+    margin-bottom: 0px;    
+}
+
+.heading {
+    overflow:auto;
+    background: #153080;
+    border-bottom-left-radius: 0px;
+    border-bottom-right-radius: 0px;
+    border-top-left-radius: 30px;
+    border-top-right-radius: 30px;
+}
+
+.windows {
+    overflow:auto;
+    border-color: #153080;
+    border-style: solid;    
+}
+
+.infobox {
+    overflow:auto;    
+    background: #153080;
+    border-bottom-left-radius: 30px;
+    border-bottom-right-radius: 30px;
+    border-top-left-radius: 0px;
+    border-top-right-radius: 0px;
 }
 
 li, ul {
     list-style: none;
     padding-left: 14px;
+    color:#B0B0B0;
+}
+
+a {    
+    color:#FF9000;;
 }
 
 .terminal {
