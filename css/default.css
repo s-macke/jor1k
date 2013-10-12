@@ -27,7 +27,12 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 h1 {
-    text-indent: 10px;
+    text-indent: 30px;
+    display: inline;
+    margin-bottom: 100px;
+    /*vertical-align:middle*/
+	bottom: 20px;
+    
 }
 
 .heading, .windows, .infobox {
@@ -65,8 +70,12 @@ li, ul {
     color:#B0B0B0;
 }
 
-a {    
+a:link {    
     color:#FF9000;;
+}
+
+img {
+    border-style: none;
 }
 
 .terminal {
