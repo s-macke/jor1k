@@ -432,7 +432,7 @@ SafeCPU.prototype.DTLBLookup = function (addr, write) {
     // nways are 1
     // nsets are 64
 
-    var setindex = (addr >> 13) & 63; // check this values
+    var setindex = (addr >> 13) & 63;
     var tlmbr = this.group1[0x200 | setindex]; // match register
     if (((tlmbr & 1) == 0) || ((tlmbr >> 19) != (addr >> 19))) {
         this.Exception(EXCEPT_DTLBMISS, addr);
@@ -470,22 +470,18 @@ SafeCPU.prototype.DTLBLookup = function (addr, write) {
 // the slow and safe version
 SafeCPU.prototype.GetInstruction = function (addr) {
     if (!this.SR_IME) {
-        return this.ram.ReadMemory32(uint32(addr));
+        return this.ram.ReadMemory32(addr);
     }
-
     // pagesize is 8192 bytes
     // nways are 1
     // nsets are 64
-
-    var setindex = (addr & 0xFFFFE000) >>> 13; // check this values
-    // at the moment we have only 64 entries in immu. Look in group0
+    
+    var setindex = (addr >> 13) & 63;
     setindex &= 63; // number of sets
     var tlmbr = this.group2[0x200 | setindex];
 
     // test if tlmbr is valid
-    if (
-        ((tlmbr & 1) == 0) || //test if valid
-        ((tlmbr & 0xFFF80000) != (addr & 0xFFF80000))) {
+    if (((tlmbr & 1) == 0) || ((tlmbr >> 19) != (addr >> 19))) {
             this.Exception(EXCEPT_ITLBMISS, this.pc<<2);
             return -1;
     }
@@ -511,7 +507,7 @@ SafeCPU.prototype.GetInstruction = function (addr) {
             return -1;
         }
     }
-    return this.ram.ReadMemory32(uint32((tlbtr & 0xFFFFE000) | (addr & 0x1FFF)));
+    return this.ram.ReadMemory32((tlbtr & 0xFFFFE000) | (addr & 0x1FFF));
 };
 
 SafeCPU.prototype.Step = function (steps) {

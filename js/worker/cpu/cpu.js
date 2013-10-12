@@ -450,8 +450,8 @@ CPU.prototype.DTLBRefill = function (addr, nsets) {
         return false;
     }
 
-    var vpn = addr >>> 13;
-    var pgd_offset = (addr >>> 24) << 2;
+    var vpn = (addr >> 13) & 0x7FFFF;
+    var pgd_offset = ((addr >> 22) & 0x3FC);
     var pte_offset = (vpn & 0x7FF) << 2;
     var dmmucr = this.ram.int32mem[this.current_pgd >> 2] & 0x3FFFFFFF;
     var pte_pointer = this.ram.int32mem[dmmucr + pgd_offset >> 2];
@@ -477,9 +477,9 @@ CPU.prototype.ITLBRefill = function (addr, nsets) {
         this.Exception(EXCEPT_ITLBMISS, addr);
         return false;
     }
-
-    var vpn = addr >>> 13;
-    var pgd_offset = (addr >>> 24) << 2;
+    
+    var vpn = (addr >> 13) & 0x7FFFF;
+    var pgd_offset = ((addr >> 22) & 0x3FC);
     var pte_offset = (vpn & 0x7FF) << 2;
     var dmmucr = this.ram.int32mem[this.current_pgd >> 2] & 0x3FFFFFFF;
     var pte_pointer = this.ram.int32mem[dmmucr + pgd_offset >> 2];
@@ -532,7 +532,7 @@ CPU.prototype.DTLBLookup = function (addr, write) {
     */
     var tlbtr = this.group1[0x280 | setindex]; // translate register
 
-    // check if supervisor mode
+    // check for page fault
     if (this.SR_SM) {
         if (
             ((!write) && (!(tlbtr & 0x100))) || // check if SRE
@@ -556,31 +556,20 @@ CPU.prototype.DTLBLookup = function (addr, write) {
 // the slow and safe version
 CPU.prototype.GetInstruction = function (addr) {
     if (!this.SR_IME) {
-        return this.ram.ReadMemory32(uint32(addr));
+        return this.ram.ReadMemory32(addr);
     }
-
     // pagesize is 8192 bytes
     // nways are 1
     // nsets are 64
-
-    var setindex = (addr & 0xFFFFE000) >>> 13; // check this values
-    // at the moment we have only 64 entries in immu. Look in group0
+    
+    var setindex = (addr >> 13) & 63;
     setindex &= 63; // number of sets
     var tlmbr = this.group2[0x200 | setindex];
 
     // test if tlmbr is valid
-    if (
-        ((tlmbr & 1) == 0) || //test if valid
-        ((tlmbr & 0xFFF80000) != (addr & 0xFFF80000))) {
-        
-        if (this.ITLBRefill(addr, 64)) {
-            tlmbr = this.group2[0x200 | setindex];
-        } else {
+    if (((tlmbr & 1) == 0) || ((tlmbr >> 19) != (addr >> 19))) {
+            this.Exception(EXCEPT_ITLBMISS, this.pc<<2);
             return -1;
-        }
-        
-        //this.Exception(EXCEPT_ITLBMISS, this.pc<<2);
-        //return -1;
     }
     // set lru
     if (tlmbr & 0xC0) {
@@ -589,8 +578,8 @@ CPU.prototype.GetInstruction = function (addr) {
     }
 
     var tlbtr = this.group2[0x280 | setindex];
+
     //Test for page fault
-    // check if supervisor mode
     if (this.SR_SM) {
         // check if user read enable is not set(URE)
         if (!(tlbtr & 0x40)) {
@@ -604,7 +593,7 @@ CPU.prototype.GetInstruction = function (addr) {
             return -1;
         }
     }
-    return this.ram.ReadMemory32(uint32((tlbtr & 0xFFFFE000) | (addr & 0x1FFF)));
+    return this.ram.ReadMemory32((tlbtr & 0xFFFFE000) | (addr & 0x1FFF));
 };
 
 CPU.prototype.Step = function (steps) {
