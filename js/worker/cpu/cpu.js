@@ -57,11 +57,14 @@ function CPU(ram) {
 
     // fast tlb lookup for instruction and data
     // index 0: 32 bit instruction
-    // index 1: data read
-    // index 2: data write
-    array = new ArrayBuffer(3 << 2);
+    // index 1: data read 32 Bit
+    // index 2: data read 8 Bit signed
+    // index 3: data read 8 Bit unsigned
+    // index 4: data write 32 Bit
+    // index 5: data write 8 Bit
+    array = new ArrayBuffer(6 << 2);
     this.fasttlblookup = new Int32Array(array); 
-    array = new ArrayBuffer(3 << 2);
+    array = new ArrayBuffer(6 << 2);
     this.fasttlbcheck = new Int32Array(array); 
     this.InvalidateTLB();
 
@@ -113,9 +116,15 @@ CPU.prototype.InvalidateTLB = function() {
     this.fasttlblookup[0] = -1;
     this.fasttlblookup[1] = -1;
     this.fasttlblookup[2] = -1;
+    this.fasttlblookup[3] = -1;
+    this.fasttlblookup[4] = -1;
+    this.fasttlblookup[5] = -1;
     this.fasttlbcheck[0] = -1;
     this.fasttlbcheck[1] = -1;
     this.fasttlbcheck[2] = -1;
+    this.fasttlbcheck[3] = -1;
+    this.fasttlbcheck[4] = -1;
+    this.fasttlbcheck[5] = -1;
 }
 
 
@@ -176,6 +185,12 @@ CPU.prototype.SetFlags = function (x) {
         this.fasttlbcheck[1] = 0x0;
         this.fasttlblookup[2] = 0x0;
         this.fasttlbcheck[2] = 0x0;
+        this.fasttlblookup[3] = 0x0;
+        this.fasttlbcheck[3] = 0x0;
+        this.fasttlblookup[4] = 0x0;
+        this.fasttlbcheck[4] = 0x0;
+        this.fasttlblookup[5] = 0x0;
+        this.fasttlbcheck[5] = 0x0;
     }
 };
 
@@ -407,9 +422,15 @@ CPU.prototype.Exception = function (excepttype, addr) {
     this.fasttlblookup[0] = 0x0;
     this.fasttlblookup[1] = 0x0;
     this.fasttlblookup[2] = 0x0;
+    this.fasttlblookup[3] = 0x0;
+    this.fasttlblookup[4] = 0x0;
+    this.fasttlblookup[5] = 0x0;
     this.fasttlbcheck[0] = 0x0;
     this.fasttlbcheck[1] = 0x0;
-	this.fasttlbcheck[2] = 0x0;
+    this.fasttlbcheck[2] = 0x0;
+    this.fasttlbcheck[3] = 0x0;
+    this.fasttlbcheck[4] = 0x0;
+    this.fasttlbcheck[5] = 0x0;
 
     this.nextpc = except_vector>>2;
 
@@ -749,6 +770,7 @@ CPU.prototype.Step = function (steps) {
             // rfe
             this.nextpc = this.GetSPR(SPR_EPCR_BASE)>>2;
             this.SetFlags(this.GetSPR(SPR_ESR_BASE));
+            this.InvalidateTLB();
             break;
 
         case 0x11:
@@ -774,45 +796,45 @@ CPU.prototype.Step = function (steps) {
                 DebugMessage("Error in lwz: no unaligned access allowed");
                 abort();
             }
-            //if ((ftlbcheck[1] ^ r[32]) >> 13) {
+            if ((ftlbcheck[1] ^ r[32]) >> 13) {
                 r[33] = this.DTLBLookup(r[32], false);
                 if (r[33] == -1) {
                     break;
                 }
-                //ftlbcheck[1] = r[32];
-                //ftlb[1] = ((r[33]^r[32]) >> 13) << 13;
-            //}
-            //r[33] = ftlb[1] ^ r[32];
+                ftlbcheck[1] = r[32];
+                ftlb[1] = ((r[33]^r[32]) >> 13) << 13;
+            }
+            r[33] = ftlb[1] ^ r[32];
             r[(ins >> 21) & 0x1F] = r[33]>0?ram.int32mem[r[33] >> 2]:ram.ReadMemory32(r[33]);
             break;
 
         case 0x23:
             // lbz
             r[32] = r[(ins >> 16) & 0x1F] + ((ins << 16) >> 16);
-            //if ((ftlbcheck[1] ^ r[32]) >> 13) {
+            if ((ftlbcheck[2] ^ r[32]) >> 13) {
                 r[33] = this.DTLBLookup(r[32], false);
                 if (r[33] == -1) {
                     break;
                 }
-                //ftlbcheck[1] = r[32];
-                //ftlb[1] = ((r[33]^r[32]) >> 13) << 13;
-            //}
-            //r[33] = ftlb[1] ^ r[32];
+                ftlbcheck[2] = r[32];
+                ftlb[2] = ((r[33]^r[32]) >> 13) << 13;
+            }
+            r[33] = ftlb[2] ^ r[32];
             r[(ins >> 21) & 0x1F] = ram.ReadMemory8(r[33]);
             break;
 
         case 0x24:
             // lbs
             r[32] = r[(ins >> 16) & 0x1F] + ((ins << 16) >> 16);
-            //if ((ftlbcheck[1] ^ r[32]) >> 13) {
+            if ((ftlbcheck[3] ^ r[32]) >> 13) {
                 r[33] = this.DTLBLookup(r[32], false);
                 if (r[33] == -1) {
                     break;
                 }
-                //ftlbcheck[1] = r[32];
-                //ftlb[1] = ((r[33]^r[32]) >> 13) << 13;
-            //}
-            //r[33] = ftlb[1] ^ r[32];
+                ftlbcheck[3] = r[32];
+                ftlb[3] = ((r[33]^r[32]) >> 13) << 13;
+            }
+            r[33] = ftlb[3] ^ r[32];
             r[(ins >> 21) & 0x1F] = ((ram.ReadMemory8(r[33])) << 24) >> 24;
             break;
 
@@ -956,15 +978,15 @@ CPU.prototype.Step = function (steps) {
                 DebugMessage("Error in sw: no aligned memory access");
                 abort();
             }
-            //if ((ftlbcheck[2] ^ r[32]) >> 13) {
+            if ((ftlbcheck[4] ^ r[32]) >> 13) {
                 r[33] = this.DTLBLookup(r[32], true);
                 if (r[33] == -1) {
                     break;
                 }
-                //ftlbcheck[2] = r[32];
-                //ftlb[2] = ((r[33]^r[32]) >> 13) << 13;
-            //}
-            //r[33] = ftlb[2] ^ r[32];
+                ftlbcheck[4] = r[32];
+                ftlb[4] = ((r[33]^r[32]) >> 13) << 13;
+            }
+            r[33] = ftlb[4] ^ r[32];
             if (r[33]>0) {
                 int32mem[r[33] >> 2] = r[(ins >> 11) & 0x1F];
             } else {
@@ -977,15 +999,15 @@ CPU.prototype.Step = function (steps) {
             // sb
             imm = ((((ins >> 10) & 0xF800) | (ins & 0x7FF)) << 16) >> 16;
             r[32] = r[(ins >> 16) & 0x1F] + imm;
-            //if ((ftlbcheck[2] ^ r[32]) >> 13) {
+            if ((ftlbcheck[5] ^ r[32]) >> 13) {
                 r[33] = this.DTLBLookup(r[32], true);
                 if (r[33] == -1) {
                     break;
                 }
-                //ftlbcheck[2] = r[32];
-                //ftlb[2] = ((r[33]^r[32]) >> 13) << 13;
-            //}
-            //r[33] = ftlb[2] ^ r[32];
+                ftlbcheck[5] = r[32];
+                ftlb[5] = ((r[33]^r[32]) >> 13) << 13;
+            }
+            r[33] = ftlb[5] ^ r[32];
             ram.WriteMemory8(r[33], r[(ins >> 11) & 0x1F]);
             break;
 
