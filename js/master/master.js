@@ -15,7 +15,7 @@ function UARTDev(worker) {
     };
 }
 
-function jor1kGUI(termid, fbid, statsid, imageurls)
+function jor1kGUI(termid, fbid, statsid, coreid, imageurls)
 {
     this.urls = imageurls;
     this.worker = new Worker('js/worker/worker.js');

@@ -26,8 +26,8 @@
                     <span style="float: left">
                     <form>
                         <select id="coreselect" onchange='jor1kgui.ChangeCore(this.options[this.selectedIndex].value)'>
+                            <option value="asm">asm.js Core</option>
                             <option value="std">Standard Core</option>
-                            <option value="asm">asm.js (for Firefox)</option>
                             <option value="safe">Safe Core (Slow)</option>
                         </select>
                         <select id="hdselect" onchange='jor1kgui.ChangeImage(this.options[this.selectedIndex].value)'>
@@ -92,7 +92,7 @@ function SelectHD()
 }
  
 function Start() {
-    jor1kgui = new jor1kGUI("tty", "fb", "stats", ["../../bin/vmlinux.bin.bz2", "../../bin/hddemo.bz2"]);
+    jor1kgui = new jor1kGUI("tty", "fb", "stats", "asm", ["../../bin/vmlinux.bin.bz2", "../../bin/hddemo.bz2"]);
 }
 </script>
 

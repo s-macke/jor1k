@@ -147,7 +147,7 @@ System.prototype.Init = function() {
     this.fastcpu.Init();
 
     DebugMessage("Init CPU");
-    this.ChangeCore("std", false);
+    this.ChangeCore("asm", false);
 
     DebugMessage("Init Terminal");
     this.term = new Terminal();
