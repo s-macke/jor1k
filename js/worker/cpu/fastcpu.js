@@ -2,7 +2,8 @@
 function FastCPU(stdlib, foreign, heap) {
 "use asm";
 
-var imul = stdlib.Math.imul;
+//var imul = stdlib.Math.imul;
+var imul = foreign.imul;
 var DebugMessage = foreign.DebugMessage;
 var abort = foreign.abort;
 var ReadMemory32 = foreign.ReadMemory32;
@@ -110,7 +111,6 @@ var SR_CID = 0x0; //Context ID
 var boot_dtlb_misshandler_address = 0x0;
 var boot_itlb_misshandler_address = 0x0;
 var current_pgd = 0x0;
-
 
 function Init() {
     AnalyzeImage();
@@ -1369,7 +1369,7 @@ function Step(steps) {
                 {                    
                     // this is a hack to do 32 bit signed multiply. Seems to work but needs to be tested. 
                     //r[rindex<<2>>2] = (rA >> 0) * (rB >> 0);
-                    r[rindex>>2] = imul(rA, rB)|0;
+                    r[rindex>>2] = imul(rA|0, rB|0)|0;
                     /*
                     var rAl = rA & 0xFFFF;
                     var rBl = rB & 0xFFFF;

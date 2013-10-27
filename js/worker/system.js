@@ -126,6 +126,20 @@ System.prototype.Init = function() {
     DebugMessage("Init RAM");
     this.ram = new RAM(this.heap, ramoffset);
 
+
+if (typeof Math.imul == "undefined") {
+    Math.imul = function(a, b) {
+        var ah  = (a >>> 16) & 0xffff;
+        var al = a & 0xffff;
+        var bh  = (b >>> 16) & 0xffff;
+        var bl = b & 0xffff;
+        // the shift by 0 fixes the sign on the high part
+        // the final |0 converts the unsigned value into a signed value
+        return ((al * bl) + (((ah * bl + al * bh) << 16) >>> 0)|0);
+    }
+}
+
+
     // Create the asm.js core. Because of Firefox limitations it can only be created once.
     var stdlib = {
         Int32Array : Int32Array,
@@ -136,6 +150,7 @@ System.prototype.Init = function() {
     {
         DebugMessage: DebugMessage,
         abort : abort,
+        imul : Math.imul,
         ReadMemory32 : this.ram.ReadMemory32.bind(this.ram),
         WriteMemory32 : this.ram.WriteMemory32.bind(this.ram),
         ReadMemory16 : this.ram.ReadMemory16.bind(this.ram),
@@ -268,6 +283,7 @@ System.prototype.ImageFinished = function(result) {
     }.bind(this));
 
     this.SendStringToTerminal("Booting Kernel\r\n");
+    this.cpu.Reset();
     this.cpu.AnalyzeImage();
     DebugMessage("Starting emulation");
     SendToMaster("execute", 0);
