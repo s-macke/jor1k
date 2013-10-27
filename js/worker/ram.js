@@ -34,36 +34,6 @@ RAM.prototype.ReadMemory32 = function(addr) {
     abort();
 };
 
-/* background function for optimization only */
-RAM.prototype.ReadMemory32ToSlice8 = function(addr, length) {
-    
-    if (addr >= 0) {
-        var arr = new Uint8Array(length);
-        var start = addr >> 2;
-        var end = start + (length >> 2);
-        if(end & 0x3){
-            end++;
-        }
-
-        for(var i=start, j=0;i<end;i++,j+=4){
-            //ugly, sorry, but hoping unrolled is faster
-            arr[j] = this.int32mem[i] >> 24;
-            if((j + 1) < arr.length){
-                arr[j + 1] = (this.int32mem[i] >> 16) & 0xFF;
-            }
-            if((j + 2) < arr.length){
-                arr[j + 2] = (this.int32mem[i] >> 8) & 0xFF;
-            }
-            if((j + 3) < arr.length){
-                arr[j + 3] = (this.int32mem[i]) & 0xFF;
-            }
-        }
-        return arr;
-    }
-    DebugMessage("Error in ReadMemorySlice32: RAM region " + hex8(addr) + " is not accessible");
-    abort();
-};
-
 RAM.prototype.WriteMemory32 = function(addr, x) {
     if (addr >= 0) {
         this.int32mem[addr >> 2] = x;

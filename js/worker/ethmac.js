@@ -328,42 +328,13 @@ function EthDev(ram, intdev, mac) {
                     var aligned = true;
                     stat.LEN = data.length;
 
-                    //if we're not word aligned, add an extra 32bit word
-                    if(data.length & 3){
-                        //need to discard the CRC, since it won't make sense
-                        aligned = false;
-                    }
-
                     if(stat.LEN > (this.PACKETLEN & 0xFFFF)){
                         stat.LEN = this.PACKETLEN & 0xFFFF;
                     }
 
                     var ptr = this.BD[i+1];
-                    var len = stat.LEN >> 2;
-                    if(!aligned){
-                        len++;
-                    }
-
-                    for(var j=0;j<len;j++){
-                        var val = uint32(0x0);
-
-                        if((j<<2) < data.length){
-                            val |= (data[(j << 2)] << 24);
-                        }
-
-                        if(((j<<2) + 1) < data.length){
-                            val |= (data[(j << 2)+1] << 16);
-                        }
-
-                        if(((j<<2) + 2) < data.length){
-                            val |= (data[(j << 2)+2] << 8);
-                        }
-
-                        if(((j<<2) + 3) < data.length){
-                            val |= data[(j << 2)+3];
-                        }
-
-                        ram.WriteMemory32(ptr+(j<<2), val);
+                    for(var j=0;j<stat.LEN;j++){
+                        ram.WriteMemory8(ptr+j, data[j]);
                     }
 
                     //mark buffer ready to be read
@@ -441,11 +412,10 @@ function EthDev(ram, intdev, mac) {
 
         //TODO: do we ever need preamble/frame start?
         var frame = new Uint8Array(frameSize);
-        var buf = ram.ReadMemory32ToSlice8(ptr, stat.LEN);
         
         for(var i=0;i<frame.length;i++){
-            if(i<buf.length){
-                frame[i] = buf[i];
+            if(i<stat.LEN){
+                frame[i] = ram.ReadMemory8(ptr+i);
             }else{
                 frame[i] = 0;
             }
@@ -461,10 +431,10 @@ function EthDev(ram, intdev, mac) {
                 crcval = this.crc32(frame, 0, frame.length-4);
             }
 
-            frame[frame.length-4] = (crcval >> 24);
-            frame[frame.length-3] = (crcval >> 16) & 0xFF;
-            frame[frame.length-2] = (crcval >> 8) & 0xFF;
-            frame[frame.length-1] = crcval & 0xFF;
+            frame[frame.length-1] = (crcval >> 24);
+            frame[frame.length-2] = (crcval >> 16) & 0xFF;
+            frame[frame.length-3] = (crcval >> 8) & 0xFF;
+            frame[frame.length-4] = crcval & 0xFF;
         }
 
         this.TransmitCallback(frame.buffer);
@@ -586,6 +556,8 @@ function EthDev(ram, intdev, mac) {
                 if(addr >= ETHMAC_ADDR_BD_START &&
                     addr <= ETHMAC_ADDR_BD_END){
                     ret = this.BD[(addr-ETHMAC_ADDR_BD_START)>>>2];
+                }else{
+                    DebugMessage("Attempt to access ethmac register beyond 0x800");
                 }
         }
         return ret;
@@ -713,6 +685,8 @@ function EthDev(ram, intdev, mac) {
                             }
                         }
                     }
+                }else{
+                    DebugMessage("Attempt to access ethmac register beyond 0x800");
                 }
         }
     };
