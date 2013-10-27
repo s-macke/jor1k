@@ -170,7 +170,12 @@ if (typeof Math.imul == "undefined") {
 
     DebugMessage("Init Devices");
     this.uartdev = new UARTDev(this.term, this);
-    this.ethdev = new EthDev();
+
+    this.ethdev = new EthDev(this.ram, this);
+    this.ethdev.TransmitCallback = function(data){
+        SendToMaster("ethmac", data);
+    }
+
     this.fbdev = new FBDev(this.ram);
     this.atadev = new ATADev(this);
     this.tsdev = new TouchscreenDev(this);

@@ -15,8 +15,9 @@ function UARTDev(worker) {
     };
 }
 
-function jor1kGUI(termid, fbid, statsid, coreid, imageurls)
+function jor1kGUI(termid, fbid, statsid, imageurls, proxyurl)
 {
+    this.proxyurl = proxyurl;
     this.urls = imageurls;
     this.worker = new Worker('js/worker/worker.js');
     this.fbfocus = false; // true: keyboard command are not send to tty
@@ -91,6 +92,22 @@ function jor1kGUI(termid, fbid, statsid, coreid, imageurls)
         this.SendToWorker("tsmousemove", {x:x, y:y});
     }.bind(this);
 
+    //open WebSocket
+    if(this.proxyurl){
+        this.socket = new WebSocket(this.proxyurl);
+        this.socket.binaryType = 'arraybuffer';
+
+        this.socket.onmessage = function(evnt){
+            if(evnt.data instanceof ArrayBuffer){
+                this.SendToWorker("ethmac", evnt.data);
+            }
+        }.bind(this);
+    }else{
+        this.socket = {
+            send : function(){}
+        };
+    }
+
     // Init Statsline 
     this.stats = document.getElementById(statsid);
 
@@ -104,6 +121,7 @@ function jor1kGUI(termid, fbid, statsid, coreid, imageurls)
 jor1kGUI.prototype.OnMessage = function(e) {    
     if (this.stop) return;
     if (e.data.command == "execute") this.SendToWorker("execute", 0); else
+    if (e.data.command == "ethmac") this.socket.send(e.data.data); else
     if (e.data.command == "tty") this.term.PutChar(e.data.data); else
     if (e.data.command == "GetFB") this.UpdateFramebuffer(e.data.data); else
     if (e.data.command == "Stop") {console.log("Received stop signal"); this.stop = true;} else

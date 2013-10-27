@@ -2,7 +2,7 @@
 // -------------------- Worker ---------------------
 // -------------------------------------------------
 
-importScripts('utils.js', 'framebuffer.js', 'eth.js', 'ata.js',
+importScripts('utils.js', 'framebuffer.js', 'ethmac.js', 'ata.js',
     'uart.js', 'touchscreen.js', 'keyboard.js', 'ram.js', 'cpu/cpu.js',
     'system.js', 'bzip2.js', 'cpu/fastcpu.js', 'cpu/safecpu.js'
     );
@@ -19,6 +19,11 @@ var sys = new System();
 DebugMessage("System initialized");
 
 onmessage = function(e) {
+    //TODO: make ethmac its own worker
+    if (e.data.command == "ethmac") {
+        sys.ethdev.Receive(new Uint8Array(e.data.data));
+        return;
+    } else 
     if (e.data.command == "execute") {
         sys.MainLoop();
         return;
