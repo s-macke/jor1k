@@ -114,18 +114,35 @@ Terminal.prototype.ScrollDown = function() {
         }
         return;
     }
+    this.ScrollDown2();
+}
 
+Terminal.prototype.ScrollDown2 = function(draw) {
     for (var i = this.scrollbottom-1; i >= this.scrolltop; i--) {
         if (i == this.nrows-1) continue;
         for (var j = 0; j < this.ncolumns; j++) {
             this.screen[i + 1][j] = this.screen[i][j];
             this.color[i + 1][j] = this.color[i][j];
         }
+        if (draw) this.PlotRow(i+1);
     }
     this.DeleteRow(this.scrolltop);
-    this.ScreenUpdate();
-
+    if (draw) this.PlotRow(this.scrolltop);
 }
+
+Terminal.prototype.ScrollUp = function(draw) {
+    for (var i = this.scrolltop+1; i <= this.scrollbottom; i++) {
+        if (i == 0) continue;
+        for (var j = 0; j < this.ncolumns; j++) {
+            this.screen[i - 1][j] = this.screen[i][j];
+            this.color[i - 1][j] = this.color[i][j];
+        }
+        if (draw) this.PlotRow(i-1);
+    }
+    this.DeleteRow(this.scrollbottom);
+    if (draw) this.PlotRow(this.scrollbottom);
+};
+
 
 
 Terminal.prototype.LineFeed = function() {
@@ -137,16 +154,20 @@ Terminal.prototype.LineFeed = function() {
         }
         return;
     }
-    for (var i = this.scrolltop+1; i <= this.scrollbottom; i++) {
-        if (i == 0) continue;
-        for (var j = 0; j < this.ncolumns; j++) {
-            this.screen[i - 1][j] = this.screen[i][j];
-            this.color[i - 1][j] = this.color[i][j];
+    this.ScrollUp(true);
+};
+
+
+Terminal.prototype.Scroll = function(count) {
+    if (count < 0) {
+        count = -count;
+        for(var i=0; i<d; i++) {
+            DeleteRow(i);
         }
     }
-    this.DeleteRow(this.scrollbottom);
     this.ScreenUpdate();
-};
+}
+
 
 Terminal.prototype.ChangeCursor = function(Numbers) {
     switch (Numbers.length) {
@@ -156,16 +177,17 @@ Terminal.prototype.ChangeCursor = function(Numbers) {
         break;
     case 1:
         this.cursory = Numbers[0];
+        if (this.cursory) this.cursory--;
         break;
     case 2:
     default:
         // TODO check for boundaries
         this.cursory = Numbers[0];
         this.cursorx = Numbers[1];
+        if (this.cursorx) this.cursorx--;
+        if (this.cursory) this.cursory--;
         break;
     }
-    if (this.cursorx) this.cursorx--;
-    if (this.cursory) this.cursory--;
     if (this.cursorx >= this.ncolumns) this.cursorx = this.ncolumns - 1;
     if (this.cursory >= this.nrows) this.cursory = this.nrows - 1;
 };
@@ -205,33 +227,18 @@ Terminal.prototype.ChangeColor = function(Numbers) {
 };
 
 Terminal.prototype.HandleEscapeSequence = function() {
-    //DebugMessage("Escape sequence:'" + this.escapestring+"'");
+    DebugMessage("Escape sequence:'" + this.escapestring+"'");
     var i = 0;
     if (this.escapestring == "[J") {
         this.DeleteArea(this.cursory, this.cursorx, this.cursory, this.ncolumns - 1);
         this.DeleteArea(this.cursory + 1, 0., this.nrows - 1, this.ncolumns - 1);
         return;
     }
-    // erase from start till cursor
-    else if (this.escapestring == "[1K") {
-        this.DeleteArea(this.cursory, 0., this.cursory, this.cursorx);
-        return;
-    }
-    // erase from cursor till end
-    else if (this.escapestring == "[K") {
-        this.DeleteArea(this.cursory, this.cursorx, this.cursory, this.ncolumns - 1);
-        return;
-    }
-    //Scroll up
-    else if (this.escapestring == "M") {
-        this.ScrollDown();
-        return;
-    }
 
     // Testing for [x;y;z
     var s = this.escapestring;
     if (s.charAt(0) != "[") {
-        DebugMessage("Escape sequence unknown:'" + this.escapestring + "'");
+        //DebugMessage("Escape sequence unknown:'" + this.escapestring + "'");
         return; // the short escape sequences must be handled earlier
     }
     s = s.substr(1); // delete first sign
@@ -247,65 +254,152 @@ Terminal.prototype.HandleEscapeSequence = function() {
     }
 
     var oldcursory = this.cursory; // save current cursor position
-
+    var count = 0;
     switch(lastsign) {
+
+        case 'l':
+            for(var i=0; i<numbers.length; i++) {
+                switch(numbers[i]) {
+                    /*case 4:
+                    break;*/
+                    default:
+                        DebugMessage("Term Parameter unknown " + numbers[i]);
+                    break;
+                }
+            }
+            break;
+
         case 'm': // colors
             this.ChangeColor(numbers);
             return;
 
+        case 'A': // move cursor up
+            count = numbers.length ? numbers[0] : 1;
+            if (count == 0) count = 1;
+            this.cursory -= count;
+            break;
+
+        case 'B': // move cursor down
+            count = numbers.length ? numbers[0] : 1;
+            if (count == 0) count = 1;
+            this.cursory += count;
+            break;
+
         case 'C': // move cursor right
-            if (numbers.length == 0) {
-                this.cursorx++;
-            }
-            else this.cursorx += numbers[0];
+            count = numbers.length ? numbers[0] : 1;
+            if (count == 0) count = 1;
+            this.cursorx += count;
             break;
 
         case 'D': // move cursor left
-            if (numbers.length == 0) {
-                this.cursorx--;
-            }
-            else this.cursorx -= numbers[0];
+            count = numbers.length ? numbers[0] : 1;
+            if (count == 0) count = 1;
+            this.cursorx -= count;
+            if (this.cursorx < 0) this.cursorx = 0;
+            break;
+
+        case 'E': // move cursor down
+            count = numbers.length ? numbers[0] : 1;
+            this.cursory += count;
+            this.cursorx = 0;
+            break;
+
+        case 'F': // move cursor up
+            count = numbers.length ? numbers[0] : 1;
+            this.cursory -= count;
+            if (this.cursory < 0) this.cursory = 0;
+            this.cursorx = 0;
             break;
 
         case 'G': // change cursor column
-            this.cursorx = numbers[0];
+            count = numbers.length ? numbers[0] : 1;
+            this.cursorx = count;
             if (this.cursorx) this.cursorx--;
-            break;
-
-        case 'r': // set scrolling region
-            this.scrolltop = numbers[0];
-            this.scrollbottom = numbers[1];
-            if (this.scrolltop) this.scrolltop--;
-            if (this.scrollbottom) this.scrollbottom--;
-            return;
-
-        case 'X': // erase only number of characters in current line    
-            for (var j = this.cursorx; j < this.cursorx + numbers[0]; j++) {
-                this.screen[this.cursory][j] = 0x0;
-            }
-            // this.DeleteArea(this.cursory, this.cursorx, this.cursory, this.cursorx+numbers[0]);
-            // this.DeleteArea(this.cursory, 0, this.cursory, numbers[0]);
             break;
 
         case 'H': // cursor position
         case 'd':
+        case 'f':
             this.ChangeCursor(numbers);
             break;
-    
-        case 'A': // move cursor up
-            if (numbers.length == 0) {
-                this.cursory--;
+
+        case 'K': // erase
+            count = numbers.length ? numbers[0] : 1;
+            if (!numbers.length) {
+                this.DeleteArea(this.cursory, this.cursorx, this.cursory, this.ncolumns - 1);
+            } else 
+            if (numbers[0] == 1) {
+                this.DeleteArea(this.cursory, 0., this.cursory, this.cursorx);
+            } else
+            if (numbers[0] == 2) {
+                this.DeleteRow(this.cursory);
             }
-            else this.cursory -= numbers[0];
             break;
-    
-        // move cursor down
-        case 'E':
-            if (numbers.length == 0) {
-                this.cursory++;
+
+        case 'L': // scroll down
+            count = numbers.length ? numbers[0] : 1;
+            if (count == 0) count = 1;
+            var top = this.scrolltop;
+            this.scrolltop = this.cursory;
+            if (count == 1) {
+                this.ScrollDown2(true);
+            } else {
+                for (var j = 0; j < count-1; j++) {
+                    this.ScrollDown2(false);
+                }
+                this.ScrollDown2(true);
             }
-            else this.cursory += numbers[0];
+            this.scrolltop = top;
             break;
+
+        case 'M': // scroll up
+            count = numbers.length ? numbers[0] : 1;
+            if (count == 0) count = 1;
+            var top = this.scrolltop;
+            this.scrolltop = this.cursory;
+            if (count == 1) {
+                this.ScrollUp(true);
+            } else {
+                for (var j = 0; j < count-1; j++) {
+                    this.ScrollUp(false);
+                }
+                this.ScrollUp(true);
+            }
+            this.scrolltop = top;
+            break;
+
+        case 'P': /* shift left from cursor and fill with zero */
+            count = numbers.length ? numbers[0] : 1;
+            if (count == 0) count = 1;
+            var n = 0;n
+            for (var j = this.cursorx+count; j < this.ncolumns; j++) {
+                this.screen[this.cursory][this.cursorx+n] = this.screen[this.cursory][j];
+                this.color[this.cursory][this.cursorx+n] = this.color[this.cursory][j];
+                n++;
+            }
+            this.DeleteArea(this.cursory, this.ncolumns-count, this.cursory, this.ncolumns-1);
+            this.PlotRow(this.cursory);
+            break;
+
+        case 'r': // set scrolling region
+            if (numbers.length == 0) {
+                this.scrolltop = 0;
+                this.scrollbottom = this.nrows-1;
+            } else {
+                this.scrolltop = numbers[0];
+                this.scrollbottom = numbers[1];
+                if (this.scrolltop) this.scrolltop--;
+                if (this.scrollbottom) this.scrollbottom--;
+            }
+            return;
+
+        case 'X': // erase only number of characters in current line    
+            count = numbers.length ? numbers[0] : 1;
+            if (count == 0) count = 1;
+            for (var j = 0; j < count; j++) {
+                this.screen[this.cursory][this.cursorx+j] = 0x0;
+            }
+            break;    
 
         default:
             DebugMessage("Escape sequence unknown:'" + this.escapestring + "'");
