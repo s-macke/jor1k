@@ -18,7 +18,7 @@ License.
 Sebastian Macke [simulationcorner.net](http://simulationcorner.net)
 
 ### Contributors
-Gerard Braad [gbraad.nl](http://gbraad.nl)
+Gerard Braad [gbraad.nl](http://gbraad.nl)  
 Ben Burns [github.com/benjamincburns](http://github.com/benjamincburns)
 
 
