@@ -227,20 +227,25 @@ Terminal.prototype.ChangeColor = function(Numbers) {
 };
 
 Terminal.prototype.HandleEscapeSequence = function() {
-    DebugMessage("Escape sequence:'" + this.escapestring+"'");
+    //DebugMessage("Escape sequence:'" + this.escapestring+"'");
     var i = 0;
     if (this.escapestring == "[J") {
         this.DeleteArea(this.cursory, this.cursorx, this.cursory, this.ncolumns - 1);
         this.DeleteArea(this.cursory + 1, 0., this.nrows - 1, this.ncolumns - 1);
         return;
+    } else
+    if (this.escapestring == "M") {
+        this.ScrollDown();
+        return;
     }
-
     // Testing for [x;y;z
     var s = this.escapestring;
+
     if (s.charAt(0) != "[") {
-        //DebugMessage("Escape sequence unknown:'" + this.escapestring + "'");
+        DebugMessage("Escape sequence unknown:'" + this.escapestring + "'");
         return; // the short escape sequences must be handled earlier
     }
+
     s = s.substr(1); // delete first sign
     var lastsign = s.substr(s.length - 1); // extract command
     s = s.substr(0, s.length - 1); // remove command
