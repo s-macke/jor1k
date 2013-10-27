@@ -80,19 +80,12 @@
 
 <script>
 
-  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
-  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
-  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
-  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
-  ga('create', 'UA-44129312-1', 's-macke.github.io');
-  ga('send', 'pageview');
-
 function SelectHD()
 {
 }
  
 function Start() {
-    jor1kgui = new jor1kGUI("tty", "fb", "stats", "asm", ["../../bin/vmlinux.bin.bz2", "../../bin/hddemo.bz2"]);
+    jor1kgui = new jor1kGUI("tty", "fb", "stats", ["../../bin/vmlinux.bin.bz2", "../../bin/hddemo.bz2"], "ws://jor1k:9999/");
 }
 </script>
 
