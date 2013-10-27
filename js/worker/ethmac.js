@@ -58,7 +58,7 @@ function EthDev(ram, intdev, mac) {
     }
 
     this.fromTxStat = function(stat){
-        var val = ((stat.LEN  & 1)   << 16);
+        var val = (stat.LEN << 16);
         val |=    ((stat.RD   & 1)   << 15);
         val |=    ((stat.IRQ  & 1)   << 14);
         val |=    ((stat.WR   & 1)   << 13);
@@ -92,7 +92,7 @@ function EthDev(ram, intdev, mac) {
     }
 
     this.fromRxStat = function(stat){
-        var val = ((stat.LEN & 1) << 16);
+        var val = (stat.LEN << 16);
         val |=    ((stat.E   & 1) << 15);
         val |=    ((stat.IRQ & 1) << 14);
         val |=    ((stat.WR  & 1) << 13);
