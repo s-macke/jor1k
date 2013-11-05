@@ -183,7 +183,26 @@ if (typeof Math.imul == "undefined") {
     this.ram.AddDevice(this.tsdev, 0x93000000, 0x1000);
     this.ram.AddDevice(this.kbddev, 0x94000000, 0x100);
 
-    this.ips = 0; // inctruction per second counter
+    this.stepsperloop = 0x40000;
+    this.ips = 0; // external inctruction per second counter
+    this.internalips = 0; // internal inctruction counter
+    this.clockspeed = 0; // clock cycle per instruction
+}
+
+// Timer function. Run every second
+System.prototype.GetIPS = function() {
+        this.internalips++; // at least one instruction
+        this.stepsperloop = Math.floor(this.internalips * (1000/1000) / 200);
+        this.stepsperloop  = this.stepsperloop<1000?1000:this.stepsperloop;
+        this.stepsperloop  = this.stepsperloop>400000?400000:this.stepsperloop;
+        // The clock runs with 20MHz.            
+        this.clockspeed = Math.floor(20000000 * 64  / (this.internalips * (1000 / 1000)) );
+        this.clockspeed  = this.clockspeed<=1?1:this.clockspeed;
+        this.clockspeed  = this.clockspeed>=10000?10000:this.clockspeed;
+        this.internalips = 0;
+        var ret = this.ips;
+        this.ips = 0;
+        return ret;
 }
 
 System.prototype.RaiseInterrupt = function(line) {
@@ -279,7 +298,6 @@ System.prototype.ImageFinished = function(result) {
             DebugMessage("File loaded: " + length + " bytes");
             this.atadev.SetBuffer(drive);
         }
-        
     }.bind(this));
 
     this.SendStringToTerminal("Booting Kernel\r\n");
@@ -294,7 +312,8 @@ System.prototype.ImageFinished = function(result) {
 System.prototype.MainLoop = function() {
     if (!this.running) return;
     SendToMaster("execute", 0);
-    this.cpu.Step(0x20000);
-    this.ips += 0x20000;
-    // go to idle state that onmessage is executed    
+    this.cpu.Step(this.stepsperloop, this.clockspeed);
+    this.ips += this.stepsperloop;
+    this.internalips += this.stepsperloop;
+    // go to idle state that onmessage is executed
 }

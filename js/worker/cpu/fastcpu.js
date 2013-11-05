@@ -813,8 +813,9 @@ function GetInstruction(addr) {
     return h[ramp+((tlbtr & 0xFFFFE000) | (addr & 0x1FFF)) >> 2]  |0;
 }
 
-function Step(steps) {
+function Step(steps, clockspeed) {
     steps = steps|0;
+    clockspeed = clockspeed|0;
     var ins = 0x0;
     var imm = 0x0;
     var i = 0;
@@ -835,15 +836,20 @@ function Step(steps) {
     var tlmbr = 0x0;
     var tlbtr = 0x0;
     var jump = 0x0;
+    var delta = 0x0;
     
     do {
         // do this not so often
-        if (!(steps & 15)) {
+        if (!(steps & 63)) {
             // ---------- TICK ----------
             // timer enabled
             if ((TTMR >> 30) != 0) {
-                TTCR = (TTCR + 32|0);
-                if ((TTCR & 0xFFFFFE0) == (TTMR & 0xFFFFFE0)) {
+                delta = (TTMR & 0xFFFFFFF) - (TTCR & 0xFFFFFFF) |0;
+                if ((delta|0) < 0) {
+                    delta = delta + 0xFFFFFFF | 0;
+                }
+                TTCR = (TTCR + clockspeed|0);
+                if ((delta|0) < (clockspeed|0)) {
                     // if interrupt enabled
                     if (TTMR & (1 << 29)) {
                         TTMR = TTMR | (1 << 28); // set pending interrupt

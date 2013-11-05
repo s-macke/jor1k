@@ -32,8 +32,8 @@ onmessage = function(e) {
         return;
     } else
     if (e.data.command == "GetIPS") {
-        SendToMaster("GetIPS", sys.ips);
-        sys.ips = 0;
+        SendToMaster("GetIPS", sys.GetIPS());
+        
         return;
     } else
     if (e.data.command == "keydown") {

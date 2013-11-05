@@ -617,7 +617,7 @@ CPU.prototype.GetInstruction = function (addr) {
     return this.ram.ReadMemory32((tlbtr & 0xFFFFE000) | (addr & 0x1FFF));
 };
 
-CPU.prototype.Step = function (steps) {
+CPU.prototype.Step = function (steps, clockspeed) {
     var ins = 0x0;
     var imm = 0x0;
     var i = 0;
@@ -637,20 +637,21 @@ CPU.prototype.Step = function (steps) {
     var setindex = 0x0;
     var tlmbr = 0x0;
     var tlbtr = 0x0;
-
     var jump = 0x0;
+    var delta = 0x0;
     
     do {
         //this.clock++;
 
         // do this not so often
-        if (!(steps & 15)) {
+        if (!(steps & 63)) {
             // ---------- TICK ----------
             // timer enabled
             if ((this.TTMR >> 30) != 0) {
-                this.TTCR += 32;
-                this.TTCR &= 0xFFFFFFFF;
-                if ((this.TTCR & 0xFFFFFE0) == (this.TTMR & 0xFFFFFE0)) {
+                delta = (this.TTMR & 0xFFFFFFF) - (this.TTCR & 0xFFFFFFF);
+                delta += delta<0?0xFFFFFFF:0x0;
+                this.TTCR = (this.TTCR + clockspeed) & 0xFFFFFFFF;
+                if (delta < clockspeed) {
                     // if interrupt enabled
                     if (this.TTMR & (1 << 29)) {
                         this.TTMR |= (1 << 28); // set pending interrupt
