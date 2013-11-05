@@ -2,6 +2,8 @@
 // -------------------- RAM ------------------------
 // -------------------------------------------------
 
+// consider that the data is saved in 32-Bit little endian format
+
 // constructor
 function RAM(heap, ramoffset) {
     //use typed arrays
@@ -52,17 +54,7 @@ RAM.prototype.WriteMemory32 = function(addr, x) {
 
 RAM.prototype.ReadMemory8 = function(addr) {
     if (addr >= 0) {
-        // consider that the data is saved in little endian
-        switch (addr & 3) {
-        case 0:
-             return this.uint8mem[(addr & ~3) | 3];
-        case 1:
-            return this.uint8mem[(addr & ~3) | 2];
-        case 2:
-            return this.uint8mem[(addr & ~3) | 1];
-        case 3:
-            return this.uint8mem[(addr & ~3) | 0];
-        }
+        return this.uint8mem[addr ^ 3];
     }
     var uaddr = uint32(addr);
     for(var i=0; i<this.devices.length; i++) {
@@ -76,21 +68,7 @@ RAM.prototype.ReadMemory8 = function(addr) {
 
 RAM.prototype.WriteMemory8 = function(addr, x) {
     if (addr >= 0) {
-    // consider that the data is saved in little endian	
-        switch (addr & 3) {
-        case 0:
-            this.uint8mem[(addr & ~3) | 3] = x & 0xFF;
-            break;
-        case 1:
-            this.uint8mem[(addr & ~3) | 2] = x & 0xFF;
-            break;
-        case 2:
-            this.uint8mem[(addr & ~3) | 1] = x & 0xFF;
-            break;
-        case 3:
-            this.uint8mem[(addr & ~3) | 0] = x & 0xFF;
-            break;
-        }
+        this.uint8mem[addr ^ 3] = x;
         return;
     }
     var uaddr = uint32(addr);
@@ -102,18 +80,13 @@ RAM.prototype.WriteMemory8 = function(addr, x) {
     }
     DebugMessage("Error in WriteMemory8: RAM region " + hex8(addr) + " is not accessible");
     abort();
-    // Exception(EXCEPT_BUSERR, addr);    
+    // Exception(EXCEPT_BUSERR, addr);
 };
 
 RAM.prototype.ReadMemory16 = function(addr) {
+
     if (addr >= 0) {
-        // consider that the data is saved in little endian	
-        if (addr & 2) {
-            return (this.uint8mem[(addr & ~3) | 1] << 8) | this.uint8mem[(addr & ~3)];
-        }
-        else {
-            return (this.uint8mem[(addr & ~3) | 3] << 8) | this.uint8mem[(addr & ~3) | 2];
-        }
+        return (this.uint8mem[(addr ^ 2)+1] << 8) | this.uint8mem[(addr ^ 2)];
     }
     var uaddr = uint32(addr);
     for(var i=0; i<this.devices.length; i++) {
@@ -127,17 +100,9 @@ RAM.prototype.ReadMemory16 = function(addr) {
 
 RAM.prototype.WriteMemory16 = function(addr, x) {
     if (addr >= 0) {
-        // consider that the data is saved in little endian	
-        if (addr & 2) {
-            this.uint8mem[(addr & ~3) | 1] = (x >> 8) & 0xFF;
-            this.uint8mem[(addr & ~3)] = x & 0xFF;
-            return;
-        }
-        else {
-            this.uint8mem[(addr & ~3) | 3] = (x >> 8) & 0xFF;
-            this.uint8mem[(addr & ~3) | 2] = x & 0xFF;
-            return;
-        }
+        this.uint8mem[(addr ^ 2)+1] = (x >> 8) & 0xFF;
+        this.uint8mem[(addr ^ 2)  ] = x & 0xFF;
+        return;
     }
     var uaddr = uint32(addr);
     for(var i=0; i<this.devices.length; i++) {

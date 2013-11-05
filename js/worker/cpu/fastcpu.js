@@ -1041,7 +1041,6 @@ function Step(steps) {
             }
             paddr = read8utlblookup ^ vaddr;
             if ((paddr|0) >= 0) {
-                // consider that the data is saved in little endian
                 r[((ins >> 19) & 0x7C)>>2] = b[ramp + (paddr ^ 3)|0]|0;
             } else {
                 r[((ins >> 19) & 0x7C)>>2] = ReadMemory8(paddr|0)|0;
@@ -1061,7 +1060,6 @@ function Step(steps) {
             }
             paddr = read8stlblookup ^ vaddr;
             if ((paddr|0) >= 0) {
-                // consider that the data is saved in little endian
                 r[((ins >> 19) & 0x7C)>>2] = (b[ramp + (paddr ^ 3)|0] << 24) >> 24;
             } else {
                 r[((ins >> 19) & 0x7C)>>2] = ((ReadMemory8(paddr|0)|0) << 24) >> 24;
@@ -1075,17 +1073,25 @@ function Step(steps) {
             if ((paddr|0) == -1) {
                 break;
             }
-            r[((ins >> 19) & 0x7C)>>2] = ReadMemory16(paddr|0)|0;
+            if ((paddr|0) >= 0) {
+                r[((ins >> 19) & 0x7C)>>2] = ((b[ramp + ((paddr ^ 2)+1)|0] << 8) | b[ramp + (paddr ^ 2)|0]);
+            } else {
+                r[((ins >> 19) & 0x7C)>>2] = (ReadMemory16(paddr|0)|0);
+            }
             break;
 
         case 0x26:
-            // lhs 
+            // lhs
             vaddr = (r[((ins >> 14) & 0x7C)>>2]|0) + ((ins << 16) >> 16)|0;
             paddr = DTLBLookup(vaddr, 0)|0;
             if ((paddr|0) == -1) {
                 break;
             }
-            r[((ins >> 19) & 0x7C)>>2] = ((ReadMemory16(paddr|0)|0) << 16) >> 16;
+            if ((paddr|0) >= 0) {
+                r[((ins >> 19) & 0x7C)>>2] = (((b[ramp + ((paddr ^ 2)+1)|0] << 8) | b[ramp + (paddr ^ 2)|0]) << 16) >> 16;
+            } else {
+                r[((ins >> 19) & 0x7C)>>2] = ((ReadMemory16(paddr|0)|0) << 16) >> 16;
+            }
             break;
 
 
@@ -1257,7 +1263,12 @@ function Step(steps) {
             if ((paddr|0) == -1) {
                 break;
             }
-            WriteMemory16(paddr|0, r[((ins >> 9) & 0x7C)>>2]|0);
+            if ((paddr|0) >= 0) {
+                b[ramp + ((paddr ^ 2)+1)|0] = r[((ins >> 9) & 0x7C)>>2] >> 8;
+                b[ramp + (paddr ^ 2)|0] = r[((ins >> 9) & 0x7C)>>2] & 0xFF;
+            } else {
+                WriteMemory16(paddr|0, r[((ins >> 9) & 0x7C)>>2]|0);
+            }
             break;
 
         case 0x38:
