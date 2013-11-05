@@ -1011,11 +1011,6 @@ function Step(steps) {
         case 0x21:
             // lwz 
             vaddr = (r[((ins >> 14) & 0x7C) >> 2]|0) + ((ins << 16) >> 16)|0;
-            if ((vaddr & 3) != 0) {
-                //DebugMessage("Error: no unaligned access allowed");
-                DebugMessage(ERROR_UNKNOWN|0);
-                abort();
-            }
             if ((read32tlbcheck ^ vaddr) >> 13) {
                 paddr = DTLBLookup(vaddr, 0)|0;
                 if ((paddr|0) == -1) {
@@ -1213,11 +1208,6 @@ function Step(steps) {
             // sw
             imm = ((((ins >> 10) & 0xF800) | (ins & 0x7FF)) << 16) >> 16;
             vaddr = (r[((ins >> 14) & 0x7C)>>2]|0) + imm|0;
-            if (vaddr & 0x3) {
-                //DebugMessage("Error: not aligned memory access");
-                DebugMessage(ERROR_UNKNOWN|0);
-                abort();
-            }
             if ((write32tlbcheck ^ vaddr) >> 13) {
                 paddr = DTLBLookup(vaddr, 1)|0;
                 if ((paddr|0) == -1) {
