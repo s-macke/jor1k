@@ -1042,20 +1042,7 @@ function Step(steps) {
             paddr = read8utlblookup ^ vaddr;
             if ((paddr|0) >= 0) {
                 // consider that the data is saved in little endian
-                switch (paddr & 3) {
-                case 0:
-                    r[((ins >> 19) & 0x7C)>>2] = b[ramp + ((paddr & ~3) | 3)|0]|0;
-                    break;
-                case 1:
-                    r[((ins >> 19) & 0x7C)>>2] = b[ramp + ((paddr & ~3) | 2)|0]|0;
-                    break;
-                case 2:
-                    r[((ins >> 19) & 0x7C)>>2] = b[ramp + ((paddr & ~3) | 1)|0]|0;
-                    break;
-                case 3:
-                    r[((ins >> 19) & 0x7C)>>2] = b[ramp + ((paddr & ~3) | 0)|0]|0;
-                    break;
-                }
+                r[((ins >> 19) & 0x7C)>>2] = b[ramp + (paddr ^ 3)|0]|0;
             } else {
                 r[((ins >> 19) & 0x7C)>>2] = ReadMemory8(paddr|0)|0;
             }
@@ -1075,20 +1062,7 @@ function Step(steps) {
             paddr = read8stlblookup ^ vaddr;
             if ((paddr|0) >= 0) {
                 // consider that the data is saved in little endian
-                switch (paddr & 3) {
-                case 0:
-                    r[((ins >> 19) & 0x7C)>>2] = (b[ramp + ((paddr & ~3) | 3)|0] << 24) >> 24;
-                    break;
-                case 1:
-                    r[((ins >> 19) & 0x7C)>>2] = (b[ramp + ((paddr & ~3) | 2)|0] << 24) >> 24;
-                    break;
-                case 2:
-                    r[((ins >> 19) & 0x7C)>>2] = (b[ramp + ((paddr & ~3) | 1)|0] << 24) >> 24;
-                    break;
-                case 3:
-                    r[((ins >> 19) & 0x7C)>>2] = (b[ramp + ((paddr & ~3) | 0)|0] << 24) >> 24;
-                    break;
-                }
+                r[((ins >> 19) & 0x7C)>>2] = (b[ramp + (paddr ^ 3)|0] << 24) >> 24;
             } else {
                 r[((ins >> 19) & 0x7C)>>2] = ((ReadMemory8(paddr|0)|0) << 24) >> 24;
             }
@@ -1269,20 +1243,7 @@ function Step(steps) {
             paddr = write8tlblookup ^ vaddr;
             if ((paddr|0) > 0) {
                 // consider that the data is saved in little endian
-                switch (paddr & 3) {
-                case 0:
-                    b[ramp + ((paddr & ~3) | 3)|0] = r[((ins >> 9) & 0x7C)>>2]|0;
-                    break;
-                case 1:
-                    b[ramp + ((paddr & ~3) | 2)|0] = r[((ins >> 9) & 0x7C)>>2]|0;
-                    break;
-                case 2:
-                    b[ramp + ((paddr & ~3) | 1)|0] = r[((ins >> 9) & 0x7C)>>2]|0;
-                    break;
-                case 3:
-                    b[ramp + ((paddr & ~3) | 0)|0] = r[((ins >> 9) & 0x7C)>>2]|0;
-                    break;
-                }
+                b[ramp + (paddr ^ 3)|0] = r[((ins >> 9) & 0x7C)>>2]|0;
             } else {
                 WriteMemory8(paddr|0, r[((ins >> 9) & 0x7C)>>2]|0);
             }
