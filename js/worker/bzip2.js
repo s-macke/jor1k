@@ -42,8 +42,10 @@ bzip2.array = function(bytes) {
 bzip2.simple = function(bits, buffer) {
     var size = bzip2.header(bits);
     var ret = {end:false, offset:0};
+    var bufsize = 100000 * size;
+    var buf = new Int32Array(bufsize);
     do {
-        ret = bzip2.decompress(bits, size, buffer, ret.offset);        
+        ret = bzip2.decompress(bits, buffer, ret.offset, buf, bufsize);        
     } while(!ret.end);
     return ret.offset;
 }
@@ -59,14 +61,13 @@ bzip2.header = function(bits) {
 //takes a function for reading the block data (starting with 0x314159265359)
 //a block size (0-9) (optional, defaults to 9)
 //a length at which to stop decompressing and return the output
-bzip2.decompress = function(bits, size, buffer, offset) {
+bzip2.decompress = function(bits, buffer, offset, buf, bufsize) {
     var MAX_HUFCODE_BITS = 20;
     var MAX_SYMBOLS = 258;
     var SYMBOL_RUNA = 0;
     var SYMBOL_RUNB = 1;
     var GROUP_SIZE = 50;
-
-    var bufsize = 100000 * size;
+    
     for(var h = '', i = 0; i < 6; i++) h += bits(8).toString(16);
     if (h == "177245385090") return {end:true, offset:offset}; //last block
     if (h != "314159265359") throw "eek not valid bzip data";
@@ -159,8 +160,7 @@ bzip2.decompress = function(bits, size, buffer, offset) {
     var byteCount = new Int32Array(256);
     for(var i = 0; i < 256; i++) mtfSymbol[i] = i;
     var runPos, count, symCount, selector;
-    runPos = count = symCount = selector = 0;
-    var buf = new Int32Array(bufsize);
+    runPos = count = symCount = selector = 0;    
     while(true) {
         if (!(symCount--)) {
             symCount = GROUP_SIZE - 1;
