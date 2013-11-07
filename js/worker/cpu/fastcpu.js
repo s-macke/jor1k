@@ -885,7 +885,6 @@ function Step(steps, clockspeed) {
             instlbcheck = pc; // save the new page, lower 11 bits are ignored
             if (!SR_IME) {
                 instlblookup = 0x0;
-                instlbcheck = 0x0;
             } else {
                 setindex = (pc >> 11) & 63; // check this values
                 tlmbr = h[group2p + ((0x200 | setindex) << 2) >> 2]|0;
