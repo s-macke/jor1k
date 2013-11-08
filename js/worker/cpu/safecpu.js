@@ -154,17 +154,6 @@ SafeCPU.prototype.SetFlags = function (x) {
     if (this.SR_IEE && !old_SR_IEE) {
         this.CheckForInterrupt();
     }
-    if (!this.SR_IME && old_SR_IME) {
-        this.fasttlblookup[0] = 0x0;
-        this.fasttlbcheck[0] = 0x0;
-    }
-    if (!this.SR_DME && old_SR_DME) {
-        this.fasttlblookup[1] = 0x0;
-        this.fasttlbcheck[1] = 0x0;
-        this.fasttlblookup[2] = 0x0;
-        this.fasttlbcheck[2] = 0x0;
-    }
-
 };
 
 SafeCPU.prototype.GetFlags = function () {
@@ -520,8 +509,6 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
 
     // local variables could be faster
     var r = this.r;
-    var ftlb = this.fasttlblookup;
-    var ftlbcheck = this.fasttlbcheck;
     var ram = this.ram;
     var int32mem = this.ram.int32mem;
     var group2 = this.group2;
