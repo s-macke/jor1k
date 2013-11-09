@@ -143,6 +143,7 @@ if (typeof Math.imul == "undefined") {
     // Create the asm.js core. Because of Firefox limitations it can only be created once.
     var stdlib = {
         Int32Array : Int32Array,
+        Float32Array : Float32Array,
         Uint8Array : Uint8Array,
         Math : Math
     };

@@ -4,6 +4,7 @@ function FastCPU(stdlib, foreign, heap) {
 
 //var imul = stdlib.Math.imul;
 var imul = foreign.imul;
+var floor = stdlib.Math.floor;
 var DebugMessage = foreign.DebugMessage;
 var abort = foreign.abort;
 var ReadMemory32 = foreign.ReadMemory32;
@@ -48,6 +49,7 @@ var EXCEPT_SYSCALL = 0xc00; // syscall, jump into supervisor mode
 
 
 var r = new stdlib.Int32Array(heap); // registers
+var f = new stdlib.Float32Array(heap); // registers
 var h = new stdlib.Int32Array(heap);
 var b = new stdlib.Uint8Array(heap);
 
@@ -821,7 +823,8 @@ function Step(steps, clockspeed) {
     var i = 0;
     var rindex = 0x0;
     var rA = 0x0,
-        rB = 0x0;
+        rB = 0x0,
+        rD = 0x0;
     var vaddr = 0x0; // virtual address
     var paddr = 0x0; // physical address
     
@@ -1207,6 +1210,72 @@ function Step(steps, clockspeed) {
             // mtspr
             imm = (ins & 0x7FF) | ((ins >> 10) & 0xF800);
             SetSPR(r[((ins >> 14) & 0x7C)>>2] | imm, r[((ins >> 9) & 0x7C)>>2]|0);
+            break;
+
+       case 0x32:
+            // floating point
+            rA = (ins >> 14) & 0x7C;
+            rB = (ins >> 9) & 0x7C;
+            rD = (ins >> 19) & 0x7C;
+
+            switch (ins & 0xFF) {
+            case 0x0:
+                // lf.add.s
+                f[rD >> 2] = (+f[rA >> 2]) + (+f[rB >> 2]);
+                break;
+            case 0x1:
+                // lf.sub.s
+                f[rD >> 2] = (+f[rA >> 2]) - (+f[rB >> 2]);
+                break;
+            case 0x2:
+                // lf.mul.s
+                f[rD >> 2] = (+f[rA >> 2]) * (+f[rB >> 2]);
+                break;
+            case 0x3:
+                // lf.div.s
+                f[rD >> 2] = (+f[rA >> 2]) / (+f[rB >> 2]);
+                break;
+            case 0x4:
+                // lf.itof.s
+                f[rD >> 2] = +(r[rA >> 2]|0);
+                break;
+            case 0x5:
+                // lf.ftoi.s
+                r[rD >> 2] = ~~(+floor(+f[rA >> 2]));
+                break;
+            case 0x7:
+                // lf.madd.s
+                f[rD >> 2] = (+f[rD >> 2]) + (+f[rA >> 2]) * (+f[rB >> 2]);
+                break;
+            case 0x8:
+                // lf.sfeq.s
+                SR_F = (+f[rA >> 2]) == (+f[rB >> 2]);
+                break;
+            case 0x9:
+                // lf.sfne.s
+                SR_F = (+f[rA >> 2]) != (+f[rB >> 2]);
+                break;
+            case 0xa:
+                // lf.sfgt.s
+                SR_F = (+f[rA >> 2]) > (+f[rB >> 2]);
+                break;
+            case 0xb:
+                // lf.sfge.s
+                SR_F = (+f[rA >> 2]) >= (+f[rB >> 2]);
+                break;
+            case 0xc:
+                // lf.sflt.s
+                SR_F = (+f[rA >> 2]) < (+f[rB >> 2]);
+                break;
+            case 0xd:
+                // lf.sfle.s
+                SR_F = (+f[rA >> 2]) <= (+f[rB >> 2]);
+                break;
+            default:
+                DebugMessage(ERROR_UNKNOWN|0);
+                abort();
+                break;
+            }
             break;
 
         case 0x35:

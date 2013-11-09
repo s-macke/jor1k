@@ -34,6 +34,7 @@ function CPU(ram) {
     // to make sure that they are not transformed accidently into a floating point number
     var array = new ArrayBuffer(34 << 2);
     this.r = new Int32Array(array);
+    this.f = new Float32Array(array);
 
     // special purpose registers
     array = new ArrayBuffer(1024 << 2);
@@ -623,10 +624,12 @@ CPU.prototype.Step = function (steps, clockspeed) {
     var i = 0;
     var rindex = 0x0;
     var rA = 0x0,
-        rB = 0x0;
+        rB = 0x0,
+        rD = 0x0;
 
     // local variables could be faster
     var r = this.r;
+    var f = this.f;
     var ftlb = this.fasttlblookup;
     var ftlbcheck = this.fasttlbcheck;
     var ram = this.ram;
@@ -969,6 +972,71 @@ CPU.prototype.Step = function (steps, clockspeed) {
             // mtspr
             imm = (ins & 0x7FF) | ((ins >> 10) & 0xF800);
             this.SetSPR(r[(ins >> 16) & 0x1F] | imm, r[(ins >> 11) & 0x1F]);
+            break;
+
+        case 0x32:
+            // floating point
+            rA = (ins >> 16) & 0x1F;
+            rB = (ins >> 11) & 0x1F;
+            rD = (ins >> 21) & 0x1F;
+            switch (ins & 0xFF) {
+            case 0x0:
+                // lf.add.s
+                f[rD] = f[rA] + f[rB];
+                break;
+            case 0x1:
+                // lf.sub.s
+                f[rD] = f[rA] - f[rB];
+                break;
+            case 0x2:
+                // lf.mul.s
+                f[rD] = f[rA] * f[rB];
+                break;
+            case 0x3:
+                // lf.div.s
+                f[rD] = f[rA] / f[rB];
+                break;
+            case 0x4:
+                // lf.itof.s
+                f[rD] = r[rA];
+                break;
+            case 0x5:
+                // lf.ftoi.s
+                r[rD] = f[rA];
+                break;
+            case 0x7:
+                // lf.madd.s
+                f[rD] += f[rA] * f[rB];
+                break;
+            case 0x8:
+                // lf.sfeq.s
+                this.SR_F = (f[rA] == f[rB]) ? true : false;
+                break;
+            case 0x9:
+                // lf.sfne.s
+                this.SR_F = (f[rA] != f[rB]) ? true : false;
+                break;
+            case 0xa:
+                // lf.sfgt.s
+                this.SR_F = (f[rA] > f[rB]) ? true : false;
+                break;
+            case 0xb:
+                // lf.sfge.s
+                this.SR_F = (f[rA] >= f[rB]) ? true : false;
+                break;
+            case 0xc:
+                // lf.sflt.s
+                this.SR_F = (f[rA] < f[rB]) ? true : false;
+                break;
+            case 0xd:
+                // lf.sfle.s
+                this.SR_F = (f[rA] <= f[rB]) ? true : false;
+                break;
+            default:
+                DebugMessage("Error: lf. function " + hex8(ins & 0xFF) + " not supported yet");
+                abort();
+                break;
+            }
             break;
 
         case 0x35:
