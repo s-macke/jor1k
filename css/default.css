@@ -70,9 +70,14 @@ li, ul {
     color:#B0B0B0;
 }
 
-a:link {    
-    color:#FF9000;;
+a:link {
+    color:#FF9000;
 }
+
+a:visited {
+    color:#FF9000;
+}
+
 
 img {
     border-style: none;
