@@ -45,6 +45,7 @@ function jor1kGUI(termid, fbid, statsid, imageurls, proxyurl)
         console.log("Error at " + e.filename + ":" + e.lineno + ": " + e.message);
     }
     this.terminalcanvas = document.getElementById(termid);
+
     // Init Framebuffer
     this.fbcanvas = document.getElementById(fbid);
     this.fbctx = this.fbcanvas.getContext("2d");
@@ -92,17 +93,17 @@ function jor1kGUI(termid, fbid, statsid, imageurls, proxyurl)
         this.SendToWorker("tsmousemove", {x:x, y:y});
     }.bind(this);
 
-    //open WebSocket
-    if(this.proxyurl){
+    // Open WebSocket
+    if (this.proxyurl) {
         this.socket = new WebSocket(this.proxyurl);
         this.socket.binaryType = 'arraybuffer';
 
-        this.socket.onmessage = function(evnt){
-            if(evnt.data instanceof ArrayBuffer){
-                this.SendToWorker("ethmac", evnt.data);
+        this.socket.onmessage = function(e) {
+            if (e.data instanceof ArrayBuffer) {
+                this.SendToWorker("ethmac", e.data);
             }
         }.bind(this);
-    }else{
+    } else {
         this.socket = {
             send : function(){}
         };

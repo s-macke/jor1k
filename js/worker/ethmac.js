@@ -40,7 +40,7 @@ function EthDev(ram, intdev, mac) {
 
     this.intdev = intdev;
 
-    this.toTxStat = function(val){
+    this.toTxStat = function(val) {
         return {
             LEN:   val >>> 16,
             RD:   (val >>> 15) & 1,
@@ -57,7 +57,7 @@ function EthDev(ram, intdev, mac) {
         }
     }
 
-    this.fromTxStat = function(stat){
+    this.fromTxStat = function(stat) {
         var val = (stat.LEN << 16);
         val |=    ((stat.RD   & 1)   << 15);
         val |=    ((stat.IRQ  & 1)   << 14);
@@ -73,7 +73,7 @@ function EthDev(ram, intdev, mac) {
         return val;
     }
 
-    this.toRxStat = function(val){
+    this.toRxStat = function(val) {
         return {
             LEN:  val >>> 16,
             E:   (val >>> 15) & 1,
@@ -91,7 +91,7 @@ function EthDev(ram, intdev, mac) {
         }
     }
 
-    this.fromRxStat = function(stat){
+    this.fromRxStat = function(stat) {
         var val = (stat.LEN << 16);
         val |=    ((stat.E   & 1) << 15);
         val |=    ((stat.IRQ & 1) << 14);
@@ -108,12 +108,12 @@ function EthDev(ram, intdev, mac) {
         return val;
     }
 
-    this.makeCRCTable = function(){
+    this.makeCRCTable = function() {
         var c;
         var crcTable = [];
-        for(var n =0; n < 256; n++){
+        for(var n =0; n < 256; n++) {
             c = n;
-            for(var k =0; k < 8; k++){
+            for(var k =0; k < 8; k++) {
                 c = ((c&1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1));
             }
             crcTable[n] = c;
@@ -127,31 +127,31 @@ function EthDev(ram, intdev, mac) {
         var crc = 0 ^ (-1);
 
         var bytelen = 4;
-        if(data instanceof Uint16Array || data instanceof Int16Array){
+        if (data instanceof Uint16Array || data instanceof Int16Array) {
             bytelen = 2;
-        } else if(data instanceof Uint8Array || data instanceof Int8Array){
+        } else if (data instanceof Uint8Array || data instanceof Int8Array) {
             bytelen = 1;
         }
 
-        if(!length){
+        if (!length) {
             length = data.length;
         }
-        if(!offset){
+        if (!offset) {
             offset = 0;
         }
 
         var val = 0x0;
-        for (var i = offset; i < length; i++ ){
+        for (var i = offset; i < length; i++ ) {
             //first byte
             val = data[i] & 0xFF;
             crc = (crc >>> 8) ^ this.crcTable[(crc ^ val) & 0xFF];
 
-            if(bytelen > 1){
+            if (bytelen > 1) {
                 //second byte
                 val = (data[i] >>> 8) & 0xFF;
                 crc = (crc >>> 8) ^ this.crcTable[(crc ^ val) & 0xFF];
 
-                if(bytelen > 2){
+                if (bytelen > 2) {
                     //third byte
                     val = (data[i] >>> 16) & 0xFF;
                     crc = (crc >>> 8) ^ this.crcTable[(crc ^ val) & 0xFF];
@@ -212,7 +212,7 @@ function EthDev(ram, intdev, mac) {
         this.ETH_TXCTRL = 0x0;
 
         this.BD = new Uint32Array(256);//128 64bit descriptors
-        for(var i=0;i<256;i++){
+        for(var i=0;i<256;i++) {
             this.BD[i] = 0x0;
         }
 
@@ -221,9 +221,9 @@ function EthDev(ram, intdev, mac) {
 
     this.Reset();
 
-    this.Receive = function(data){
+    this.Receive = function(data) {
         //check RXEN
-        if((this.MODER & 0x1) == 0){
+        if ((this.MODER & 0x1) == 0) {
             return;
         }
 
@@ -244,26 +244,26 @@ function EthDev(ram, intdev, mac) {
         mac1 |= (data[0] << 8);
         mac1 |= data[1];
 
-        if(mac0 == this.MAC_ADDR0 && mac1 == this.MAC_ADDR1){
+        if (mac0 == this.MAC_ADDR0 && mac1 == this.MAC_ADDR1) {
             match = true;
-        }else if(mac1 & (1 << 15)){
+        }else if (mac1 & (1 << 15)) {
             multicast = true;
         }
 
-        if(this.MODER & (1<<5)){
+        if (this.MODER & (1<<5)) {
             promiscuous = true;
         }
 
         var i = this.currRX;
 
         //won't branch if no match/multicast and we're not promiscuous
-        if(promiscuous || multicast || match){
+        if (promiscuous || multicast || match) {
             var err = false;
             //if this BD is ready
-            if(this.BD[i] & (1 << 15)){
+            if (this.BD[i] & (1 << 15)) {
                 var stat = this.toRxStat(this.BD[i]);
 
-                if(!match && !multicast && promiscuous){
+                if (!match && !multicast && promiscuous) {
                     stat.M = 1;
                 }
                 
@@ -279,22 +279,22 @@ function EthDev(ram, intdev, mac) {
                 stat.DN = 0;
 
                 //Too Long, bigger than max packetlen
-                if(data.length > (this.PACKETLEN & 0xFFFF)){
+                if (data.length > (this.PACKETLEN & 0xFFFF)) {
                     //check HUGEN
-                    if(this.MODER & (1 << 14)){
+                    if (this.MODER & (1 << 14)) {
                         //TODO: in this case, how much of the frame do we write?
                         stat.TL = 1;
-                    }else{
+                    } else {
                         stat.TL = 0;
                         //according to 2.3.5.6 of design doc, we still write
                         //the start of the frame, and don't mark TL bit?
                         //TODO: need to check this behavior
                     }
-                }else{
+                } else {
                     stat.TL = 0;
                 }
                 
-                if(stat.DN == 0){
+                if (stat.DN == 0) {
                     //We don't get a CRC from TAP devices, so just assert this
                     stat.CRC = 0;
                 }
@@ -308,17 +308,17 @@ function EthDev(ram, intdev, mac) {
 
                 //write the packet to the memory location
                 //TODO: do we want to write on an error, anyway?
-                if(!err){
+                if (!err) {
                     stat.LEN = data.length;
 
                     var aligned = true;
 
-                    if(stat.LEN > (this.PACKETLEN & 0xFFFF)){
+                    if (stat.LEN > (this.PACKETLEN & 0xFFFF)) {
                         stat.LEN = this.PACKETLEN & 0xFFFF;
                     }
 
                     var ptr = this.BD[i+1];
-                    for(var j=0;j<stat.LEN;j++){
+                    for(var j=0;j<stat.LEN;j++) {
                         ram.WriteMemory8(ptr+j, data[j]);
                     }
                     
@@ -331,17 +331,17 @@ function EthDev(ram, intdev, mac) {
 
                 this.BD[i] = this.fromRxStat(stat);
                 //IRQ
-                if(stat.IRQ){
-                    if(err){
+                if (stat.IRQ) {
+                    if (err) {
                         //RXE interrupt
                         this.INT_SOURCE |= (1 << 3);
                     }
                     //RXB interrupt
                     this.INT_SOURCE |= (1 << 2);
 
-                    if(this.INT_MASK & this.INT_SOURCE){
+                    if (this.INT_MASK & this.INT_SOURCE) {
                         this.intdev.RaiseInterrupt(0x4);
-                    }else{
+                    } else {
                         this.intdev.ClearInterrupt(0x4);
                     }
 
@@ -349,28 +349,28 @@ function EthDev(ram, intdev, mac) {
             } else {
                 //BUSY interrupt
                 this.INT_SOURCE |= (1 << 4);
-                if(this.INT_MASK & this.INT_SOURCE){
+                if (this.INT_MASK & this.INT_SOURCE) {
                     this.intdev.RaiseInterrupt(0x4);
-                }else{
+                } else {
                     this.intdev.ClearInterrupt(0x4);
                 }
             }
 
             //check wrap bit and BD bounds
-            if((this.BD[this.currRX] & (1 << 13)) ||
-                (this.currRX + 2) >= this.BD.length){
+            if ((this.BD[this.currRX] & (1 << 13)) ||
+                (this.currRX + 2) >= this.BD.length) {
 
                 this.currRX = (this.TX_BD_NUM << 1);
-            }else{
+            } else {
                 this.currRX+=2;
             }
         }
     };
 
-    this.Transmit = function(bd_num){
+    this.Transmit = function(bd_num) {
         
         //check MODER.TXEN
-        if((this.MODER & (1 << 1)) == 0){
+        if ((this.MODER & (1 << 1)) == 0) {
             return;
         }
 
@@ -378,7 +378,7 @@ function EthDev(ram, intdev, mac) {
         var ptr = this.BD[(bd_num << 1) + 1];
 
         //Check RD bit
-        if(stat.RD == 0){
+        if (stat.RD == 0) {
             return;
         }
 
@@ -386,7 +386,7 @@ function EthDev(ram, intdev, mac) {
         //check crc gen for frame size modification
         var frameSize = stat.LEN;
         var crc = false;
-        if(stat.CRC || (this.MODER & (1 << 13))){
+        if (stat.CRC || (this.MODER & (1 << 13))) {
             //frameSize += 4;
             //crc = true;
         }
@@ -394,10 +394,10 @@ function EthDev(ram, intdev, mac) {
         //check padding for frame size modification
         var pad = false;
         var padlen = 0;
-        if(stat.PAD || (this.MODER & (1 << 15))){
+        if (stat.PAD || (this.MODER & (1 << 15))) {
             pad = true;
 
-            if((this.PACKETLEN >>> 16) > stat.LEN){
+            if ((this.PACKETLEN >>> 16) > stat.LEN) {
                 frameSize = this.PACKETLEN >>> 16;
             }
         }
@@ -405,21 +405,21 @@ function EthDev(ram, intdev, mac) {
         //TODO: do we ever need preamble/frame start?
         var frame = new Uint8Array(frameSize);
         
-        for(var i=0;i<frame.length;i++){
-            if(i<stat.LEN){
+        for(var i=0;i<frame.length;i++) {
+            if (i<stat.LEN) {
                 frame[i] = ram.ReadMemory8(ptr+i);
-            }else{
+            } else {
                 frame[i] = 0;
             }
         }
 
         //should only have one 32bit word left to write here
-        if(crc){
+        if (crc) {
             var crcval = 0;
             //if DLYCRCEN
-            if(this.MODER & (1 << 12)){
+            if (this.MODER & (1 << 12)) {
                 crcval = this.crc32(frame, 4, frame.length-4);
-            }else{
+            } else {
                 crcval = this.crc32(frame, 0, frame.length-4);
             }
 
@@ -445,9 +445,9 @@ function EthDev(ram, intdev, mac) {
 
         this.INT_SOURCE |= 1;
 
-        if(this.INT_MASK & this.INT_SOURCE){
+        if (this.INT_MASK & this.INT_SOURCE) {
             this.intdev.RaiseInterrupt(0x4);
-        }else{
+        } else {
             this.intdev.ClearInterrupt(0x4);
         }
     };
@@ -545,10 +545,10 @@ function EthDev(ram, intdev, mac) {
                 ret = this.ETH_TXCTRL;
                 break;
             default:
-                if(addr >= ETHMAC_ADDR_BD_START &&
-                    addr <= ETHMAC_ADDR_BD_END){
+                if (addr >= ETHMAC_ADDR_BD_START &&
+                    addr <= ETHMAC_ADDR_BD_END) {
                     ret = this.BD[(addr-ETHMAC_ADDR_BD_START)>>>2];
-                }else{
+                } else {
                     DebugMessage("Attempt to access ethmac register beyond 0x800");
                 }
         }
@@ -566,9 +566,9 @@ function EthDev(ram, intdev, mac) {
                 //otherwise, leave the other bits alone
                 this.INT_SOURCE = this.INT_SOURCE & ~val;
 
-                if(this.INT_MASK & this.INT_SOURCE){
+                if (this.INT_MASK & this.INT_SOURCE) {
                     this.intdev.RaiseInterrupt(0x4);
-                }else{
+                } else {
                     this.intdev.ClearInterrupt(0x4);
                 }
 
@@ -577,9 +577,9 @@ function EthDev(ram, intdev, mac) {
             case ETHMAC_ADDR_INT_MASK:
                 this.INT_MASK = val;
 
-                if(this.INT_MASK & this.INT_SOURCE){
+                if (this.INT_MASK & this.INT_SOURCE) {
                     this.intdev.RaiseInterrupt(0x4);
-                }else{
+                } else {
                     this.intdev.ClearInterrupt(0x4);
                 }
 
@@ -658,8 +658,8 @@ function EthDev(ram, intdev, mac) {
                 break;
 
             default:
-                if(addr >= ETHMAC_ADDR_BD_START &&
-                    addr <= ETHMAC_ADDR_BD_END){
+                if (addr >= ETHMAC_ADDR_BD_START &&
+                    addr <= ETHMAC_ADDR_BD_END) {
 
                     this.BD[(addr-ETHMAC_ADDR_BD_START)>>>2] = val;
 
@@ -667,17 +667,17 @@ function EthDev(ram, intdev, mac) {
                     var BD_NUM = (addr - ETHMAC_ADDR_BD_START)>>>3;
                     
                     //make sure this isn't the pointer portion
-                    if(((BD_NUM << 3) + ETHMAC_ADDR_BD_START) == addr){
+                    if (((BD_NUM << 3) + ETHMAC_ADDR_BD_START) == addr) {
                         //did we just set the ready/empty bit?
-                        if((val & (1 << 15)) != 0){
+                        if ((val & (1 << 15)) != 0) {
                             //TX, or RX?
-                            if(BD_NUM < this.TX_BD_NUM){
+                            if (BD_NUM < this.TX_BD_NUM) {
                                 //TX BD
                                 this.Transmit(BD_NUM);
                             }
                         }
                     }
-                }else{
+                } else {
                     DebugMessage("Attempt to access ethmac register beyond 0x800");
                 }
         }

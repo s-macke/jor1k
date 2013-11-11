@@ -20,12 +20,12 @@ DebugMessage("System initialized");
 
 onmessage = function(e) {
     //TODO: make ethmac its own worker
-    if (e.data.command == "ethmac") {
-        sys.ethdev.Receive(new Uint8Array(e.data.data));
-        return;
-    } else 
     if (e.data.command == "execute") {
         sys.MainLoop();
+        return;
+    } else 
+    if (e.data.command == "ethmac") {
+        sys.ethdev.Receive(new Uint8Array(e.data.data));
         return;
     } else 
     if (e.data.command == "GetFB") {
@@ -37,8 +37,7 @@ onmessage = function(e) {
         return;
     } else
     if (e.data.command == "GetIPS") {
-        SendToMaster("GetIPS", sys.GetIPS());
-        
+        SendToMaster("GetIPS", sys.GetIPS());        
         return;
     } else
     if (e.data.command == "keydown") {
