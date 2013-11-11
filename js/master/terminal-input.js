@@ -5,9 +5,13 @@
 function TerminalInput(uartdev) {
     this.CTRLpressed = false;
     this.uart = uartdev;
+    this.enabled = true;
 }
 
 TerminalInput.prototype.OnKeyPress = function(e) {
+    if (!this.enabled) {
+        return;
+    }
     var key = 0;
     key = e.charCode;
     if (key == 0) {
@@ -22,6 +26,9 @@ TerminalInput.prototype.OnKeyPress = function(e) {
 };
 
 TerminalInput.prototype.OnKeyUp = function(e) {
+    if (!this.enabled) {
+        return;
+    }
     var keycode = e.keyCode;
     var unicode = e.charCode;
     if (keycode == 17) {
@@ -31,6 +38,9 @@ TerminalInput.prototype.OnKeyUp = function(e) {
 };
 
 TerminalInput.prototype.OnKeyDown = function(e) {
+    if (!this.enabled) {
+        return;
+    }
     var keycode = e.keyCode;
     var unicode = e.charCode;
 
