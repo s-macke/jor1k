@@ -70,8 +70,8 @@ li, ul {
     color:#B0B0B0;
 }
 
-a:link {
-    color:#FF9000;
+a:link, a:visited {    
+    color:#FF9000;;
 }
 
 a:visited {

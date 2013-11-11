@@ -2,7 +2,7 @@
 <html>
     <head>
         <meta charset="utf-8">
-        <title>jor1k: OpenRISC OR1K Javascript Emulator Running Linux</title>
+        <title>jor1k: OpenRISC OR1K Javascript Emulator Running Linux With Network Support</title>
         <meta name="keywords" content="opencore, emulation, or1000, javascript, linux">
         <meta name="author" content="Sebastian Macke">
         <link rel="stylesheet" href="css/default.css">
@@ -10,7 +10,7 @@
     <body onload="Start()">
     <div class="heading">
     <a href="http://opencores.org/or1k/"><img src="globe.png"></img></a>
-    <h1>jor1k: OpenRISC OR1K Javascript Emulator Running Linux</h1>
+    <h1>jor1k: OpenRISC OR1K Javascript Emulator Running Linux With Network Support</h1>
     </div>
     <div class="windows">
         <table>
@@ -31,6 +31,7 @@
                             <option value="safe">Safe Core (Slow)</option>
                         </select>
                         <select id="hdselect" onchange='jor1kgui.ChangeImage(this.options[this.selectedIndex].value)'>
+                            <option value="../../bin/netdemo.bz2">Network tools (links, lynx, nasm, ssh, wget) (8.2MB)</option>
                             <option value="../../bin/hddemo.bz2">Graphic demos, games, and ScummVM (Monkey island) (7MB)</option>
                             <option value="../../bin/hdgcc.bz2">Gnu C Compiler. Compile Frotz to play a text adventure (10 MB) </option>
                             <option value="../../bin/hdX.bz2">Basic X window system running twm, glxgears, xterm and xeyes (9MB)</option>
@@ -53,13 +54,10 @@
        
         </div>
         <div class="infobox">
-            <h3>Don't know what to do?</h3>
-            <ul>
-                <li>Have a look at the <a href="https://github.com/s-macke/jor1k/wiki/Explore-the-emulator" target="_blank">Explore the emulator</a> page at the project wiki.</li>
-            </ul>
-
             <h3>Links</h3>
             <ul>
+                <li><a href="https://github.com/s-macke/jor1k/wiki/Explore-the-emulator">Explore the emulator</a> wiki page</li>
+                <li><a href="http://www.benjamincburns.com/2013/11/10/jor1k-ethmac-support.html">Ben's blog post about network support</a></li>
                 <li><a href="https://github.com/s-macke/jor1k/">Project</a> page at github</li>
                 <li><a href="https://github.com/s-macke/jor1k/issues">Bugtracker</a> to report any issues or feature requests</li>
                 <li><a href="https://github.com/s-macke/jor1k/wiki">Wiki</a> containing more detailed descriptions</li>
@@ -70,6 +68,7 @@
             <ul>
                 <li>Sebastian Macke <a href="http://simulationcorner.net/">simulationcorner.net</a></li>
                 <li>Gerard Braad <a href="http://gbraad.nl">gbraad.nl</a></li>
+                <li>Ben Burns <a href="http://www.benjamincburns.com">benjamincburns.com</a></li>
             </ul>
 
         </div>
@@ -85,7 +84,7 @@ function SelectHD()
 }
  
 function Start() {
-    jor1kgui = new jor1kGUI("tty", "fb", "stats", ["../../bin/vmlinux.bin.bz2", "../../bin/hddemo.bz2"], "ws://jor1k:9999/");
+    jor1kgui = new jor1kGUI("tty", "fb", "stats", ["../../bin/vmlinux.bin.bz2", "../../bin/netdemo.bz2"], "ws://relay.widgetry.org/");
 }
 </script>
 
