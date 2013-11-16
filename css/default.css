@@ -10,9 +10,7 @@ html, body {
 body {
     font: 13.34px helvetica,arial,freesans,clean,sans-serif;
     line-height: 1.4;
-    margin-top: 30px;
-    margin-left: 30px;
-    margin-right: 30px;
+    margin: 30px;
     background: #F0F0F0;
 }
 
@@ -42,7 +40,7 @@ h1 {
 
 .heading {
     overflow:auto;
-    background: #153080;
+    background: #2C458D;
     border-bottom-left-radius: 0px;
     border-bottom-right-radius: 0px;
     border-top-left-radius: 30px;
@@ -51,13 +49,13 @@ h1 {
 
 .windows {
     overflow:auto;
-    border-color: #153080;
+    border-color: #2C458D;
     border-style: solid;    
 }
 
 .infobox {
     overflow:auto;    
-    background: #153080;
+    background: #2C458D;
     border-bottom-left-radius: 30px;
     border-bottom-right-radius: 30px;
     border-top-left-radius: 0px;
@@ -78,6 +76,11 @@ img {
     border-style: none;
 }
 
+iframe {
+    position: relative;
+    top: 6px;
+}
+
 .terminal {
     border: 2px solid black;
     font-family: courier,fixed,swiss,monospace,sans-serif;
@@ -90,6 +93,27 @@ img {
 .screen {
     border: 2px solid black;
 }
+
+.contributor ul {
+    padding: 0px;
+    margin: 0px;
+}
+.contributor li {
+    display: inline;
+    padding: 0px;
+    margin: 0px;
+    height: 25px !important;
+    line-height: 25px;
+}
+
+.contributor-info {
+    width: 350px;
+}
+
+.donate {
+    margin-top: 20px;
+}
+
 
 #infobox {
     margin-left: 20px;

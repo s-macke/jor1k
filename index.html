@@ -31,7 +31,7 @@
                             <option value="safe">Safe Core (Slow)</option>
                         </select>
                         <select id="hdselect" onchange='jor1kgui.ChangeImage(this.options[this.selectedIndex].value)'>
-                            <option value="../../bin/netdemo.bz2">Network tools (links, lynx, nasm, ssh, wget) (8.2MB)</option>
+                            <option value="../../bin/netdemo.bz2">Network tools (links, lynx, nmap, ssh, wget) (8.2MB)</option>
                             <option value="../../bin/hddemo.bz2">Graphic demos, games, and ScummVM (Monkey island) (7MB)</option>
                             <option value="../../bin/hdgcc.bz2">Gnu C Compiler. Compile Frotz to play a text adventure (10 MB) </option>
                             <option value="../../bin/hdX.bz2">Basic X window system running twm, glxgears, xterm and xeyes (9MB)</option>
@@ -64,25 +64,40 @@
                 <li><a href="http://opencores.org/or1k/">Official site</a> of the openrisc project</li>
             </ul>
 
-            <h4>Developer and contributors</h4>
+            <h3>Developer and contributors</h3>
             <ul>
-                <li>Sebastian Macke <a href="http://simulationcorner.net/">simulationcorner.net</a></li>
-                <li>Gerard Braad <a href="http://gbraad.nl">gbraad.nl</a></li>
-                <li>Ben Burns <a href="http://www.benjamincburns.com">benjamincburns.com</a></li>
+                <li class="contributor">
+                    <ul>
+                        <li class="contributor-info">Main developer - Sebastian Macke <a href="http://simulationcorner.net/">simulationcorner.net</a></li>
+                        <li>
+                            <script data-gittip-username="s-macke"            
+                            data-gittip-widget="button"
+                            src="//gttp.co/v1.js"></script>
+                        </li>
+                    </ul>
+                </li>
+                <li class="contributor">
+                    <ul>
+                        <li class="contributor-info">Network support - Ben Burns <a href="http://www.benjamincburns.com">benjamincburns.com</a></li>
+                        <li>
+                            <script data-gittip-username="benjamincburns"            
+                            data-gittip-widget="button"
+                            src="//gttp.co/v1.js"></script>
+                        </li>
+                    </ul>
+                </li>
+                <li class="contributor">
+                    <ul>
+                        <li class="contributor-info">Gerard Braad <a href="http://gbraad.nl">gbraad.nl</a></li>
+                    </ul>
+                </li>
             </ul>
 
-            <h4>Donate</h4>
+            <h3>Donate</h3>
             
             <ul>
                 <li>If you like the project, please support it</li>
-                <li></li>
-                <li>
-                    <script data-gittip-username="s-macke"            
-                    data-gittip-widget="button"
-                    src="//gttp.co/v1.js"></script>
-                </li>
-                <li></li>
-                <li>
+                <li class="donate">
                     <form action="https://www.paypal.com/cgi-bin/webscr" method="post" target="_top">
                     <input type="hidden" name="cmd" value="_s-xclick">
                     <input type="hidden" name="hosted_button_id" value="YNEZT8JALL7VS">
