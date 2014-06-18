@@ -235,7 +235,7 @@ Terminal.prototype.HandleEscapeSequence = function() {
         return;
     } else
     if (this.escapestring == "M") {
-        this.ScrollDown();
+        this.ScrollDown2(true);
         return;
     }
     // Testing for [x;y;z
