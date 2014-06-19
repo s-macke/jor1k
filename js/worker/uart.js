@@ -1,6 +1,7 @@
 // -------------------------------------------------
 // -------------------- UART -----------------------
 // -------------------------------------------------
+// See http://www.tldp.org/HOWTO/Serial-HOWTO-18.html#ss18.3
 
 var UART_LSR_DATA_READY = 0x1;
 var UART_LSR_FIFO_EMPTY = 0x20;
@@ -35,7 +36,7 @@ function UARTDev(outputdev, intdev) {
     this.intdev = intdev;
     this.odev = outputdev;
     this.Reset();  
-    this.fifo = new Array(); // receive fifo buffer
+    this.fifo = new Array(); // receive fifo buffer. Simple JS push/shift O(N) implementation 
 }
 UARTDev.prototype.Reset = function() {
     this.LCR = 0x3; // Line Control, reset, character has 8 bits
@@ -51,16 +52,12 @@ UARTDev.prototype.Reset = function() {
     this.input = 0;
 }
 
-// this function is maybe too simple. No buffer. The character may be overwritten
-// if the code needs some cycles to process. So the FIFO is done by the operating system
+// To prevent the character from being overwritten we use a javascript array-based fifo and immediately request a character timeout. 
 UARTDev.prototype.ReceiveChar = function(x) {
     this.fifo.push(x);
-    if (this.fifo.length >= 1) {
-        this.input = this.fifo.shift()
-        this.ClearInterrupt(UART_IIR_CTI);
-        this.LSR |= UART_LSR_DATA_READY;
-        this.ThrowCTI();
-    }
+    this.LSR |= UART_LSR_DATA_READY;
+    this.ThrowCTI();
+
 };
 
 UARTDev.prototype.ThrowCTI = function() {
@@ -121,17 +118,20 @@ UARTDev.prototype.ReadReg8 = function(addr) {
     switch (addr) {
     case 0:
         {
-            var ret = this.input;
+            var ret = 0x21;// !
             this.input = 0;
             this.ClearInterrupt(UART_IIR_RDI);
             this.ClearInterrupt(UART_IIR_CTI);
-            if (this.fifo.length >= 1) {
-                // not sure if this is right, probably not
-                this.input = this.fifo.shift();
-                this.LSR |= UART_LSR_DATA_READY;
-                //this.ThrowCTI();
+            var fifo_len = this.fifo.length;
+            if (fifo_len >= 1) {
+                ret = this.fifo.shift();
             }
-            else {
+            // Due to shift(), the fifo buffer is now smaller. Perhaps we shifted the last byte?
+            if(fifo_len > 1) { // Still more bytes to read - immediately timeout
+                this.LSR |= UART_LSR_DATA_READY;
+                this.ThrowCTI(); // Immediately timeout - we're ready to transfer
+            }
+            else { // No more bytes after this one
                 this.LSR &= ~UART_LSR_DATA_READY;
             }
             return ret;
