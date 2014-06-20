@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>Demo 1</title>
+        <link rel="stylesheet" href="css/default.css">
+    </head>
+    <body onload="Start()">
+    <div class="heading">
+    </div>
+    <div class="windows">
+        <table>
+            <tr>
+                <td style="vertical-align: top">
+                    <table>
+                    <tr><td>
+                    <canvas id="tty" class="screen" width="640" height="384">
+                        Terminal uses canvas
+                    </canvas>
+                    </td></tr>
+                    <tr><td>
+                    <span style="float: left">
+                    <form>
+                        <select id="coreselect" onchange='jor1kgui.ChangeCore(this.options[this.selectedIndex].value)'>
+                            <option value="asm">asm.js Core</option>
+                            <option value="std">Standard Core</option>
+                            <option value="safe">Safe Core (Slow)</option>
+                        </select>
+                    </form>
+                    </span>
+                    <span id="stats" style="float: right"></span>
+                    </td></tr>
+                    </table>
+
+                </td>
+                <td style="vertical-align: top">
+	<form >
+<textarea id="studentcode" rows=30 cols=80>
+#include &lt;stdio.h&gt;
+int main() {
+	fork();
+	fork();
+	printf("pid=%d\n",getpid());
+	return 0;
+}
+</textarea><br>
+		<a href="#" onclick="jor1kgui.runcode(document.getElementById('studentcode').value);return false">Run</a>
+			
+		</form>
+                </td>
+            </tr>
+        </table>
+       
+        </div>
+        <div class="infobox">
+        </div>
+
+    <script src="js/master/terminal.js"></script>
+    <script src="js/master/terminal-input.js"></script>
+    <script src="js/master/master.js"></script>
+
+<script>
+
+function SelectHD()
+{
+}
+ 
+function Start() {
+    jor1kgui = new jor1kGUI("tty", "fb", "stats", ["../../bin/vmlinux.bin.bz2", "../../bin/hdgcc.bz2"], "ws://relay.widgetry.org/");
+}
+</script>
+
+    </body>
+</html>
