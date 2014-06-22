@@ -645,8 +645,9 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
             this.delayedins = true;
             continue;
 
+        case 0x1B:
         case 0x21:
-            // lwz
+            // lwa and lwz
             r[32] = r[(ins >> 16) & 0x1F] + ((ins << 16) >> 16);
             if ((r[32] & 3) != 0) {
                 DebugMessage("Error in lwz: no unaligned access allowed");
@@ -876,6 +877,25 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
             }
             break;
 
+        case 0x33:
+            // swa
+            imm = ((((ins >> 10) & 0xF800) | (ins & 0x7FF)) << 16) >> 16;
+            r[32] = r[(ins >> 16) & 0x1F] + imm;
+            if (r[32] & 0x3) {
+                DebugMessage("Error in sw: no aligned memory access");
+                abort();
+            }
+            r[33] = this.DTLBLookup(r[32], true);
+            if (r[33] == -1) {
+                break;
+            }
+            if (r[33]>0) {
+                int32mem[r[33] >> 2] = r[(ins >> 11) & 0x1F];
+            } else {
+                ram.WriteMemory32(r[33], r[(ins >> 11) & 0x1F]);
+            }
+            this.SR_F = true;
+            break;
             
         case 0x35:
             // sw

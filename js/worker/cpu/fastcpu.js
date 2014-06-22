@@ -1016,8 +1016,9 @@ function Step(steps, clockspeed) {
             steps = steps - 1|0;
             continue;
 
+        case 0x1B:
         case 0x21:
-            // lwz 
+            // lwa and lwz
             vaddr = (r[((ins >> 14) & 0x7C) >> 2]|0) + ((ins << 16) >> 16)|0;
             if ((read32tlbcheck ^ vaddr) >> 13) {
                 paddr = DTLBLookup(vaddr, 0)|0;
@@ -1278,6 +1279,27 @@ function Step(steps, clockspeed) {
             }
             break;
 
+        case 0x33:
+            // swa
+            imm = ((((ins >> 10) & 0xF800) | (ins & 0x7FF)) << 16) >> 16;
+            vaddr = (r[((ins >> 14) & 0x7C)>>2]|0) + imm|0;
+            if ((write32tlbcheck ^ vaddr) >> 13) {
+                paddr = DTLBLookup(vaddr, 1)|0;
+                if ((paddr|0) == -1) {
+                    break;
+                }
+                write32tlbcheck = vaddr;
+                write32tlblookup = ((paddr^vaddr) >> 13) << 13;
+            }
+            paddr = write32tlblookup ^ vaddr;
+            if ((paddr|0) > 0) {
+                h[ramp + paddr >> 2] = r[((ins >> 9) & 0x7C)>>2]|0;
+            } else {
+                WriteMemory32(paddr|0, r[((ins >> 9) & 0x7C)>>2]|0);
+            }
+            SR_F = 1|0;
+            break;
+
         case 0x35:
             // sw
             imm = ((((ins >> 10) & 0xF800) | (ins & 0x7FF)) << 16) >> 16;
@@ -1295,7 +1317,7 @@ function Step(steps, clockspeed) {
                 h[ramp + paddr >> 2] = r[((ins >> 9) & 0x7C)>>2]|0;
             } else {
                 WriteMemory32(paddr|0, r[((ins >> 9) & 0x7C)>>2]|0);
-            }            
+            }
             break;
 
         case 0x36:
