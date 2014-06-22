@@ -90,7 +90,6 @@ function jor1kGUI(termid, fbid, statsid, imageurls, proxyurl)
 jor1kGUI.prototype.OnMessage = function(e) {    
     if (this.stop) return;
     if (e.data.command == "execute") this.SendToWorker("execute", 0); else
-    if (e.data.command == "ethmac") this.socket.send(e.data.data); else
     if (e.data.command == "tty") this.term.PutChar(e.data.data); else
     if (e.data.command == "GetFB") this.UpdateFramebuffer(e.data.data); else
     if (e.data.command == "Stop") {console.log("Received stop signal"); this.stop = true;} else
