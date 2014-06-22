@@ -36,14 +36,14 @@ var UART_SCR = 7; /* R/W: Scratch Register*/
 // constructor
 function UARTDev(outputdev, intdev) {
     this.intdev = intdev;
-    this.odev = outputdev;
+    this.TransmitCallback = function(data){}; // Should call handler to send data asynchronously.
     this.Reset();  
 }
 UARTDev.prototype.Reset = function() {
     this.LCR = 0x3; // Line Control, reset, character has 8 bits
     this.LSR = UART_LSR_TRANSMITTER_EMPTY | UART_LSR_FIFO_EMPTY; // Line Status register, Transmitter serial register empty and Transmitter buffer register empty
     this.MSR = 0; // modem status register
-    this.IIR = UART_IIR_NO_INT; // // Interrupt Identification, no interrupt
+    this.IIR = UART_IIR_NO_INT; // Interrupt Identification, no interrupt
     this.ints = 0x0; // no interrupt pending
     this.IER = 0x0; //Interrupt Enable
     this.DLL = 0;
@@ -183,8 +183,8 @@ UARTDev.prototype.WriteReg8 = function(addr, x) {
     switch (addr) {
     case UART_TXBUF:
         this.LSR &= ~UART_LSR_FIFO_EMPTY;
-        this.odev.PutChar(x); // Data is send with a latency of zero!
-        this.LSR |= UART_LSR_FIFO_EMPTY; // txbuffer is empty					
+        this.TransmitCallback(x); // Data is send with a latency of zero!
+        this.LSR |= UART_LSR_FIFO_EMPTY; // txbuffer is empty
         this.ThrowTHRI();
         break;
     case UART_IER:

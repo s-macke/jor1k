@@ -39,6 +39,7 @@ function EthDev(ram, intdev, mac) {
     "use strict";
 
     this.intdev = intdev;
+    this.TransmitCallback = function(data){}; // Should call handler to send data asynchronously.
 
     this.toTxStat = function(val) {
         return {

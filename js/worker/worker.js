@@ -7,14 +7,6 @@ importScripts('utils.js', 'framebuffer.js', 'ethmac.js', 'ata.js',
     'system.js', 'bzip2.js', 'cpu/fastcpu.js', 'cpu/safecpu.js'
     );
 
-// The normal Terminal Device cannot be used here because it needs a canvas element
-// Therefore a small terminal device is emulated here which sends all characters received to the master.
-function Terminal() {
-    this.PutChar = function(c) {
-        SendToMaster("tty", c);
-    };
-}
-
 var sys = new System();
 DebugMessage("System initialized");
 

@@ -165,11 +165,11 @@ if (typeof Math.imul == "undefined") {
     DebugMessage("Init CPU");
     this.ChangeCore("asm", false);
 
-    DebugMessage("Init Terminal");
-    this.term = new Terminal();
-
     DebugMessage("Init Devices");
     this.uartdev = new UARTDev(this.term, this);
+    this.uartdev.TransmitCallback = function(data) {
+        SendToMaster("tty", data);
+    }
 
     this.ethdev = new EthDev(this.ram, this);
     this.ethdev.TransmitCallback = function(data){
@@ -278,7 +278,7 @@ System.prototype.PrintState = function() {
 System.prototype.SendStringToTerminal = function(str)
 {
     for (var i = 0; i < str.length; i++) {
-        this.term.PutChar(str.charCodeAt(i));
+        SendToMaster("tty", str.charCodeAt(i));
     }
 }
 
