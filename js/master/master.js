@@ -15,9 +15,8 @@ function UARTDev(worker) {
     };
 }
 
-function jor1kGUI(termid, fbid, statsid, imageurls, proxyurl)
+function jor1kGUI(termid, fbid, statsid, imageurls, relayURL)
 {
-    this.proxyurl = proxyurl;
     this.urls = imageurls;
     this.worker = new Worker('js/worker/worker.js');
     this.fbfocus = false; // true: keyboard command are not send to tty
@@ -93,21 +92,10 @@ function jor1kGUI(termid, fbid, statsid, imageurls, proxyurl)
         this.SendToWorker("tsmousemove", {x:x, y:y});
     }.bind(this);
 
-    // Open WebSocket
-    if (this.proxyurl) {
-        this.socket = new WebSocket(this.proxyurl);
-        this.socket.binaryType = 'arraybuffer';
-
-        this.socket.onmessage = function(e) {
-            if (e.data instanceof ArrayBuffer) {
-                this.SendToWorker("ethmac", e.data);
-            }
-        }.bind(this);
-    } else {
-        this.socket = {
-            send : function(){}
-        };
-    }
+    this.ethernet = new Ethernet(relayURL);
+    this.ethernet.onmessage = function(e) {
+        this.SendToWorker("ethmac", e.data);
+    }.bind(this);
 
     // Init Statsline 
     this.stats = document.getElementById(statsid);
@@ -118,11 +106,10 @@ function jor1kGUI(termid, fbid, statsid, imageurls, proxyurl)
     window.setInterval(function(){this.SendToWorker("GetFB", 0)}.bind(this), 100);
 }
 
-
-jor1kGUI.prototype.OnMessage = function(e) {    
+jor1kGUI.prototype.OnMessage = function(e) {
     if (this.stop) return;
     if (e.data.command == "execute") this.SendToWorker("execute", 0); else
-    if (e.data.command == "ethmac") this.socket.send(e.data.data); else
+    if (e.data.command == "ethmac") this.ethernet.SendFrame(e.data.data); else
     if (e.data.command == "tty") this.term.PutChar(e.data.data); else
     if (e.data.command == "GetFB") this.UpdateFramebuffer(e.data.data); else
     if (e.data.command == "Stop") {console.log("Received stop signal"); this.stop = true;} else
@@ -147,7 +134,4 @@ jor1kGUI.prototype.UpdateFramebuffer = function(buffer) {
     //data.set(buffer);
     this.fbctx.putImageData(this.fbimageData, 0, 0); // at coords 0,0
 }
-
-
-
 
