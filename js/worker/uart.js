@@ -69,7 +69,6 @@ UARTDev.prototype.ThrowCTI = function() {
     if ((this.IIR != UART_IIR_RLSI) && (this.IIR != UART_IIR_RDI)) {
         this.IIR = UART_IIR_CTI;
         this.intdev.RaiseInterrupt(0x2);
-		DebugMessage("raise 0x2 with " + this.rxbuf);
     }
 };
 
@@ -99,7 +98,6 @@ UARTDev.prototype.NextInterrupt = function() {
 
 UARTDev.prototype.ClearInterrupt = function(line) {
     this.ints &= ~ (1 << line);
-    //this.IIR = UART_IIR_NO_INT;
     if (line != this.IIR) {
         return;
     }
