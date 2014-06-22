@@ -284,7 +284,8 @@ System.prototype.SendStringToTerminal = function(str)
 
 System.prototype.LoadImageAndStart = function(urls) {
     DebugMessage("Loading urls " + urls);
-    this.SendStringToTerminal("Loading kernel and hard drive image from web server. Please wait ...\r\n");
+    this.SendStringToTerminal("\r================================================================================");
+    this.SendStringToTerminal("\r\nLoading kernel and hard drive image from web server. Please wait ...\r\n");
     DownloadAllAsync(urls, this.ImageFinished.bind(this), function(error){DebugMessage(error);} );
 }
 
@@ -306,7 +307,8 @@ System.prototype.ImageFinished = function(result) {
         }
     }.bind(this));
 
-    this.SendStringToTerminal("Booting Kernel\r\n");
+    this.SendStringToTerminal("Booting\r\n");
+    this.SendStringToTerminal("================================================================================");
     this.cpu.Reset();
     this.cpu.AnalyzeImage();
     DebugMessage("Starting emulation");
