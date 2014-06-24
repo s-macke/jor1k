@@ -11,63 +11,50 @@ var sys = new System();
 DebugMessage("System initialized");
 
 onmessage = function(e) {
-    //TODO: make ethmac its own worker
-    if (e.data.command == "execute") {
-        sys.MainLoop();
-        return;
-    } else 
-    if (e.data.command == "ethmac") {
-        sys.ethdev.Receive(new Uint8Array(e.data.data));
-        return;
-    } else 
-    if (e.data.command == "GetFB") {
-        SendToMaster("GetFB", sys.fbdev.GetBuffer());
-        return;
-    } else
-    if (e.data.command == "tty0") {
-        sys.uartdev0.ReceiveChar(e.data.data);
-        return;
-    } else
-    if (e.data.command == "tty1") {
-        sys.uartdev1.ReceiveChar(e.data.data);
-        return;
-    } else
-    if (e.data.command == "GetIPS") {
-        SendToMaster("GetIPS", sys.GetIPS());        
-        return;
-    } else
-    if (e.data.command == "keydown") {
+    switch(e.data.command)
+    {
+        case "execute":
+            sys.MainLoop();
+            break;
+        case "ethmac":
+            sys.ethdev.Receive(new Uint8Array(e.data.data));
+            break;
+        case "GetFB":
+            SendToMaster("GetFB", sys.fbdev.GetBuffer());
+            break;
+        case "tty0":
+            sys.uartdev0.ReceiveChar(e.data.data);
+            break;
+        case "tty1":
+            sys.uartdev1.ReceiveChar(e.data.data);
+            break;
+        case "GetIPS":
+            SendToMaster("GetIPS", sys.GetIPS());        
+            break;
+        case "keydown":
             sys.kbddev.OnKeyDown(e.data.data);
-        return;
-    } else
-    if (e.data.command == "keyup") {
+            break;
+        case "keyup":
             sys.kbddev.OnKeyUp(e.data.data);
-        return;
-    } else
-    if (e.data.command == "tsmousedown") {
-        sys.tsdev.onmousedown(e.data.data);
-        return;
-    } else
-    if (e.data.command == "tsmouseup") {
-        sys.tsdev.onmouseup(e.data.data);
-        return;
-    } else
-    if (e.data.command == "tsmousemove") {
-        sys.tsdev.onmousemove(e.data.data);
-        return;
-    } else
-    if (e.data.command == "Reset") {
-        sys.Reset(e.data.data);
-        return;
-    } else
-    if (e.data.command == "ChangeCore") {
-        sys.ChangeCore(e.data.data, true);
-        return;
-    } else
-    if (e.data.command == "LoadAndStart") {
-        sys.LoadImageAndStart(e.data.data);
-        return;
+            break;
+        case "tsmousedown":
+            sys.tsdev.onmousedown(e.data.data);
+            break;
+        case "tsmouseup":
+            sys.tsdev.onmouseup(e.data.data);
+            break;
+        case "tsmousemove":
+            sys.tsdev.onmousemove(e.data.data);
+            break;
+        case "Reset":
+            sys.Reset(e.data.data);
+            break;
+        case "ChangeCore":
+            sys.ChangeCore(e.data.data, true);
+            break;
+        case "LoadAndStart":
+            sys.LoadImageAndStart(e.data.data);
+            break;
     }
-
 
 }

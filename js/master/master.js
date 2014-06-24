@@ -108,15 +108,31 @@ function jor1kGUI(termid, fbid, statsid, imageurls, relayURL)
 
 jor1kGUI.prototype.OnMessage = function(e) {
     if (this.stop) return;
-    if (e.data.command == "execute") this.SendToWorker("execute", 0); else
-    if (e.data.command == "ethmac") this.ethernet.SendFrame(e.data.data); else
-    if (e.data.command == "tty0") this.term.PutChar(e.data.data); else
-    if (e.data.command == "GetFB") this.UpdateFramebuffer(e.data.data); else
-    if (e.data.command == "Stop") {console.log("Received stop signal"); this.stop = true;} else
-    if (e.data.command == "GetIPS") {        
-        this.stats.innerHTML = (Math.floor(e.data.data/100000)/10.) + " MIPS";
-    } else
-    if (e.data.command == "Debug") console.log(e.data.data);
+    switch(e.data.command)
+    {
+        case "execute":
+            this.SendToWorker("execute", 0);
+            break;
+        case "ethmac":
+            this.ethernet.SendFrame(e.data.data);
+            break;
+        case "tty0":
+            this.term.PutChar(e.data.data);
+            break;
+        case "GetFB":
+            this.UpdateFramebuffer(e.data.data);
+            break;
+        case "Stop":
+            console.log("Received stop signal"); 
+            this.stop = true;
+            break;
+        case "GetIPS":
+            this.stats.innerHTML = (Math.floor(e.data.data/100000)/10.) + " MIPS";
+            break;
+        case "Debug":
+            console.log(e.data.data);
+            break;
+    }
 }
 
 jor1kGUI.prototype.UpdateFramebuffer = function(buffer) {

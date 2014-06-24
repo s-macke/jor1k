@@ -285,7 +285,7 @@ System.prototype.PrintState = function() {
 System.prototype.SendStringToTerminal = function(str)
 {
     for (var i = 0; i < str.length; i++) {
-        SendToMaster("tty", str.charCodeAt(i));
+        SendToMaster("tty0", str.charCodeAt(i));
     }
 }
 
@@ -319,9 +319,8 @@ System.prototype.ImageFinished = function(result) {
     this.cpu.Reset();
     this.cpu.AnalyzeImage();
     DebugMessage("Starting emulation");
-    SendToMaster("execute", 0);
     this.running = true;
-    this.MainLoop();
+    SendToMaster("execute", 0);
 }
 
 System.prototype.MainLoop = function() {
