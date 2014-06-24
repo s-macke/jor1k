@@ -18,8 +18,14 @@ function UARTDev(worker) {
 function jor1kGUI(termid, fbid, statsid, imageurls, relayURL)
 {
     this.urls = imageurls;
-    this.worker = new Worker('js/worker/worker.js');
     this.fbfocus = false; // true: keyboard command are not send to tty
+    
+    this.worker = new Worker('js/worker/worker.js');
+    this.worker.onmessage = this.OnMessage.bind(this);   
+    this.worker.onerror = function(e) {
+        console.log("Error at " + e.filename + ":" + e.lineno + ": " + e.message);
+    }
+    
     this.SendToWorker = function(command, data) {
         this.worker.postMessage(
         {
@@ -27,6 +33,7 @@ function jor1kGUI(termid, fbid, statsid, imageurls, relayURL)
             "data": data
         });
     }
+
     this.ChangeCore = function(core) {
         this.SendToWorker("ChangeCore", core);
     };
@@ -37,13 +44,11 @@ function jor1kGUI(termid, fbid, statsid, imageurls, relayURL)
         this.SendToWorker("LoadAndStart", this.urls);
     };
 
+    this.terminalcanvas = document.getElementById(termid);
+    this.stats = document.getElementById(statsid);
+
     this.term = new Terminal(24, 80, termid);
     this.terminput = new TerminalInput(new UARTDev(this));
-    this.worker.onmessage = this.OnMessage.bind(this);   
-    this.worker.onerror = function(e) {
-        console.log("Error at " + e.filename + ":" + e.lineno + ": " + e.message);
-    }
-    this.terminalcanvas = document.getElementById(termid);
 
     // Init Framebuffer
     this.fbcanvas = document.getElementById(fbid);
@@ -56,7 +61,6 @@ function jor1kGUI(termid, fbid, statsid, imageurls, relayURL)
     }.bind(this);
 
     document.onkeydown = function(event) {
-        //DebugMessage("" + event.keyCode);
         this.SendToWorker("keydown", {keyCode:event.keyCode, charCode:event.charCode});
         return this.terminput.OnKeyDown(event);
     }.bind(this);
@@ -79,12 +83,14 @@ function jor1kGUI(termid, fbid, statsid, imageurls, relayURL)
         var y = event.clientY - rect.top;
         this.SendToWorker("tsmousedown", {x:x, y:y});
     }.bind(this);
+
     this.fbcanvas.onmouseup = function(event) {
         var rect = this.fbcanvas.getBoundingClientRect();
         var x = event.clientX - rect.left;
         var y = event.clientY - rect.top;
         this.SendToWorker("tsmouseup", {x:x, y:y});
     }.bind(this);
+
     this.fbcanvas.onmousemove = function(event) {
         var rect = this.fbcanvas.getBoundingClientRect();
         var x = event.clientX - rect.left;
@@ -96,9 +102,6 @@ function jor1kGUI(termid, fbid, statsid, imageurls, relayURL)
     this.ethernet.onmessage = function(e) {
         this.SendToWorker("ethmac", e.data);
     }.bind(this);
-
-    // Init Statsline 
-    this.stats = document.getElementById(statsid);
 
     this.stop = false;
     this.SendToWorker("LoadAndStart", this.urls);
