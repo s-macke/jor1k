@@ -183,7 +183,7 @@ function GetState() {
 function AnalyzeImage() { // get addresses for fast refill
     boot_dtlb_misshandler_address = h[ramp+0x900 >> 2]|0;
     boot_itlb_misshandler_address = h[ramp+0xA00 >> 2]|0;
-    current_pgd = ((h[ramp+0x2018 >> 2]&0xFFF)<<16) | (h[ramp+0x201C >> 2] & 0xFFFF)|0;
+    current_pgd = ((h[ramp+0x2010 >> 2]&0xFFF)<<16) | (h[ramp+0x2014 >> 2] & 0xFFFF)|0;
 }
 
 

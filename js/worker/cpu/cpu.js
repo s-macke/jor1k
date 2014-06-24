@@ -133,7 +133,7 @@ CPU.prototype.AnalyzeImage = function() // get addresses for fast refill
 {
     this.boot_dtlb_misshandler_address = this.ram.int32mem[0x900 >> 2];
     this.boot_itlb_misshandler_address = this.ram.int32mem[0xA00 >> 2];
-    this.current_pgd = ((this.ram.int32mem[0x2018>>2]&0xFFF)<<16) | (this.ram.int32mem[0x201C>>2] & 0xFFFF);
+    this.current_pgd = ((this.ram.int32mem[0x2010>>2]&0xFFF)<<16) | (this.ram.int32mem[0x2014>>2] & 0xFFFF);
 }
 
 CPU.prototype.SetFlags = function (x) {
