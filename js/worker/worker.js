@@ -24,8 +24,12 @@ onmessage = function(e) {
         SendToMaster("GetFB", sys.fbdev.GetBuffer());
         return;
     } else
-    if (e.data.command == "tty") {
-        sys.uartdev.ReceiveChar(e.data.data);
+    if (e.data.command == "tty0") {
+        sys.uartdev0.ReceiveChar(e.data.data);
+        return;
+    } else
+    if (e.data.command == "tty1") {
+        sys.uartdev1.ReceiveChar(e.data.data);
         return;
     } else
     if (e.data.command == "GetIPS") {

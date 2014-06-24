@@ -106,7 +106,8 @@ if (change) {
 
 System.prototype.Reset = function() {
     this.running = false;
-    this.uartdev.Reset();
+    this.uartdev0.Reset();
+    this.uartdev1.Reset();
     this.ethdev.Reset();
     this.fbdev.Reset();
     this.atadev.Reset();
@@ -166,11 +167,16 @@ if (typeof Math.imul == "undefined") {
     this.ChangeCore("asm", false);
 
     DebugMessage("Init Devices");
-    this.uartdev = new UARTDev(this.term, this);
-    this.uartdev.TransmitCallback = function(data) {
-        SendToMaster("tty", data);
+    this.uartdev0 = new UARTDev(this, 0x2);
+    this.uartdev0.TransmitCallback = function(data) {
+        SendToMaster("tty0", data);
     }
 
+    this.uartdev1 = new UARTDev(this, 0x3);
+    this.uartdev1.TransmitCallback = function(data) {
+        SendToMaster("tty1", data);
+    }
+    
     this.ethdev = new EthDev(this.ram, this);
     this.ethdev.TransmitCallback = function(data){
         SendToMaster("ethmac", data);
@@ -183,7 +189,8 @@ if (typeof Math.imul == "undefined") {
 
     DebugMessage("Add Devices");  
     this.ram.AddDevice(this.atadev, 0x9e000000, 0x1000);
-    this.ram.AddDevice(this.uartdev, 0x90000000, 0x7);
+    this.ram.AddDevice(this.uartdev0, 0x90000000, 0x7);
+    this.ram.AddDevice(this.uartdev1, 0x96000000, 0x7);
     this.ram.AddDevice(this.ethdev, 0x92000000, 0x1000);
     this.ram.AddDevice(this.fbdev, 0x91000000, 0x1000);
     this.ram.AddDevice(this.tsdev, 0x93000000, 0x1000);

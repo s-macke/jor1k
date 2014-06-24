@@ -10,7 +10,7 @@ function DebugMessage(message) {
 function UARTDev(worker) {
     this.ReceiveChar = function(c) {
         if (!worker.fbfocus) { // check if framebuffer has focus
-            worker.SendToWorker("tty", c);
+            worker.SendToWorker("tty0", c);
         }
     };
 }
@@ -110,7 +110,7 @@ jor1kGUI.prototype.OnMessage = function(e) {
     if (this.stop) return;
     if (e.data.command == "execute") this.SendToWorker("execute", 0); else
     if (e.data.command == "ethmac") this.ethernet.SendFrame(e.data.data); else
-    if (e.data.command == "tty") this.term.PutChar(e.data.data); else
+    if (e.data.command == "tty0") this.term.PutChar(e.data.data); else
     if (e.data.command == "GetFB") this.UpdateFramebuffer(e.data.data); else
     if (e.data.command == "Stop") {console.log("Received stop signal"); this.stop = true;} else
     if (e.data.command == "GetIPS") {        

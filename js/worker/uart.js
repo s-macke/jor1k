@@ -34,7 +34,8 @@ var UART_SCR = 7; /* R/W: Scratch Register*/
 
 
 // constructor
-function UARTDev(outputdev, intdev) {
+function UARTDev(intdev, intno) {
+    this.intno = intno;
     this.intdev = intdev;
     this.TransmitCallback = function(data){}; // Should call handler to send data asynchronously.
     this.Reset();  
@@ -68,7 +69,7 @@ UARTDev.prototype.ThrowCTI = function() {
     }
     if ((this.IIR != UART_IIR_RLSI) && (this.IIR != UART_IIR_RDI)) {
         this.IIR = UART_IIR_CTI;
-        this.intdev.RaiseInterrupt(0x2);
+        this.intdev.RaiseInterrupt(this.intno);
     }
 };
 
@@ -79,7 +80,7 @@ UARTDev.prototype.ThrowTHRI = function() {
     }
     if ((this.IIR & UART_IIR_NO_INT) || (this.IIR == UART_IIR_MSI) || (this.IIR == UART_IIR_THRI)) {
         this.IIR = UART_IIR_THRI;
-        this.intdev.RaiseInterrupt(0x2);
+        this.intdev.RaiseInterrupt(this.intno);
     }
 };
 
@@ -92,7 +93,7 @@ UARTDev.prototype.NextInterrupt = function() {
     }
     else {
         this.IIR = UART_IIR_NO_INT;
-        this.intdev.ClearInterrupt(0x2);
+        this.intdev.ClearInterrupt(this.intno);
     }
 };
 
