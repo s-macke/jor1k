@@ -4,6 +4,7 @@
 
 function TerminalInput(uartdev) {
     this.CTRLpressed = false;
+    this.ALTpressed = false;
     this.uart = uartdev;
     this.enabled = true;
 }
@@ -17,6 +18,7 @@ TerminalInput.prototype.OnKeyPress = function(e) {
     if (key == 0) {
         return false;
     }
+
     // Define that the control key has this effect only if special keys have been pressed A..Z a..z. Otherwise some foreign keyboards will not work
     if ((this.CTRLpressed) && (((key >= 0x41) && (key <= 0x5A)) || ((key >= 0x61) && (key <= 0x7A)))) {
         key &= 0x1F;
@@ -33,6 +35,9 @@ TerminalInput.prototype.OnKeyUp = function(e) {
     var unicode = e.charCode;
     if (keycode == 17) {
         this.CTRLpressed = false;
+    } else
+    if (keycode == 18) {
+        this.ALTpressed = false;
     }
     return false;
 };
@@ -43,9 +48,9 @@ TerminalInput.prototype.OnKeyDown = function(e) {
     }
     var keycode = e.keyCode;
     var unicode = e.charCode;
-
+ 
     // CTRL + x key handling for chrome 
-    if ((this.CTRLpressed) && (keycode >= 65) && (keycode <= 90)) {
+    if ((this.CTRLpressed) && (!this.ALTpressed) && (keycode >= 65) && (keycode <= 90)) {
         this.uart.ReceiveChar((keycode-32) & 0x1F);
         e.preventDefault();
         return false;
@@ -117,6 +122,11 @@ TerminalInput.prototype.OnKeyDown = function(e) {
         //return false;
         return;
         break;
+    case 18:
+        // Alt
+        this.ALTpressed = true;
+        return;
+        break;
     }
 
     if ((keycode != 0) && (keycode <= 0x1F)) {
@@ -124,5 +134,6 @@ TerminalInput.prototype.OnKeyDown = function(e) {
         e.preventDefault();
         return false;
     }
+    
     return;
 };
