@@ -3,6 +3,7 @@
 // -------------------------------------------------
 // See http://www.tldp.org/HOWTO/Serial-HOWTO-18.html#ss18.3
 // http://www.lammertbies.nl/comm/info/serial-uart.html#IIR
+// http://www.freebsd.org/doc/en/articles/serial-uart/
 
 var UART_LSR_DATA_READY = 0x1;
 var UART_LSR_FIFO_EMPTY = 0x20;
@@ -37,8 +38,12 @@ var UART_MSR = 6; /* R: Modem Status Register */
 var UART_SCR = 7; /* R/W: Scratch Register*/
 
 var UART_MCR_DTR = 0x01; /* Data Terminal Ready - Kernel ready to receive */
+var UART_MCR_RTS = 0x02; /* Request To Send - Kernel ready to receive */
+
 var UART_MSR_DSR= 0x20; 
 var UART_MSR_DELTA_DSR= 0x2; 
+var UART_MSR_CTS= 0x10; 
+var UART_MSR_DELTA_CTS= 0x1; 
 
 var UART_VERBOSE = true;
 var MCR_BIT_DESC=["DataTerminalReady", "RTS", "AuxOut1", "AuxOut2", "Loopback","Autoflow"/*16750*/]; 
@@ -51,7 +56,8 @@ var IER_BIT_DESC=["RxAvailableI","TxEmptyI","BreakI","MSI"];
 // Non-spec UART rx implementation to prevent incoming infinite bandwidth from overflowing kernel FLIP buffer:
 var UART_RXMODE_NONE = 0; /* No flow control Immediately send incoming chars to the kernel */
 var UART_RXMODE_DTR = 1; /* Don't send unless MCR_DataTerminalReady bit is set */
-// Other protocols (e.g. RTS-CTS; wait for char echo; interval timer) are possible
+var UART_RXMODE_RTS = 2; /* Use RTS protocol */
+// Other protocols (e.g. wait for char echo; interval timer) are possible
 
 
 // constructor
@@ -84,7 +90,11 @@ UARTDev.prototype.Reset = function() {
     this.MCR = 0x0; // Modem Control
     this.rxbuf = new Array(); // receive fifo buffer. Simple JS push/shift O(N) implementation
     this.rxon = true; 
-    this.rxmode = UART_RXMODE_NONE;
+    this.rxmode = UART_RXMODE_RTS;
+    // Our connected device says it's clear-to-send
+    // This required when reliable RTS-CTS flow control is used (stty crtscts) 
+    if(this.TransmitCallback)
+      this.MSR =UART_MSR_CTS | UART_MSR_DELTA_CTS; // Clear To Send bytes to the terminal/output
 }
 
 // To prevent the character from being overwritten we use a javascript array-based fifo and immediately request a character timeout. 
@@ -92,36 +102,45 @@ UARTDev.prototype.ReceiveChar = function(x) {
     this.rxbuf.push(x&0xFF);
     this.UpdateRx();
 }
-// Consider UpdateRx handle status changes upon a fake character that has just arrived
+// Flow Logic for status changes upon foreign char arrival.
+// Same logic is applied when a received char is read.
 UARTDev.prototype.UpdateRx = function() {
   if(this.rxbuf.length > 0) {
     // Update DSR
-    if(this.rxmode == UART_RXMODE_DTR) {
-      if((this.MSR & UART_MSR_DSR)==0) {
+    if((this.rxmode == UART_RXMODE_DTR) && (this.MSR & UART_MSR_DSR)==0) {
         this.MSR |= UART_MSR_DELTA_DSR | UART_MSR_DSR; // DataSetReady 
         this.ThrowMSR();
-        // is a return necessary at this point? (if so, call updateRX upon MS read)
-      }
+        // is a return required here?
+      
     }
-    // update UART_LSR_DATA_READY if the kernel is ready
-    if(this.rxmode == UART_RXMODE_NONE || 
-        (this.rxmode == UART_RXMODE_DTR) && (this.MCR & UART_MCR_DTR))
-    {
+    var ready = false;
+    switch(this.rxmode) {
+      case UART_RXMODE_NONE:
+        ready = true; 
+        break;
+      case UART_RXMODE_DTR: 
+        ready= (this.MCR & UART_MCR_DTR);
+        break;
+      case UART_RXMODE_RTS: 
+        ready= (this.MCR & UART_MCR_RTS);
+        break;
+      };
+    if(ready) {  // update UART_LSR_DATA_READY if the kernel is ready
       this.LSR |= UART_LSR_DATA_READY;
-      this.ThrowCTI();
-    } 
+      this.ThrowCTI(); 
+    }
+
   } 
   else 
   {
+    // Todo: Untested code. Is this necessary to take the dataset down?
     // No characters left, we're not ready to send anymore
-    // Note, LSR is handled during read
-    if(this.rxmode == UART_RXMODE_DTR) {
-      if((this.MSR & UART_MSR_DSR)==0) {
+    // Note, clearing LSR-data-available is handled during read
+    if( (this.rxmode == UART_RXMODE_DTR) && ((this.MSR & UART_MSR_DSR)==0) ) {
         this.MSR &= ~UART_MSR_DSR; // DataSetReady 
         this.MSR |= UART_MSR_DELTA_DSR;
         this.ThrowMSR();
         // is a return necessary at this point? (if so, call updateRX upon MS read)
-      }
     }
   }
 };
