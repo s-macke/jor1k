@@ -94,7 +94,7 @@ UARTDev.prototype.Reset = function() {
     this.MCR = 0x0; // Modem Control
     this.rxbuf = new Array(); // receive fifo buffer. Simple JS push/shift O(N) implementation
     this.rxon = true;  // xonoff state depends on most recently transmitted XON or XOFF char
-    this.rxmode = UART_RXMODE_RTS;
+    this.rxmode = UART_RXMODE_XONXOFF;
     // Our connected device says it's clear-to-send
     // This required when reliable RTS-CTS flow control is used (stty crtscts) 
     
