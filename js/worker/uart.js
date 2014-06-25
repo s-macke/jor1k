@@ -235,15 +235,17 @@ UARTDev.prototype.ReadReg8 = function(addr) {
     case UART_MSR:
         var result = this.MSR;
         this.MSR &= 0xf0; // reset lowest 4 "delta" bits
-        DebugMessage("Get UART_MSR" + this.ToBitDescription(result,MSR_BIT_DESC))
+        DebugMessage("Get UART_MSR " + this.ToBitDescription(result,MSR_BIT_DESC));
         return result;
         break;
     case UART_IIR:
         {
             var ret = (this.IIR & 0x0f) | 0xC0; // the two top bits are always set
+             
             if (this.IIR == UART_IIR_THRI) {
                 this.ClearInterrupt(UART_IIR_THRI);
             }
+            
             return ret;
             break;
         }
@@ -252,7 +254,8 @@ UARTDev.prototype.ReadReg8 = function(addr) {
         return this.LCR;
         break;
     case UART_LSR: 
-        DebugMessage("Get UART_LSR" + this.ToBitDescription(this.LSR,LSR_BIT_DESC))
+      // This gets called at 10Hz
+        //DebugMessage("Get UART_LSR " + this.ToBitDescription(this.LSR,LSR_BIT_DESC));
     
         if (this.IIR == UART_IIR_RLSI) {
           this.ClearInterrupt(UART_IIR_RLSI);
@@ -293,23 +296,23 @@ UARTDev.prototype.WriteReg8 = function(addr, x) {
     case UART_IER:
         // 2 = 10b ,5=101b, 7=111b
         this.IER = x & 0x0F; // only the first four bits are valid
-         if(this.verboseuart) DebugMessage("Set UART_IER" + this.ToBitDescription(x,IER_BIT_DESC));
+         if(this.verboseuart) DebugMessage("Set UART_IER " + this.ToBitDescription(x,IER_BIT_DESC));
         // Ok, check immediately if there is a interrupt pending
         this.NextInterrupt();
         break;
     case UART_FCR:
-        if(this.verboseuart) DebugMessage("Set UART_FCR" + this.ToBitDescription(x,FCR_BIT_DESC));
+        if(this.verboseuart) DebugMessage("Set UART_FCR " + this.ToBitDescription(x,FCR_BIT_DESC));
         this.FCR = x;
         if (this.FCR & 2) {
             this.fifo = new Array(); // clear receive fifo buffer
         }
         break;
     case UART_LCR:
-         if(this.verboseuart)  DebugMessage("Set UART_LCR" + this.ToBitDescription(x,LCR_BIT_DESC));
+         if(this.verboseuart)  DebugMessage("Set UART_LCR " + this.ToBitDescription(x,LCR_BIT_DESC));
         this.LCR = x;
         break;
     case UART_MCR:
-         if(this.verboseuart)  DebugMessage("Set UART_MCR" + this.ToBitDescription(x,MCR_BIT_DESC));
+         if(this.verboseuart)  DebugMessage("Set UART_MCR " + this.ToBitDescription(x,MCR_BIT_DESC));
         this.MCR = x;
         break;
     default:
