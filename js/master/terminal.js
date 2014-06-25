@@ -24,6 +24,7 @@ function Terminal(rows, columns, elemId) {
     this.scrolltop = 0;
     this.scrollbottom = this.nrows-1;
     this.currentcolor = 0x7;
+    this.pauseblink = false;
 
     this.screen = new Array(this.nrows);
     this.color = new Array(this.nrows);
@@ -39,10 +40,15 @@ function Terminal(rows, columns, elemId) {
     this.ScreenUpdate();
     this.Blink();
 }
-
+Terminal.prototype.PauseBlink = function(pause) { // Stop blinking cursor when the VM is paused
+  pause = !! pause;
+  this.pauseblink = pause;
+  this.cursorvisible = ! pause;
+  this.PlotRow(this.cursory);
+}
 Terminal.prototype.Blink = function() {
     this.cursorvisible = !this.cursorvisible;
-    this.PlotRow(this.cursory);
+    if(!this.pauseblink) this.PlotRow(this.cursory);
     window.setTimeout(this.Blink.bind(this), 500); // update every half second
 };
 

@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>JOR1K Compiler Demo</title>
+        <link rel="stylesheet" href="css/default.css">
+    </head>
+    <body onload="Start()">
+    <div >
+        <table>
+            <tr>
+                <td style="vertical-align: top">
+                    <table>
+                    <tr><td>
+                    <canvas id="tty" class="screen" width="640" height="384">
+                        Terminal uses canvas
+                    </canvas>
+                    </td></tr>
+                    <tr><td>
+                    <span style="float: left">
+                    <form>VM Control
+                        <select id="coreselect" onchange='jor1kgui.ChangeCore(this.options[this.selectedIndex].value)'>
+                            <option value="asm">asm.js Core</option>
+                            <option value="std">Standard Core</option>
+                            <option value="safe">Safe Core (Slow)</option>
+                        </select>
+
+                    <button type='button' onclick='jor1kgui.Reset()'>Reset</button>
+                    <button type='button' onclick='jor1kgui.Pause(true)'>Pause</button>
+                    <button type='button' onclick='jor1kgui.Pause(false)'>Run</button>
+                    </form>                    </span>
+                    <span id="stats" style="float: right"></span>
+                    </td></tr>
+                    </table>
+
+                </td>
+                <td style="vertical-align: top">
+<form>
+<textarea id="code" rows=24 cols=80>
+#include &lt;stdio.h&gt;
+int main() {
+    printf("Hello World!\n");
+    return 0;
+}
+</textarea>
+</form>
+gcc:<input type="text" maxlen=32 id="gccoptions" value="-lm"></input><button type='button' onclick="RunCode(document.getElementById('code').value,document.getElementById('gccoptions').value);return false;">Compile and run</button>
+
+                </td>
+            </tr>
+        </table>
+       
+        </div>
+        <div class="infobox">
+        </div>
+
+    <script src="js/master/terminal.js"></script>
+    <script src="js/master/terminal-input.js"></script>
+    <script src="js/master/ethernet.js"></script>
+    <script src="js/master/master.js"></script>
+
+<script>
+function Start() {
+    jor1kgui = new jor1kGUI("tty", "fb", "stats", ["../../bin/vmlinux.bin.bz2", "../../bin/hdgcc.bz2"], "ws://relay.widgetry.org/");
+    
+}
+function SendKeysToJor1k(text,quiet) {
+  var tty = quiet ? "tty1" : "tty0";
+  for(var i=0;i<text.length;i++) {
+    jor1kgui.SendToWorker(tty, text.charCodeAt(i) >>>0);
+  }
+}
+function RunCode(code,gccoptions) {
+   if(code.length ===0) return;           
+
+   jor1kgui.Pause(false);
+    // wakeup tty0
+   SendKeysToJor1k("\x03\n\r",false); 
+// wakeup hidden tty1
+//tty1-unusedfornow SendKeysToJor1k("\x03\n",true);
+   
+   SendKeysToJor1k("cd ~;rm prog.c program 2>/dev/null\n");
+  //no-can-do SendKeysToJor1k("stty -echo\n\r");   // Does not work reliably
+
+   codeArray= code.match(/[^]{1,256}/gim); // Avoid 1K line-limit (assume escape expansion) so split programing into shorter chuncks
+
+   for(var i=0; i < codeArray.length;i++) {
+     // For happiness, escape *after* splitting
+     var escaped = codeArray[i] .replace(/\\/g,"\\134").replace(/\t/g,"\\t")
+                .replace(/\n/g,"\\n").replace(/\r/g,"\\r").replace(/"/gm,'\\"');
+    //Todo Handle all chars in the sent file i.e. replace <=0x2f with \xnn
+
+     SendKeysToJor1k('echo -n -e "');
+     SendKeysToJor1k(escaped);
+     SendKeysToJor1k('\">> prog.c\n\r');
+   }
+   // For now we want gcc output to be viewable, so this goes on the main terminal
+   // To use tty1 we would need to synchronize gcc i.e. wait for prog.c upload
+
+   // Why can we not see the gcc line ?
+   //xxx SendKeysToJor1k("stty echo\n\r"); 
+   SendKeysToJor1k("gcc " + gccoptions + " prog.c -o program && ./program\n\r");
+
+}
+</script>
+
+    </body>
+</html>
