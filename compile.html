@@ -76,8 +76,8 @@ function RunCode(code,gccoptions) {
    jor1kgui.Pause(false);
     // wakeup tty0
    SendKeysToJor1k("\x03\n\r",false); 
-    // wakeup hidden tty1
-//unusedfornow SendKeysToJor1k("\x03\n",true);
+// wakeup hidden tty1
+//tty1-unusedfornow SendKeysToJor1k("\x03\n",true);
    
    SendKeysToJor1k("cd ~;rm prog.c program 2>/dev/null\n");
   //no-can-do SendKeysToJor1k("stty -echo\n\r");   // Does not work reliably
@@ -96,6 +96,8 @@ function RunCode(code,gccoptions) {
    }
    // For now we want gcc output to be viewable, so this goes on the main terminal
    // To use tty1 we would need to synchronize gcc i.e. wait for prog.c upload
+
+   // Why can we not see the gcc line ?
    //xxx SendKeysToJor1k("stty echo\n\r"); 
    SendKeysToJor1k("gcc " + gccoptions + " prog.c -o program && ./program\n\r");
 
