@@ -9,16 +9,13 @@ function DebugMessage(message) {
 // small uart device
 function UARTDev(worker) {
     this.ReceiveChar = function(c) {
-        if (!worker.fbfocus) { // check if framebuffer has focus
             worker.SendToWorker("tty0", c);
-        }
     };
 }
 
 function jor1kGUI(termid, fbid, statsid, imageurls, relayURL)
 {
     this.urls = imageurls;
-    this.fbfocus = false; // true: keyboard command are not send to tty
     
     this.worker = new Worker('js/worker/worker.js');
     this.worker.onmessage = this.OnMessage.bind(this);   
@@ -40,9 +37,26 @@ function jor1kGUI(termid, fbid, statsid, imageurls, relayURL)
 
     this.ChangeImage = function(newurl) {
         this.urls[1] = newurl;
-        this.SendToWorker("Reset");
-        this.SendToWorker("LoadAndStart", this.urls);
+        this.Reset() 
     };
+    this.Reset= function () {
+      this.stop = false; // VM Stopped/Aborted
+      this.userpaused = false;
+      this.executepending=false; // if we rec an execute message while paused      
+      this.SendToWorker("Reset");
+      this.SendToWorker("LoadAndStart", this.urls);
+      this.term.PauseBlink(false);
+    }
+    this.Pause = function(pause) {
+      pause = !! pause; // coerce to boolean
+      if(pause == this.userpaused) return; 
+      this.userpaused = pause;
+      if(! this.userpaused && this.executepending) {
+        this.executepending = false;
+         this.SendToWorker("execute", 0);
+      }
+      this.term.PauseBlink(pause);
+    }
 
     this.terminalcanvas = document.getElementById(termid);
     this.stats = document.getElementById(statsid);
@@ -50,63 +64,83 @@ function jor1kGUI(termid, fbid, statsid, imageurls, relayURL)
     this.term = new Terminal(24, 80, termid);
     this.terminput = new TerminalInput(new UARTDev(this));
 
-    // Init Framebuffer
+    // Init Framebuffer if it exists
     this.fbcanvas = document.getElementById(fbid);
-    this.fbctx = this.fbcanvas.getContext("2d");
-    this.fbimageData = this.fbctx.createImageData(this.fbcanvas.width, this.fbcanvas.height);
-
+    if(this.fbcanvas) {
+      this.fbctx = this.fbcanvas.getContext("2d");
+      this.fbimageData = this.fbctx.createImageData(this.fbcanvas.width, this.fbcanvas.height);
+    }
+    
+    this.IgnoreKeys = function() {
+      //Simpler but not as general, return( document.activeElement.type==="textarea" || document.activeElement.type==='input');
+      return (this.lastMouseDownTarget != this.terminalcanvas);
+    }
+    var recordTarget = function(event) {
+            this.lastMouseDownTarget = event.target;
+        }.bind(this);
+      
+    if(document.addEventListener)
+      document.addEventListener('mousedown', recordTarget, false);
+    else
+      Window.onmousedown = recordTarget; // IE 10 support (untested)
+        
+    
     document.onkeypress = function(event) {
+        if(this.IgnoreKeys()) return true;
         this.SendToWorker("keypress", {keyCode:event.keyCode, charCode:event.charCode});
         return this.terminput.OnKeyPress(event);      
     }.bind(this);
 
     document.onkeydown = function(event) {
+        if(this.IgnoreKeys()) return true;
         this.SendToWorker("keydown", {keyCode:event.keyCode, charCode:event.charCode});
         return this.terminput.OnKeyDown(event);
     }.bind(this);
 
     document.onkeyup = function(event) {
+        if(this.IgnoreKeys()) return true;
         this.SendToWorker("keyup", {keyCode:event.keyCode, charCode:event.charCode});
         return this.terminput.OnKeyUp(event);
     }.bind(this);
 
-    this.terminalcanvas.onmousedown = function(event) {
-        this.fbfocus = false;
-        this.fbcanvas.style.border = "2px solid #000000";
-    }.bind(this);
+    if(this.fbcanvas) {
+      this.terminalcanvas.onmousedown = function(event) {
+          this.fbcanvas.style.border = "2px solid #000000";
+      }.bind(this);
 
-    this.fbcanvas.onmousedown = function(event) {
-        this.fbcanvas.style.border = "2px solid #FF0000";
-        this.fbfocus = true;
-        var rect = this.fbcanvas.getBoundingClientRect();
-        var x = event.clientX - rect.left;
-        var y = event.clientY - rect.top;
-        this.SendToWorker("tsmousedown", {x:x, y:y});
-    }.bind(this);
+      this.fbcanvas.onmousedown = function(event) {
+          this.fbcanvas.style.border = "2px solid #FF0000";
+          var rect = this.fbcanvas.getBoundingClientRect();
+          var x = event.clientX - rect.left;
+          var y = event.clientY - rect.top;
+          this.SendToWorker("tsmousedown", {x:x, y:y});
+      }.bind(this);
 
-    this.fbcanvas.onmouseup = function(event) {
-        var rect = this.fbcanvas.getBoundingClientRect();
-        var x = event.clientX - rect.left;
-        var y = event.clientY - rect.top;
-        this.SendToWorker("tsmouseup", {x:x, y:y});
-    }.bind(this);
+      this.fbcanvas.onmouseup = function(event) {
+          var rect = this.fbcanvas.getBoundingClientRect();
+          var x = event.clientX - rect.left;
+          var y = event.clientY - rect.top;
+          this.SendToWorker("tsmouseup", {x:x, y:y});
+      }.bind(this);
 
-    this.fbcanvas.onmousemove = function(event) {
-        var rect = this.fbcanvas.getBoundingClientRect();
-        var x = event.clientX - rect.left;
-        var y = event.clientY - rect.top;
-        this.SendToWorker("tsmousemove", {x:x, y:y});
-    }.bind(this);
-
+      this.fbcanvas.onmousemove = function(event) {
+          var rect = this.fbcanvas.getBoundingClientRect();
+          var x = event.clientX - rect.left;
+          var y = event.clientY - rect.top;
+          this.SendToWorker("tsmousemove", {x:x, y:y});
+      }.bind(this);
+    }
     this.ethernet = new Ethernet(relayURL);
     this.ethernet.onmessage = function(e) {
         this.SendToWorker("ethmac", e.data);
     }.bind(this);
 
-    this.stop = false;
-    this.SendToWorker("LoadAndStart", this.urls);
+    this.Reset();
+    
     window.setInterval(function(){this.SendToWorker("GetIPS", 0)}.bind(this), 1000);
-    window.setInterval(function(){this.SendToWorker("GetFB", 0)}.bind(this), 100);
+    if(this.fbcanvas) {
+      window.setInterval(function(){this.SendToWorker("GetFB", 0)}.bind(this), 100);
+    }
 }
 
 jor1kGUI.prototype.OnMessage = function(e) {
@@ -114,7 +148,12 @@ jor1kGUI.prototype.OnMessage = function(e) {
     switch(e.data.command)
     {
         case "execute":
-            this.SendToWorker("execute", 0);
+            if(this.userpaused) {
+              this.executepending = true;
+            } else {
+              this.executepending = false; 
+              this.SendToWorker("execute", 0);
+            }
             break;
         case "ethmac":
             this.ethernet.SendFrame(e.data.data);
@@ -130,7 +169,7 @@ jor1kGUI.prototype.OnMessage = function(e) {
             this.stop = true;
             break;
         case "GetIPS":
-            this.stats.innerHTML = (Math.floor(e.data.data/100000)/10.) + " MIPS";
+            this.stats.innerHTML = this.userpaused ? "Paused" : (Math.floor(e.data.data/100000)/10.) + " MIPS";
             break;
         case "Debug":
             console.log(e.data.data);
@@ -139,6 +178,7 @@ jor1kGUI.prototype.OnMessage = function(e) {
 }
 
 jor1kGUI.prototype.UpdateFramebuffer = function(buffer) {
+    if(this.userpaused) return;
     var i=0, n = buffer.length;
     var data = this.fbimageData.data;
     
