@@ -57,7 +57,11 @@ var IER_BIT_DESC=["RxAvailableI","TxEmptyI","BreakI","MSI"];
 var UART_RXMODE_NONE = 0; /* No flow control Immediately send incoming chars to the kernel */
 var UART_RXMODE_DTR = 1; /* Don't send unless MCR_DataTerminalReady bit is set */
 var UART_RXMODE_RTS = 2; /* Use RTS protocol */
+var UART_RXMODE_XONXOFF = 2; /* Use RTS protocol */
 // Other protocols (e.g. wait for char echo; interval timer) are possible
+
+var ASCII_XOFF = 0x13;
+var ASCII_XON = 0x11;        
 
 
 // constructor
@@ -89,15 +93,37 @@ UARTDev.prototype.Reset = function() {
     this.FCR = 0x0; // FIFO Control;
     this.MCR = 0x0; // Modem Control
     this.rxbuf = new Array(); // receive fifo buffer. Simple JS push/shift O(N) implementation
-    this.rxon = true; 
+    this.rxon = true;  // xonoff state depends on most recently transmitted XON or XOFF char
     this.rxmode = UART_RXMODE_RTS;
     // Our connected device says it's clear-to-send
     // This required when reliable RTS-CTS flow control is used (stty crtscts) 
-    if(this.TransmitCallback)
-      this.MSR =UART_MSR_CTS | UART_MSR_DELTA_CTS; // Clear To Send bytes to the terminal/output
+    
+    // Change MSR because the upstream device is now ready for bytes
+    this.MSR =UART_MSR_CTS | UART_MSR_DELTA_CTS; // Clear To Send bytes to the terminal/output
+    
+    // Terrible Hack - let us hope this can be removed someday
+    // but so far it's the only reliable way found so far to quickly send > 4KB
+    // Attempts at Hardware and Software Flow Control to date (e.g. xon-xoff,RTS-CTS), 
+    // do not prevent the Kernel's internal buffer from overflowing, resulting in drop chars and other nasties.
+    
+    //4096,32 - sending after paused was not reliable
+    this.ratelimitmaxcount = 1024;// Max Kernel Buffer Size that we dare fill (bytes)
+    this.ratelimitinc = 1; //worstcase_rx_per_execute_cycle. Found by experiment and then reduced
+    this.ratelimitcounter = this.ratelimitmaxcount;
+    this.enableratelimitcounter = true; // 
 }
 
-// To prevent the character from being overwritten we use a javascript array-based fifo and immediately request a character timeout. 
+UARTDev.prototype.RxRateLimitBump = function() {
+  if(! this.enableratelimitcounter) return;
+  
+  this.ratelimitcounter += this.ratelimitinc;
+  // Assume Kernel can extract at least this many characters from its own buffer every execute cycle.
+  // The buffer size is 4KB, so the we can't bank unused buffer space forever.
+  if(this.ratelimitcounter > this.ratelimitmaxcount) this.ratelimitcounter = this.ratelimitmaxcount;
+  else if(this.ratelimitcounter>0) this.UpdateRx();
+  
+}
+// To prevent the character from being overwritten we use a javascript array-based fifo and request a character timeout. 
 UARTDev.prototype.ReceiveChar = function(x) {
     this.rxbuf.push(x&0xFF);
     this.UpdateRx();
@@ -105,39 +131,49 @@ UARTDev.prototype.ReceiveChar = function(x) {
 // Flow Logic for status changes upon foreign char arrival.
 // Same logic is applied when a received char is read.
 UARTDev.prototype.UpdateRx = function() {
-  if(this.rxbuf.length > 0) {
-    // Update DSR
-    if((this.rxmode == UART_RXMODE_DTR) && (this.MSR & UART_MSR_DSR)==0) {
-        this.MSR |= UART_MSR_DELTA_DSR | UART_MSR_DSR; // DataSetReady 
-        this.ThrowMSR();
-        // is a return required here?
-      
-    }
+  if(this.rxbuf.length > 0 && this.ratelimitcounter >0) {
+    
+    if(this.enableratelimitcounter)  this.ratelimitcounter --;
+    
     var ready = false;
     switch(this.rxmode) {
       case UART_RXMODE_NONE:
-        ready = true; 
+        ready = true;  // No flow control - just blast
         break;
       case UART_RXMODE_DTR: 
-        ready= (this.MCR & UART_MCR_DTR);
+        ready= !!(this.MCR & UART_MCR_DTR);
         break;
       case UART_RXMODE_RTS: 
-        ready= (this.MCR & UART_MCR_RTS);
+        ready= !!(this.MCR & UART_MCR_RTS);
         break;
+      case UART_RXMODE_XONXOFF:
+        ready= this.rxon; // updated by xon & xoff chars in transmit stream
       };
-    if(ready) {  // update UART_LSR_DATA_READY if the kernel is ready
+    if(ready) { // we believe the kernel is ready for more
+      
+      // Update DataSetReady if we are in DTR mode (untested)
+      if((this.rxmode == UART_RXMODE_DTR) && (this.MSR & UART_MSR_DSR)==0) {
+          this.MSR |= UART_MSR_DELTA_DSR | UART_MSR_DSR;
+          this.ThrowMSR();
+      }
+      
+      // update UART_LSR_DATA_READY
       this.LSR |= UART_LSR_DATA_READY;
       this.ThrowCTI(); 
-    }
+    } 
 
   } 
   else 
   {
-    // Todo: Untested code. Is this necessary to take the dataset down?
-    // No characters left, we're not ready to send anymore
-    // Note, clearing LSR-data-available is handled during read
-    if( (this.rxmode == UART_RXMODE_DTR) && ((this.MSR & UART_MSR_DSR)==0) ) {
-        this.MSR &= ~UART_MSR_DSR; // DataSetReady 
+    // No characters left so we're not ready to send anymore
+    // This is untested code as our stty does not (yet) support cdtrdsr. 
+    // Todo: Decide is it really necessary to take the datasetready down?
+    
+    // Note, clearing LSR-data-available is implemented during UART_RXBUF
+    // We don't need to change LSR because it will be cleared once the outstanding byte is read
+    
+    if( (this.rxmode == UART_RXMODE_DTR) && (!(this.MSR & UART_MSR_DSR)) ) {
+        this.MSR &= ~UART_MSR_DSR; // DataSetReady is no longer ready
         this.MSR |= UART_MSR_DELTA_DSR;
         this.ThrowMSR();
         // is a return necessary at this point? (if so, call updateRX upon MS read)
@@ -188,7 +224,7 @@ UARTDev.prototype.NextInterrupt = function() {
         this.ThrowMSI();
     } else {
         this.IIR = UART_IIR_NO_INT;
-        this.intdev.ClearInterrupt(this.intno); // on intdev; not the function below
+        this.intdev.ClearInterrupt(this.intno); // intdev method; not the method below
     }
 };
 
@@ -214,19 +250,23 @@ UARTDev.prototype.ReadReg8 = function(addr) {
     switch (addr) {
     case UART_RXBUF:
         {
-            var ret = 0x21; // !
+            var ret = 0x21; // ! (will be replaced by rxbuf.shift)
             this.ClearInterrupt(UART_IIR_RDI);
             this.ClearInterrupt(UART_IIR_CTI);
             this.LSR &= ~UART_LSR_DATA_READY; 
             var rxbuf_len = this.rxbuf.length;
             if (rxbuf_len >= 1) {
                 ret = this.rxbuf.shift();
+            } else {
+              // DebugMessage("Oops: UART_RXBUF but rxbuf is empty!");
+              // During init, device driver reads UART_RXBUF twice 
+              // even though this.LSR & UART_LSR_DATA_READY is unset;
             }
-            // Due to shift(), the fifo buffer is now smaller. Perhaps we shifted the last byte?
-            if(rxbuf_len > 1) {
-                this.UpdateRx();
-            }
-            return ret;
+            // Perhaps we shifted the last byte, handle flow control etc ...
+            
+            this.UpdateRx();
+            
+            return ret &  0xff;
         }
         break;
     case UART_IER:
@@ -235,7 +275,7 @@ UARTDev.prototype.ReadReg8 = function(addr) {
     case UART_MSR:
         var result = this.MSR;
         this.MSR &= 0xf0; // reset lowest 4 "delta" bits
-        DebugMessage("Get UART_MSR " + this.ToBitDescription(result,MSR_BIT_DESC));
+        if(this.verboseuart) DebugMessage("Get UART_MSR " + this.ToBitDescription(result,MSR_BIT_DESC));
         return result;
         break;
     case UART_IIR:
@@ -254,8 +294,8 @@ UARTDev.prototype.ReadReg8 = function(addr) {
         return this.LCR;
         break;
     case UART_LSR: 
-      // This gets called at 10Hz
-        //DebugMessage("Get UART_LSR " + this.ToBitDescription(this.LSR,LSR_BIT_DESC));
+         // This gets polled many times a second, so logging is commented out
+         //flood if(this.verboseuart) DebugMessage("Get UART_LSR " + this.ToBitDescription(this.LSR,LSR_BIT_DESC));
     
         if (this.IIR == UART_IIR_RLSI) {
           this.ClearInterrupt(UART_IIR_RLSI);
@@ -289,14 +329,23 @@ UARTDev.prototype.WriteReg8 = function(addr, x) {
     case UART_TXBUF: 
          // In theory, reset UART_IIR_THRI here except data is sent with a latency of zero!
         this.LSR &= ~UART_LSR_FIFO_EMPTY;
+        if(x == ASCII_XON && ! this.rxon) {
+          this.rxon = true; 
+          this.UpdateRx();
+        }
+        else if(x == ASCII_XOFF && this.rxon) {
+          this.rxon = false;
+          this.UpdateRx();
+        }
+        
         this.TransmitCallback(x); 
-        this.LSR |= UART_LSR_FIFO_EMPTY; // txbuffer is empty
+        this.LSR |= UART_LSR_FIFO_EMPTY; // txbuffer is empty again
         this.ThrowTHRI();
         break;
     case UART_IER:
         // 2 = 10b ,5=101b, 7=111b
         this.IER = x & 0x0F; // only the first four bits are valid
-         if(this.verboseuart) DebugMessage("Set UART_IER " + this.ToBitDescription(x,IER_BIT_DESC));
+        if(this.verboseuart) DebugMessage("Set UART_IER " + this.ToBitDescription(x,IER_BIT_DESC));
         // Ok, check immediately if there is a interrupt pending
         this.NextInterrupt();
         break;
@@ -308,11 +357,13 @@ UARTDev.prototype.WriteReg8 = function(addr, x) {
         }
         break;
     case UART_LCR:
-         if(this.verboseuart)  DebugMessage("Set UART_LCR " + this.ToBitDescription(x,LCR_BIT_DESC));
+        if(this.verboseuart)  DebugMessage("Set UART_LCR " + this.ToBitDescription(x,LCR_BIT_DESC));
+        
         this.LCR = x;
         break;
     case UART_MCR:
-         if(this.verboseuart)  DebugMessage("Set UART_MCR " + this.ToBitDescription(x,MCR_BIT_DESC));
+        if(this.verboseuart)  DebugMessage("Set UART_MCR " + this.ToBitDescription(x,MCR_BIT_DESC));
+        
         this.MCR = x;
         break;
     default:

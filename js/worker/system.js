@@ -329,5 +329,7 @@ System.prototype.MainLoop = function() {
     this.cpu.Step(this.stepsperloop, this.clockspeed);
     this.ips += this.stepsperloop;
     this.internalips += this.stepsperloop;
+    this.uartdev0.RxRateLimitBump();
+    this.uartdev1.RxRateLimitBump()
     // go to idle state that onmessage is executed
 }
