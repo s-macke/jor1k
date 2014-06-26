@@ -184,9 +184,9 @@ function GetTimeToNextInterrupt() {
     var delta = 0x0;
     if ((TTMR >> 30) == 0) return -1;    
     delta = (TTMR & 0xFFFFFFF) - (TTCR & 0xFFFFFFF) |0;
-    //if ((delta|0) < 0) {
-    //    delta = delta + 0x10000000 | 0;
-    //}    
+    if ((delta|0) < 0) {
+        delta = delta + 0xFFFFFFF | 0;
+    }    
     return delta|0;
 }
 
@@ -864,7 +864,7 @@ function Step(steps, clockspeed) {
             if ((TTMR >> 30) != 0) {
                 delta = (TTMR & 0xFFFFFFF) - (TTCR & 0xFFFFFFF) |0;
                 if ((delta|0) < 0) {
-                    delta = delta + 0x10000000 | 0;
+                    delta = delta + 0xFFFFFFF | 0;
                 }
                 TTCR = (TTCR + clockspeed|0);                
                 if ((delta|0) < (clockspeed|0)) {
