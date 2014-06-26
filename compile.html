@@ -35,16 +35,22 @@
 
                 </td>
                 <td style="vertical-align: top">
-<form>
-<textarea id="code" rows=24 cols=80>
+<div id="code" style="width: 640px; height: 388px; margin-top: 2px">
 #include &lt;stdio.h&gt;
 int main() {
     printf("Hello World!\n");
     return 0;
 }
-</textarea>
-</form>
-gcc:<input type="text" maxlen=32 id="gccoptions" value="-lm"></input><button type='button' onclick="RunCode(document.getElementById('code').value,document.getElementById('gccoptions').value);return false;">Compile and run</button>
+</div>
+
+gcc options:<input type="text" maxlen=32 id="gccoptions" value="-lm -Wall"></input><button type='button' onclick= "RunCode(GetCodeText(),document.getElementById('gccoptions').value);return false;" >Compile and run</button>
+Theme<select onchange='editor.setTheme("ace/theme/"+this.options[this.selectedIndex].value)'>
+  <option value="tomorrow">tomorrow</option>
+  <option value="github">github</option>
+  <option value="monokai">monokai</option>
+  <option value="terminal">terminal</option>
+  <option value="xcode">xcode</option>
+</select>
 
                 </td>
             </tr>
@@ -58,18 +64,34 @@ gcc:<input type="text" maxlen=32 id="gccoptions" value="-lm"></input><button typ
     <script src="js/master/terminal-input.js"></script>
     <script src="js/master/ethernet.js"></script>
     <script src="js/master/master.js"></script>
+	<script src="js/lib/ace-editor-src-min-noconflict/ace.js" type="text/javascript" charset="utf-8"></script>
 
 <script>
 function Start() {
+	CreateEditor();
     jor1kgui = new jor1kGUI("tty", "fb", "stats", ["../../bin/vmlinux.bin.bz2", "../../bin/hdgcc.bz2"], "ws://relay.widgetry.org/");
-    
 }
+
+function CreateEditor()
+{
+    editor = ace.edit("code");
+    editor.setTheme("ace/theme/tomorrow");
+//Also try terminal
+    editor.getSession().setMode("ace/mode/c_cpp");
+}
+
+function GetCodeText() {
+	//return document.getElementById('code').value; // textarea
+	return editor.getSession().getValue(); //ace
+}
+
 function SendKeysToJor1k(text,quiet) {
   var tty = quiet ? "tty1" : "tty0";
   for(var i=0;i<text.length;i++) {
     jor1kgui.SendToWorker(tty, text.charCodeAt(i) >>>0);
   }
 }
+
 function RunCode(code,gccoptions) {
    if(code.length ===0) return;           
 
