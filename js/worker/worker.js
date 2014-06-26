@@ -20,7 +20,9 @@ onmessage = function(e) {
             sys.ethdev.Receive(new Uint8Array(e.data.data));
             break;
         case "GetFB":
-            SendToMaster("GetFB", sys.fbdev.GetBuffer());
+            if (sys.status == SYSTEM_RUN) {
+                SendToMaster("GetFB", sys.fbdev.GetBuffer());
+            }
             break;
         case "tty0":
             sys.uartdev0.ReceiveChar(e.data.data);

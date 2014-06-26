@@ -165,6 +165,7 @@ function PutState() {
     boot_itlb_misshandler_address = h[(0x100 + 36) >> 2]|0;
     current_pgd = h[(0x100 + 40) >> 2]|0;
 }
+
 function GetState() {
     h[(0x100 + 0) >> 2] = pc|0;
     h[(0x100 + 4) >> 2] = nextpc|0;
@@ -179,6 +180,20 @@ function GetState() {
     h[(0x100 + 40) >> 2] = current_pgd|0;
 }
 
+function GetTimeToNextInterrupt() {
+    var delta = 0x0;
+    if ((TTMR >> 30) == 0) return -1;    
+    delta = (TTMR & 0xFFFFFFF) - (TTCR & 0xFFFFFFF) |0;
+    //if ((delta|0) < 0) {
+    //    delta = delta + 0x10000000 | 0;
+    //}    
+    return delta|0;
+}
+
+function ProgressTime(delta) {
+    delta = delta|0;
+    TTCR = (TTCR + delta)|0;
+}
 
 function AnalyzeImage() { // get addresses for fast refill
     boot_dtlb_misshandler_address = h[ramp+0x900 >> 2]|0;
@@ -849,9 +864,9 @@ function Step(steps, clockspeed) {
             if ((TTMR >> 30) != 0) {
                 delta = (TTMR & 0xFFFFFFF) - (TTCR & 0xFFFFFFF) |0;
                 if ((delta|0) < 0) {
-                    delta = delta + 0xFFFFFFF | 0;
+                    delta = delta + 0x10000000 | 0;
                 }
-                TTCR = (TTCR + clockspeed|0);
+                TTCR = (TTCR + clockspeed|0);                
                 if ((delta|0) < (clockspeed|0)) {
                     // if interrupt enabled
                     if (TTMR & (1 << 29)) {
@@ -972,6 +987,14 @@ function Step(steps, clockspeed) {
             continue;
         case 0x5:
             // nop
+            /*
+            if ((ins & 0xFF) == 0xFF) { // halt instruction
+                pc = nextpc;
+                nextpc = nextpc + 1|0;
+                delayedins = 0;
+                return 0x1;
+            } 
+            */
             break;
         case 0x6:
             // movhi or macrc
@@ -1526,6 +1549,7 @@ function Step(steps, clockspeed) {
         delayedins = 0;
         steps = steps - 1|0;
     } while (steps); // main loop
+    return 0x0;
 }
 
 return {
@@ -1536,7 +1560,9 @@ return {
     GetFlags: GetFlags,
     SetFlags: SetFlags,
     PutState: PutState,
-    GetState: GetState,
+    GetState: GetState,    
+    GetTimeToNextInterrupt: GetTimeToNextInterrupt,
+    ProgressTime: ProgressTime,
     RaiseInterrupt: RaiseInterrupt,
     ClearInterrupt: ClearInterrupt,
     AnalyzeImage: AnalyzeImage,

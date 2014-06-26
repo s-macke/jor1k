@@ -2,9 +2,13 @@
 // ------------------- SYSTEM ----------------------
 // -------------------------------------------------
 
+var SYSTEM_RUN = 0x1;
+var SYSTEM_STOP = 0x2;
+var SYSTEM_HALT = 0x3; // Idle
+
+
 function System() {
     sys = this; // one global variable used by the abort() function
-    this.running = false;
     this.Init();
 }
 
@@ -105,7 +109,7 @@ if (change) {
 }
 
 System.prototype.Reset = function() {
-    this.running = false;
+    this.status = SYSTEM_STOP;
     this.uartdev0.Reset();
     this.uartdev1.Reset();
     this.ethdev.Reset();
@@ -118,7 +122,7 @@ System.prototype.Reset = function() {
 }
 
 System.prototype.Init = function() {
-    this.running = false;    
+    this.status = SYSTEM_STOP;
    
     // this must be a power of two.
     DebugMessage("Init Heap");
@@ -196,30 +200,52 @@ if (typeof Math.imul == "undefined") {
     this.ram.AddDevice(this.tsdev, 0x93000000, 0x1000);
     this.ram.AddDevice(this.kbddev, 0x94000000, 0x100);
 
+    
     this.stepsperloop = 0x40000;
-    this.ips = 0; // external inctruction per second counter
+    this.ips = 0; // external instruction per second counter
     this.internalips = 0; // internal inctruction counter
-    this.clockspeed = 0; // clock cycle per instruction
+    this.clockspeed = 1; // clock cycles per instruction
+    this.idletime = 0; // start time of the idle routine
+
+    // constants
+    this.loopspersecond = 200; // main loops per second, to keep the system responsive
+    this.cyclesperms = 20000; // 20 MHz    
+    
+    
 }
 
-// Timer function. Run every second
+// Timer function. Runs every second
 System.prototype.GetIPS = function() {
-        this.internalips++; // at least one instruction
-        this.stepsperloop = Math.floor(this.internalips * (1000/1000) / 200);
+    this.internalips++; // at least one instruction
+    if (this.status == SYSTEM_RUN)
+    {
+        this.stepsperloop = Math.floor(this.internalips / this.loopspersecond);
         this.stepsperloop  = this.stepsperloop<1000?1000:this.stepsperloop;
-        this.stepsperloop  = this.stepsperloop>400000?400000:this.stepsperloop;
-        // The clock runs with 20MHz.            
-        this.clockspeed = Math.floor(20000000 * 64  / (this.internalips * (1000 / 1000)) );
+        this.stepsperloop  = this.stepsperloop>4000000?4000000:this.stepsperloop;    
+    
+        this.clockspeed = Math.floor(this.cyclesperms*1000 * 64  / this.internalips);
         this.clockspeed  = this.clockspeed<=1?1:this.clockspeed;
         this.clockspeed  = this.clockspeed>=10000?10000:this.clockspeed;
-        this.internalips = 0;
-        var ret = this.ips;
-        this.ips = 0;
-        return ret;
+    }
+    
+    this.internalips = 0;
+    var ret = this.ips;
+    this.ips = 0;
+    return ret;
 }
 
 System.prototype.RaiseInterrupt = function(line) {
     this.cpu.RaiseInterrupt(line);
+    
+    if (this.status == SYSTEM_HALT)
+    {
+        this.status = SYSTEM_RUN;
+        clearTimeout(this.idletimeouthandle);
+        delta = (new Date()).getTime() - this.idletime;
+        
+        this.cpu.ProgressTime(delta*this.cyclesperms);
+        this.MainLoop();        
+    }
 }
 System.prototype.ClearInterrupt = function (line) {
     this.cpu.ClearInterrupt(line);
@@ -319,17 +345,41 @@ System.prototype.ImageFinished = function(result) {
     this.cpu.Reset();
     this.cpu.AnalyzeImage();
     DebugMessage("Starting emulation");
-    this.running = true;
+    this.status = SYSTEM_RUN;
     SendToMaster("execute", 0);
 }
 
+// the kernel has sent a halt signal, so stop everything until the next interrupt is raised
+System.prototype.HandleHalt = function() {
+    var delta = this.cpu.GetTimeToNextInterrupt();
+    if (delta == -1) return;
+        var mswait = Math.floor(delta / this.cyclesperms);
+        if (mswait <= 1) return;        
+        DebugMessage("idle " + mswait + "ms " + this.clockspeed );
+        //if (mswait > 120) {delta = 120*this.cyclesperms; mswait=120;}
+        this.idletime = (new Date()).getTime();
+        this.status = SYSTEM_HALT;
+        this.idletimeouthandle = setTimeout(function() {
+                if (this.status == SYSTEM_HALT) {
+                    this.status = SYSTEM_RUN;
+                    this.cpu.ProgressTime(mswait*this.cyclesperms);
+                    this.MainLoop();
+                }
+            }.bind(this), mswait);
+}
+
 System.prototype.MainLoop = function() {
-    if (!this.running) return;
+    if (this.status != SYSTEM_RUN) return;
     SendToMaster("execute", 0);
-    this.cpu.Step(this.stepsperloop, this.clockspeed);
+    var ret = this.cpu.Step(this.stepsperloop, this.clockspeed);
     this.ips += this.stepsperloop;
     this.internalips += this.stepsperloop;
     this.uartdev0.RxRateLimitBump();
-    this.uartdev1.RxRateLimitBump()
+    this.uartdev1.RxRateLimitBump();
+    
+    if (ret) {
+        //this.HandleHalt();
+    }
+    
     // go to idle state that onmessage is executed
 }

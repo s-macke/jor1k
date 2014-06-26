@@ -105,6 +105,19 @@ SafeCPU.prototype.Reset = function() {
 SafeCPU.prototype.InvalidateTLB = function() {
 }
 
+SafeCPU.prototype.GetTimeToNextInterrupt = function () {
+
+    if ((this.TTMR >> 30) == 0) return -1;
+    var delta = (this.TTMR & 0xFFFFFFF) - (this.TTCR & 0xFFFFFFF);
+    delta += delta<0?0xFFFFFFF:0x0;
+    return delta;
+}
+
+SafeCPU.prototype.ProgressTime = function (delta) {
+    this.TTCR = (this.TTCR + delta) & 0xFFFFFFFF;
+    DebugMessage((this.TTMR & 0xFFFFFFF) - (this.TTCR & 0xFFFFFFF));
+}
+
 
 SafeCPU.prototype.AnalyzeImage = function() // we haveto define these to copy the cpus
 {

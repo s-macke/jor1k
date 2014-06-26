@@ -136,6 +136,19 @@ CPU.prototype.AnalyzeImage = function() // get addresses for fast refill
     this.current_pgd = ((this.ram.int32mem[0x2010>>2]&0xFFF)<<16) | (this.ram.int32mem[0x2014>>2] & 0xFFFF);
 }
 
+CPU.prototype.GetTimeToNextInterrupt = function () {
+
+    if ((this.TTMR >> 30) == 0) return -1;
+    var delta = (this.TTMR & 0xFFFFFFF) - (this.TTCR & 0xFFFFFFF);
+    delta += delta<0?0xFFFFFFF:0x0;
+    return delta;
+}
+
+CPU.prototype.ProgressTime = function (delta) {
+    this.TTCR = (this.TTCR + delta) & 0xFFFFFFFF;
+    DebugMessage((this.TTMR & 0xFFFFFFF) - (this.TTCR & 0xFFFFFFF));
+}
+
 CPU.prototype.SetFlags = function (x) {
     this.SR_SM = (x & (1 << 0)) ? true : false;
     this.SR_TEE = (x & (1 << 1)) ? true : false;
@@ -752,6 +765,13 @@ CPU.prototype.Step = function (steps, clockspeed) {
             continue;
         case 0x5:
             // nop
+            /*            
+            if ((ins&0xFF) == 0xFF) { // halt instruction
+                this.pc = this.nextpc++;
+                this.delayedins = false;
+                return 0x1;
+            }
+            */
             break;
         case 0x6:
             // movhi or macrc
@@ -1279,5 +1299,6 @@ CPU.prototype.Step = function (steps, clockspeed) {
         this.delayedins = false;
 
     } while (--steps); // main loop
+    return 0x0;
 };
 
