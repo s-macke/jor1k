@@ -35,7 +35,6 @@
 
                 </td>
                 <td style="vertical-align: top">
-<form>
 <div id="code" style="width: 640px; height: 388px; margin-top: 2px">
 #include &lt;stdio.h&gt;
 int main() {
@@ -43,8 +42,15 @@ int main() {
     return 0;
 }
 </div>
-</form>
-gcc:<input type="text" maxlen=32 id="gccoptions" value="-lm"></input><button type='button' onclick= "RunCode(GetCodeText(),document.getElementById('gccoptions').value);return false;" >Compile and run</button>
+
+gcc options:<input type="text" maxlen=32 id="gccoptions" value="-lm -Wall"></input><button type='button' onclick= "RunCode(GetCodeText(),document.getElementById('gccoptions').value);return false;" >Compile and run</button>
+Theme<select onchange='editor.setTheme("ace/theme/"+this.options[this.selectedIndex].value)'>
+  <option value="tomorrow">tomorrow</option>
+  <option value="github">github</option>
+  <option value="monokai">monokai</option>
+  <option value="terminal">terminal</option>
+  <option value="xcode">xcode</option>
+</select>
 
                 </td>
             </tr>
@@ -69,7 +75,8 @@ function Start() {
 function CreateEditor()
 {
     editor = ace.edit("code");
-    editor.setTheme("ace/theme/terminal");
+    editor.setTheme("ace/theme/tomorrow");
+//Also try terminal
     editor.getSession().setMode("ace/mode/c_cpp");
 }
 
