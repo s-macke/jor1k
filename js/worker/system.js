@@ -374,11 +374,11 @@ System.prototype.MainLoop = function() {
     var ret = this.cpu.Step(this.stepsperloop, this.clockspeed);
     this.ips += this.stepsperloop;
     this.internalips += this.stepsperloop;
-    this.uartdev0.RxRateLimitBump();
-    this.uartdev1.RxRateLimitBump();
+    this.uartdev0.RxRateLimitBump(this.stepsperloop);
+    this.uartdev1.RxRateLimitBump(this.stepsperloop)
     
     if (ret) {
-        //this.HandleHalt();
+        this.HandleHalt();
     }
     
     // go to idle state that onmessage is executed

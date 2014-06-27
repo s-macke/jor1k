@@ -45,10 +45,9 @@ int main() {
 
 gcc options:<input type="text" maxlen=32 id="gccoptions" value="-lm -Wall"></input><button type='button' onclick= "RunCode(GetCodeText(),document.getElementById('gccoptions').value);return false;" >Compile and run</button>
 Theme<select onchange='editor.setTheme("ace/theme/"+this.options[this.selectedIndex].value)'>
-  <option value="tomorrow">tomorrow</option>
-  <option value="github">github</option>
   <option value="monokai">monokai</option>
   <option value="terminal">terminal</option>
+  <option value="tomorrow">tomorrow</option>
   <option value="xcode">xcode</option>
 </select>
 
@@ -64,25 +63,24 @@ Theme<select onchange='editor.setTheme("ace/theme/"+this.options[this.selectedIn
     <script src="js/master/terminal-input.js"></script>
     <script src="js/master/ethernet.js"></script>
     <script src="js/master/master.js"></script>
-	<script src="js/lib/ace-editor-src-min-noconflict/ace.js" type="text/javascript" charset="utf-8"></script>
+   <script src="js/lib/ace-editor-src-min-noconflict/ace.js" type="text/javascript" charset="utf-8"></script>
 
 <script>
 function Start() {
-	CreateEditor();
+   CreateEditor();
     jor1kgui = new jor1kGUI("tty", "fb", "stats", ["../../bin/vmlinux.bin.bz2", "../../bin/hdgcc.bz2"], "ws://relay.widgetry.org/");
 }
 
 function CreateEditor()
 {
     editor = ace.edit("code");
-    editor.setTheme("ace/theme/tomorrow");
-//Also try terminal
+    editor.setTheme("ace/theme/monokai");
     editor.getSession().setMode("ace/mode/c_cpp");
 }
 
 function GetCodeText() {
-	//return document.getElementById('code').value; // textarea
-	return editor.getSession().getValue(); //ace
+   //return document.getElementById('code').value; // textarea
+   return editor.getSession().getValue(); //ace
 }
 
 function SendKeysToJor1k(text,quiet) {
@@ -93,35 +91,45 @@ function SendKeysToJor1k(text,quiet) {
 }
 
 function RunCode(code,gccoptions) {
-   if(code.length ===0) return;           
+   if(code.length ===0 || code.indexOf("\x03") >= 0 || code.indexOf("\x04") >= 0 ) return;           
 
    jor1kgui.Pause(false);
     // wakeup tty0
-   SendKeysToJor1k("\x03\n\r",false); 
+   SendKeysToJor1k("\x03\n\nstty -clocal\nstty crtscts\nstty -ixoff\n",false); 
 // wakeup hidden tty1
 //tty1-unusedfornow SendKeysToJor1k("\x03\n",true);
    
    SendKeysToJor1k("cd ~;rm prog.c program 2>/dev/null\n");
-  //no-can-do SendKeysToJor1k("stty -echo\n\r");   // Does not work reliably
+   // not-reliable SendKeysToJor1k("stty -echo\n\n");   // Does not work reliably
 
-   codeArray= code.match(/[^]{1,256}/gim); // Avoid 1K line-limit (assume escape expansion) so split programing into shorter chuncks
+   switch(3) {
+	   case 1: // dd - does not work
+	     SendKeysToJor1k("dd ibs=1 of=prog.c count="+code.length+"\n");
+	     SendKeysToJor1k(code);
+	   break;
+	   case 2:  // cat - does not work
+	     SendKeysToJor1k("cat >prog.c\n");
+	     SendKeysToJor1k(code);
+	     SendKeysToJor1k("\x04"); //  why does this not work?
+	   break
+	   case 3:  // brain dead echo does work
+	     codeArray= code.match(/[^]{1,256}/gim); // Avoid 1K line-limit (assume escape expansion) so split programing into shorter chuncks
+	     for(var i=0; i < codeArray.length;i++) {
+	          // For happiness, escape *after* splitting
+	          var escaped = codeArray[i] .replace(/\\/g,"\\134").replace(/\t/g,"\\t")
+	                   .replace(/\n/g,"\\n").replace(/\r/g,"\\r").replace(/"/gm,'\\"');
+	          //Todo Handle all chars in the sent file i.e. replace <=0x2f with \xnn
 
-   for(var i=0; i < codeArray.length;i++) {
-     // For happiness, escape *after* splitting
-     var escaped = codeArray[i] .replace(/\\/g,"\\134").replace(/\t/g,"\\t")
-                .replace(/\n/g,"\\n").replace(/\r/g,"\\r").replace(/"/gm,'\\"');
-    //Todo Handle all chars in the sent file i.e. replace <=0x2f with \xnn
-
-     SendKeysToJor1k('echo -n -e "');
-     SendKeysToJor1k(escaped);
-     SendKeysToJor1k('\">> prog.c\n\r');
-   }
+	          SendKeysToJor1k('echo -n -e "');
+	          SendKeysToJor1k(escaped);
+	          SendKeysToJor1k('\">> prog.c\n');
+	     }
+	}
    // For now we want gcc output to be viewable, so this goes on the main terminal
    // To use tty1 we would need to synchronize gcc i.e. wait for prog.c upload
 
-   // Why can we not see the gcc line ?
-   //xxx SendKeysToJor1k("stty echo\n\r"); 
-   SendKeysToJor1k("gcc " + gccoptions + " prog.c -o program && ./program\n\r");
+      // not-reliable SendKeysToJor1k("stty echo\n\nclear\n"); 
+   SendKeysToJor1k("clear;gcc " + gccoptions + " prog.c -o program && ./program\n");
 
 }
 </script>
