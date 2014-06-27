@@ -997,16 +997,9 @@ function Step(steps, clockspeed) {
             */
             break;
         case 0x6:
-            // movhi or macrc
+            // movhi
             rindex = (ins >> 21) & 0x1F;
-            // if 16th bit is set
-            if (ins & 0x10000) {
-                //DebugMessage("Error: macrc not supported\n");
-                DebugMessage(ERROR_UNKNOWN|0);
-                abort();
-            } else {
-                r[rindex << 2 >> 2] = ((ins & 0xFFFF) << 16); // movhi
-            }
+            r[rindex << 2 >> 2] = ((ins & 0xFFFF) << 16); // movhi
             break;
 
         case 0x8:
