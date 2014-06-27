@@ -57,7 +57,7 @@ var IER_BIT_DESC=["RxAvailableI","TxEmptyI","BreakI","MSI"];
 var UART_RXMODE_NONE = 0; /* No flow control Immediately send incoming chars to the kernel */
 var UART_RXMODE_DTR = 1; /* Don't send unless MCR_DataTerminalReady bit is set */
 var UART_RXMODE_RTS = 2; /* Use RTS protocol */
-var UART_RXMODE_XONXOFF = 2; /* Use RTS protocol */
+var UART_RXMODE_XONXOFF = 2; /* Use XONXOFF protocol */
 // Other protocols (e.g. wait for char echo; interval timer) are possible
 
 var ASCII_XOFF = 0x13;
@@ -93,34 +93,50 @@ UARTDev.prototype.Reset = function() {
     this.FCR = 0x0; // FIFO Control;
     this.MCR = 0x0; // Modem Control
     this.rxbuf = new Array(); // receive fifo buffer. Simple JS push/shift O(N) implementation
-    this.rxon = true;  // xonoff state depends on most recently transmitted XON or XOFF char
-    this.rxmode = UART_RXMODE_XONXOFF;
-    // Our connected device says it's clear-to-send
-    // This required when reliable RTS-CTS flow control is used (stty crtscts) 
+    this.rxon = true;  // did we mostly recently transmit XON or XOFF char (used in UART_RXMODE_XONXOFF mode)
+    this.kernelcanreceive = true; // our best guess about whether the kernel's FLIP buffer is full
+    // If we flood the CPU with too many receive interrupts, the FLIP buffer fills up and then corrupts the data
+    // With so many interrupts the kernel will not stop the flow; so we need to be consecutive and give the kernel
+    // time to send xoff characters/change RTS etc and/or get the data out of the buffer.
+    
+    this.rxmode = UART_RXMODE_RTS;
     
     // Change MSR because the upstream device is now ready for bytes
     this.MSR =UART_MSR_CTS | UART_MSR_DELTA_CTS; // Clear To Send bytes to the terminal/output
     
-    // Terrible Hack - let us hope this can be removed someday
-    // but so far it's the only reliable way found so far to quickly send > 4KB
-    // Attempts at Hardware and Software Flow Control to date (e.g. xon-xoff,RTS-CTS), 
-    // do not prevent the Kernel's internal buffer from overflowing, resulting in drop chars and other nasties.
+    // Practical hack to overcome Linux terminal rate assumptions - let us hope this can be removed someday
+    // but so far it's the only reliable way found so far, to quickly send > 4KB
+    // Attempts at simple Software and Hardware Flow Control to date (e.g. xon-xoff,RTS-CTS), 
+    // do not prevent the Kernel's internal buffer from overflowing, resulting in drop chars and other corruption nasties.
+
     
-    //4096,32 - sending after paused was not reliable
-    this.ratelimitmaxcount = 1024;// Max Kernel Buffer Size that we dare fill (bytes)
-    this.ratelimitinc = 1; //worstcase_rx_per_execute_cycle. Found by experiment and then reduced
-    this.ratelimitcounter = this.ratelimitmaxcount;
-    this.enableratelimitcounter = true; // 
+    // ratelimitcost: Minimum number of thousand cpu ops that must be retired to allow one receive interrupt
+    // 200 was insufficient under stress when tested with -clocal crtscts stty settings and a 4141 byte file. 
+    // Have not seen any isssues so far with {400,1}. 
+    // Note, the receiving rate can be higher than this value because transmitted characters also increase the count.
+    this.ratelimitcost = 400; /* kilo-cpu operations retired */
+    
+    // ratelimitmaxcount: Max value of counter that we allow, over successive main loop iterations
+    // Emperically, 1 seems to be best multiplier i.e. no history or ability to 'save up'.
+    this.ratelimitmaxcount = ( 1 * this.ratelimitcost) |0;
+    
+    //When we stop, we back off for 128 chars-equivalent-time to allow the kernel to catch up
+    this.ratelimitbackoff = -this.ratelimitcost <<7; 
+    this.ratelimitcounter = 0;
+    this.enableratelimitcounter = true; 
 }
 
-UARTDev.prototype.RxRateLimitBump = function() {
+UARTDev.prototype.RxRateLimitBump = function(stepsperloop) {
   if(! this.enableratelimitcounter) return;
-  
-  this.ratelimitcounter += this.ratelimitinc;
-  // Assume Kernel can extract at least this many characters from its own buffer every execute cycle.
-  // The buffer size is 4KB, so the we can't bank unused buffer space forever.
-  if(this.ratelimitcounter > this.ratelimitmaxcount) this.ratelimitcounter = this.ratelimitmaxcount;
-  else if(this.ratelimitcounter>0) this.UpdateRx();
+
+  // Number of receive-ready interrupts we allow is proportional to CPU ops
+  // Assume Kernel can conservatively process  no more than (Kilo-stepsperloop / ratelimitcost ) characters from its own buffer every execute cycle.
+  // This should be a minimum amount, reliable amount. We can exceed this rate because every time a character is transmitted we assume
+  // that the linux terminal has enough cycles to be pulling characters from the FLIP buffer and echo-ing them.
+  // If this mechanism overcompensates, then we still have a fair chance of recovering (and not corrupting the FLIP buffer) because we will see the XOFF character in the output stream (assuming we are no more than 128 characters ahead)  
+  this.ratelimitcounter = Math.min(this.ratelimitmaxcount,  this.ratelimitcounter + (stepsperloop>>10));
+
+  if(this.ratelimitcounter > 0) this.UpdateRx(); // Wake up RX
   
 }
 // To prevent the character from being overwritten we use a javascript array-based fifo and request a character timeout. 
@@ -133,24 +149,23 @@ UARTDev.prototype.ReceiveChar = function(x) {
 UARTDev.prototype.UpdateRx = function() {
   if(this.rxbuf.length > 0 && this.ratelimitcounter >0) {
     
-    if(this.enableratelimitcounter)  this.ratelimitcounter --;
+    if(this.enableratelimitcounter)  this.ratelimitcounter -= this.ratelimitcost;
     
-    var ready = false;
+    var old = this.kernelcanreceive;
     switch(this.rxmode) {
       case UART_RXMODE_NONE:
-        ready = true;  // No flow control - just blast
+        this.kernelcanreceive = true;  // No flow control - just blast
         break;
       case UART_RXMODE_DTR: 
-        ready= !!(this.MCR & UART_MCR_DTR);
+        this.kernelcanreceive = !!(this.MCR & UART_MCR_DTR);
         break;
       case UART_RXMODE_RTS: 
-        ready= !!(this.MCR & UART_MCR_RTS);
+        this.kernelcanreceive = !!(this.MCR & UART_MCR_RTS);
         break;
       case UART_RXMODE_XONXOFF:
-        ready= this.rxon; // updated by xon & xoff chars in transmit stream
+        this.kernelcanreceive = this.rxon; // updated by xon & xoff chars in transmit stream
       };
-    if(ready) { // we believe the kernel is ready for more
-      
+    if(this.kernelcanreceive) { // we believe the kernel is ready for more      
       // Update DataSetReady if we are in DTR mode (untested)
       if((this.rxmode == UART_RXMODE_DTR) && (this.MSR & UART_MSR_DSR)==0) {
           this.MSR |= UART_MSR_DELTA_DSR | UART_MSR_DSR;
@@ -160,7 +175,14 @@ UARTDev.prototype.UpdateRx = function() {
       // update UART_LSR_DATA_READY
       this.LSR |= UART_LSR_DATA_READY;
       this.ThrowCTI(); 
-    } 
+    } else if(old) { 
+      // we just turned the receive tap off, so let's pause for a while (e.g. 128 chars to allow the Kernel to catch up)
+      this.ratelimitcounter = this.ratelimitbackoff;
+    }
+    if(this.kernelcanreceive != old) {
+      DebugMessage("uart:kernelcanreceive"+this.kernelcanreceive);
+    }
+    
 
   } 
   else 
@@ -327,15 +349,27 @@ UARTDev.prototype.WriteReg8 = function(addr, x) {
 
     switch (addr) {
     case UART_TXBUF: 
-         // In theory, reset UART_IIR_THRI here except data is sent with a latency of zero!
+         // In the uart spec we reset UART_IIR_THRI now ...
         this.LSR &= ~UART_LSR_FIFO_EMPTY;
+        // but data is sent with a latency of zero, so we will change it again below.
+        
         if(x == ASCII_XON && ! this.rxon) {
           this.rxon = true; 
           this.UpdateRx();
         }
         else if(x == ASCII_XOFF && this.rxon) {
+          
           this.rxon = false;
           this.UpdateRx();
+        } else {
+          
+          // Rate Limiting hack that gives fair performance but backs off when things get slow:
+          // Every good char transmitted suggests one fewer character in the FLIP buffer, so we have the opportunity to send some more
+          if(this.kernelcanreceive) { 
+            this.ratelimitcounter = Math.min(this.ratelimitmaxcount,this.ratelimitcounter  + this.ratelimitcost) |0;
+            this.UpdateRx();
+          }
+          
         }
         
         this.TransmitCallback(x); 
