@@ -9,7 +9,9 @@ function DebugMessage(message) {
 // small uart device
 function UARTDev(worker) {
     this.ReceiveChar = function(c) {
+        if (worker.lastMouseDownTarget != worker.fbcanvas) {
             worker.SendToWorker("tty0", c);
+        }
     };
 }
 
@@ -66,7 +68,7 @@ function jor1kGUI(termid, fbid, statsid, imageurls, relayURL)
 
     this.IgnoreKeys = function() {
       //Simpler but not as general, return( document.activeElement.type==="textarea" || document.activeElement.type==='input');
-      return (this.lastMouseDownTarget != this.terminalcanvas);
+      return ((this.lastMouseDownTarget != this.terminalcanvas) && (this.lastMouseDownTarget != this.fbcanvas));
     }
     var recordTarget = function(event) {
             this.lastMouseDownTarget = event.target;
@@ -81,7 +83,7 @@ function jor1kGUI(termid, fbid, statsid, imageurls, relayURL)
     document.onkeypress = function(event) {
         if(this.IgnoreKeys()) return true;
         this.SendToWorker("keypress", {keyCode:event.keyCode, charCode:event.charCode});
-        return this.terminput.OnKeyPress(event);      
+        return this.terminput.OnKeyPress(event);
     }.bind(this);
 
     document.onkeydown = function(event) {
