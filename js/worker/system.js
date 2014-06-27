@@ -206,7 +206,8 @@ if (typeof Math.imul == "undefined") {
     this.internalips = 0; // internal inctruction counter
     this.clockspeed = 1; // clock cycles per instruction
     this.idletime = 0; // start time of the idle routine
-
+    this.idlemaxwait = 0; // maximum waiting time in cycles
+    
     // constants
     this.loopspersecond = 200; // main loops per second, to keep the system responsive
     this.cyclesperms = 20000; // 20 MHz    
@@ -236,15 +237,14 @@ System.prototype.GetIPS = function() {
 
 System.prototype.RaiseInterrupt = function(line) {
     this.cpu.RaiseInterrupt(line);
-    
     if (this.status == SYSTEM_HALT)
     {
         this.status = SYSTEM_RUN;
         clearTimeout(this.idletimeouthandle);
-        delta = (new Date()).getTime() - this.idletime;
-        
-        this.cpu.ProgressTime(delta*this.cyclesperms);
-        this.MainLoop();        
+        delta = ((new Date()).getTime() - this.idletime) * this.cyclesperms;
+        if (delta > this.idlemaxwait) delta = this.idlemaxwait;
+        this.cpu.ProgressTime(delta);
+        this.MainLoop();
     }
 }
 System.prototype.ClearInterrupt = function (line) {
@@ -353,16 +353,16 @@ System.prototype.ImageFinished = function(result) {
 System.prototype.HandleHalt = function() {
     var delta = this.cpu.GetTimeToNextInterrupt();
     if (delta == -1) return;
+        this.idlemaxwait = delta;
         var mswait = Math.floor(delta / this.cyclesperms);
-        if (mswait <= 1) return;        
-        DebugMessage("idle " + mswait + "ms " + this.clockspeed );
-        //if (mswait > 120) {delta = 120*this.cyclesperms; mswait=120;}
+        //DebugMessage("idle " + mswait + "ms " + this.clockspeed  + " steps per loop: " + this.stepsperloop);
+        if (mswait <= 1) return;
         this.idletime = (new Date()).getTime();
         this.status = SYSTEM_HALT;
         this.idletimeouthandle = setTimeout(function() {
                 if (this.status == SYSTEM_HALT) {
                     this.status = SYSTEM_RUN;
-                    this.cpu.ProgressTime(mswait*this.cyclesperms);
+                    this.cpu.ProgressTime(/*mswait*this.cyclesperms*/delta);
                     this.MainLoop();
                 }
             }.bind(this), mswait);
@@ -371,15 +371,15 @@ System.prototype.HandleHalt = function() {
 System.prototype.MainLoop = function() {
     if (this.status != SYSTEM_RUN) return;
     SendToMaster("execute", 0);
-    var ret = this.cpu.Step(this.stepsperloop, this.clockspeed);
-    this.ips += this.stepsperloop;
-    this.internalips += this.stepsperloop;
-    this.uartdev0.RxRateLimitBump(this.stepsperloop);
-    this.uartdev1.RxRateLimitBump(this.stepsperloop)
+    var stepsleft = this.cpu.Step(this.stepsperloop, this.clockspeed);
+    this.ips += this.stepsperloop-stepsleft;
+    this.internalips += this.stepsperloop-stepsleft;
+    this.uartdev0.RxRateLimitBump(this.stepsperloop-stepsleft);
+    this.uartdev1.RxRateLimitBump(this.stepsperloop-stepsleft)
     
-    if (ret) {
+    if (stepsleft) { // currently this is the only necessary indicator to start the idle process.
         this.HandleHalt();
     }
     
-    // go to idle state that onmessage is executed
+    // go to worker thread idle state that onmessage is executed
 }

@@ -146,7 +146,6 @@ CPU.prototype.GetTimeToNextInterrupt = function () {
 
 CPU.prototype.ProgressTime = function (delta) {
     this.TTCR = (this.TTCR + delta) & 0xFFFFFFFF;
-    DebugMessage((this.TTMR & 0xFFFFFFF) - (this.TTCR & 0xFFFFFFF));
 }
 
 CPU.prototype.SetFlags = function (x) {
@@ -765,13 +764,15 @@ CPU.prototype.Step = function (steps, clockspeed) {
             continue;
         case 0x5:
             // nop
-            /*            
+            
             if ((ins&0xFF) == 0xFF) { // halt instruction
+                if (this.TTMR & (1 << 28)) break;
+                if (this.interrupt_pending) break;
                 this.pc = this.nextpc++;
                 this.delayedins = false;
-                return 0x1;
+                return steps;
             }
-            */
+            
             break;
         case 0x6:
             // movhi or macrc
@@ -1299,6 +1300,6 @@ CPU.prototype.Step = function (steps, clockspeed) {
         this.delayedins = false;
 
     } while (--steps); // main loop
-    return 0x0;
+    return steps;
 };
 

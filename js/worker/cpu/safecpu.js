@@ -115,7 +115,6 @@ SafeCPU.prototype.GetTimeToNextInterrupt = function () {
 
 SafeCPU.prototype.ProgressTime = function (delta) {
     this.TTCR = (this.TTCR + delta) & 0xFFFFFFFF;
-    DebugMessage((this.TTMR & 0xFFFFFFF) - (this.TTCR & 0xFFFFFFF));
 }
 
 
@@ -1113,5 +1112,6 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
         this.delayedins = false;
 
     } while (--steps); // main loop
+    return 0;
 };
 

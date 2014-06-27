@@ -866,7 +866,7 @@ function Step(steps, clockspeed) {
                 if ((delta|0) < 0) {
                     delta = delta + 0xFFFFFFF | 0;
                 }
-                TTCR = (TTCR + clockspeed|0);                
+                TTCR = (TTCR + clockspeed|0);
                 if ((delta|0) < (clockspeed|0)) {
                     // if interrupt enabled
                     if (TTMR & (1 << 29)) {
@@ -987,14 +987,16 @@ function Step(steps, clockspeed) {
             continue;
         case 0x5:
             // nop
-            /*
+            
             if ((ins & 0xFF) == 0xFF) { // halt instruction
+                if (TTMR & (1 << 28)) break; // don't go idle if a timer interrupt is pending
+                if (interrupt_pending) break; // don't go idle if an external interrupt is pending
                 pc = nextpc;
                 nextpc = nextpc + 1|0;
                 delayedins = 0;
-                return 0x1;
+                return steps|0;
             } 
-            */
+            
             break;
         case 0x6:
             // movhi
@@ -1542,7 +1544,7 @@ function Step(steps, clockspeed) {
         delayedins = 0;
         steps = steps - 1|0;
     } while (steps); // main loop
-    return 0x0;
+    return steps|0;
 }
 
 return {
