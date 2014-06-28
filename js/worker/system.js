@@ -354,9 +354,10 @@ System.prototype.HandleHalt = function() {
     var delta = this.cpu.GetTimeToNextInterrupt();
     if (delta == -1) return;
         this.idlemaxwait = delta;
-        var mswait = Math.floor(delta / this.cyclesperms);
-        //DebugMessage("idle " + mswait + "ms " + this.clockspeed  + " steps per loop: " + this.stepsperloop);
+        var mswait = Math.floor(delta / this.cyclesperms + 0.5);
+        
         if (mswait <= 1) return;
+        if (mswait > 1000) DebugMessage("Warning: idle for " + mswait + "ms");
         this.idletime = (new Date()).getTime();
         this.status = SYSTEM_HALT;
         this.idletimeouthandle = setTimeout(function() {

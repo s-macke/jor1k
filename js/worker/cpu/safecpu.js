@@ -629,6 +629,10 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                 r[rindex] = ((ins & 0xFFFF) << 16); // movhi
             }
             break;
+        case 0x7: 
+            // halt
+            // the safe cpu should ignore it for now. 
+        break;
 
         case 0x8:
             //sys

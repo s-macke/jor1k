@@ -987,22 +987,21 @@ function Step(steps, clockspeed) {
             continue;
         case 0x5:
             // nop
-            
-            if ((ins & 0xFF) == 0xFF) { // halt instruction
-                if (TTMR & (1 << 28)) break; // don't go idle if a timer interrupt is pending
-                if (interrupt_pending) break; // don't go idle if an external interrupt is pending
-                pc = nextpc;
-                nextpc = nextpc + 1|0;
-                delayedins = 0;
-                return steps|0;
-            } 
-            
             break;
         case 0x6:
             // movhi
             rindex = (ins >> 21) & 0x1F;
             r[rindex << 2 >> 2] = ((ins & 0xFFFF) << 16); // movhi
             break;
+        case 0x7:
+            // halt emulator specific
+            if (TTMR & (1 << 28)) break; // don't go idle if a timer interrupt is pending
+            if (interrupt_pending) break; // don't go idle if an external interrupt is pending
+            pc = nextpc;
+            nextpc = nextpc + 1|0;
+            delayedins = 0;
+            return steps|0;            
+        break;
 
         case 0x8:
             //sys

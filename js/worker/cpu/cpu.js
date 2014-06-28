@@ -764,15 +764,6 @@ CPU.prototype.Step = function (steps, clockspeed) {
             continue;
         case 0x5:
             // nop
-            
-            if ((ins&0xFF) == 0xFF) { // halt instruction
-                if (this.TTMR & (1 << 28)) break;
-                if (this.interrupt_pending) break;
-                this.pc = this.nextpc++;
-                this.delayedins = false;
-                return steps;
-            }
-            
             break;
         case 0x6:
             // movhi or macrc
@@ -785,7 +776,14 @@ CPU.prototype.Step = function (steps, clockspeed) {
                 r[rindex] = ((ins & 0xFFFF) << 16); // movhi
             }
             break;
-
+        case 0x7:
+                //halt
+                if (this.TTMR & (1 << 28)) break;
+                if (this.interrupt_pending) break;
+                this.pc = this.nextpc++;
+                this.delayedins = false;
+                return steps;
+        break;
         case 0x8:
             //sys
             this.Exception(EXCEPT_SYSCALL, this.group0[SPR_EEAR_BASE]);
