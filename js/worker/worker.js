@@ -3,8 +3,8 @@
 // -------------------------------------------------
 
 importScripts('utils.js', 'framebuffer.js', 'ethmac.js', 'ata.js',
-    'uart.js', 'touchscreen.js', 'keyboard.js', 'ram.js', 'cpu/cpu.js',
-    'system.js', 'bzip2.js', 'cpu/fastcpu.js', 'cpu/safecpu.js'
+    'uart.js', 'touchscreen.js', 'keyboard.js', 'virtio.js', 'ram.js',
+    'system.js', 'bzip2.js', 'cpu/cpu.js', 'cpu/fastcpu.js', 'cpu/safecpu.js'
     );
 
 var sys = new System();

@@ -190,17 +190,18 @@ if (typeof Math.imul == "undefined") {
     this.atadev = new ATADev(this);
     this.tsdev = new TouchscreenDev(this);
     this.kbddev = new KeyboardDev(this);
+    this.virtiodev = new VirtIODev(this);
 
     DebugMessage("Add Devices");  
     this.ram.AddDevice(this.atadev, 0x9e000000, 0x1000);
     this.ram.AddDevice(this.uartdev0, 0x90000000, 0x7);
     this.ram.AddDevice(this.uartdev1, 0x96000000, 0x7);
     this.ram.AddDevice(this.ethdev, 0x92000000, 0x1000);
+    this.ram.AddDevice(this.virtiodev, 0x97000000, 0x1000);
     this.ram.AddDevice(this.fbdev, 0x91000000, 0x1000);
     this.ram.AddDevice(this.tsdev, 0x93000000, 0x1000);
     this.ram.AddDevice(this.kbddev, 0x94000000, 0x100);
 
-    
     this.stepsperloop = 0x40000;
     this.ips = 0; // external instruction per second counter
     this.internalips = 0; // internal inctruction counter
