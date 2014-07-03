@@ -20,7 +20,8 @@ Sebastian Macke [simulationcorner.net](http://simulationcorner.net)
 
 ### Contributors
 Gerard Braad [gbraad.nl](http://gbraad.nl)  
-Ben Burns [github.com/benjamincburns](http://github.com/benjamincburns)
+Ben Burns [github.com/benjamincburns](http://github.com/benjamincburns)  
+Lawrence Angrave [github.com/angrave](http://github.com/angrave)  
 
 
 [or1k specification]: http://opencores.org/or1k/Main_Page
