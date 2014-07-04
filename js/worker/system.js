@@ -51,7 +51,6 @@ if (change) {
             this.cpu.pc = h[(0x40 + 0)];
             this.cpu.nextpc = h[(0x40 + 1)];
             this.cpu.delayedins = h[(0x40 + 2)]?true:false;
-            this.cpu.interrupt_pending = h[(0x40 + 3)]?true:false;
             this.cpu.TTMR = h[(0x40 + 4)];
             this.cpu.TTCR = h[(0x40 + 5)];
             this.cpu.PICMR = h[(0x40 + 6)];
@@ -73,7 +72,7 @@ if (change) {
             h[(0x40 + 0)] = oldcpu.pc;
             h[(0x40 + 1)] = oldcpu.nextpc;
             h[(0x40 + 2)] = oldcpu.delayedins;
-            h[(0x40 + 3)] = oldcpu.interrupt_pending;
+            h[(0x40 + 3)] = 0x0;
             h[(0x40 + 4)] = oldcpu.TTMR;
             h[(0x40 + 5)] = oldcpu.TTCR;
             h[(0x40 + 6)] = oldcpu.PICMR;
@@ -95,7 +94,6 @@ if (change) {
             this.cpu.pc = oldcpu.pc;
             this.cpu.nextpc = oldcpu.nextpc;
             this.cpu.delayedins = oldcpu.delayedins;
-            this.cpu.interrupt_pending = oldcpu.interrupt_pending;
             this.cpu.TTMR = oldcpu.TTMR;
             this.cpu.TTCR = oldcpu.TTCR;
             this.cpu.PICMR = oldcpu.PICMR;

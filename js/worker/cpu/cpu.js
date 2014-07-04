@@ -52,9 +52,7 @@ function CPU(ram) {
     this.pc = 0x0; // instruction pointer in multiples of four
     this.nextpc = 0x0; // pointer to next instruction in multiples of four
     //this.ins=0x0; // current instruction to handle
-
     this.delayedins = false; // the current instruction is an delayed instruction, one cycle before a jump
-    this.interrupt_pending = false;
 
     // fast tlb lookup for instruction and data
     // index 0: 32 bit instruction
@@ -235,11 +233,8 @@ CPU.prototype.CheckForInterrupt = function () {
         return;
     }
     if (this.PICMR & this.PICSR) {
-            this.interrupt_pending = true;
-            /*
-                    // Do it here. Save one comparison in the main loop
-                    this.Exception(EXCEPT_INT, this.group0[SPR_EEAR_BASE]);
-            */
+        this.Exception(EXCEPT_INT, this.group0[SPR_EEAR_BASE]);
+        this.pc = this.nextpc++;
     }
 };
 
@@ -453,18 +448,14 @@ CPU.prototype.Exception = function (excepttype, addr) {
 
     case EXCEPT_ITLBMISS:
     case EXCEPT_IPF:
-        this.SetSPR(SPR_EPCR_BASE, addr - (this.delayedins ? 4 : 0));
-        break;
     case EXCEPT_DTLBMISS:
     case EXCEPT_DPF:
     case EXCEPT_BUSERR:
-        this.SetSPR(SPR_EPCR_BASE, (this.pc<<2) - (this.delayedins ? 4 : 0));
-        break;
-
     case EXCEPT_TICK:
     case EXCEPT_INT:
         this.SetSPR(SPR_EPCR_BASE, (this.pc<<2) - (this.delayedins ? 4 : 0));
         break;
+ 
     case EXCEPT_SYSCALL:
         this.SetSPR(SPR_EPCR_BASE, (this.pc<<2) + 4 - (this.delayedins ? 4 : 0));
         break;
@@ -678,15 +669,6 @@ CPU.prototype.Step = function (steps, clockspeed) {
             if ((this.SR_TEE) && (this.TTMR & (1 << 28))) {
                 this.Exception(EXCEPT_TICK, this.group0[SPR_EEAR_BASE]);
                 this.pc = this.nextpc++;
-            } else {
-                if (this.interrupt_pending) {
-                    // check again because there could be another exception during this one cycle
-                    if ((this.PICSR) && (this.SR_IEE)) {
-                        this.interrupt_pending = false;
-                        this.Exception(EXCEPT_INT, this.group0[SPR_EEAR_BASE]);
-                        this.pc = this.nextpc++;
-                    }
-                }
             }
         }
 
@@ -777,13 +759,12 @@ CPU.prototype.Step = function (steps, clockspeed) {
             }
             break;
         case 0x7:
-                //halt
-                if (this.TTMR & (1 << 28)) break;
-                if (this.interrupt_pending) break;
-                this.pc = this.nextpc++;
-                this.delayedins = false;
-                return steps;
-        break;
+            //halt
+            if (this.TTMR & (1 << 28)) break;
+            this.pc = this.nextpc++;
+            this.delayedins = false;
+            return steps;
+            break;
         case 0x8:
             //sys
             this.Exception(EXCEPT_SYSCALL, this.group0[SPR_EEAR_BASE]);
@@ -792,9 +773,11 @@ CPU.prototype.Step = function (steps, clockspeed) {
         case 0x9:
             // rfe
             this.nextpc = this.GetSPR(SPR_EPCR_BASE)>>2;
-            this.SetFlags(this.GetSPR(SPR_ESR_BASE));
-            this.InvalidateTLB();
-            break;
+            this.InvalidateTLB();            
+            this.pc = this.nextpc++;
+            this.delayedins = false;
+            this.SetFlags(this.GetSPR(SPR_ESR_BASE)); // could raise an exception
+            continue;
 
         case 0x11:
             // jr
@@ -991,8 +974,10 @@ CPU.prototype.Step = function (steps, clockspeed) {
         case 0x30:
             // mtspr
             imm = (ins & 0x7FF) | ((ins >> 10) & 0xF800);
-            this.SetSPR(r[(ins >> 16) & 0x1F] | imm, r[(ins >> 11) & 0x1F]);
-            break;
+            this.pc = this.nextpc++;
+            this.delayedins = false;
+            this.SetSPR(r[(ins >> 16) & 0x1F] | imm, r[(ins >> 11) & 0x1F]); // Could raise an exception
+            continue;
 
         case 0x32:
             // floating point
