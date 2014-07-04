@@ -200,15 +200,14 @@ if (typeof Math.imul == "undefined") {
     this.ram.AddDevice(this.tsdev, 0x93000000, 0x1000);
     this.ram.AddDevice(this.kbddev, 0x94000000, 0x100);
 
-    this.stepsperloop = 0x40000;
+    this.instructionsperloop = 0x40000;
     this.ips = 0; // external instruction per second counter
-    this.internalips = 0; // internal inctruction counter
-    this.clockspeed = 1; // clock cycles per instruction
+    this.timercyclesperinstruction = 1; // clock cycles per instruction
     this.idletime = 0; // start time of the idle routine
     this.idlemaxwait = 0; // maximum waiting time in cycles
     
     // constants
-    this.loopspersecond = 200; // main loops per second, to keep the system responsive
+    this.loopspersecond = 100; // main loops per second, to keep the system responsive
     this.cyclesperms = 20000; // 20 MHz    
     
     
@@ -216,19 +215,6 @@ if (typeof Math.imul == "undefined") {
 
 // Timer function. Runs every second
 System.prototype.GetIPS = function() {
-    this.internalips++; // at least one instruction
-    if (this.status == SYSTEM_RUN)
-    {
-        this.stepsperloop = Math.floor(this.internalips / this.loopspersecond);
-        this.stepsperloop  = this.stepsperloop<1000?1000:this.stepsperloop;
-        this.stepsperloop  = this.stepsperloop>4000000?4000000:this.stepsperloop;    
-    
-        this.clockspeed = Math.floor(this.cyclesperms*1000 * 64  / this.internalips);
-        this.clockspeed  = this.clockspeed<=1?1:this.clockspeed;
-        this.clockspeed  = this.clockspeed>=10000?10000:this.clockspeed;
-    }
-    
-    this.internalips = 0;
     var ret = this.ips;
     this.ips = 0;
     return ret;
@@ -240,7 +226,7 @@ System.prototype.RaiseInterrupt = function(line) {
     {
         this.status = SYSTEM_RUN;
         clearTimeout(this.idletimeouthandle);
-        delta = ((new Date()).getTime() - this.idletime) * this.cyclesperms;
+        delta = (GetMilliseconds() - this.idletime) * this.cyclesperms;
         if (delta > this.idlemaxwait) delta = this.idlemaxwait;
         this.cpu.ProgressTime(delta);
         this.MainLoop();
@@ -249,7 +235,6 @@ System.prototype.RaiseInterrupt = function(line) {
 System.prototype.ClearInterrupt = function (line) {
     this.cpu.ClearInterrupt(line);
 }
-
 
 System.prototype.PrintState = function() {
     DebugMessage("Current state of the machine")
@@ -357,7 +342,7 @@ System.prototype.HandleHalt = function() {
         
         if (mswait <= 1) return;
         if (mswait > 1000) DebugMessage("Warning: idle for " + mswait + "ms");
-        this.idletime = (new Date()).getTime();
+        this.idletime = GetMilliseconds();
         this.status = SYSTEM_HALT;
         this.idletimeouthandle = setTimeout(function() {
                 if (this.status == SYSTEM_HALT) {
@@ -370,12 +355,31 @@ System.prototype.HandleHalt = function() {
 
 System.prototype.MainLoop = function() {
     if (this.status != SYSTEM_RUN) return;
+    var time = GetMilliseconds();
     SendToMaster("execute", 0);
-    var stepsleft = this.cpu.Step(this.stepsperloop, this.clockspeed);
-    this.ips += this.stepsperloop-stepsleft;
-    this.internalips += this.stepsperloop-stepsleft;
-    this.uartdev0.RxRateLimitBump(this.stepsperloop-stepsleft);
-    this.uartdev1.RxRateLimitBump(this.stepsperloop-stepsleft)
+    var stepsleft = this.cpu.Step(this.instructionsperloop, this.timercyclesperinstruction);
+    var totalsteps = this.instructionsperloop - stepsleft;
+    totalsteps++; // at least one instruction    
+    this.ips += totalsteps;
+    this.uartdev0.RxRateLimitBump(totalsteps);
+    this.uartdev1.RxRateLimitBump(totalsteps);
+    
+    // recalibrate timer
+    var delta = GetMilliseconds() - time;
+    if (!stepsleft)
+    if (delta > 1)
+    if (totalsteps > 1000)
+    {
+        var ipms = totalsteps / delta; // ipms (per millisecond) of current run
+        this.instructionsperloop = Math.floor(ipms*1000. / this.loopspersecond);
+        this.instructionsperloop = this.instructionsperloop<1000?1000:this.instructionsperloop;
+        this.instructionsperloop = this.instructionsperloop>4000000?4000000:this.instructionsperloop;    
+    
+        this.timercyclesperinstruction = Math.floor(this.cyclesperms * 64 / ipms);
+        this.timercyclesperinstruction  = this.timercyclesperinstruction<=1?1:this.timercyclesperinstruction;
+        this.timercyclesperinstruction  = this.timercyclesperinstruction>=1000?1000:this.timercyclesperinstruction;
+        this.internalips = 0x0;
+    }
     
     if (stepsleft) { // currently this is the only necessary indicator to start the idle process.
         this.HandleHalt();
