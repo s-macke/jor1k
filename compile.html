@@ -35,8 +35,7 @@
 
                 </td>
                 <td style="vertical-align: top">
-<div id="code" style="width: 640px; height: 388px; margin-top: 2px">
-#include &lt;stdio.h&gt;
+<div id="code" style="width: 640px; height: 388px; margin-top: 2px">#include &lt;stdio.h&gt;
 int main() {
     printf("Hello World!\n");
     return 0;
@@ -44,7 +43,7 @@ int main() {
 </div>
 
 gcc options:<input type="text" maxlen=32 id="gccoptions" value="-lm -Wall"></input><button type='button' onclick= "RunCode(GetCodeText(),document.getElementById('gccoptions').value);return false;" >Compile and run</button>
-Theme<select onchange='editor.setTheme("ace/theme/"+this.options[this.selectedIndex].value)'>
+<span style="margin: 0 5px 0 5px" id="gcc-compile-status"></span>Theme<select onchange='editor.setTheme("ace/theme/"+this.options[this.selectedIndex].value)'>
   <option value="monokai">monokai</option>
   <option value="terminal">terminal</option>
   <option value="tomorrow">tomorrow</option>
@@ -59,6 +58,11 @@ Theme<select onchange='editor.setTheme("ace/theme/"+this.options[this.selectedIn
         <div class="infobox">
         </div>
 
+    <div>
+        <p>GCC output:</p>
+        <textarea id="gcc-output" rows="20" cols="60" disabled></textarea>
+    </div>
+
     <script src="js/master/terminal.js"></script>
     <script src="js/master/terminal-input.js"></script>
     <script src="js/master/ethernet.js"></script>
@@ -67,8 +71,58 @@ Theme<select onchange='editor.setTheme("ace/theme/"+this.options[this.selectedIn
 
 <script>
 function Start() {
-   CreateEditor();
+    CreateEditor();
+    document.addEventListener("jor1k_terminal_put_char", terminalPutCharListener, false);
     jor1kgui = new jor1kGUI("tty", "fb", "stats", ["../../bin/vmlinux.bin.bz2", "../../bin/hdgcc.bz2"], "ws://relay.widgetry.org/");
+}
+
+
+var term_output = "";
+var gcc_output_capture_re = /###GCC_COMPILE###\s*([\S\s]*?)\s*###GCC_COMPILE_FINISHED###/;
+
+function terminalPutCharListener(e)
+{
+    term_output = term_output + e.detail.character;
+}
+
+function waitForGccCompletion() {
+
+    console.log(term_output);
+    var regex_match_array = gcc_output_capture_re.exec(term_output);
+
+    if (regex_match_array !== null) {
+        var gcc_output = regex_match_array[1];
+        document.getElementById('gcc-output').value = gcc_output;
+        SendKeysToJor1k("clear\n");
+        if (gcc_output === "") {
+            document.getElementById('gcc-compile-status').innerHTML = '<span style="color: green">SUCCESS</span>';
+            SendKeysToJor1k("./program\n");
+        }
+        else {
+            document.getElementById('gcc-compile-status').innerHTML = '<span style="color: red">FAILED</span>';
+            editor.getSession().setAnnotations(getErrorAnnotations(gcc_output));
+        }
+    }
+    else {
+        document.getElementById('gcc-compile-status').innerHTML = '<span style="color: gray">COMPILING</span>';
+        setTimeout(waitForGccCompletion, 1000);
+    }
+}
+
+var gcc_output_parse_re = /(\d+):(\d+):\s*([\w]+):\s*(.+)/g;
+function getErrorAnnotations(gcc_output_str) {
+    var match, errors = [];
+    gcc_output_str.split("prog.c").forEach(function (error_line) {
+        if(match = gcc_output_parse_re.exec(error_line)) {
+            errors.push({
+                row: match[1] - 1, // line numbers in ace start from zero
+                column: match[2],
+                type: match[3], // ace supports error, warning or information
+                text: match[4]
+            });
+        }
+    });
+    return errors;
 }
 
 function CreateEditor()
@@ -128,9 +182,10 @@ function RunCode(code,gccoptions) {
    // For now we want gcc output to be viewable, so this goes on the main terminal
    // To use tty1 we would need to synchronize gcc i.e. wait for prog.c upload
 
-      // not-reliable SendKeysToJor1k("stty echo\n\nclear\n"); 
-   SendKeysToJor1k("clear;gcc " + gccoptions + " prog.c -o program && ./program\n");
-
+      // not-reliable SendKeysToJor1k("stty echo\n\nclear\n");
+    term_output = "";
+    SendKeysToJor1k("echo \\#\\#\\#GCC_COMPILE\\#\\#\\#;clear;gcc " + gccoptions + " prog.c -o program;echo \\#\\#\\#GCC_COMPILE_FINISHED\\#\\#\\#;clear\n");
+    waitForGccCompletion();
 }
 </script>
 
