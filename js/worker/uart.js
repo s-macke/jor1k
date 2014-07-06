@@ -120,8 +120,8 @@ UARTDev.prototype.Reset = function() {
     // Emperically, 1 seems to be best multiplier i.e. no history or ability to 'save up'.
     this.ratelimitmaxcount = ( 1 * this.ratelimitcost) |0;
     
-    //When we stop, we back off for 128 chars-equivalent-time to allow the kernel to catch up
-    this.ratelimitbackoff = -this.ratelimitcost <<7; 
+    //When we stop, we back off for a few chars-equivalent-time to allow the kernel to catch up
+    this.ratelimitbackoff = -this.ratelimitcost <<4; // <<7 was too great a delay when the CPU is in idle mode
     this.ratelimitcounter = 0;
     this.enableratelimitcounter = true; 
 }
