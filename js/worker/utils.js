@@ -17,9 +17,13 @@ function DebugMessage(message) {
 
 function abort() {
     DebugMessage("Abort execution.");
-    sys.PrintState();
     SendToMaster("Stop");
+    sys.PrintState();
     throw new Error('Kill worker');
+}
+
+function GetMilliseconds() {
+    return (new Date()).getTime();
 }
 
 // big endian to little endian and vice versa

@@ -9,7 +9,9 @@ function DebugMessage(message) {
 // small uart device
 function UARTDev(worker) {
     this.ReceiveChar = function(c) {
+        if (worker.lastMouseDownTarget != worker.fbcanvas) {
             worker.SendToWorker("tty0", c);
+        }
     };
 }
 
@@ -37,7 +39,7 @@ function jor1kGUI(termid, fbid, statsid, imageurls, relayURL)
 
     this.ChangeImage = function(newurl) {
         this.urls[1] = newurl;
-        this.Reset() 
+        this.Reset();
     };
     this.Reset= function () {
       this.stop = false; // VM Stopped/Aborted
@@ -64,16 +66,9 @@ function jor1kGUI(termid, fbid, statsid, imageurls, relayURL)
     this.term = new Terminal(24, 80, termid);
     this.terminput = new TerminalInput(new UARTDev(this));
 
-    // Init Framebuffer if it exists
-    this.fbcanvas = document.getElementById(fbid);
-    if(this.fbcanvas) {
-      this.fbctx = this.fbcanvas.getContext("2d");
-      this.fbimageData = this.fbctx.createImageData(this.fbcanvas.width, this.fbcanvas.height);
-    }
-    
     this.IgnoreKeys = function() {
       //Simpler but not as general, return( document.activeElement.type==="textarea" || document.activeElement.type==='input');
-      return (this.lastMouseDownTarget != this.terminalcanvas);
+      return ((this.lastMouseDownTarget != this.terminalcanvas) && (this.lastMouseDownTarget != this.fbcanvas));
     }
     var recordTarget = function(event) {
             this.lastMouseDownTarget = event.target;
@@ -88,7 +83,7 @@ function jor1kGUI(termid, fbid, statsid, imageurls, relayURL)
     document.onkeypress = function(event) {
         if(this.IgnoreKeys()) return true;
         this.SendToWorker("keypress", {keyCode:event.keyCode, charCode:event.charCode});
-        return this.terminput.OnKeyPress(event);      
+        return this.terminput.OnKeyPress(event);
     }.bind(this);
 
     document.onkeydown = function(event) {
@@ -103,51 +98,23 @@ function jor1kGUI(termid, fbid, statsid, imageurls, relayURL)
         return this.terminput.OnKeyUp(event);
     }.bind(this);
 
-    if(this.fbcanvas) {
-      this.terminalcanvas.onmousedown = function(event) {
-          this.fbcanvas.style.border = "2px solid #000000";
-      }.bind(this);
-
-      this.fbcanvas.onmousedown = function(event) {
-          this.fbcanvas.style.border = "2px solid #FF0000";
-          var rect = this.fbcanvas.getBoundingClientRect();
-          var x = event.clientX - rect.left;
-          var y = event.clientY - rect.top;
-          this.SendToWorker("tsmousedown", {x:x, y:y});
-      }.bind(this);
-
-      this.fbcanvas.onmouseup = function(event) {
-          var rect = this.fbcanvas.getBoundingClientRect();
-          var x = event.clientX - rect.left;
-          var y = event.clientY - rect.top;
-          this.SendToWorker("tsmouseup", {x:x, y:y});
-      }.bind(this);
-
-      this.fbcanvas.onmousemove = function(event) {
-          var rect = this.fbcanvas.getBoundingClientRect();
-          var x = event.clientX - rect.left;
-          var y = event.clientY - rect.top;
-          this.SendToWorker("tsmousemove", {x:x, y:y});
-      }.bind(this);
-    }
     this.ethernet = new Ethernet(relayURL);
     this.ethernet.onmessage = function(e) {
         this.SendToWorker("ethmac", e.data);
     }.bind(this);
 
+    this.InitFramebuffer(fbid);
+    
     this.Reset();
     
     window.setInterval(function(){this.SendToWorker("GetIPS", 0)}.bind(this), 1000);
-    if(this.fbcanvas) {
-      window.setInterval(function(){this.SendToWorker("GetFB", 0)}.bind(this), 100);
-    }
 }
 
 jor1kGUI.prototype.OnMessage = function(e) {
     if (this.stop) return;
     switch(e.data.command)
     {
-        case "execute":
+        case "execute":  // this command is send back and forth to be responsive
             if(this.userpaused) {
               this.executepending = true;
             } else {
@@ -165,7 +132,7 @@ jor1kGUI.prototype.OnMessage = function(e) {
             this.UpdateFramebuffer(e.data.data);
             break;
         case "Stop":
-            console.log("Received stop signal"); 
+            console.log("Received stop signal");
             this.stop = true;
             break;
         case "GetIPS":
@@ -175,6 +142,44 @@ jor1kGUI.prototype.OnMessage = function(e) {
             console.log(e.data.data);
             break;
     }
+}
+
+// Init Framebuffer if it exists
+jor1kGUI.prototype.InitFramebuffer = function(fbid) {
+    this.fbcanvas = document.getElementById(fbid);
+    if(!this.fbcanvas) return;
+
+    this.fbctx = this.fbcanvas.getContext("2d");
+    this.fbimageData = this.fbctx.createImageData(this.fbcanvas.width, this.fbcanvas.height);
+
+    this.terminalcanvas.onmousedown = function(event) {
+        this.fbcanvas.style.border = "2px solid #000000";
+    }.bind(this);
+
+    this.fbcanvas.onmousedown = function(event) {
+        this.fbcanvas.style.border = "2px solid #FF0000";
+        var rect = this.fbcanvas.getBoundingClientRect();
+        var x = event.clientX - rect.left;
+        var y = event.clientY - rect.top;
+        this.SendToWorker("tsmousedown", {x:x, y:y});
+    }.bind(this);
+
+    this.fbcanvas.onmouseup = function(event) {
+        var rect = this.fbcanvas.getBoundingClientRect();
+        var x = event.clientX - rect.left;
+        var y = event.clientY - rect.top;
+        this.SendToWorker("tsmouseup", {x:x, y:y});
+    }.bind(this);
+
+    this.fbcanvas.onmousemove = function(event) {
+        var rect = this.fbcanvas.getBoundingClientRect();
+        var x = event.clientX - rect.left;
+        var y = event.clientY - rect.top;
+        this.SendToWorker("tsmousemove", {x:x, y:y});
+    }.bind(this);
+    
+    // receive the contents of the framebuffer every 100ms
+    window.setInterval(function(){this.SendToWorker("GetFB", 0)}.bind(this), 100);
 }
 
 jor1kGUI.prototype.UpdateFramebuffer = function(buffer) {

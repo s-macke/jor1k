@@ -11,15 +11,17 @@ More information can be found on the [Wiki][project wiki] pages.
  * [Wiki][project wiki] containing more detailed descriptions
 
 ### LICENSE
-The program is distributed under the terms of the GNU General Public
-License.
+ * The program is distributed under the terms of the GNU General Public License v2 (GPLv2).
+ * The ACE editor is BSD licensed.
+ * The bzip2 decompression code is licensed under the GNU Library General Public License (LGPL) version 2.
 
 ### Developer
 Sebastian Macke [simulationcorner.net](http://simulationcorner.net)
 
 ### Contributors
 Gerard Braad [gbraad.nl](http://gbraad.nl)  
-Ben Burns [github.com/benjamincburns](http://github.com/benjamincburns)
+Ben Burns [github.com/benjamincburns](http://github.com/benjamincburns)  
+Lawrence Angrave [github.com/angrave](http://github.com/angrave)  
 
 
 [or1k specification]: http://opencores.org/or1k/Main_Page
