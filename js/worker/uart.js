@@ -111,23 +111,21 @@ UARTDev.prototype.Reset = function() {
 
     
     // ratelimitcost: Minimum number of thousand cpu ops that must be retired to allow one receive interrupt
-    // 200 was insufficient under stress when tested with -clocal crtscts stty settings and a 4141 byte file. 
-    // Have not seen any isssues so far with {400,1}. 
-    // Note, the receiving rate can be higher than this value because transmitted characters also increase the count.
-    this.ratelimitcost = 400; /* kilo-cpu operations retired */
+    // Stresstested with -clocal crtscts stty settings and a >4KB file (see source files in test/). 
+    // Note, the measured receiving rate can be higher than this value because transmitted characters also increase the count.
+    this.ratelimitcost = 0x10; /* kilo-cpu operations retired */
     
-    // ratelimitmaxcount: Max value of counter that we allow, over successive main loop iterations
-    // Emperically, 1 seems to be best multiplier i.e. no history or ability to 'save up'.
-    this.ratelimitmaxcount = ( 1 * this.ratelimitcost) |0;
+    this.ratelimitpayback = (this.ratelimitcost - 1) |0; // Payback for transmitting a char.  0=< ratelimitpayback<ratelimitcost
+    
+    // ratelimitmaxcount: Max value of counter that we allow over successive main loop iterations. This allows fast bursts
+    this.ratelimitmaxcount = this.ratelimitcost <<10;
     
     //When we stop, we back off for a few chars-equivalent-time to allow the kernel to catch up
-    this.ratelimitbackoff = -this.ratelimitcost <<4; // <<7 was too great a delay when the CPU is in idle mode
-    this.ratelimitcounter = 0;
-    this.enableratelimitcounter = true; 
+    this.ratelimitbackoff = - this.ratelimitcost <<4; 
+    this.ratelimitcounter = 0x0;
 }
 
 UARTDev.prototype.RxRateLimitBump = function(stepsperloop) {
-  if(! this.enableratelimitcounter) return;
 
   // Number of receive-ready interrupts we allow is proportional to CPU ops
   // Assume Kernel can conservatively process  no more than (Kilo-stepsperloop / ratelimitcost ) characters from its own buffer every execute cycle.
@@ -144,13 +142,23 @@ UARTDev.prototype.ReceiveChar = function(x) {
     this.rxbuf.push(x&0xFF);
     this.UpdateRx();
 }
+
+// UART can prevent the VM from going to idle/halt mode if there are still characters waiting to be sent to the kernel
+UARTDev.prototype.HaltPending = function() {
+  
+  if(this.rxbuf.length === 0) {
+    return true; // Allow halt - we have nothing more to give
+  }
+  this.ratelimitcounter = this.ratelimitmaxcount;
+  this.UpdateRx(); // May raise an interrupt
+  return !this.kernelcanreceive; // Deny halt if we have more 
+} 
+
 // Flow Logic for status changes upon foreign char arrival.
 // Same logic is applied when a received char is read.
 UARTDev.prototype.UpdateRx = function() {
   if(this.rxbuf.length > 0 && this.ratelimitcounter >0) {
-    
-    if(this.enableratelimitcounter)  this.ratelimitcounter -= this.ratelimitcost;
-    
+        
     var old = this.kernelcanreceive;
     switch(this.rxmode) {
       case UART_RXMODE_NONE:
@@ -180,7 +188,7 @@ UARTDev.prototype.UpdateRx = function() {
       this.ratelimitcounter = this.ratelimitbackoff;
     }
     if(this.kernelcanreceive != old) {
-      DebugMessage("uart:kernelcanreceive"+this.kernelcanreceive);
+      DebugMessage("uart:kernelcanreceive "+this.kernelcanreceive);
     }
     
 
@@ -285,7 +293,7 @@ UARTDev.prototype.ReadReg8 = function(addr) {
               // even though this.LSR & UART_LSR_DATA_READY is unset;
             }
             // Perhaps we shifted the last byte, handle flow control etc ...
-            
+            this.ratelimitcounter -= this.ratelimitcost;
             this.UpdateRx();
             
             return ret &  0xff;
@@ -365,8 +373,8 @@ UARTDev.prototype.WriteReg8 = function(addr, x) {
           
           // Rate Limiting hack that gives fair performance but backs off when things get slow:
           // Every good char transmitted suggests one fewer character in the FLIP buffer, so we have the opportunity to send some more
-          if(this.kernelcanreceive) { 
-            this.ratelimitcounter = Math.min(this.ratelimitmaxcount,this.ratelimitcounter  + this.ratelimitcost) |0;
+          if(this.kernelcanreceive && this.ratelimitcounter > 0) { 
+            this.ratelimitcounter = Math.min(this.ratelimitmaxcount,this.ratelimitcounter  + this.ratelimitpayback) |0;
             this.UpdateRx();
           }
           

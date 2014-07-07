@@ -364,25 +364,27 @@ System.prototype.MainLoop = function() {
     this.uartdev0.RxRateLimitBump(totalsteps);
     this.uartdev1.RxRateLimitBump(totalsteps);
     
-    // recalibrate timer
-    var delta = GetMilliseconds() - time;
-    if (!stepsleft)
-    if (delta > 1)
-    if (totalsteps > 1000)
-    {
-        var ipms = totalsteps / delta; // ipms (per millisecond) of current run
-        this.instructionsperloop = Math.floor(ipms*1000. / this.loopspersecond);
-        this.instructionsperloop = this.instructionsperloop<1000?1000:this.instructionsperloop;
-        this.instructionsperloop = this.instructionsperloop>4000000?4000000:this.instructionsperloop;    
+    if (!stepsleft) {
+      // recalibrate timer
+      var delta = GetMilliseconds() - time;
+      if (delta > 1 && totalsteps > 1000)
+      {
+          var ipms = totalsteps / delta; // ipms (per millisecond) of current run
+          this.instructionsperloop = Math.floor(ipms*1000. / this.loopspersecond);
+          this.instructionsperloop = this.instructionsperloop<1000?1000:this.instructionsperloop;
+          this.instructionsperloop = this.instructionsperloop>4000000?4000000:this.instructionsperloop;    
     
-        this.timercyclesperinstruction = Math.floor(this.cyclesperms * 64 / ipms);
-        this.timercyclesperinstruction  = this.timercyclesperinstruction<=1?1:this.timercyclesperinstruction;
-        this.timercyclesperinstruction  = this.timercyclesperinstruction>=1000?1000:this.timercyclesperinstruction;
-        this.internalips = 0x0;
-    }
-    
-    if (stepsleft) { // currently this is the only necessary indicator to start the idle process.
-        this.HandleHalt();
+          this.timercyclesperinstruction = Math.floor(this.cyclesperms * 64 / ipms);
+          this.timercyclesperinstruction  = this.timercyclesperinstruction<=1?1:this.timercyclesperinstruction;
+          this.timercyclesperinstruction  = this.timercyclesperinstruction>=1000?1000:this.timercyclesperinstruction;
+          this.internalips = 0x0;
+      }
+    } else { // stepsleft != 0 indicates CPU idle
+      
+      // uart may raise an interrupt if the fifo is non-empty
+      if( this.uartdev0.HaltPending() && this.uartdev1.HaltPending()) {
+        this.HandleHalt(); 
+      }
     }
     
     // go to worker thread idle state that onmessage is executed
