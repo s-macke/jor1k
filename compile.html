@@ -43,7 +43,9 @@ int main() {
 </div>
 
 gcc options:<input type="text" maxlen=32 id="gccoptions" value="-lm -Wall"></input><button type='button' onclick= "RunCode(GetCodeText(),document.getElementById('gccoptions').value);return false;" >Compile and run</button>
-<span style="margin: 0 5px 0 5px" id="gcc-compile-status"></span>Theme<select onchange='editor.setTheme("ace/theme/"+this.options[this.selectedIndex].value)'>
+<span style="margin: 0 5px 0 5px" id="gcc-compile-status"></span>
+<span style="margin: 0 5px 0 5px">Errors: <span id="gcc-error-count">0</span> Warnings: <span id="gcc-warning-count">0</span></span>
+Theme<select onchange='editor.setTheme("ace/theme/"+this.options[this.selectedIndex].value)'>
   <option value="monokai">monokai</option>
   <option value="terminal">terminal</option>
   <option value="tomorrow">tomorrow</option>
@@ -57,11 +59,6 @@ gcc options:<input type="text" maxlen=32 id="gccoptions" value="-lm -Wall"></inp
         </div>
         <div class="infobox">
         </div>
-
-    <div>
-        <p>GCC output:</p>
-        <textarea id="gcc-output" rows="20" cols="60" disabled></textarea>
-    </div>
 
     <script src="js/master/terminal.js"></script>
     <script src="js/master/terminal-input.js"></script>
@@ -78,6 +75,7 @@ function Start() {
 
 
 var term_output = "";
+var gcc_output = "";
 var gcc_output_capture_re = /###GCC_COMPILE###\s*([\S\s]*?)\s*###GCC_COMPILE_FINISHED###/;
 
 function terminalPutCharListener(e)
@@ -87,38 +85,66 @@ function terminalPutCharListener(e)
 
 function waitForGccCompletion() {
 
-    console.log(term_output);
     var regex_match_array = gcc_output_capture_re.exec(term_output);
 
     if (regex_match_array !== null) {
-        var gcc_output = regex_match_array[1];
-        document.getElementById('gcc-output').value = gcc_output;
+        gcc_output = regex_match_array[1];
         SendKeysToJor1k("clear\n");
-        if (gcc_output === "") {
-            document.getElementById('gcc-compile-status').innerHTML = '<span style="color: green">SUCCESS</span>';
+        var errorAnnotations = getErrorAnnotations(gcc_output);
+        editor.getSession().setAnnotations(errorAnnotations);
+
+        var warnings_errors_count = {
+            error: 0,
+            warning: 0
+        };
+        errorAnnotations.forEach(function (errorAnnotation) {
+            warnings_errors_count[errorAnnotation.type] += 1;
+        });
+
+        document.getElementById('gcc-error-count').innerHTML = warnings_errors_count.error.toString();
+        document.getElementById('gcc-warning-count').innerHTML = warnings_errors_count.warning.toString();
+
+        if (warnings_errors_count.error === 0) {
+            if (warnings_errors_count.warning > 0) {
+                document.getElementById('gcc-compile-status').innerHTML = '<span><a href="#" style="color: darkgoldenrod" onclick="alert(gcc_output); return false;">SUCCESSFUL WITH WARNINGS</a></span>';
+            }
+            else {
+                document.getElementById('gcc-compile-status').innerHTML = '<span style="color: green">SUCCESS</span>';
+            }
             SendKeysToJor1k("./program\n");
         }
         else {
-            document.getElementById('gcc-compile-status').innerHTML = '<span style="color: red">FAILED</span>';
-            editor.getSession().setAnnotations(getErrorAnnotations(gcc_output));
+            document.getElementById('gcc-compile-status').innerHTML = '<span><a href="#" style="color: red" onclick="alert(gcc_output); return false;">FAILED</a></span>';
         }
     }
     else {
+        // output is not ready yet
         document.getElementById('gcc-compile-status').innerHTML = '<span style="color: gray">COMPILING</span>';
         setTimeout(waitForGccCompletion, 1000);
     }
 }
 
-var gcc_output_parse_re = /(\d+):(\d+):\s*([\w]+):\s*(.+)/g;
+var gcc_output_parse_re = /prog.c:(.+):\s*(.+)/g;
+var gcc_row_col_type_parse_re = /(\d+):(\d+):\s*([\w]+)/;
 function getErrorAnnotations(gcc_output_str) {
-    var match, errors = [];
-    gcc_output_str.split("prog.c").forEach(function (error_line) {
+    var match, line_col_type_match, row, col, type, errors = [];
+    gcc_output_str.split("\n").forEach(function (error_line) {
         if(match = gcc_output_parse_re.exec(error_line)) {
+            if (line_col_type_match = gcc_row_col_type_parse_re.exec(match[1])) {
+                row = line_col_type_match[1] - 1; // line numbers in ace start from zero
+                col = line_col_type_match[2];
+                type = line_col_type_match[3];
+            }
+            else {
+                row = col = 0;
+                type = "error";
+            }
+
             errors.push({
-                row: match[1] - 1, // line numbers in ace start from zero
-                column: match[2],
-                type: match[3], // ace supports error, warning or information
-                text: match[4]
+                row: row,
+                column: col,
+                type: type, // ace supports error, warning or info
+                text: match[2]
             });
         }
     });
