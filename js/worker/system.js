@@ -2,9 +2,13 @@
 // ------------------- SYSTEM ----------------------
 // -------------------------------------------------
 
+var SYSTEM_RUN = 0x1;
+var SYSTEM_STOP = 0x2;
+var SYSTEM_HALT = 0x3; // Idle
+
+
 function System() {
     sys = this; // one global variable used by the abort() function
-    this.running = false;
     this.Init();
 }
 
@@ -47,7 +51,6 @@ if (change) {
             this.cpu.pc = h[(0x40 + 0)];
             this.cpu.nextpc = h[(0x40 + 1)];
             this.cpu.delayedins = h[(0x40 + 2)]?true:false;
-            this.cpu.interrupt_pending = h[(0x40 + 3)]?true:false;
             this.cpu.TTMR = h[(0x40 + 4)];
             this.cpu.TTCR = h[(0x40 + 5)];
             this.cpu.PICMR = h[(0x40 + 6)];
@@ -69,7 +72,7 @@ if (change) {
             h[(0x40 + 0)] = oldcpu.pc;
             h[(0x40 + 1)] = oldcpu.nextpc;
             h[(0x40 + 2)] = oldcpu.delayedins;
-            h[(0x40 + 3)] = oldcpu.interrupt_pending;
+            h[(0x40 + 3)] = 0x0;
             h[(0x40 + 4)] = oldcpu.TTMR;
             h[(0x40 + 5)] = oldcpu.TTCR;
             h[(0x40 + 6)] = oldcpu.PICMR;
@@ -91,7 +94,6 @@ if (change) {
             this.cpu.pc = oldcpu.pc;
             this.cpu.nextpc = oldcpu.nextpc;
             this.cpu.delayedins = oldcpu.delayedins;
-            this.cpu.interrupt_pending = oldcpu.interrupt_pending;
             this.cpu.TTMR = oldcpu.TTMR;
             this.cpu.TTCR = oldcpu.TTCR;
             this.cpu.PICMR = oldcpu.PICMR;
@@ -105,7 +107,7 @@ if (change) {
 }
 
 System.prototype.Reset = function() {
-    this.running = false;
+    this.status = SYSTEM_STOP;
     this.uartdev0.Reset();
     this.uartdev1.Reset();
     this.ethdev.Reset();
@@ -118,7 +120,7 @@ System.prototype.Reset = function() {
 }
 
 System.prototype.Init = function() {
-    this.running = false;    
+    this.status = SYSTEM_STOP;
    
     // this must be a power of two.
     DebugMessage("Init Heap");
@@ -186,45 +188,53 @@ if (typeof Math.imul == "undefined") {
     this.atadev = new ATADev(this);
     this.tsdev = new TouchscreenDev(this);
     this.kbddev = new KeyboardDev(this);
+    this.virtiodev = new VirtIODev(this);
 
     DebugMessage("Add Devices");  
     this.ram.AddDevice(this.atadev, 0x9e000000, 0x1000);
     this.ram.AddDevice(this.uartdev0, 0x90000000, 0x7);
     this.ram.AddDevice(this.uartdev1, 0x96000000, 0x7);
     this.ram.AddDevice(this.ethdev, 0x92000000, 0x1000);
+    this.ram.AddDevice(this.virtiodev, 0x97000000, 0x1000);
     this.ram.AddDevice(this.fbdev, 0x91000000, 0x1000);
     this.ram.AddDevice(this.tsdev, 0x93000000, 0x1000);
     this.ram.AddDevice(this.kbddev, 0x94000000, 0x100);
 
-    this.stepsperloop = 0x40000;
-    this.ips = 0; // external inctruction per second counter
-    this.internalips = 0; // internal inctruction counter
-    this.clockspeed = 0; // clock cycle per instruction
+    this.instructionsperloop = 0x40000;
+    this.ips = 0; // external instruction per second counter
+    this.timercyclesperinstruction = 1; // clock cycles per instruction
+    this.idletime = 0; // start time of the idle routine
+    this.idlemaxwait = 0; // maximum waiting time in cycles
+    
+    // constants
+    this.loopspersecond = 100; // main loops per second, to keep the system responsive
+    this.cyclesperms = 20000; // 20 MHz    
+    
+    
 }
 
-// Timer function. Run every second
+// Timer function. Runs every second
 System.prototype.GetIPS = function() {
-        this.internalips++; // at least one instruction
-        this.stepsperloop = Math.floor(this.internalips * (1000/1000) / 200);
-        this.stepsperloop  = this.stepsperloop<1000?1000:this.stepsperloop;
-        this.stepsperloop  = this.stepsperloop>400000?400000:this.stepsperloop;
-        // The clock runs with 20MHz.            
-        this.clockspeed = Math.floor(20000000 * 64  / (this.internalips * (1000 / 1000)) );
-        this.clockspeed  = this.clockspeed<=1?1:this.clockspeed;
-        this.clockspeed  = this.clockspeed>=10000?10000:this.clockspeed;
-        this.internalips = 0;
-        var ret = this.ips;
-        this.ips = 0;
-        return ret;
+    var ret = this.ips;
+    this.ips = 0;
+    return ret;
 }
 
 System.prototype.RaiseInterrupt = function(line) {
     this.cpu.RaiseInterrupt(line);
+    if (this.status == SYSTEM_HALT)
+    {
+        this.status = SYSTEM_RUN;
+        clearTimeout(this.idletimeouthandle);
+        delta = (GetMilliseconds() - this.idletime) * this.cyclesperms;
+        if (delta > this.idlemaxwait) delta = this.idlemaxwait;
+        this.cpu.ProgressTime(delta);
+        this.MainLoop();
+    }
 }
 System.prototype.ClearInterrupt = function (line) {
     this.cpu.ClearInterrupt(line);
 }
-
 
 System.prototype.PrintState = function() {
     DebugMessage("Current state of the machine")
@@ -319,17 +329,63 @@ System.prototype.ImageFinished = function(result) {
     this.cpu.Reset();
     this.cpu.AnalyzeImage();
     DebugMessage("Starting emulation");
-    this.running = true;
+    this.status = SYSTEM_RUN;
     SendToMaster("execute", 0);
 }
 
+// the kernel has sent a halt signal, so stop everything until the next interrupt is raised
+System.prototype.HandleHalt = function() {
+    var delta = this.cpu.GetTimeToNextInterrupt();
+    if (delta == -1) return;
+        this.idlemaxwait = delta;
+        var mswait = Math.floor(delta / this.cyclesperms + 0.5);
+        
+        if (mswait <= 1) return;
+        if (mswait > 1000) DebugMessage("Warning: idle for " + mswait + "ms");
+        this.idletime = GetMilliseconds();
+        this.status = SYSTEM_HALT;
+        this.idletimeouthandle = setTimeout(function() {
+                if (this.status == SYSTEM_HALT) {
+                    this.status = SYSTEM_RUN;
+                    this.cpu.ProgressTime(/*mswait*this.cyclesperms*/delta);
+                    this.MainLoop();
+                }
+            }.bind(this), mswait);
+}
+
 System.prototype.MainLoop = function() {
-    if (!this.running) return;
+    if (this.status != SYSTEM_RUN) return;
+    var time = GetMilliseconds();
     SendToMaster("execute", 0);
-    this.cpu.Step(this.stepsperloop, this.clockspeed);
-    this.ips += this.stepsperloop;
-    this.internalips += this.stepsperloop;
-    this.uartdev0.RxRateLimitBump(this.stepsperloop);
-    this.uartdev1.RxRateLimitBump(this.stepsperloop)
-    // go to idle state that onmessage is executed
+    var stepsleft = this.cpu.Step(this.instructionsperloop, this.timercyclesperinstruction);
+    var totalsteps = this.instructionsperloop - stepsleft;
+    totalsteps++; // at least one instruction    
+    this.ips += totalsteps;
+    this.uartdev0.RxRateLimitBump(totalsteps);
+    this.uartdev1.RxRateLimitBump(totalsteps);
+    
+    if (!stepsleft) {
+      // recalibrate timer
+      var delta = GetMilliseconds() - time;
+      if (delta > 1 && totalsteps > 1000)
+      {
+          var ipms = totalsteps / delta; // ipms (per millisecond) of current run
+          this.instructionsperloop = Math.floor(ipms*1000. / this.loopspersecond);
+          this.instructionsperloop = this.instructionsperloop<1000?1000:this.instructionsperloop;
+          this.instructionsperloop = this.instructionsperloop>4000000?4000000:this.instructionsperloop;    
+    
+          this.timercyclesperinstruction = Math.floor(this.cyclesperms * 64 / ipms);
+          this.timercyclesperinstruction  = this.timercyclesperinstruction<=1?1:this.timercyclesperinstruction;
+          this.timercyclesperinstruction  = this.timercyclesperinstruction>=1000?1000:this.timercyclesperinstruction;
+          this.internalips = 0x0;
+      }
+    } else { // stepsleft != 0 indicates CPU idle
+      
+      // uart may raise an interrupt if the fifo is non-empty
+      if( this.uartdev0.HaltPending() && this.uartdev1.HaltPending()) {
+        this.HandleHalt(); 
+      }
+    }
+    
+    // go to worker thread idle state that onmessage is executed
 }

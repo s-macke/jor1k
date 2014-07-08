@@ -64,9 +64,7 @@ var group2p = 0xA000; // instruction tlb registers
 // define variables and initialize
 var pc = 0x0; // instruction pointer in multiples of four
 var nextpc = 0x0; // pointer to next instruction in multiples of four
-
 var delayedins = 0; // the current instruction is an delayed instruction, one cycle before a jump
-var interrupt_pending = 0;
 
 // fast tlb lookup tables, invalidate
 var instlblookup = -1;
@@ -156,7 +154,6 @@ function PutState() {
     pc = h[(0x100 + 0) >> 2]|0;
     nextpc = h[(0x100 + 4) >> 2]|0;
     delayedins = h[(0x100 + 8) >> 2]|0;
-    interrupt_pending = h[(0x100 + 12) >> 2]|0;
     TTMR = h[(0x100 + 16) >> 2]|0;
     TTCR = h[(0x100 + 20) >> 2]|0;
     PICMR = h[(0x100 + 24) >> 2]|0;
@@ -165,11 +162,12 @@ function PutState() {
     boot_itlb_misshandler_address = h[(0x100 + 36) >> 2]|0;
     current_pgd = h[(0x100 + 40) >> 2]|0;
 }
+
 function GetState() {
     h[(0x100 + 0) >> 2] = pc|0;
     h[(0x100 + 4) >> 2] = nextpc|0;
     h[(0x100 + 8) >> 2] = delayedins|0;
-    h[(0x100 + 12) >> 2] = interrupt_pending|0;
+    h[(0x100 + 12) >> 2] = 0;
     h[(0x100 + 16) >> 2] = TTMR|0;
     h[(0x100 + 20) >> 2] = TTCR|0;
     h[(0x100 + 24) >> 2] = PICMR|0;
@@ -179,6 +177,20 @@ function GetState() {
     h[(0x100 + 40) >> 2] = current_pgd|0;
 }
 
+function GetTimeToNextInterrupt() {
+    var delta = 0x0;
+    if ((TTMR >> 30) == 0) return -1;    
+    delta = (TTMR & 0xFFFFFFF) - (TTCR & 0xFFFFFFF) |0;
+    if ((delta|0) < 0) {
+        delta = delta + 0xFFFFFFF | 0;
+    }    
+    return delta|0;
+}
+
+function ProgressTime(delta) {
+    delta = delta|0;
+    TTCR = (TTCR + delta)|0;
+}
 
 function AnalyzeImage() { // get addresses for fast refill
     boot_dtlb_misshandler_address = h[ramp+0x900 >> 2]|0;
@@ -261,11 +273,10 @@ function CheckForInterrupt() {
         return;
     }
     if (PICMR & PICSR) {
-            interrupt_pending = 1;
-            /*
-                    // Do it here. Save one comparison in the main loop
-                    this.Exception(EXCEPT_INT, this.group0[SPR_EEAR_BASE]);
-            */
+        // DebugMessage("raise interrupt " + hex8(PICMR & PICSR));
+        Exception(EXCEPT_INT, h[group0p + (SPR_EEAR_BASE<<2)>>2]|0);
+        pc = nextpc;
+        nextpc = nextpc + 1|0;
     }
 }
 
@@ -498,18 +509,14 @@ function Exception(excepttype, addr) {
 
     case 0xA00: // EXCEPT_ITLBMISS
     case 0x400: // EXCEPT_IPF
-        SetSPR(SPR_EPCR_BASE, addr - (delayedins ? 4 : 0)|0);
-        break;
     case 0x900: // EXCEPT_DTLBMISS
     case 0x300: // EXCEPT_DPF
     case 0x200: // EXCEPT_BUSERR
-        SetSPR(SPR_EPCR_BASE, (pc<<2) - (delayedins ? 4 : 0)|0);
-        break;
-
     case 0x500: // EXCEPT_TICK
     case 0x800: // EXCEPT_INT
         SetSPR(SPR_EPCR_BASE, (pc<<2) - (delayedins ? 4 : 0)|0);
         break;
+
     case 0xC00: // EXCEPT_SYSCALL
         SetSPR(SPR_EPCR_BASE, (pc<<2) + 4 - (delayedins ? 4 : 0)|0);
         break;
@@ -840,7 +847,7 @@ function Step(steps, clockspeed) {
     var tlbtr = 0x0;
     var jump = 0x0;
     var delta = 0x0;
-    
+
     do {
         // do this not so often
         if (!(steps & 63)) {
@@ -866,18 +873,6 @@ function Step(steps, clockspeed) {
                     Exception(EXCEPT_TICK, h[group0p + (SPR_EEAR_BASE<<2) >> 2]|0);
                     pc = nextpc;
                     nextpc = nextpc + 1|0;
-                }
-            } else {
-                // the interrupt is executed immediately. Saves one comparison
-                // test it here instead every time,
-                if (interrupt_pending) {                 
-                    // check again because there could be another exception during this one cycle
-                    if (PICSR) if (SR_IEE) {
-                        interrupt_pending = 0;
-                        Exception(EXCEPT_INT, h[group0p + (SPR_EEAR_BASE<<2)>>2]|0);
-                        pc = nextpc;
-                        nextpc = nextpc + 1|0;
-                    }
                 }
             }
         }
@@ -974,17 +969,19 @@ function Step(steps, clockspeed) {
             // nop
             break;
         case 0x6:
-            // movhi or macrc
+            // movhi
             rindex = (ins >> 21) & 0x1F;
-            // if 16th bit is set
-            if (ins & 0x10000) {
-                //DebugMessage("Error: macrc not supported\n");
-                DebugMessage(ERROR_UNKNOWN|0);
-                abort();
-            } else {
-                r[rindex << 2 >> 2] = ((ins & 0xFFFF) << 16); // movhi
-            }
+            r[rindex << 2 >> 2] = ((ins & 0xFFFF) << 16); // movhi
             break;
+        case 0x7:
+            // halt emulator specific
+            if (TTMR & (1 << 28)) break; // don't go idle if a timer interrupt is pending
+            pc = nextpc;
+            nextpc = nextpc + 1|0;
+            delayedins = 0;
+            return steps|0;
+            
+        break;
 
         case 0x8:
             //sys
@@ -994,9 +991,13 @@ function Step(steps, clockspeed) {
         case 0x9:
             // rfe
             nextpc = (GetSPR(SPR_EPCR_BASE)|0)>>2;
-            SetFlags(GetSPR(SPR_ESR_BASE)|0);
             InvalidateTLB();
-            break;
+            pc = nextpc;
+            nextpc = nextpc + 1|0;
+            delayedins = 0;
+            SetFlags(GetSPR(SPR_ESR_BASE)|0); // could raise an exception
+            steps = steps - 1|0;
+            continue;
 
         case 0x11:
             // jr
@@ -1210,8 +1211,12 @@ function Step(steps, clockspeed) {
         case 0x30:
             // mtspr
             imm = (ins & 0x7FF) | ((ins >> 10) & 0xF800);
+            pc = nextpc;
+            nextpc = nextpc + 1|0;
+            delayedins = 0;
+            steps = steps - 1|0;
             SetSPR(r[((ins >> 14) & 0x7C)>>2] | imm, r[((ins >> 9) & 0x7C)>>2]|0);
-            break;
+            continue;
 
        case 0x32:
             // floating point
@@ -1526,6 +1531,7 @@ function Step(steps, clockspeed) {
         delayedins = 0;
         steps = steps - 1|0;
     } while (steps); // main loop
+    return steps|0;
 }
 
 return {
@@ -1536,7 +1542,9 @@ return {
     GetFlags: GetFlags,
     SetFlags: SetFlags,
     PutState: PutState,
-    GetState: GetState,
+    GetState: GetState,    
+    GetTimeToNextInterrupt: GetTimeToNextInterrupt,
+    ProgressTime: ProgressTime,
     RaiseInterrupt: RaiseInterrupt,
     ClearInterrupt: ClearInterrupt,
     AnalyzeImage: AnalyzeImage,
