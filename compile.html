@@ -75,37 +75,38 @@ function Start() {
 
 
 var term_output = "";
-var gcc_output = "";
+var gcc_output;
 var gcc_output_capture_re = /###GCC_COMPILE###\s*([\S\s]*?)\s*###GCC_COMPILE_FINISHED###/;
+var gcc_exit_code_capture_re = /GCC_EXIT_CODE: (\d+)/;
 
-function terminalPutCharListener(e)
-{
+function terminalPutCharListener(e) {
     term_output = term_output + e.detail.character;
 }
 
 function waitForGccCompletion() {
-
     var regex_match_array = gcc_output_capture_re.exec(term_output);
+    var gcc_exit_code, errorAnnotations;
+    var warnings_errors_info_count = {
+        error: 0,
+        warning: 0,
+        info: 0
+    };
 
     if (regex_match_array !== null) {
         gcc_output = regex_match_array[1];
+        gcc_exit_code = parseInt(gcc_exit_code_capture_re.exec(gcc_output)[1]);
         SendKeysToJor1k("clear\n");
-        var errorAnnotations = getErrorAnnotations(gcc_output);
+        errorAnnotations = getErrorAnnotations(gcc_output);
         editor.getSession().setAnnotations(errorAnnotations);
-
-        var warnings_errors_count = {
-            error: 0,
-            warning: 0
-        };
         errorAnnotations.forEach(function (errorAnnotation) {
-            warnings_errors_count[errorAnnotation.type] += 1;
+            warnings_errors_info_count[errorAnnotation.type] += 1;
         });
 
-        document.getElementById('gcc-error-count').innerHTML = warnings_errors_count.error.toString();
-        document.getElementById('gcc-warning-count').innerHTML = warnings_errors_count.warning.toString();
+        document.getElementById('gcc-error-count').innerHTML = warnings_errors_info_count.error.toString();
+        document.getElementById('gcc-warning-count').innerHTML = warnings_errors_info_count.warning.toString();
 
-        if (warnings_errors_count.error === 0) {
-            if (warnings_errors_count.warning > 0) {
+        if (gcc_exit_code === 0) {
+            if (warnings_errors_info_count.warning > 0) {
                 document.getElementById('gcc-compile-status').innerHTML = '<span><a href="#" style="color: darkgoldenrod" onclick="alert(gcc_output); return false;">SUCCESSFUL WITH WARNINGS</a></span>';
             }
             else {
@@ -124,27 +125,50 @@ function waitForGccCompletion() {
     }
 }
 
-var gcc_output_parse_re = /prog.c:(.+):\s*(.+)/g;
-var gcc_row_col_type_parse_re = /(\d+):(\d+):\s*([\w]+)/;
+var gcc_output_parse_re = /(?:prog\.c|gcc|collect2):\s*(.+)\s*:\s*(.+)\s*/;
+var gcc_row_col_type_parse_re = /(\d+):(\d+):\s*(.+)/;
+var gcc_output_type_text_split_re = /\s*(.+)\s*:\s*(.+)\s*/;
 function getErrorAnnotations(gcc_output_str) {
-    var match, line_col_type_match, row, col, type, errors = [];
+    var match, line_col_type_match, type_text_split_match, row, col, gcc_error_type, ace_annotation_type, text, errors = [];
     gcc_output_str.split("\n").forEach(function (error_line) {
         if(match = gcc_output_parse_re.exec(error_line)) {
             if (line_col_type_match = gcc_row_col_type_parse_re.exec(match[1])) {
                 row = line_col_type_match[1] - 1; // line numbers in ace start from zero
                 col = line_col_type_match[2];
-                type = line_col_type_match[3];
-            }
-            else {
+                if (type_text_split_match = gcc_output_type_text_split_re.exec(line_col_type_match[3])) {
+                    gcc_error_type = type_text_split_match[1];
+                    text = type_text_split_match[2] + ": " + match[2];
+                } else {
+                    gcc_error_type = line_col_type_match[3];
+                    text = match[2];
+                }
+            } else {
+                // some gcc output without line info
                 row = col = 0;
-                type = "error";
+                if (type_text_split_match = gcc_output_type_text_split_re.exec(match[1])) {
+                    gcc_error_type = type_text_split_match[1];
+                    text = type_text_split_match[2] + ": " + match[2];
+                } else {
+                    gcc_error_type = match[1];
+                    text = match[2];
+                }
+            }
+
+            // Determine the type of editor annotation. ace supports error, warning or info.
+            // This annotation type is also used to determine success of the compilation process.
+            if (gcc_error_type.toLowerCase().indexOf("error") !== -1) {
+                ace_annotation_type = "error";
+            } else if (gcc_error_type.toLowerCase().indexOf("warning") !== -1) {
+                ace_annotation_type = "warning";
+            } else {
+                ace_annotation_type = "info";
             }
 
             errors.push({
                 row: row,
                 column: col,
-                type: type, // ace supports error, warning or info
-                text: match[2]
+                type: ace_annotation_type,
+                text: text
             });
         }
     });
@@ -210,7 +234,7 @@ function RunCode(code,gccoptions) {
 
       // not-reliable SendKeysToJor1k("stty echo\n\nclear\n");
     term_output = "";
-    SendKeysToJor1k("echo \\#\\#\\#GCC_COMPILE\\#\\#\\#;clear;gcc " + gccoptions + " prog.c -o program;echo \\#\\#\\#GCC_COMPILE_FINISHED\\#\\#\\#;clear\n");
+    SendKeysToJor1k("echo \\#\\#\\#GCC_COMPILE\\#\\#\\#;clear;gcc " + gccoptions + " prog.c -o program; echo GCC_EXIT_CODE: $?; echo \\#\\#\\#GCC_COMPILE_FINISHED\\#\\#\\#;clear\n");
     waitForGccCompletion();
 }
 </script>
