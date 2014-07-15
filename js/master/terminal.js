@@ -461,6 +461,7 @@ Terminal.prototype.PutChar = function(c) {
     case 0xA:
         // line feed
         this.LineFeed();
+        document.dispatchEvent(new CustomEvent("jor1k_terminal_put_char", { detail: { character: "\n" }}));
         //DebugMessage("LineFeed");
         return;
     case 0xD:
@@ -517,6 +518,7 @@ Terminal.prototype.PutChar = function(c) {
     var cx = this.cursorx;
     var cy = this.cursory;
     this.screen[cy][cx] = c;
+    document.dispatchEvent(new CustomEvent("jor1k_terminal_put_char", { detail: { character: String.fromCharCode(c) }}));
     //DebugMessage("Write: " + String.fromCharCode(c));
     this.color[cy][cx] = this.currentcolor;
     this.cursorx++;

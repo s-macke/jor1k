@@ -6,6 +6,11 @@
         <link rel="stylesheet" href="css/default.css">
     </head>
     <body onload="Start()">
+    <div class="heading">
+    <a href="http://opencores.org/or1k/"><img src="globe.png"></img></a>
+    <h1>Web-based C-Compiler demo for <a href='.'>jor1k</a></h1>
+    </div>
+    
     <div >
         <table>
             <tr>
@@ -25,7 +30,7 @@
                             <option value="safe">Safe Core (Slow)</option>
                         </select>
 
-                    <button type='button' onclick='jor1kgui.Reset()'>Reset</button>
+                    <button type='button' onclick='term_output="";waitingForActivate=true;jor1kgui.Reset()'>Reset</button>
                     <button type='button' onclick='jor1kgui.Pause(true)'>Pause</button>
                     <button type='button' onclick='jor1kgui.Pause(false)'>Run</button>
                     </form>                    </span>
@@ -36,14 +41,21 @@
                 </td>
                 <td style="vertical-align: top">
 <div id="code" style="width: 640px; height: 388px; margin-top: 2px">
+// jor1k Example: Client-side C Compiler demo 
+// by Neelabh Gupta and Lawrence Angrave from UIUC
+
+// Compile this program to find the syntax error...
 #include &lt;stdio.h&gt;
 int main() {
-    printf("Hello World!\n");
+  
+    printf("Hello World!\n")
     return 0;
 }
 </div>
 
 gcc options:<input type="text" maxlen=32 id="gccoptions" value="-lm -Wall"></input><button type='button' onclick= "RunCode(GetCodeText(),document.getElementById('gccoptions').value);return false;" >Compile and run</button>
+<span style="margin: 0 5px 0 5px" id="gcc-compile-status"></span>
+<span style="margin: 0 5px 0 5px">Errors: <span id="gcc-error-count">0</span> Warnings: <span id="gcc-warning-count">0</span></span>
 Theme<select onchange='editor.setTheme("ace/theme/"+this.options[this.selectedIndex].value)'>
   <option value="monokai">monokai</option>
   <option value="terminal">terminal</option>
@@ -57,6 +69,16 @@ Theme<select onchange='editor.setTheme("ace/theme/"+this.options[this.selectedIn
        
         </div>
         <div class="infobox">
+        <h3>About</h3>
+       <ul>This interactive compile demo is by Neelabh Gupta and Lawrence Angrave from UIUC. It uses the ACE editor and jor1k's' gcc to compile the student's C program.</ul>
+       <ul>The output of gcc is used to highlight errors in the student's program. </ul>
+       <br>
+       <ul>This compiler demo is dual licensed under the GPL v3 and Illinoi/NCSA Open Source license.</ul>
+       <ul>The ACE editor is licensed under the BSD license.</ul>
+       <br>
+    
+       <ul>Lawrence and UIUC students are building a more complete learning environment to playfully learn C and system programming at <a href='http://angrave.github.io/sys'>angrave.github.io/sys</a>.</ul>
+       <br>
         </div>
 
     <script src="js/master/terminal.js"></script>
@@ -67,8 +89,117 @@ Theme<select onchange='editor.setTheme("ace/theme/"+this.options[this.selectedIn
 
 <script>
 function Start() {
-   CreateEditor();
+    CreateEditor();
+    document.addEventListener("jor1k_terminal_put_char", terminalPutCharListener, false);
     jor1kgui = new jor1kGUI("tty", "fb", "stats", ["../../bin/vmlinux.bin.bz2", "../../bin/hdgcc.bz2"], "ws://relay.widgetry.org/");
+}
+
+
+var term_output = "";
+var gcc_output;
+var gcc_output_capture_re = /###GCC_COMPILE###\s*([\S\s]*?)\s*###GCC_COMPILE_FINISHED###/;
+var gcc_exit_code_capture_re = /GCC_EXIT_CODE: (\d+)/;
+
+var waitingForActivate = true;
+function terminalPutCharListener(e) {
+    term_output = term_output + e.detail.character;
+    if(waitingForActivate  && (term_output.indexOf('activate this console.') != -1)) {
+      SendKeysToJor1k("\n");
+      waitingForActivate = false;
+      // waitingForActivate hack can be removed once busybox inittab is updated to use respawn.
+    }
+}
+
+function waitForGccCompletion() {
+    var regex_match_array = gcc_output_capture_re.exec(term_output);
+    var gcc_exit_code, errorAnnotations;
+    var warnings_errors_info_count = {
+        error: 0,
+        warning: 0,
+        info: 0
+    };
+
+    if (regex_match_array !== null) {
+        gcc_output = regex_match_array[1];
+        gcc_exit_code = parseInt(gcc_exit_code_capture_re.exec(gcc_output)[1]);
+        SendKeysToJor1k("clear\n");
+        errorAnnotations = getErrorAnnotations(gcc_output);
+        editor.getSession().setAnnotations(errorAnnotations);
+        errorAnnotations.forEach(function (errorAnnotation) {
+            warnings_errors_info_count[errorAnnotation.type] += 1;
+        });
+
+        document.getElementById('gcc-error-count').innerHTML = warnings_errors_info_count.error.toString();
+        document.getElementById('gcc-warning-count').innerHTML = warnings_errors_info_count.warning.toString();
+
+        if (gcc_exit_code === 0) {
+            if (warnings_errors_info_count.warning > 0) {
+                document.getElementById('gcc-compile-status').innerHTML = '<span><a href="#" style="color: darkgoldenrod" onclick="alert(gcc_output); return false;">SUCCESSFUL WITH WARNINGS</a></span>';
+            }
+            else {
+                document.getElementById('gcc-compile-status').innerHTML = '<span style="color: green">SUCCESS</span>';
+            }
+            SendKeysToJor1k("./program\n");
+        }
+        else {
+            document.getElementById('gcc-compile-status').innerHTML = '<span><a href="#" style="color: red" onclick="alert(gcc_output); return false;">FAILED</a></span>';
+        }
+    }
+    else {
+        // output is not ready yet
+        document.getElementById('gcc-compile-status').innerHTML = '<span style="color: gray">COMPILING</span>';
+        setTimeout(waitForGccCompletion, 1000);
+    }
+}
+
+var gcc_output_parse_re = /(?:prog\.c|gcc|collect2):\s*(.+)\s*:\s*(.+)\s*/;
+var gcc_row_col_type_parse_re = /(\d+):(\d+):\s*(.+)/;
+var gcc_output_type_text_split_re = /\s*(.+)\s*:\s*(.+)\s*/;
+function getErrorAnnotations(gcc_output_str) {
+    var match, line_col_type_match, type_text_split_match, row, col, gcc_error_type, ace_annotation_type, text, errors = [];
+    gcc_output_str.split("\n").forEach(function (error_line) {
+        if(match = gcc_output_parse_re.exec(error_line)) {
+            if (line_col_type_match = gcc_row_col_type_parse_re.exec(match[1])) {
+                row = line_col_type_match[1] - 1; // line numbers in ace start from zero
+                col = line_col_type_match[2];
+                if (type_text_split_match = gcc_output_type_text_split_re.exec(line_col_type_match[3])) {
+                    gcc_error_type = type_text_split_match[1];
+                    text = type_text_split_match[2] + ": " + match[2];
+                } else {
+                    gcc_error_type = line_col_type_match[3];
+                    text = match[2];
+                }
+            } else {
+                // some gcc output without line info
+                row = col = 0;
+                if (type_text_split_match = gcc_output_type_text_split_re.exec(match[1])) {
+                    gcc_error_type = type_text_split_match[1];
+                    text = type_text_split_match[2] + ": " + match[2];
+                } else {
+                    gcc_error_type = match[1];
+                    text = match[2];
+                }
+            }
+
+            // Determine the type of editor annotation. ace supports error, warning or info.
+            // This annotation type is also used to determine success of the compilation process.
+            if (gcc_error_type.toLowerCase().indexOf("error") !== -1) {
+                ace_annotation_type = "error";
+            } else if (gcc_error_type.toLowerCase().indexOf("warning") !== -1) {
+                ace_annotation_type = "warning";
+            } else {
+                ace_annotation_type = "info";
+            }
+
+            errors.push({
+                row: row,
+                column: col,
+                type: ace_annotation_type,
+                text: text
+            });
+        }
+    });
+    return errors;
 }
 
 function CreateEditor()
@@ -128,9 +259,10 @@ function RunCode(code,gccoptions) {
    // For now we want gcc output to be viewable, so this goes on the main terminal
    // To use tty1 we would need to synchronize gcc i.e. wait for prog.c upload
 
-      // not-reliable SendKeysToJor1k("stty echo\n\nclear\n"); 
-   SendKeysToJor1k("clear;gcc " + gccoptions + " prog.c -o program && ./program\n");
-
+      // not-reliable SendKeysToJor1k("stty echo\n\nclear\n");
+    term_output = "";
+    SendKeysToJor1k("echo \\#\\#\\#GCC_COMPILE\\#\\#\\#;clear;gcc " + gccoptions + " prog.c -o program; echo GCC_EXIT_CODE: $?; echo \\#\\#\\#GCC_COMPILE_FINISHED\\#\\#\\#;clear\n");
+    waitForGccCompletion();
 }
 </script>
 
