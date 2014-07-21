@@ -30,6 +30,16 @@ var ETHMAC_ADDR_ETH_TXCTRL = 0x50;
 var ETHMAC_ADDR_BD_START = 0x400;
 var ETHMAC_ADDR_BD_END = 0x7FF;
 
+
+var MII_BMCR = 0x0;
+var MII_BMSR = 0x1;
+var MII_PHYIDR1 = 0x2;
+var MII_PHYIDR2 = 0x3;
+var MII_ANAR = 0x4;
+var MII_ANLPAR = 0x5;
+
+
+
 //TODO: MODER.LOOPBCK - loopback support
 //TODO: Carrier Sense?
 //TODO: Huge frames
@@ -186,16 +196,6 @@ function EthDev(ram, intdev, mac) {
         this.MIIRX_DATA = 0x22; //default is 0x0
         this.MIISTATUS = 0x0;
         
-        /*
-            mac0 |= (data[2] << 24);
-            mac0 |= (data[3] << 16);
-            mac0 |= (data[4] << 8);
-            mac0 |= data[5];
-
-            mac1 |= (data[0] << 8);
-            mac1 |= data[1];
-        */
-
         this.MAC_ADDR0 |= (Math.floor(Math.random()*256) << 24);
         this.MAC_ADDR0 |= (Math.floor(Math.random()*256) << 16);
         this.MAC_ADDR0 |= (Math.floor(Math.random()*256) << 8);
@@ -203,10 +203,6 @@ function EthDev(ram, intdev, mac) {
 
         this.MAC_ADDR1 |= (((Math.floor(Math.random()*256) << 8) & 0xfe) | 0x02);
         this.MAC_ADDR1 |= Math.floor(Math.random()*256);
-
-        //use passed mac addr
-        //this.MAC_ADDR0 = 0x0;
-        //this.MAC_ADDR1 = 0x0;
 
         this.ETH_HASH0_ADR = 0x0;
         this.ETH_HASH1_ADR = 0x0;
@@ -216,6 +212,17 @@ function EthDev(ram, intdev, mac) {
         for(var i=0;i<256;i++) {
             this.BD[i] = 0x0;
         }
+         
+        this.MIIregs = new Uint16Array(16);
+        this.MIIregs[MII_BMCR] = 0x1000;
+        this.MIIregs[MII_BMSR] = 0x7848; /* no ext regs */
+        this.MIIregs[MII_PHYIDR1] = 0x2000;
+        this.MIIregs[MII_PHYIDR2] = 0x5c90;
+        this.MIIregs[MII_ANAR] = 0x01e1;
+
+        // link ok
+        this.MIIregs[MII_BMSR] |= 0x4;
+        this.MIIregs[MII_ANLPAR] |= 0x01e1;
 
         this.currRX = (this.TX_BD_NUM << 1);
     };
@@ -514,12 +521,6 @@ function EthDev(ram, intdev, mac) {
 
             case ETHMAC_ADDR_MIIRX_DATA:
                 ret = this.MIIRX_DATA;
-                if (this.MIIRX_DATA === 0x1613) {
-                    this.MIIRX_DATA = 0xffff;
-                }
-                if (this.MIIRX_DATA === 0x22) {
-                    this.MIIRX_DATA = 0x1613;
-                }
                 break;
 
             case ETHMAC_ADDR_MIISTATUS:
@@ -621,6 +622,23 @@ function EthDev(ram, intdev, mac) {
 
             case ETHMAC_ADDR_MIICOMMAND:
                 this.MIICOMMAND = val;
+                var fiad = this.MIIADDRESS & 0x1F;
+                var rgad = (this.MIIADDRESS >> 8) & 0x1F;
+                if (val & 0x4) { // write control data                    
+                    if (fiad != 0x1) break;
+                    if ((rgad == MII_BMCR) && (this.MIITX_DATA & 0x8000)) {
+                        this.MIIregs[MII_BMCR] = 0x1000; // some sort of reset
+                    } else {
+                        this.MIIregs[rgad] = this.MIITX_DATA & 0xFFFF;
+                    }
+                }
+                if (val & 0x2) { // read control data                    
+                    if (fiad != 0x1) {
+                        this.MIIRX_DATA = 0xFFFF;
+                    } else {
+                        this.MIIRX_DATA = this.MIIregs[rgad];
+                    }
+                }
                 break;
 
             case ETHMAC_ADDR_MIIADDRESS:
@@ -633,6 +651,7 @@ function EthDev(ram, intdev, mac) {
 
             case ETHMAC_ADDR_MIIRX_DATA:
                 this.MIIRX_DATA = val;
+                break;
 
             case ETHMAC_ADDR_MIISTATUS:
                 this.MIISTATUS = val;
