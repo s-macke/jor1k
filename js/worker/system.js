@@ -188,7 +188,7 @@ if (typeof Math.imul == "undefined") {
     this.atadev = new ATADev(this);
     this.tsdev = new TouchscreenDev(this);
     this.kbddev = new KeyboardDev(this);
-    this.virtiodev = new VirtIODev(this);
+    this.virtiodev = new VirtIODev(this, this.ram);
 
     DebugMessage("Add Devices");  
     this.ram.AddDevice(this.atadev, 0x9e000000, 0x1000);
