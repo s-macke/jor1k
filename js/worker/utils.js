@@ -116,3 +116,93 @@ function DownloadAllAsync(urls, OnSuccess, OnError) {
         );
     });
 }
+
+// Inserts data from an array to a byte aligned struct in memory
+function ArrayToStruct(typelist, input, struct, offset) {
+    var item;
+    for (var i=0; i < typelist.length; i++) {
+        item = input[i];
+        switch (typelist[i]) {
+            case "w":
+                struct[offset^3] = item & 0xFF;
+                offset++;
+                struct[offset^3] = (item >>> 8) & 0xFF;
+                offset++;
+                struct[offset^3] = (item >>> 16) & 0xFF;
+                offset++;
+                struct[offset^3] = item >>> 24;
+                offset++;
+                break;
+            case "h":
+                struct[offset^3] = item & 0xFF;
+                offset++;
+                struct[offset^3] = item >>> 8;
+                offset++;
+                break;
+            case "b":
+                struct[offset^3] = item;
+                offset++;
+                break;
+            case "s":
+                struct[offset^3] = item.length & 0xFF;
+                offset++;
+                struct[offset^3] = item.length >>> 8;
+                offset++;
+                for (var j in item) {
+                    struct[offset^3] = item.charCodeAt(j);
+                    offset++;
+                }
+                break;
+            default:
+                DebugMessage("ArrayToStruct: Unknown type=" + type[i]);
+        }
+    }
+};
+
+
+// Extracts data from a byte aligned struct in memory to an array
+function StructToArray(typelist, struct, offset) {
+    var output = [];
+    
+    for (var i=0; i < typelist.length; i++) {
+        switch (typelist[i]) {
+            case "w":
+                var val = struct[offset^3];
+                offset++;
+                val += struct[offset^3] << 8;
+                offset++;
+                val += struct[offset^3] << 16;
+                offset++;
+                val += (struct[offset^3] << 24) >>> 0;
+                offset++;
+                output.push(val);
+                break;
+            case "h":
+                var val = struct[offset^3];
+                offset++;
+                output.push(val + (struct[offset^3] << 8));
+                offset++;
+                break;
+            case "b":
+                output.push(struct[offset^3]);
+                offset++;
+                break;
+            case "s":
+                var len = struct[offset^3];
+                offset++;
+                len += struct[offset^3] << 8;
+                offset++;
+                var str = '';
+                for (var j=0; j < len; j++)
+                {
+                    str += String.fromCharCode(struct[offset^3]);
+                    offset++;
+                }
+                output.push(str);
+                break;
+            default:
+                DebugMessage("StructToArray: Unknown type=" + type[i]);
+        }
+    }
+    return output;
+};
