@@ -2,7 +2,6 @@
 // ------------------- VIRTIO ----------------------
 // -------------------------------------------------
 
-
 var VIRTIO_MAGIC_REG = 0x0;
 var VIRTIO_VERSION_REG = 0x4;
 var VIRTIO_DEVICE_REG = 0x8;
@@ -22,10 +21,147 @@ var VIRTIO_INTERRUPTSTATUS_REG = 0x60;
 var VIRTIO_INTERRUPTACK_REG = 0x64;
 var VIRTIO_STATUS_REG = 0x70;
 
+// non aligned copy
+function CopyMemoryToBuffer(from, to, offset, size)
+{
+    for(var i=0; i<size; i++)
+        to[i] = from.ReadMemory8(offset+i);
+}
+
+function CopyBufferToMemory(from, to, offset, size)
+{
+    for(var i=0; i<size; i++)
+        to.WriteMemory8(offset+i, from[i]);
+}
+
+// small 9p device
+function Virtio9p(ramdev) {
+    this.ramdev = ramdev; // uint8 array
+    this.deviceid = 0x9; // 9p filesystem
+    this.hostfeature = 0x1; // mountpoint
+    this.configspace = [0x0, 0x4, 0x68, 0x6F, 0x73, 0x74]; // length of string and "host" string
+    this.replybuffer = new Uint8Array(0x100);
+    this.replybuffersize = 0;
+}
+
+Virtio9p.prototype.BuildReply = function(id, tag, payloadsize) {
+    ArrayToStruct(["w", "b", "h"], [payloadsize+7, id+1, tag], this.replybuffer, 0);
+    //for(var i=0; i<payload.length; i++)
+    //    this.replybuffer[7+i] = payload[i];
+    this.replybuffersize = payloadsize+7;
+    return;
+}
+
+
+Virtio9p.prototype.ReceiveRequest = function (desc) {
+
+    var buffer = new Uint8Array(desc.len);
+    CopyMemoryToBuffer(this.ramdev, buffer, desc.addr, desc.len);
+
+    var header = StructToArray(["w", "b", "h"], buffer, 0);
+    var size = header[0];
+    var id = header[1];
+    var tag = header[2];
+    DebugMessage("size:" + size + " id:" + id + " tag:" + tag);
+
+    switch(id)
+    {
+        case 24: // getattr
+            var req = StructToArray(["w"], buffer, 7);
+            DebugMessage("[getattr]: fid=" + req[0]);
+            //req[0] = 0x10 | 0x80;
+			req[0] = 0x40;
+            req[1] = 1406338013; // version, incremented every time the file is modified. Or it doesn't matter
+            req[2] = 0x12345678; // unique id low
+            req[3] = 0x0;
+
+            req[4] = 0x1ED | 0x4000; // permissions and flags, is directory
+            req[5] = 0x2; // number of hard links low
+            req[6] = 0x0; // number of hard links high
+            req[7] = 0x0; // user id
+            req[8] = 0x0; // group id
+            req[9] = 0x0; // device id low
+            req[10] = 0x0; // device id high
+            req[11] = 4096; // size low
+            req[12] = 0x0; // size high
+            req[13] = 4096; // blk size low
+            req[14] = 0x0; // blk size high
+            req[15] = 8; // number of file system blocks
+            req[16] = 0x0; // number of file system blocks
+            req[17] = 0x1; // last access
+            req[18] = 0x0; // last access
+            req[19] = 0x0; // last access nanoseconds
+            req[20] = 0x0; // last access nanoseconds
+            req[21] = 0x1; // last modification
+            req[22] = 0x0; // last modification
+            req[23] = 0x0; // last modification
+            req[24] = 0x0; // last modification
+            req[25] = 0x1; // last status change
+            req[26] = 0x0; // last status change
+            req[27] = 0x0; // last status change
+            req[28] = 0x0; // last status change
+
+            ArrayToStruct([
+			"b", "w", "w", "w",  
+			"w",  
+			"w", "w", 
+			"w", "w", "w", "w", 
+			"w", "w", "w", "w", "w", "w", 
+			"w", "w", "w", "w", 
+			"w", "w", "w", "w", 
+			"w", "w", "w", "w"], req, this.replybuffer, 7);
+            this.BuildReply(id, tag, 28*4+1);
+            return true;
+            break;
+
+        case 100: // version
+            var version = StructToArray(["w", "s"], buffer, 7);
+            DebugMessage("[version]: msize=" + version[0] + " version=" + version[1]);
+            ArrayToStruct(["w", "s"], version, this.replybuffer, 7);
+            this.BuildReply(id, tag, size-7);
+            return true;
+            break;
+
+        case 104: // attach
+            var req = StructToArray(["w", "w", "s", "s"], buffer, 7);
+            DebugMessage("[attach]: fid=" + req[0] + " afid=" + hex8(req[1]) + " uname=" + req[2] + " aname=" + req[3]);
+            // return root directorie's QID
+            //req[0] = 0x10 | 0x80; // mount point & directory
+            req[0] = 0x40; // mount point & directory
+            req[1] = 1406338013; // version, incremented every time the file is modified. Or it doesn't matter
+            req[2] = 0x12345678; // unique id low
+            req[3] = 0x0; // unique id high
+
+			/*
+            case "Q":
+                out = out.concat(this.marshal(["b"], item.type));
+                out = out.concat(this.marshal(["w"], item.version));
+                out = out.concat(this.marshal(["w"], item.path));
+                out = out.concat(this.marshal(["w"], 0)); // FIXME
+			*/
+            ArrayToStruct(["b", "w", "w", "w"], req, this.replybuffer, 7);
+            this.BuildReply(id, tag, 13);
+            return true;
+            break;
+
+        case 120: // clunk
+            var req = StructToArray(["w"], buffer, 7);
+            DebugMessage("[clunk]: fid=" + req[0]);
+            this.BuildReply(id, tag, 0);
+            return true;
+        default:
+            DebugMessage("Error in Virtio9p: Unknown id " + id + " received");
+            break;
+    }
+    return false;
+}
+
+
 
 
 function VirtIODev(intdev, ramdev) {
     "use strict";
+    this.dev = new Virtio9p(ramdev);
     this.intdev = intdev;
     this.ramdev = ramdev;
     this.status = 0x0;
@@ -33,38 +169,12 @@ function VirtIODev(intdev, ramdev) {
     this.intstatus = 0x0;
     this.pagesize = 0x0;
     this.queuenum = 0x0;
+    this.align = 0x0;
 }
 
 VirtIODev.prototype.ReadReg8 = function (addr) {
-    DebugMessage("read 8 byte at " + hex8(addr));
-    switch(addr)
-    {
-        case 0x100: // configspace length high byte
-            return 0x0;
-            break;
-
-        case 0x101: // configspace length low byte
-            return 0x4;
-            break;
-
-        case 0x102:
-            return 0x68; 'h'
-            break;
-
-        case 0x103:
-            return 0x6F; 'o'
-            break;
-
-        case 0x104:
-            return 0x73; 's'
-            break;
-
-        case 0x105:
-            return 0x74; 't'
-            break;
-    }
-
-    return 0x0;
+    //DebugMessage("read 8 byte at " + hex8(addr));
+    return this.dev.configspace[addr-0x100];
 }
 
 
@@ -85,11 +195,11 @@ VirtIODev.prototype.ReadReg32 = function (addr) {
             break;
 
         case VIRTIO_DEVICE_REG:
-            val = 0x9;
+            val = this.dev.deviceid;
             break;
 
         case VIRTIO_HOSTFEATURES_REG:
-            val = 0x1;
+            val = this.dev.hostfeature;
             break;
 
         case VIRTIO_QUEUENUMMAX_REG:
@@ -105,7 +215,7 @@ VirtIODev.prototype.ReadReg32 = function (addr) {
             break;
 
         case VIRTIO_INTERRUPTSTATUS_REG:
-            val = this.intstatus;    
+            val = this.intstatus;
             break;
 
         default:
@@ -115,21 +225,61 @@ VirtIODev.prototype.ReadReg32 = function (addr) {
     return Swap32(val);
 };
 
-VirtIODev.prototype.ReceiveRequest = function (desc) {
+VirtIODev.prototype.GetDescriptor = function(index)
+{
+    var addr = this.queuepfn * this.pagesize + index * 16;
+    var buffer = new Uint8Array(16);
+    CopyMemoryToBuffer(this.ramdev, buffer, addr, 16);
 
-    var size = Swap32(this.ramdev.ReadMemory32(desc.addr2+0));
-    var id = this.ramdev.ReadMemory8(desc.addr2+4)
-    var tag = this.ramdev.ReadMemory16(desc.addr2+5)
-    DebugMessage("size:" + size + " id:" + id + " tag:" + tag);
-/*
-    var msize = Swap32(this.ramdev.ReadMemory32(desc.addr2+7));
-    var strlen = this.ramdev.ReadMemory32(desc.addr2+7)
-    DebugMessage("msize:" + msize );
-*/
+    var desc = StructToArray(["w", "w", "w", "h", "h"], buffer, 0);
+    DebugMessage("GetDescriptor: index=" + index + " addr=" + Swap32(desc[1]) + " len=" + Swap32(desc[2]) + " flags=" + Swap16(desc[3])  + " next=" + Swap16(desc[4]));
+    // flags:
+    /* This marks a buffer as continuing via the next field. */
+    //#define VRING_DESC_F_NEXT       1
+    /* This marks a buffer as write-only (otherwise read-only). */
+    //#define VRING_DESC_F_WRITE      2
+    /* This means the buffer contains a list of buffer descriptors. */
+    //#define VRING_DESC_F_INDIRECT   4
 
-    // id = 100: version
-
+    return {
+        addrhigh: Swap32(desc[0]),
+        addr: Swap32(desc[1]),
+        len: Swap32(desc[2]),
+        flags: Swap16(desc[3]),
+        next: Swap16(desc[4])        
+    };
 }
+
+VirtIODev.prototype.FillDescriptor = function(index, descaddr, len, next, flags) {
+    var addr = this.queuepfn * this.pagesize + index * 16;
+    var desc = [];
+    desc[0] = 0x0;
+    desc[1] = Swap32(descaddr);
+    desc[2] = Swap32(len);
+    desc[3] = Swap16(flags);
+    desc[4] = Swap16(next);
+    ArrayToStruct(["w", "w", "w", "h", "h"], desc, this.ramdev.uint8mem, addr);
+};
+
+// the memory layout can be found here: include/uapi/linux/virtio_ring.h
+
+VirtIODev.prototype.ConsumeDescriptor = function(descindex, desclen) {
+    var addr = this.queuepfn * this.pagesize + this.queuenum*16; // end of descriptors
+    addr = addr + 2 + 2 + this.queuenum*2 + 2; // ring of available descriptors
+    if (addr & (this.align-1)) // padding to next align boundary
+    {
+        var mask = ~(this.align - 1);
+        addr = (addr & mask) + this.align;
+    }
+    // addr points to the used_flags
+    var index = this.ramdev.ReadMemory16(addr + 2); // get used index
+    //DebugMessage("used index:" + index + " descindex=" + descindex);
+    var usedaddr = addr + 4 + index * 8;
+    this.ramdev.WriteMemory32(usedaddr+0, descindex);
+    this.ramdev.WriteMemory32(usedaddr+4, desclen);
+    this.ramdev.WriteMemory16(addr + 2, index+1);
+}
+
 
 VirtIODev.prototype.WriteReg32 = function (addr, val) {
     val = Swap32(val);
@@ -168,6 +318,7 @@ VirtIODev.prototype.WriteReg32 = function (addr, val) {
 
         case VIRTIO_QUEUEALIGN_REG:
             DebugMessage("write queuealign reg : " + hex8(val));
+            this.align = val;
             break;
 
         case VIRTIO_QUEUEPFN_REG:
@@ -176,28 +327,27 @@ VirtIODev.prototype.WriteReg32 = function (addr, val) {
             break;
 
         case VIRTIO_QUEUENOTIFY_REG:
-            DebugMessage("write queuenotify reg : " + hex8(val));
-            // check if queue is ready
-            var addr = this.queuepfn * this.pagesize /*+ this.queuenum*16*/ + val * 16;
-
-            var desc = {
-                addr: this.ramdev.ReadMemory32(addr + 0),
-                addr2: this.ramdev.ReadMemory32(addr + 4),
-                len: this.ramdev.ReadMemory32(addr + 8),
-                next: this.ramdev.ReadMemory16(addr + 12),
-                flags: this.ramdev.ReadMemory16(addr + 14)
-            };
-            DebugMessage("" + desc.addr + " " + desc.addr2 + " " + desc.len + " " + desc.next  + " " + desc.flags);
-            this.ReceiveRequest(desc);
-            this.intstatus = 0x1;
-            this.intdev.RaiseInterrupt(0x6);            
+            //DebugMessage("write queuenotify reg : " + hex8(val));
+            var index = val;
+            var desc = this.GetDescriptor(index);            
+            if (this.dev.ReceiveRequest(desc, this.ramdev.uint8mem)) {
+                var nextdesc = this.GetDescriptor(desc.next);
+                CopyBufferToMemory(this.dev.replybuffer, this.ramdev, nextdesc.addr, this.dev.replybuffersize);
+                this.intstatus = desc.next;
+                this.intdev.RaiseInterrupt(0x6);
+                this.ConsumeDescriptor(index, desc.len);
+            }
             break;
 
         case VIRTIO_INTERRUPTACK_REG:
-            DebugMessage("write interruptack reg : " + hex8(val));
+            //DebugMessage("write interruptack reg : " + hex8(val));
             this.intstatus = 0x0;
+            this.intdev.ClearInterrupt(0x6);
             break;
 
+//        last_used = (vq->last_used_idx & (vq->vring.num - 1));
+//        i = vq->vring.used->ring[last_used].id;
+//        *len = vq->vring.used->ring[last_used].len;
 
         default:
             DebugMessage("Error in VirtIODev: Attempt to write register " + hex8(addr) + ":" + hex8(val));

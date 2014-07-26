@@ -120,83 +120,69 @@ function DownloadAllAsync(urls, OnSuccess, OnError) {
 // Inserts data from an array to a byte aligned struct in memory
 function ArrayToStruct(typelist, input, struct, offset) {
     var item;
+    var size = 0;
     for (var i=0; i < typelist.length; i++) {
         item = input[i];
         switch (typelist[i]) {
             case "w":
-                struct[offset^3] = item & 0xFF;
-                offset++;
-                struct[offset^3] = (item >>> 8) & 0xFF;
-                offset++;
-                struct[offset^3] = (item >>> 16) & 0xFF;
-                offset++;
-                struct[offset^3] = item >>> 24;
-                offset++;
+                struct[offset++] = item & 0xFF;
+                struct[offset++] = (item >> 8) & 0xFF;
+                struct[offset++] = (item >> 16) & 0xFF;
+                struct[offset++] = (item >> 24) & 0xFF;
+                size += 4;
                 break;
             case "h":
-                struct[offset^3] = item & 0xFF;
-                offset++;
-                struct[offset^3] = item >>> 8;
-                offset++;
+                struct[offset++] = item & 0xFF;
+                struct[offset++] = item >> 8;
+                size += 2;
                 break;
             case "b":
-                struct[offset^3] = item;
-                offset++;
+                struct[offset++] = item;
+                size += 1;
                 break;
             case "s":
-                struct[offset^3] = item.length & 0xFF;
-                offset++;
-                struct[offset^3] = item.length >>> 8;
-                offset++;
+                struct[offset++] = item.length & 0xFF;
+                struct[offset++] = (item.length >> 8) & 0xFF;
+                size += 2;
                 for (var j in item) {
-                    struct[offset^3] = item.charCodeAt(j);
-                    offset++;
+                    struct[offset++] = item.charCodeAt(j);
+                    size += 1;
                 }
                 break;
             default:
                 DebugMessage("ArrayToStruct: Unknown type=" + type[i]);
         }
     }
+    return size;
 };
 
 
 // Extracts data from a byte aligned struct in memory to an array
 function StructToArray(typelist, struct, offset) {
     var output = [];
-    
     for (var i=0; i < typelist.length; i++) {
         switch (typelist[i]) {
             case "w":
-                var val = struct[offset^3];
-                offset++;
-                val += struct[offset^3] << 8;
-                offset++;
-                val += struct[offset^3] << 16;
-                offset++;
-                val += (struct[offset^3] << 24) >>> 0;
-                offset++;
+                var val = struct[offset++];
+                val += struct[offset++] << 8;
+                val += struct[offset++] << 16;
+                val += (struct[offset++] << 24) >>> 0;
                 output.push(val);
                 break;
             case "h":
-                var val = struct[offset^3];
-                offset++;
-                output.push(val + (struct[offset^3] << 8));
-                offset++;
+                var val = struct[offset++];
+                output.push(val + (struct[offset++] << 8));
                 break;
             case "b":
-                output.push(struct[offset^3]);
-                offset++;
+                output.push(struct[offset++]);
                 break;
             case "s":
-                var len = struct[offset^3];
-                offset++;
-                len += struct[offset^3] << 8;
-                offset++;
+                var len = struct[offset++];
+                len += struct[offset++] << 8;
                 var str = '';
                 for (var j=0; j < len; j++)
                 {
-                    str += String.fromCharCode(struct[offset^3]);
-                    offset++;
+                    str += String.fromCharCode(struct[offset++]);
                 }
                 output.push(str);
                 break;
