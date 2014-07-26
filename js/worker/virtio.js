@@ -66,51 +66,77 @@ Virtio9p.prototype.ReceiveRequest = function (desc) {
 
     switch(id)
     {
+        case 12: // open
+            break;
         case 24: // getattr
-            var req = StructToArray(["w"], buffer, 7);
-            DebugMessage("[getattr]: fid=" + req[0]);
-            //req[0] = 0x10 | 0x80;
-			req[0] = 0x40;
-            req[1] = 1406338013; // version, incremented every time the file is modified. Or it doesn't matter
-            req[2] = 0x12345678; // unique id low
-            req[3] = 0x0;
+            var req = StructToArray(["w", "w", "w"], buffer, 7);
+            DebugMessage("[getattr]: fid=" + req[0]+ " request mask=" + req[1] + " " + req[2]);
+            
+            //req[1] = 0x10 | 0x80;
+            //req[0] = 0x0;
+            //req[1] = 0x0;
+            //req[0] |= 0x1000; // P9_STATS_GEN
+            req[0] = req[1];
+            req[1] = req[2];
+            req[2] = 0x40;
+            req[3] = 1406338013; // version, incremented every time the file is modified. Or it doesn't matter
+            req[4] = 0x12345678; // unique id low
+            req[5] = 0x0;
 
-            req[4] = 0x1ED | 0x4000; // permissions and flags, is directory
-            req[5] = 0x2; // number of hard links low
-            req[6] = 0x0; // number of hard links high
+            req[6] = 0x01ED | 0x4000; // permissions and flags, is directory
             req[7] = 0x0; // user id
             req[8] = 0x0; // group id
-            req[9] = 0x0; // device id low
-            req[10] = 0x0; // device id high
-            req[11] = 4096; // size low
-            req[12] = 0x0; // size high
-            req[13] = 4096; // blk size low
-            req[14] = 0x0; // blk size high
-            req[15] = 8; // number of file system blocks
-            req[16] = 0x0; // number of file system blocks
-            req[17] = 0x1; // last access
-            req[18] = 0x0; // last access
-            req[19] = 0x0; // last access nanoseconds
-            req[20] = 0x0; // last access nanoseconds
-            req[21] = 0x1; // last modification
-            req[22] = 0x0; // last modification
-            req[23] = 0x0; // last modification
+            
+            req[9] = 0x2; // number of hard links low
+            req[10] = 0x0; // number of hard links high
+            
+            req[11] = 0x0; // device id low
+            req[12] = 0x0; // device id high
+            
+            req[13] = 4096; // size low
+            req[14] = 0x0; // size high
+            
+            req[15] = 4096; // blk size low
+            req[16] = 0x0; // blk size high
+            
+            req[17] = 8; // number of file system blocks
+            req[18] = 0x0; // number of file system blocks
+for(var i=19; i<19+4*10;i++)
+{
+    req[i] = 0x0;
+}           
+           /*
+            req[19] = 0x1; // last access
+            req[20] = 0x0; // last access
+            req[21] = 0x0; // last access nanoseconds
+            req[22] = 0x0; // last access nanoseconds
+            req[23] = 0x1; // last modification
             req[24] = 0x0; // last modification
-            req[25] = 0x1; // last status change
-            req[26] = 0x0; // last status change
-            req[27] = 0x0; // last status change
-            req[28] = 0x0; // last status change
-
+            req[25] = 0x0; // last modification
+            req[26] = 0x0; // last modification
+            req[27] = 0x1; // time? 
+            req[28] = 0x0; // time?
+            req[29] = 0x0; // time?
+            req[30] = 0x0; // time?
+*/
             ArrayToStruct([
-			"b", "w", "w", "w",  
+            "w", "w",
+			"b", "w", "w", "w", // QID 
 			"w",  
 			"w", "w", 
 			"w", "w", "w", "w", 
 			"w", "w", "w", "w", "w", "w", 
+			"w", "w", "w", "w", // time
+			"w", "w", "w", "w", 
+			"w", "w", "w", "w", 
+			"w", "w", "w", "w", 
+			"w", "w", "w", "w", 
+			"w", "w", "w", "w", 
+			"w", "w", "w", "w", 
 			"w", "w", "w", "w", 
 			"w", "w", "w", "w", 
 			"w", "w", "w", "w"], req, this.replybuffer, 7);
-            this.BuildReply(id, tag, 28*4+1);
+            this.BuildReply(id, tag, 59*4+1);
             return true;
             break;
 
@@ -144,11 +170,25 @@ Virtio9p.prototype.ReceiveRequest = function (desc) {
             return true;
             break;
 
+        case 110: // walk
+            var req = StructToArray(["w", "w", "h"], buffer, 7);
+            nwname = req[2];
+            DebugMessage("[walk]: fid=" + req[0] + " nwfid=" + req[1] + " nwname=" + nwname);
+            if (nwname == 0) {
+                //this.add_qid(nwfid, qid);
+                ArrayToStruct(["h"], [0], this.replybuffer, 7);
+                this.BuildReply(id, tag, 2);
+                return true;
+            } 
+            return false;
+            break;
+
         case 120: // clunk
             var req = StructToArray(["w"], buffer, 7);
             DebugMessage("[clunk]: fid=" + req[0]);
             this.BuildReply(id, tag, 0);
             return true;
+
         default:
             DebugMessage("Error in Virtio9p: Unknown id " + id + " received");
             break;
