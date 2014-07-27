@@ -43,6 +43,7 @@ function Virtio9p(ramdev, filesystem) {
     this.configspace = [0x0, 0x4, 0x68, 0x6F, 0x73, 0x74]; // length of string and "host" string
     this.replybuffer = new Uint8Array(0x2000);
     this.replybuffersize = 0;
+    this.fid2inode = [];
 }
 
 Virtio9p.prototype.BuildReply = function(id, tag, payloadsize) {
@@ -72,7 +73,7 @@ Virtio9p.prototype.ReceiveRequest = function (desc) {
             var req = StructToArray(["w", "w"], buffer, 7);
             var fid = req[0];
             var mode = req[1];
-            var inode = this.fs.GetInode(fid);
+            var inode = this.fs.GetInode(this.fid2inode[fid]);
             
             DebugMessage("[open] fid=" + fid + ", mode=" + mode);
             req[0] = inode.qid;
@@ -86,57 +87,62 @@ Virtio9p.prototype.ReceiveRequest = function (desc) {
             var req = StructToArray(["w", "d"], buffer, 7);
             var fid = req[0];
             DebugMessage("[getattr]: fid=" + fid + " request mask=" + req[1]);
-            var inode = this.fs.GetInode(fid);
-            //req[0] |= 0x1000; // P9_STATS_GEN
-            req[0] = req[1];
+            var inode = this.fs.GetInode(this.fid2inode[fid]);
+            req[0] |= 0x1000; // P9_STATS_GEN
+            req[0] = req[1]; // request mask
             req[1] = inode.qid;
 
-            req[2] = inode.permission; // permissions and flags, is directory
+            req[2] = inode.mode; 
             req[3] = inode.uid; // user id
             req[4] = inode.gid; // group id
             
-            req[5] = 0x2; // number of hard links
+            req[5] = 0x1; // number of hard links
             req[6] = 0x0; // device id low
             req[7] = inode.data.length; // size low
             req[8] = inode.data.length; // blk size low
             req[9] = inode.data.length/512; // number of file system blocks
-
-            for(var i=10; i<10+4*10;i++) {
-                req[i] = 0x0;
-            }
+            req[10] = 0x0; // atime
+            req[11] = 0x0;
+            req[12] = 0x0; // mtime
+            req[13] = 0x0;
+            req[14] = 0x0; // ctime
+            req[15] = 0x0;
+            req[16] = 0x0; // btime
+            req[17] = 0x0; 
+            req[18] = 0x0; // st_gen
+            req[19] = 0x0; // data_version
             ArrayToStruct([
             "d", "Q", 
             "w",  
             "w", "w", 
             "d", "d", 
             "d", "d", "d",
-            "w", "w", "w", "w", // time
-            "w", "w", "w", "w", 
-            "w", "w", "w", "w", 
-            "w", "w", "w", "w", 
-            "w", "w", "w", "w", 
-            "w", "w", "w", "w", 
-            "w", "w", "w", "w", 
-            "d", "d", 
+            "d", "d", // atime
+            "d", "d", // mtime
+            "d", "d", // ctime
+            "d", "d", // btime
             "d", "d",
-            "d", "d"], req, this.replybuffer, 7);
-            this.BuildReply(id, tag, 59*4+1);
+            ], req, this.replybuffer, 7);
+            this.BuildReply(id, tag, 8 + 13 + 4 + 4+ 4 + 8*15);
             return true;
             break;
 
         case 40: // TREADDIR
+        case 116: // read
             var req = StructToArray(["w", "d", "w"], buffer, 7);
             var fid = req[0];
             var offset = req[1];
             var count = req[2];
-            DebugMessage("[treaddir]: fid=" + fid + " offset=" + offset + " count=" + count);
-            this.fs.FillDirectory(fid);
-            var inode = this.fs.GetInode(fid);
-            ArrayToStruct(["d"], [inode.data.length-offset], this.replybuffer, 7);
-            for(var i=0; i<inode.data.length; i++)
-                this.replybuffer[7+8+i] = inode.data[offset+i];
-            this.BuildReply(id, tag, 8 + inode.data.length);
+            if (id == 40) DebugMessage("[treaddir]: fid=" + fid + " offset=" + offset + " count=" + count);
+            if (id == 116) DebugMessage("[read]: fid=" + fid + " offset=" + offset + " count=" + count);
+            if (id == 40) this.fs.FillDirectory(this.fid2inode[fid]);
+            var inode = this.fs.GetInode(this.fid2inode[fid]);
+            for(var i=0; i<inode.data.length-offset; i++)
+                this.replybuffer[7+4+i] = inode.data[offset+i];
+            ArrayToStruct(["w"], [inode.data.length-offset], this.replybuffer, 7);
+            this.BuildReply(id, tag, 4 + (inode.data.length-offset));
             return true;
+            break;
 
         case 100: // version
             var version = StructToArray(["w", "s"], buffer, 7);
@@ -151,14 +157,9 @@ Virtio9p.prototype.ReceiveRequest = function (desc) {
             var req = StructToArray(["w", "w", "s", "s"], buffer, 7);
             var fid = req[0];
             DebugMessage("[attach]: fid=" + fid + " afid=" + hex8(req[1]) + " uname=" + req[2] + " aname=" + req[3]);
-            this.fs.AttachRoot(fid);
-            var inode = this.fs.GetInode(fid);
-            req[0] = inode.qid.type; // mount point & directory
-            req[1] = inode.qid.version; // version, incremented every time the file is modified. Or it doesn't matter
-            req[2] = inode.qid.path; // unique id low
-            req[3] = 0x0; // unique id high
-
-            ArrayToStruct(["b", "w", "w", "w"], req, this.replybuffer, 7);
+            this.fid2inode[fid] = 0;            
+            var inode = this.fs.GetInode(this.fid2inode[fid]);
+            ArrayToStruct(["Q"], [inode.qid], this.replybuffer, 7);
             this.BuildReply(id, tag, 13);
             return true;
             break;
@@ -170,17 +171,34 @@ Virtio9p.prototype.ReceiveRequest = function (desc) {
             var nwname = req[2];
             DebugMessage("[walk]: fid=" + req[0] + " nwfid=" + req[1] + " nwname=" + nwname);
             if (nwname == 0) {
-                this.fs.Addfid(nwfid, fid);
+                this.fid2inode[nwfid] = this.fid2inode[fid];
                 ArrayToStruct(["h"], [0], this.replybuffer, 7);
                 this.BuildReply(id, tag, 2);
                 return true;
-            } 
-            return false;
+            }
+            var wnames = [];
+            for(var i=0; i<nwname; i++) {
+                wnames.push("s");
+            }     
+            walk = StructToArray(wnames, buffer, 7+4+4+2);                        
+            DebugMessage("walk to :" + walk.toString());
+            var idx = this.fid2inode[fid];
+            var offset = 7+2;
+            for(var i=0; i<nwname; i++) {
+                idx = this.fs.Walk(idx, walk[i]);                
+                offset += ArrayToStruct(["Q"], [this.fs.inodes[idx].qid], this.replybuffer, offset);
+                this.fid2inode[nwfid] = idx;
+            }
+
+            ArrayToStruct(["h"], [nwname], this.replybuffer, 7);
+            this.BuildReply(id, tag, 2+offset);
+            return true;
             break;
 
         case 120: // clunk
             var req = StructToArray(["w"], buffer, 7);
             DebugMessage("[clunk]: fid=" + req[0]);
+            this.fid2inode[req[0]] = -1;
             this.BuildReply(id, tag, 0);
             return true;
 
@@ -267,7 +285,7 @@ VirtIODev.prototype.GetDescriptor = function(index)
     CopyMemoryToBuffer(this.ramdev, buffer, addr, 16);
 
     var desc = StructToArray(["w", "w", "w", "h", "h"], buffer, 0);
-    DebugMessage("GetDescriptor: index=" + index + " addr=" + Swap32(desc[1]) + " len=" + Swap32(desc[2]) + " flags=" + Swap16(desc[3])  + " next=" + Swap16(desc[4]));
+    DebugMessage("GetDescriptor: index=" + index + " addr=" + hex8(Swap32(desc[1])) + " len=" + Swap32(desc[2]) + " flags=" + Swap16(desc[3])  + " next=" + Swap16(desc[4]));
     // flags:
     /* This marks a buffer as continuing via the next field. */
     //#define VRING_DESC_F_NEXT       1
@@ -367,7 +385,18 @@ VirtIODev.prototype.WriteReg32 = function (addr, val) {
             var desc = this.GetDescriptor(index);            
             if (this.dev.ReceiveRequest(desc, this.ramdev.uint8mem)) {
                 var nextdesc = this.GetDescriptor(desc.next);
-                CopyBufferToMemory(this.dev.replybuffer, this.ramdev, nextdesc.addr, this.dev.replybuffersize);
+                var offset = 0;
+                for(var i=0; i<this.dev.replybuffersize; i++)
+                {
+                    if (offset >= nextdesc.len) {
+                        nextdesc = this.GetDescriptor(nextdesc.next);
+                        offset = 0;
+                    }                    
+                    this.ramdev.WriteMemory8(nextdesc.addr+offset, this.dev.replybuffer[i]);
+                    offset++;
+                }
+                //CopyBufferToMemory(this.dev.replybuffer, this.ramdev, nextdesc.addr, this.dev.replybuffersize);
+                
                 this.intstatus = desc.next;
                 this.intdev.RaiseInterrupt(0x6);
                 this.ConsumeDescriptor(index, desc.len);
