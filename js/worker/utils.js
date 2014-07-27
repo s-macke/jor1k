@@ -131,6 +131,14 @@ function ArrayToStruct(typelist, input, struct, offset) {
                 struct[offset++] = (item >> 24) & 0xFF;
                 size += 4;
                 break;
+            case "d": // double word
+                struct[offset++] = item & 0xFF;
+                struct[offset++] = (item >> 8) & 0xFF;
+                struct[offset++] = (item >> 16) & 0xFF;
+                struct[offset++] = (item >> 24) & 0xFF;
+                offset += 4;
+                size += 8;
+                break;
             case "h":
                 struct[offset++] = item & 0xFF;
                 struct[offset++] = item >> 8;
@@ -148,6 +156,11 @@ function ArrayToStruct(typelist, input, struct, offset) {
                     struct[offset++] = item.charCodeAt(j);
                     size += 1;
                 }
+                break;
+            case "Q":
+                ArrayToStruct(["b", "w", "w", "w"], [item.type, item.version, item.path, 0x0], struct, offset)
+                offset += 13;
+                size += 13;
                 break;
             default:
                 DebugMessage("ArrayToStruct: Unknown type=" + type[i]);
@@ -167,6 +180,14 @@ function StructToArray(typelist, struct, offset) {
                 val += struct[offset++] << 8;
                 val += struct[offset++] << 16;
                 val += (struct[offset++] << 24) >>> 0;
+                output.push(val);
+                break;
+            case "d":
+                var val = struct[offset++];
+                val += struct[offset++] << 8;
+                val += struct[offset++] << 16;
+                val += (struct[offset++] << 24) >>> 0;
+                offset += 4;
                 output.push(val);
                 break;
             case "h":

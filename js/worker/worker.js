@@ -4,8 +4,8 @@
 
 importScripts('utils.js', 'framebuffer.js', 'ethmac.js', 'ata.js',
     'uart.js', 'touchscreen.js', 'keyboard.js', 'virtio.js', 'ram.js',
-    'system.js', 'bzip2.js', 'cpu/cpu.js', 'cpu/fastcpu.js', 'cpu/safecpu.js'
-    );
+    'system.js', 'bzip2.js', 'cpu/cpu.js', 'cpu/fastcpu.js', 'cpu/safecpu.js',
+    'filesystem.js');
 
 var sys = new System();
 DebugMessage("System initialized");

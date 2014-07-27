@@ -169,6 +169,7 @@ if (typeof Math.imul == "undefined") {
     this.ChangeCore("asm", false);
 
     DebugMessage("Init Devices");
+
     this.uartdev0 = new UARTDev(this, 0x2);
     this.uartdev0.TransmitCallback = function(data) {
         SendToMaster("tty0", data);
@@ -188,7 +189,10 @@ if (typeof Math.imul == "undefined") {
     this.atadev = new ATADev(this);
     this.tsdev = new TouchscreenDev(this);
     this.kbddev = new KeyboardDev(this);
-    this.virtiodev = new VirtIODev(this, this.ram);
+
+    this.filesystem = new FS();
+    this.virtio9pdev = new Virtio9p(this.ram, this.filesystem);
+    this.virtiodev = new VirtIODev(this, this.ram, this.virtio9pdev);
 
     DebugMessage("Add Devices");  
     this.ram.AddDevice(this.atadev, 0x9e000000, 0x1000);

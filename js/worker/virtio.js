@@ -35,12 +35,13 @@ function CopyBufferToMemory(from, to, offset, size)
 }
 
 // small 9p device
-function Virtio9p(ramdev) {
+function Virtio9p(ramdev, filesystem) {
+    this.fs = filesystem;
     this.ramdev = ramdev; // uint8 array
     this.deviceid = 0x9; // 9p filesystem
     this.hostfeature = 0x1; // mountpoint
     this.configspace = [0x0, 0x4, 0x68, 0x6F, 0x73, 0x74]; // length of string and "host" string
-    this.replybuffer = new Uint8Array(0x100);
+    this.replybuffer = new Uint8Array(0x2000);
     this.replybuffersize = 0;
 }
 
@@ -66,79 +67,76 @@ Virtio9p.prototype.ReceiveRequest = function (desc) {
 
     switch(id)
     {
-        case 12: // open
-            break;
-        case 24: // getattr
-            var req = StructToArray(["w", "w", "w"], buffer, 7);
-            DebugMessage("[getattr]: fid=" + req[0]+ " request mask=" + req[1] + " " + req[2]);
+        case 112: // topen
+        case 12: // tlopen
+            var req = StructToArray(["w", "w"], buffer, 7);
+            var fid = req[0];
+            var mode = req[1];
+            var inode = this.fs.GetInode(fid);
             
-            //req[1] = 0x10 | 0x80;
-            //req[0] = 0x0;
-            //req[1] = 0x0;
+            DebugMessage("[open] fid=" + fid + ", mode=" + mode);
+            req[0] = inode.qid;
+            req[1] = 4096; // iounit
+            ArrayToStruct(["Q", "w"], req, this.replybuffer, 7);
+            this.BuildReply(id, tag, 13+4);
+            return true;
+            break;
+
+        case 24: // getattr
+            var req = StructToArray(["w", "d"], buffer, 7);
+            var fid = req[0];
+            DebugMessage("[getattr]: fid=" + fid + " request mask=" + req[1]);
+            var inode = this.fs.GetInode(fid);
             //req[0] |= 0x1000; // P9_STATS_GEN
             req[0] = req[1];
-            req[1] = req[2];
-            req[2] = 0x40;
-            req[3] = 1406338013; // version, incremented every time the file is modified. Or it doesn't matter
-            req[4] = 0x12345678; // unique id low
-            req[5] = 0x0;
+            req[1] = inode.qid;
 
-            req[6] = 0x01ED | 0x4000; // permissions and flags, is directory
-            req[7] = 0x0; // user id
-            req[8] = 0x0; // group id
+            req[2] = inode.permission; // permissions and flags, is directory
+            req[3] = inode.uid; // user id
+            req[4] = inode.gid; // group id
             
-            req[9] = 0x2; // number of hard links low
-            req[10] = 0x0; // number of hard links high
-            
-            req[11] = 0x0; // device id low
-            req[12] = 0x0; // device id high
-            
-            req[13] = 4096; // size low
-            req[14] = 0x0; // size high
-            
-            req[15] = 4096; // blk size low
-            req[16] = 0x0; // blk size high
-            
-            req[17] = 8; // number of file system blocks
-            req[18] = 0x0; // number of file system blocks
-for(var i=19; i<19+4*10;i++)
-{
-    req[i] = 0x0;
-}           
-           /*
-            req[19] = 0x1; // last access
-            req[20] = 0x0; // last access
-            req[21] = 0x0; // last access nanoseconds
-            req[22] = 0x0; // last access nanoseconds
-            req[23] = 0x1; // last modification
-            req[24] = 0x0; // last modification
-            req[25] = 0x0; // last modification
-            req[26] = 0x0; // last modification
-            req[27] = 0x1; // time? 
-            req[28] = 0x0; // time?
-            req[29] = 0x0; // time?
-            req[30] = 0x0; // time?
-*/
+            req[5] = 0x2; // number of hard links
+            req[6] = 0x0; // device id low
+            req[7] = inode.data.length; // size low
+            req[8] = inode.data.length; // blk size low
+            req[9] = inode.data.length/512; // number of file system blocks
+
+            for(var i=10; i<10+4*10;i++) {
+                req[i] = 0x0;
+            }
             ArrayToStruct([
-            "w", "w",
-			"b", "w", "w", "w", // QID 
-			"w",  
-			"w", "w", 
-			"w", "w", "w", "w", 
-			"w", "w", "w", "w", "w", "w", 
-			"w", "w", "w", "w", // time
-			"w", "w", "w", "w", 
-			"w", "w", "w", "w", 
-			"w", "w", "w", "w", 
-			"w", "w", "w", "w", 
-			"w", "w", "w", "w", 
-			"w", "w", "w", "w", 
-			"w", "w", "w", "w", 
-			"w", "w", "w", "w", 
-			"w", "w", "w", "w"], req, this.replybuffer, 7);
+            "d", "Q", 
+            "w",  
+            "w", "w", 
+            "d", "d", 
+            "d", "d", "d",
+            "w", "w", "w", "w", // time
+            "w", "w", "w", "w", 
+            "w", "w", "w", "w", 
+            "w", "w", "w", "w", 
+            "w", "w", "w", "w", 
+            "w", "w", "w", "w", 
+            "w", "w", "w", "w", 
+            "d", "d", 
+            "d", "d",
+            "d", "d"], req, this.replybuffer, 7);
             this.BuildReply(id, tag, 59*4+1);
             return true;
             break;
+
+        case 40: // TREADDIR
+            var req = StructToArray(["w", "d", "w"], buffer, 7);
+            var fid = req[0];
+            var offset = req[1];
+            var count = req[2];
+            DebugMessage("[treaddir]: fid=" + fid + " offset=" + offset + " count=" + count);
+            this.fs.FillDirectory(fid);
+            var inode = this.fs.GetInode(fid);
+            ArrayToStruct(["d"], [inode.data.length-offset], this.replybuffer, 7);
+            for(var i=0; i<inode.data.length; i++)
+                this.replybuffer[7+8+i] = inode.data[offset+i];
+            this.BuildReply(id, tag, 8 + inode.data.length);
+            return true;
 
         case 100: // version
             var version = StructToArray(["w", "s"], buffer, 7);
@@ -149,22 +147,17 @@ for(var i=19; i<19+4*10;i++)
             break;
 
         case 104: // attach
-            var req = StructToArray(["w", "w", "s", "s"], buffer, 7);
-            DebugMessage("[attach]: fid=" + req[0] + " afid=" + hex8(req[1]) + " uname=" + req[2] + " aname=" + req[3]);
             // return root directorie's QID
-            //req[0] = 0x10 | 0x80; // mount point & directory
-            req[0] = 0x40; // mount point & directory
-            req[1] = 1406338013; // version, incremented every time the file is modified. Or it doesn't matter
-            req[2] = 0x12345678; // unique id low
+            var req = StructToArray(["w", "w", "s", "s"], buffer, 7);
+            var fid = req[0];
+            DebugMessage("[attach]: fid=" + fid + " afid=" + hex8(req[1]) + " uname=" + req[2] + " aname=" + req[3]);
+            this.fs.AttachRoot(fid);
+            var inode = this.fs.GetInode(fid);
+            req[0] = inode.qid.type; // mount point & directory
+            req[1] = inode.qid.version; // version, incremented every time the file is modified. Or it doesn't matter
+            req[2] = inode.qid.path; // unique id low
             req[3] = 0x0; // unique id high
 
-			/*
-            case "Q":
-                out = out.concat(this.marshal(["b"], item.type));
-                out = out.concat(this.marshal(["w"], item.version));
-                out = out.concat(this.marshal(["w"], item.path));
-                out = out.concat(this.marshal(["w"], 0)); // FIXME
-			*/
             ArrayToStruct(["b", "w", "w", "w"], req, this.replybuffer, 7);
             this.BuildReply(id, tag, 13);
             return true;
@@ -172,10 +165,12 @@ for(var i=19; i<19+4*10;i++)
 
         case 110: // walk
             var req = StructToArray(["w", "w", "h"], buffer, 7);
-            nwname = req[2];
+            var fid = req[0];
+            var nwfid = req[1];
+            var nwname = req[2];
             DebugMessage("[walk]: fid=" + req[0] + " nwfid=" + req[1] + " nwname=" + nwname);
             if (nwname == 0) {
-                //this.add_qid(nwfid, qid);
+                this.fs.Addfid(nwfid, fid);
                 ArrayToStruct(["h"], [0], this.replybuffer, 7);
                 this.BuildReply(id, tag, 2);
                 return true;
@@ -199,9 +194,9 @@ for(var i=19; i<19+4*10;i++)
 
 
 
-function VirtIODev(intdev, ramdev) {
+function VirtIODev(intdev, ramdev, device) {
     "use strict";
-    this.dev = new Virtio9p(ramdev);
+    this.dev = device;
     this.intdev = intdev;
     this.ramdev = ramdev;
     this.status = 0x0;
