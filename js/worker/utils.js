@@ -217,3 +217,49 @@ function StructToArray(typelist, struct, offset) {
     }
     return output;
 };
+
+
+// Extracts data from a byte aligned struct in memory to an array
+function StructToArray2(typelist, GetByte) {
+    var output = [];
+    for (var i=0; i < typelist.length; i++) {
+        switch (typelist[i]) {
+            case "w":
+                var val = GetByte();
+                val += GetByte() << 8;
+                val += GetByte() << 16;
+                val += (GetByte() << 24) >>> 0;
+                output.push(val);
+                break;
+            case "d":
+                var val = GetByte();
+                val += GetByte() << 8;
+                val += GetByte() << 16;
+                val += (GetByte() << 24) >>> 0;
+                GetByte();GetByte();GetByte();GetByte();
+                output.push(val);
+                break;
+            case "h":
+                var val = GetByte();
+                output.push(val + (GetByte() << 8));
+                break;
+            case "b":
+                output.push(GetByte());
+                break;
+            case "s":
+                var len = GetByte();
+                len += GetByte() << 8;
+                var str = '';
+                for (var j=0; j < len; j++) {
+                    str += String.fromCharCode(GetByte());
+                }
+                output.push(str);
+                break;
+            default:
+                DebugMessage("StructToArray: Unknown type=" + type[i]);
+                break;
+        }
+    }
+    return output;
+};
+

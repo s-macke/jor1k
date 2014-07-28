@@ -46,27 +46,20 @@ function FS() {
     this.qidnumber = 0x0;
 
     // root entry
-    var inode = this.CreateDirectory("", -1);
-    this.inodes.push(inode);
-/*
-    inode = this.CreateDirectory(".", 0);
-    inode.qid = this.inodes[0].qid;
-    this.inodes.push(inode);
+    this.CreateDirectory("", -1);
 
-    inode = this.CreateDirectory("..", 0);
-    this.inodes.push(inode);
-*/
-    inode = this.CreateTextFile("hello", 0, "Hello World");
-    this.inodes.push(inode);
+    this.CreateTextFile("hello", 0, "Hello World");
 }
 
 FS.prototype.CreateInode = function() {
     this.qidnumber++;
     return {
+        valid : true,
         name : "",
         uid : 0x0,
         gid : 0x0,
         data : new Uint8Array(0),
+        symlink : "",
         mode : 0x01ED,
         qid: {type: 0, version: 0, path: this.qidnumber},
         parentid: -1
@@ -79,7 +72,8 @@ FS.prototype.CreateDirectory = function(name, parentid) {
     x.parentid = parentid;
     x.qid.type = S_IFDIR >> 8;
     x.mode = 0x01ED | S_IFDIR;
-    return x;
+    this.inodes.push(x);
+    return this.inodes.length-1;
 }
 
 FS.prototype.CreateFile = function(filename, parentid) {
@@ -88,16 +82,29 @@ FS.prototype.CreateFile = function(filename, parentid) {
     x.parentid = parentid;
     x.qid.type = S_IFREG >> 8;
     x.mode = 0x01ED | S_IFREG;
-    return x;
+    this.inodes.push(x);
+    return this.inodes.length-1;
+}
+     
+FS.prototype.CreateSymlink = function(filename, parentid, symlink) {
+    var x = this.CreateInode();
+    x.name = filename;
+    x.parentid = parentid;
+    x.qid.type = S_IFLNK >> 8;
+    x.symlink = symlink;
+    x.mode = S_IFLNK;
+    this.inodes.push(x);
+    return this.inodes.length-1;
 }
 
 FS.prototype.CreateTextFile = function(filename, parentid, str) {
-    var x = this.CreateFile(filename, parentid);
+    var id = this.CreateFile(filename, parentid);
+    var x = this.inodes[id];
     x.data = new Uint8Array(str.length);
     for (var j in str) {
         x.data[j] = str.charCodeAt(j);
     }
-    return x;
+    return id;
 }
 
 
@@ -107,12 +114,25 @@ FS.prototype.GetRoot = function() {
 }
 
 
-FS.prototype.Walk = function(idx, name) {
+FS.prototype.Search = function(idx, name) {
     for(var i=0; i<this.inodes.length; i++) {
+        if (!this.inodes[i].valid) continue;
         if (this.inodes[i].parentid != idx) continue;
         if (this.inodes[i].name != name) continue;
         return i;
-    }    
+    }
+    return -1;
+}
+
+FS.prototype.Rename = function(srcdir, srcname, destdir, destname) {
+
+
+}
+
+
+FS.prototype.Unlink = function(idx) {
+    this.inodes[idx].data = new Uint8Array(0);
+    this.inodes[idx].valid = false;
 }
 
 
@@ -121,23 +141,60 @@ FS.prototype.GetInode = function(idx)
     return this.inodes[idx];
 }
 
-
-
-FS.prototype.FillDirectory = function(idx) {
+FS.prototype.ChangeSize = function(idx, newsize)
+{
     var inode = this.inodes[idx];
-    var dirid = idx;
+    var temp = inode.data;
+    inode.data = new Uint8Array(newsize);
+    DebugMessage("change size to: " + newsize);
+    var size = temp.length;
+    if (size > inode.data.length) size = inode.data.length;
+    for(var i=0; i<size; i++) {
+        inode.data[i] = temp[i];
+    }
+
+}
+
+
+FS.prototype.FillDirectory = function(dirid) {
+    var inode = this.inodes[dirid];
+    var parentid = this.inodes[dirid].parentid;
+    if (parentid == -1) parentid = 0; // if root directory point to the root directory
     
     // first get size
     var size = 0;
     for(var i=0; i<this.inodes.length; i++) {
+        if (!this.inodes[i].valid) continue;
         if (this.inodes[i].parentid != dirid) continue;
         size += 13 + 8 + 1 + 2 + this.inodes[i].name.length;
     }
+
+    size += 13 + 8 + 1 + 2 + 1; // "." entry
+    size += 13 + 8 + 1 + 2 + 2; // ".." entry
     //DebugMessage("size of dir entry: " + size);
     inode.data = new Uint8Array(size);
 
     var offset = 0x0;
+    offset += ArrayToStruct(
+        ["Q", "d", "b", "s"],
+        [this.inodes[dirid].qid, 
+        offset+13+8+1+2+1, 
+        this.inodes[dirid].qid.mode>>8, 
+        "."],
+        inode.data, offset);
+
+    offset += ArrayToStruct(
+        ["Q", "d", "b", "s"],
+        [this.inodes[parentid].qid,
+        offset+13+8+1+2+2, 
+        this.inodes[dirid].qid.mode>>8, 
+        ".."],
+        inode.data, offset);
+
+
+    
     for(var i=0; i<this.inodes.length; i++) {
+        if (!this.inodes[i].valid) continue;
         if (this.inodes[i].parentid != dirid) continue;
         offset += ArrayToStruct(
         ["Q", "d", "b", "s"],
