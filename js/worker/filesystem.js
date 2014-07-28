@@ -146,7 +146,7 @@ FS.prototype.ChangeSize = function(idx, newsize)
     var inode = this.inodes[idx];
     var temp = inode.data;
     inode.data = new Uint8Array(newsize);
-    DebugMessage("change size to: " + newsize);
+    //DebugMessage("change size to: " + newsize);
     var size = temp.length;
     if (size > inode.data.length) size = inode.data.length;
     for(var i=0; i<size; i++) {
@@ -205,12 +205,7 @@ FS.prototype.FillDirectory = function(dirid) {
         inode.data, offset);
         //DebugMessage("Add file " + this.inodes[i].name);
     }
-    //DebugMessage("size of dir entry: " + offset);
-    /*
-    len = pdu_marshal(pdu, 11 + count, "Qqbs",
-                          &qid, dent->d_off,
-                          dent->d_type, &name);
-	*/
+
 }
 
 
