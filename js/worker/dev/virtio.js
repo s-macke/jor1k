@@ -54,6 +54,10 @@ function VirtIODev(intdev, ramdev, device) {
     this.dev = device;
     this.intdev = intdev;
     this.ramdev = ramdev;
+    this.Reset();
+}
+
+VirtIODev.prototype.Reset = function() {
     this.status = 0x0;
     this.queuepfn = 0x0;
     this.intstatus = 0x0;
@@ -61,6 +65,7 @@ function VirtIODev(intdev, ramdev, device) {
     this.queuenum = 0x100;
     this.align = 0x0;
 }
+
 
 VirtIODev.prototype.ReadReg8 = function (addr) {
     return this.dev.configspace[addr-0x100];

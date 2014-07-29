@@ -43,6 +43,10 @@ function Virtio9p(ramdev, filesystem) {
     this.fid2inode = [];
 }
 
+Virtio9p.prototype.Reset = function() {
+    this.fid2inode = [];
+}
+
 Virtio9p.prototype.BuildReply = function(id, tag, payloadsize) {
     ArrayToStruct(["w", "b", "h"], [payloadsize+7, id+1, tag], this.replybuffer, 0);
     //for(var i=0; i<payload.length; i++)

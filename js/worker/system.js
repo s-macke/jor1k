@@ -115,6 +115,8 @@ System.prototype.Reset = function() {
     this.atadev.Reset();
     this.tsdev.Reset();
     this.kbddev.Reset();
+    this.virtiodev.Reset();
+    this.virtio9pdev.Reset();
     this.cpu.Reset();
     this.ips = 0;
 }
