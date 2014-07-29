@@ -39,13 +39,14 @@ bzip2.array = function(bytes) {
     }
 }
 
-bzip2.simple = function(bits, buffer) {
+bzip2.simple = function(srcbuffer, stream) {
+    var bits = bzip2.array(srcbuffer);
     var size = bzip2.header(bits);
     var ret = {end:false, offset:0};
     var bufsize = 100000 * size;
     var buf = new Int32Array(bufsize);
     do {
-        ret = bzip2.decompress(bits, buffer, ret.offset, buf, bufsize);        
+        ret = bzip2.decompress(bits, stream, ret.offset, buf, bufsize);        
     } while(!ret.end);
     return ret.offset;
 }
@@ -61,7 +62,7 @@ bzip2.header = function(bits) {
 //takes a function for reading the block data (starting with 0x314159265359)
 //a block size (0-9) (optional, defaults to 9)
 //a length at which to stop decompressing and return the output
-bzip2.decompress = function(bits, buffer, offset, buf, bufsize) {
+bzip2.decompress = function(bits, stream, offset, buf, bufsize) {
     var MAX_HUFCODE_BITS = 20;
     var MAX_SYMBOLS = 258;
     var SYMBOL_RUNA = 0;
@@ -245,7 +246,8 @@ bzip2.decompress = function(bits, buffer, offset, buf, bufsize) {
             outbyte = current;
         }
         while(copies--) {
-            buffer[offset++] = outbyte;
+            //buffer[offset++] = outbyte;
+            stream(outbyte);
         }
         if (current != previous) run = 0;
     }

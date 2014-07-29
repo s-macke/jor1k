@@ -315,15 +315,18 @@ System.prototype.ImageFinished = function(result) {
         var buffer8 = new Uint8Array(buffer);
         if (i == 0) { // kernel image
             this.SendStringToTerminal("Decompressing kernel...\r\n");
-            var length = bzip2.simple(bzip2.array(buffer8), this.ram.uint8mem);
+            var length = 0;
+            var checksum = 0;
+            bzip2.simple(buffer8, function(x){this.ram.uint8mem[length++] = x; checksum = (checksum + x)&0xFFFFFF;}.bind(this));
             for (var i = 0; i < length >> 2; i++) this.ram.int32mem[i] = Swap32(this.ram.int32mem[i]); // big endian to little endian
-            DebugMessage("File loaded: " + length + " bytes");
+            DebugMessage("File loaded: " + length + " bytes   checksum: " + hex8(checksum));
         } else { // hard drive
             this.SendStringToTerminal("Decompressing hard drive image...\r\n");
             var drive = new ArrayBuffer(30*1024*1024); // bzip does not know the final size
             var driveimage = new Uint8Array(drive);
-            var length = bzip2.simple(bzip2.array(buffer8), driveimage);
-            DebugMessage("File loaded: " + length + " bytes");
+            var length = 0;
+            bzip2.simple(buffer8, function(x){driveimage[length++] = x;checksum = (checksum + x)&0xFFFFFF;}.bind(this));
+            DebugMessage("File loaded: " + length + " bytes   checksum: " + hex8(checksum));
             this.atadev.SetBuffer(drive);
         }
     }.bind(this));
