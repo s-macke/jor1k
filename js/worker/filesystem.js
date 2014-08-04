@@ -49,7 +49,102 @@ function FS() {
     this.CreateDirectory("", -1);
 
     this.CreateTextFile("hello", 0, "Hello World");
+
+    this.tarbuffer = new Uint8Array(512);
+    this.tarbufferofs = 0;
+    this.tarmode = 0; // mode = 0: header, mode!=0: file
+    //this.tarfilebuffer = 0;
+    this.tarfileoffset = 0;
 }
+
+// -----------------------------------------------------
+
+function ReadString(buffer, offset, numBytes) {
+    var str = "";
+    for(var i=0; i<numBytes; i++) {
+        if (buffer[offset+i] < 32) return str; // no special signs
+        str = str + String.fromCharCode(buffer[offset+i]); 
+    }
+    return str;
+};
+
+FS.prototype.Untar = function(x) {
+    this.tarbuffer[this.tarbufferofs++] = x;
+    if (this.tarbufferofs != 512) return;
+    this.tarbufferofs = 0;
+ 
+    if (this.tarmode == 1) {
+        var n = Math.min(512, this.tarfilebuffer.length - this.tarfileoffset);
+        for(var i=0; i<n; i++) {
+            this.tarfilebuffer[this.tarfileoffset++] = this.tarbuffer[i];
+        }
+        if (this.tarfileoffset >= this.tarfilebuffer.length) this.tarmode = 0; // file finished loading, change mode
+        return;
+    }
+
+    // tarmode = 0
+    var magic = ReadString(this.tarbuffer, 257, 5);
+    if (magic != "ustar") return;
+
+    var typeflag = String.fromCharCode(this.tarbuffer[156]);
+    var name = ReadString(this.tarbuffer, 0, 100);    
+    //DebugMessage("name:" + name);
+    var walk = name.split("/");
+    var n = walk.length;
+    if (walk[n-1].length == 0) walk.pop();
+    var n = walk.length;
+    DebugMessage("walk:" + walk);
+
+    var parentid = 0;
+    var id = -1;
+    for(var i=0; i<n-1; i++) {
+        id = this.Search(parentid, walk[i]);
+        if (id == -1) throw "Error in untar: Could not find inode.";
+        parentid = id;
+    }
+    id = this.Search(parentid, walk[walk.length-1]);
+
+    if (id != -1) return;
+
+    if ((id != -1) && (typeflag != '5')) {
+        //throw "Warning: File already exists";
+        return; // do not overwrite
+    }
+    if ((id != -1) && (typeflag == '5')) {
+        return;
+    }
+
+    var inode = this.CreateInode();
+    inode.name = walk[n-1];
+    inode.parentid = parentid;
+    inode.mode = parseInt(ReadString(this.tarbuffer, 100, 8), 8);
+    var size = parseInt(ReadString(this.tarbuffer, 124, 12), 8);
+    //DebugMessage(size);
+
+    switch(typeflag) {
+    case "5":
+        inode.mode |= S_IFDIR;
+        break;
+
+    case "0":
+        inode.mode |= S_IFREG;
+        inode.data = new Uint8Array(size);
+        if (size == 0) break;
+        this.tarmode = 1;
+        this.tarfileoffset = 0;
+        this.tarfilebuffer = inode.data;
+        break;
+
+    case "1":
+    case "2":
+        inode.mode |= S_IFLNK;
+        inode.symlink = ReadString(this.tarbuffer, 157, 100);
+        break;
+    }
+    this.inodes.push(inode);
+}
+
+// -----------------------------------------------------
 
 FS.prototype.CreateInode = function() {
     this.qidnumber++;
@@ -145,8 +240,8 @@ FS.prototype.ChangeSize = function(idx, newsize)
 {
     var inode = this.inodes[idx];
     var temp = inode.data;
-    inode.data = new Uint8Array(newsize);
     //DebugMessage("change size to: " + newsize);
+    inode.data = new Uint8Array(newsize);
     var size = temp.length;
     if (size > inode.data.length) size = inode.data.length;
     for(var i=0; i<size; i++) {
