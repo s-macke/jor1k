@@ -58,7 +58,7 @@ function ATADev(intdev) {
 
     this.Reset();
 
-    var buffer = new ArrayBuffer(1*1024*1024); // 1MB
+    var buffer = new ArrayBuffer(64*1024); // 64 kB
     this.SetBuffer(buffer);    
     
 }
