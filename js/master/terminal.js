@@ -260,8 +260,10 @@ Terminal.prototype.HandleEscapeSequence = function() {
         numbers = [];
     }
     // the array must contain of numbers and not strings. Make this sure
-    for (i=0; i<numbers.length; i++) {
-        numbers[i] = Number(numbers[i]);
+    if (s.charAt(0) != '?') {
+        for (i=0; i<numbers.length; i++) {
+            numbers[i] = Number(numbers[i]);
+        }
     }
 
     var oldcursory = this.cursory; // save current cursor position
@@ -269,12 +271,43 @@ Terminal.prototype.HandleEscapeSequence = function() {
     switch(lastsign) {
 
         case 'l':
+            if (this.escapestring)
             for(var i=0; i<numbers.length; i++) {
                 switch(numbers[i]) {
-                    /*case 4:
-                    break;*/
+                    case '7': // disable line wrap
+                    break;
+                    case '?25': // disable cursor
+                    break;
+                    case '?7': // reset auto-wrap mode 
+                    break;
                     default:
-                        DebugMessage("Term Parameter unknown " + numbers[i]);
+                        DebugMessage("Term Parameter " + this.escapestring + " unknown");
+                    break;
+                }
+            }
+            break;
+
+        case 'h':
+            for(var i=0; i<numbers.length; i++) {
+                switch(numbers[i]) {
+                    case '7': // enable line wrap
+                    break;
+                    case '?25': // enable cursor
+                    break;
+                    case '?7': // Set auto-wrap mode 
+                    break;
+                    default:
+                        DebugMessage("Term Parameter " + this.escapestring + " unknown");
+                    break;
+                }
+            }
+            break;
+
+        case 'c':
+            for(var i=0; i<numbers.length; i++) {
+                switch(numbers[i]) {
+                    default:
+                        DebugMessage("Term Parameter " + this.escapestring + " unknown");
                     break;
                 }
             }
