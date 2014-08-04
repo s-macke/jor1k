@@ -23,6 +23,7 @@ function jor1kGUI(termid, fbid, statsid, imageurls, relayURL)
     this.worker.onmessage = this.OnMessage.bind(this);   
     this.worker.onerror = function(e) {
         console.log("Error at " + e.filename + ":" + e.lineno + ": " + e.message);
+        this.stop = true;
     }
     
     this.SendToWorker = function(command, data) {
