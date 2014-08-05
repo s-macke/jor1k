@@ -136,6 +136,10 @@ FS.prototype.Untar = function(x) {
         break;
 
     case "1":
+        inode.mode |= S_IFLNK;
+        inode.symlink = "/"+ReadString(this.tarbuffer, 157, 100);
+        break;
+
     case "2":
         inode.mode |= S_IFLNK;
         inode.symlink = ReadString(this.tarbuffer, 157, 100);
