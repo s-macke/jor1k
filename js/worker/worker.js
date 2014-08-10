@@ -57,6 +57,9 @@ onmessage = function(e) {
         case "LoadAndStart":
             sys.LoadImageAndStart(e.data.data);
             break;
+        case "MergeFile":
+            sys.filesystem.MergeFile(e.data.data);
+            break;
     }
 
 }

@@ -275,7 +275,6 @@ FS.prototype.Untar = function(x) {
     inode.parentid = parentid;
     inode.mode = parseInt(ReadStringFromBinary(this.tarbuffer, 100, 8), 8);
     var size = parseInt(ReadStringFromBinary(this.tarbuffer, 124, 12), 8);
-    //DebugMessage(size);
 
     switch(typeflag) {
     case "5":
@@ -335,8 +334,10 @@ FS.prototype.CreateFile = function(filename, parentid) {
     var x = this.CreateInode();
     x.name = filename;
     x.parentid = parentid;
+    x.uid = this.inodes[parentid].uid;
+    x.gid = this.inodes[parentid].gid;
     x.qid.type = S_IFREG >> 8;
-    x.mode = 0x01ED | S_IFREG;
+    x.mode = 0x01B4 | S_IFREG;
     this.inodes.push(x);
     return this.inodes.length-1;
 }
@@ -426,6 +427,28 @@ FS.prototype.ChangeSize = function(idx, newsize)
     for(var i=0; i<size; i++) {
         inode.data[i] = temp[i];
     }
+}
+
+FS.prototype.MergeFile = function(file) {
+    DebugMessage("Merge path:" + file.name);
+
+    var walk = file.name.split("/");
+    var n = walk.length;
+    if (walk[n-1].length == 0) walk.pop();
+    var n = walk.length;
+
+    var parentid = 0;
+    var id = -1;
+    for(var i=0; i<n-1; i++) {
+        id = this.Search(parentid, walk[i]);
+        if (id == -1) throw "Error in MergeFile: Could not find inode.";
+        parentid = id;
+    }
+    id = this.Search(parentid, walk[walk.length-1]);
+    if (id == -1)  {
+        id = this.CreateFile(walk[walk.length-1], parentid); 
+    }
+    this.inodes[id].data = file.data;
 
 }
 

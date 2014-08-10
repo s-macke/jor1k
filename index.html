@@ -40,6 +40,14 @@
                     </form>
                     </span>
                     <span id="stats" style="float: right"></span>
+                    <br>
+                    
+                    <fieldset  style="width:100px;border:2px solid #a1a1a1;">
+                    <legend>Upload To Home</legend>
+                    <input type="file" id="files" name="files[]" onchange='OnUploadFiles(this.files)' multiple />
+                    </fieldset>
+                    
+                    
                     </td></tr>
                     </table>
 
@@ -126,8 +134,17 @@
     <script src="js/master/terminal-input.js"></script>
     <script src="js/master/ethernet.js"></script>
     <script src="js/master/master.js"></script>
-
+    
+    
 <script>
+
+
+function OnUploadFiles(files)
+{
+    for (var i = 0, f; f = files[i]; i++) {
+        jor1kgui.UploadExternalFile(f);
+    }
+}
 
 function SelectHD()
 {

@@ -111,6 +111,16 @@ function jor1kGUI(termid, fbid, statsid, kernelurl, fsurls, imageurls, relayURL)
     window.setInterval(function(){this.SendToWorker("GetIPS", 0)}.bind(this), 1000);
 }
 
+jor1kGUI.prototype.UploadExternalFile = function(f) {
+    var reader = new FileReader();
+    reader.onload = function(e) {
+        this.SendToWorker("MergeFile", 
+        {name: "home/user/"+f.name, data: new Uint8Array(reader.result)});
+    }.bind(this);
+    reader.readAsArrayBuffer(f);
+}
+
+
 jor1kGUI.prototype.OnMessage = function(e) {
 if (e.data.command == "Debug") console.log(e.data.data);
 
