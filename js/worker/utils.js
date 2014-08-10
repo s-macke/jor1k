@@ -88,6 +88,24 @@ function LoadBinaryResource(url, OnSuccess, OnError) {
     req.send(null);
 }
 
+function LoadXMLResource(url, OnSuccess, OnError) {
+    var req = new XMLHttpRequest();
+    req.open('GET', url, true);
+    //req.overrideMimeType('text/xml');
+    req.onreadystatechange = function () {
+        if (req.readyState != 4) {
+            return;
+        }
+        if ((req.status != 200) && (req.status != 0)) {
+            OnError("Error: Could not load XML file " + url);
+            return;
+        }        
+        OnSuccess(req.responseText);        
+    };
+    req.send(null);
+}
+
+
 function DownloadAllAsync(urls, OnSuccess, OnError) {
     var pending = urls.length;
     var result = [];

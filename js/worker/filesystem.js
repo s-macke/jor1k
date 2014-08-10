@@ -53,13 +53,165 @@ function FS() {
     this.tarbuffer = new Uint8Array(512);
     this.tarbufferofs = 0;
     this.tarmode = 0; // mode = 0: header, mode!=0: file
-    //this.tarfilebuffer = 0;
     this.tarfileoffset = 0;
 }
 
 // -----------------------------------------------------
 
-function ReadString(buffer, offset, numBytes) {
+function ReadVariable(buffer, offset) {
+    var variable = [];
+    variable.name = "";
+    variable.value = "";
+
+    // read blanks
+    for(var i=offset; i<buffer.length; i++) {
+        if (buffer[i] == '>') return variable;
+        if (buffer[i] == '/') return variable;
+        if (buffer[i] != ' ') break;
+    }
+    offset = i;
+    if (buffer[i] == '>') return variable;
+
+    // read variable name
+    for(var i=offset; i<buffer.length; i++) {
+        if (buffer[i] == '>') break;
+        if (buffer[i] == '=') break;
+        variable.name = variable.name + buffer[i]; 
+    }
+    offset = i+1;
+    if (variable.name.length == 0) return variable;
+    // read variable value
+    for(var i=offset+1; i<buffer.length; i++) {
+        if (buffer[i] == '>') break;
+        if (buffer[i] == '\'') break;
+        variable.value = variable.value + buffer[i]; 
+    }
+    offset = i+1;
+    variable.offset = offset;
+    //DebugMessage("read " + variable.name + "=" + variable.value);
+    return variable;
+}
+
+function ReadTag(buffer, offset) {
+    var tag = [];
+    tag.type = "";
+    tag.name = "";
+    tag.mode = 0x0;
+    tag.path = "";
+    tag.src = "";
+    tag.compressed = 0;
+
+    if (buffer[offset] != '<') return tag;
+    for(var i=offset+1; i<buffer.length; i++) {
+        if (buffer[i] ==  ' ') break;
+        if (buffer[i] == '\n') break;
+        if (buffer[i] == '>') break;
+        tag.type = tag.type + buffer[i]; 
+    }
+    offset = i;
+    // read variables
+    do {
+        var variable = ReadVariable(buffer, offset);
+        if (variable.name == "name") tag.name = variable.value;
+        if (variable.name == "mode") tag.mode = parseInt(variable.value, 8);
+        if (variable.name == "path") tag.path = variable.value;
+        if (variable.name == "size") tag.size = parseInt(variable.value, 10);
+        if (variable.name == "src") tag.src = variable.value;
+        if (variable.name == "compressed") tag.compressed = true;
+        offset = variable.offset;
+    } while(variable.name.length != 0);
+    return tag;
+};
+
+
+FS.prototype.LoadFSXML = function(urls)
+{
+    DebugMessage("Load filesystem information from " + urls[0]);
+    LoadXMLResource("../../" + urls[0], this.OnXMLLoaded.bind(this), function(error){throw error;});
+}
+
+FS.prototype.OnXMLLoaded = function(fs)
+{
+    // At this point I realized, that the dom is not available in worker threads and that I cannot get the xml information directly.
+    // So let's analyze ourself
+    var sysrootdir = "../../";
+
+    var parentid = 0;
+    for(var i=0; i<fs.length; i++)
+    {
+        if (fs[i] != '<') continue;
+        var tag = ReadTag(fs, i, ' '); 
+        //DebugMessage("Found " + tag.type + " " + tag.name);
+        var id = this.Search(parentid, tag.name);
+        if (id != -1) continue;
+
+        var inode = this.CreateInode();
+        inode.name = tag.name;
+        inode.parentid = parentid;
+        inode.mode = tag.mode;
+        var size = tag.size;
+
+
+    switch(tag.type) {
+    case "FS":
+        sysrootdir = "../../" + tag.src + "/";
+        break;
+
+    case "Dir":
+        inode.mode |= S_IFDIR;
+        parentid = this.inodes.length;
+        this.inodes.push(inode);
+        break;
+
+    case "/Dir":
+        parentid = this.inodes[parentid].parentid;
+        break;
+
+    case "File":
+        inode.mode |= S_IFREG;
+        //inode.data = new Uint8Array(size);
+        var idx = this.inodes.length;
+        this.inodes.push(inode);        
+        var url = sysrootdir + (tag.src.length==0?this.GetFullPath(idx):tag.src);
+        DebugMessage("Load id=" + (idx) + " " + url);
+        this.LoadFile(idx, url, size, tag.compressed);
+        break;
+
+    case "Link":
+        inode.mode |= S_IFLNK;
+        inode.symlink = tag.path;
+        this.inodes.push(inode);
+        break;
+        }
+    }
+    DebugMessage("processed " + this.inodes.length + " inodes");
+}
+
+// Loads the data from a url for a specific inode
+FS.prototype.LoadFile = function(idx, url, size, compressed) {
+
+    if (compressed) {
+        url = url + ".bz2";
+        this.inodes[idx].data = new Uint8Array(size);
+    LoadBinaryResource(url, 
+        function(buffer){
+        var buffer8 = new Uint8Array(buffer);
+        var ofs = 0;
+        bzip2.simple(buffer8, function(x){this.inodes[idx].data[ofs++] = x;}.bind(this) );    
+        }.bind(this), 
+        function(error){throw error;});
+
+        return;
+    }
+
+    LoadBinaryResource(url, 
+        function(buffer){ this.inodes[idx].data = new Uint8Array(buffer); }.bind(this), 
+        function(error){throw error;});
+}
+
+// -----------------------------------------------------
+
+function ReadStringFromBinary(buffer, offset, numBytes) {
     var str = "";
     for(var i=0; i<numBytes; i++) {
         if (buffer[offset+i] < 32) return str; // no special signs
@@ -83,11 +235,11 @@ FS.prototype.Untar = function(x) {
     }
 
     // tarmode = 0
-    var magic = ReadString(this.tarbuffer, 257, 5);
+    var magic = ReadStringFromBinary(this.tarbuffer, 257, 5);
     if (magic != "ustar") return;
 
     var typeflag = String.fromCharCode(this.tarbuffer[156]);
-    var name = ReadString(this.tarbuffer, 0, 100);    
+    var name = ReadStringFromBinary(this.tarbuffer, 0, 100);    
     //DebugMessage("name:" + name);
     var walk = name.split("/");
     var n = walk.length;
@@ -117,8 +269,8 @@ FS.prototype.Untar = function(x) {
     var inode = this.CreateInode();
     inode.name = walk[n-1];
     inode.parentid = parentid;
-    inode.mode = parseInt(ReadString(this.tarbuffer, 100, 8), 8);
-    var size = parseInt(ReadString(this.tarbuffer, 124, 12), 8);
+    inode.mode = parseInt(ReadStringFromBinary(this.tarbuffer, 100, 8), 8);
+    var size = parseInt(ReadStringFromBinary(this.tarbuffer, 124, 12), 8);
     //DebugMessage(size);
 
     switch(typeflag) {
@@ -137,12 +289,12 @@ FS.prototype.Untar = function(x) {
 
     case "1":
         inode.mode |= S_IFLNK;
-        inode.symlink = "/"+ReadString(this.tarbuffer, 157, 100);
+        inode.symlink = "/"+ReadStringFromBinary(this.tarbuffer, 157, 100);
         break;
 
     case "2":
         inode.mode |= S_IFLNK;
-        inode.symlink = ReadString(this.tarbuffer, 157, 100);
+        inode.symlink = ReadStringFromBinary(this.tarbuffer, 157, 100);
         break;
     }
     this.inodes.push(inode);
@@ -221,6 +373,16 @@ FS.prototype.Search = function(idx, name) {
         return i;
     }
     return -1;
+}
+
+FS.prototype.GetFullPath = function(idx) {
+    var path = "";
+
+    while(idx != 0) {
+        path = "/" + this.inodes[idx].name + path;
+        idx = this.inodes[idx].parentid;
+    }
+    return path.substring(1);
 }
 
 FS.prototype.Rename = function(srcdir, srcname, destdir, destname) {
