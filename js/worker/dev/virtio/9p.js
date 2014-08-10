@@ -8,10 +8,10 @@
 // TODO
 // mknod
 // flush
-// fsync
 // lock?
-// link
 
+
+var EPERM = 1;       /* Operation not permitted */
 var ENOENT = 2;       /* No such file or directory */
 var EINVAL = 22;      /* Invalid argument */
 var ENOTSUPP = 524;     /* Operation is not supported */
@@ -104,6 +104,11 @@ Virtio9p.prototype.ReceiveRequest = function (desc, GetByte) {
             ArrayToStruct(["Q", "w"], req, this.replybuffer, 7);
             this.BuildReply(id, tag, 13+4);
             return true;
+            break;
+
+        case 70: // link
+                this.SendError(tag, "Operation not permitted", EPERM);                   
+                return true;
             break;
 
         case 16: // symlink
@@ -231,6 +236,13 @@ Virtio9p.prototype.ReceiveRequest = function (desc, GetByte) {
             if (req[1] & P9_SETATTR_SIZE) {
                 this.fs.ChangeSize(this.fid2inode[fid], req[5]);
             }
+            this.BuildReply(id, tag, 0);
+            return true;
+            break;
+
+        case 50: // fsync
+            var req = StructToArray2(["w", "d"], GetByte);
+            var fid = req[0];
             this.BuildReply(id, tag, 0);
             return true;
             break;
