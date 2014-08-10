@@ -1,0 +1,10 @@
+::sysinit:/etc/init.d/rcS
+::respawn:-login -f root
+
+# Stuff to do when restarting the init process
+::restart:/sbin/init
+
+# Stuff to do before rebooting
+::ctrlaltdel:/sbin/reboot
+::shutdown:/etc/shutdown
+ttyS1::respawn:-login -f root

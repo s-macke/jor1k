@@ -134,7 +134,10 @@ function SelectHD()
 }
  
 function Start() {
-    jor1kgui = new jor1kGUI("tty", "fb", "stats", ["../../bin/vmlinux.bin.bz2", "../../bin/netdemo.bz2"], "ws://relay.widgetry.org/");
+    jor1kgui = new jor1kGUI("tty", "fb", "stats",
+        "bin/vmlinux.bin.bz2",
+        ["bin/basefs.xml"], [],
+	"ws://relay.widgetry.org/");
 }
 </script>
 

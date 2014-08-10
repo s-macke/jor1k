@@ -117,7 +117,7 @@ VirtIODev.prototype.ReadReg32 = function (addr) {
             abort();
             break;
     }
-    return Swap32(val);
+    return val;
 };
 
 VirtIODev.prototype.GetDescriptor = function(index)
@@ -172,7 +172,7 @@ VirtIODev.prototype.ConsumeDescriptor = function(descindex, desclen) {
 
 
 VirtIODev.prototype.WriteReg32 = function (addr, val) {
-    val = Swap32(val);
+    val = val;
     switch(addr)
     {
         case VIRTIO_GUEST_PAGE_SIZE_REG:
@@ -182,7 +182,7 @@ VirtIODev.prototype.WriteReg32 = function (addr, val) {
 
         case VIRTIO_STATUS_REG:
             DebugMessage("write status reg : " + hex8(val));
-            this.status = Swap32(val);
+            this.status = val;
             break;
 
         case VIRTIO_HOSTFEATURESSEL_REG:

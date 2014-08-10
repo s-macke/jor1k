@@ -215,8 +215,6 @@ if (typeof Math.imul == "undefined") {
     // constants
     this.loopspersecond = 100; // main loops per second, to keep the system responsive
     this.cyclesperms = 20000; // 20 MHz    
-    
-    
 }
 
 // Timer function. Runs every second
@@ -308,37 +306,28 @@ System.prototype.SendStringToTerminal = function(str)
 System.prototype.LoadImageAndStart = function(urls) {
     DebugMessage("Loading urls " + urls);
     this.SendStringToTerminal("\r================================================================================");
-    this.SendStringToTerminal("\r\nLoading kernel and hard drive image from web server. Please wait ...\r\n");
-    DownloadAllAsync(urls, this.ImageFinished.bind(this), function(error){DebugMessage(error);} );
+    this.SendStringToTerminal("\r\nLoading kernel and hard and basic file system from web server. Please wait ...\r\n");
+    LoadBinaryResource("../../" + urls.kernel, this.OnKernelLoaded.bind(this), function(error){throw error;});
+    this.filesystem.LoadFSXML(urls.fs);
 }
 
-System.prototype.ImageFinished = function(result) {
-    result.forEach(function(buffer, i) {
-        var buffer8 = new Uint8Array(buffer);
-        if (i == 0) { // kernel image
-            this.SendStringToTerminal("Decompressing kernel...\r\n");
-            var length = 0;
-            bzip2.simple(buffer8, function(x){this.ram.uint8mem[length++] = x;}.bind(this));
-            for (var i = 0; i < length >> 2; i++) this.ram.int32mem[i] = Swap32(this.ram.int32mem[i]); // big endian to little endian
-            DebugMessage("File loaded: " + length + " bytes");
-        } else { // hard drive
-            this.SendStringToTerminal("Decompressing hard drive image...\r\n");
-            var drive = new ArrayBuffer(30*1024*1024); // bzip does not know the final size
-            var driveimage = new Uint8Array(drive);
-            var length = 0;
-            bzip2.simple(buffer8, function(x){driveimage[length++] = x;});
-            DebugMessage("File loaded: " + length + " bytes");
-            this.atadev.SetBuffer(drive);
-        }
-    }.bind(this));
-
+System.prototype.OnKernelLoaded = function(buffer) {
+    this.SendStringToTerminal("Decompressing kernel...\r\n");
+    var buffer8 = new Uint8Array(buffer);
+    var length = 0;
+    bzip2.simple(buffer8, function(x){this.ram.uint8mem[length++] = x;}.bind(this));
+    for (var i = 0; i < length >> 2; i++) this.ram.int32mem[i] = Swap32(this.ram.int32mem[i]); // big endian to little endian
+    DebugMessage("Kernel loaded: " + length + " bytes");
     this.SendStringToTerminal("Booting\r\n");
     this.SendStringToTerminal("================================================================================");
+    // we can start the boot process already, even if the filesystem is not yet ready
+
     this.cpu.Reset();
     this.cpu.AnalyzeImage();
     DebugMessage("Starting emulation");
     this.status = SYSTEM_RUN;
     SendToMaster("execute", 0);
+
 }
 
 // the kernel has sent a halt signal, so stop everything until the next interrupt is raised

@@ -15,10 +15,13 @@ function UARTDev(worker) {
     };
 }
 
-function jor1kGUI(termid, fbid, statsid, imageurls, relayURL)
+function jor1kGUI(termid, fbid, statsid, kernelurl, fsurls, imageurls, relayURL)
 {
-    this.urls = imageurls;
-    
+    this.urls = [];
+    this.urls.kernel = kernelurl;
+    this.urls.fs = fsurls;
+    this.urls.images = imageurls;
+
     this.worker = new Worker('js/worker/worker.js');
     this.worker.onmessage = this.OnMessage.bind(this);   
     this.worker.onerror = function(e) {
@@ -38,15 +41,12 @@ function jor1kGUI(termid, fbid, statsid, imageurls, relayURL)
         this.SendToWorker("ChangeCore", core);
     };
 
-    this.ChangeImage = function(newurl) {
-        this.urls[1] = newurl;
-        this.Reset();
-    };
     this.Reset= function () {
       this.stop = false; // VM Stopped/Aborted
       this.userpaused = false;
       this.executepending=false; // if we rec an execute message while paused      
       this.SendToWorker("Reset");
+      
       this.SendToWorker("LoadAndStart", this.urls);
       this.term.PauseBlink(false);
     }
@@ -112,6 +112,8 @@ function jor1kGUI(termid, fbid, statsid, imageurls, relayURL)
 }
 
 jor1kGUI.prototype.OnMessage = function(e) {
+if (e.data.command == "Debug") console.log(e.data.data);
+
     if (this.stop) return;
     switch(e.data.command)
     {
@@ -138,9 +140,6 @@ jor1kGUI.prototype.OnMessage = function(e) {
             break;
         case "GetIPS":
             this.stats.innerHTML = this.userpaused ? "Paused" : (Math.floor(e.data.data/100000)/10.) + " MIPS";
-            break;
-        case "Debug":
-            console.log(e.data.data);
             break;
     }
 }

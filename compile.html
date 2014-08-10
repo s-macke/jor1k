@@ -91,7 +91,10 @@ Theme<select onchange='editor.setTheme("ace/theme/"+this.options[this.selectedIn
 function Start() {
     CreateEditor();
     document.addEventListener("jor1k_terminal_put_char", terminalPutCharListener, false);
-    jor1kgui = new jor1kGUI("tty", "fb", "stats", ["../../bin/vmlinux.bin.bz2", "../../bin/hdgcc.bz2"], "ws://relay.widgetry.org/");
+    jor1kgui = new jor1kGUI("tty", "fb", "stats",
+        "bin/vmlinux.bin.bz2",
+        ["bin/basefs.xml"], [],
+        "ws://relay.widgetry.org/");
 }
 
 

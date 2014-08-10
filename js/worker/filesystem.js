@@ -48,8 +48,6 @@ function FS() {
     // root entry
     this.CreateDirectory("", -1);
 
-    this.CreateTextFile("hello", 0, "Hello World");
-
     this.tarbuffer = new Uint8Array(512);
     this.tarbufferofs = 0;
     this.tarmode = 0; // mode = 0: header, mode!=0: file
