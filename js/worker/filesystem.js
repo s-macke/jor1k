@@ -143,7 +143,6 @@ FS.prototype.OnXMLLoaded = function(fs)
     {
         if (fs[i] != '<') continue;
         var tag = ReadTag(fs, i, ' '); 
-        //DebugMessage("Found " + tag.type + " " + tag.name);
         var id = this.Search(parentid, tag.name);
         if (id != -1) continue;
 
@@ -177,7 +176,7 @@ FS.prototype.OnXMLLoaded = function(fs)
         var idx = this.inodes.length;
         this.inodes.push(inode);        
         var url = sysrootdir + (tag.src.length==0?this.GetFullPath(idx):tag.src);
-        DebugMessage("Load id=" + (idx) + " " + url);
+        //DebugMessage("Load id=" + (idx) + " " + url);
         this.LoadFile(idx, url, size, tag.compressed);
         break;
 
@@ -197,7 +196,7 @@ FS.prototype.LoadFile = function(idx, url, size, compressed) {
     if (compressed) {
         url = url + ".bz2";
         this.inodes[idx].data = new Uint8Array(size);
-    LoadBinaryResource(url, 
+        LoadBinaryResource(url, 
         function(buffer){
         var buffer8 = new Uint8Array(buffer);
         var ofs = 0;
@@ -245,6 +244,7 @@ FS.prototype.Untar = function(x) {
     var typeflag = String.fromCharCode(this.tarbuffer[156]);
     var name = ReadStringFromBinary(this.tarbuffer, 0, 100);    
     //DebugMessage("name:" + name);
+    //TODO: use searchpath function
     var walk = name.split("/");
     var n = walk.length;
     if (walk[n-1].length == 0) walk.pop();
@@ -400,8 +400,6 @@ FS.prototype.GetFullPath = function(idx) {
 }
 
 FS.prototype.Rename = function(srcdir, srcname, destdir, destname) {
-
-
 }
 
 
@@ -430,26 +428,31 @@ FS.prototype.ChangeSize = function(idx, newsize)
 }
 
 FS.prototype.SearchPath = function(path) {
-
+    //path = path.replace(/\/\//g, "/");
+    path = path.replace("//", "/");
     var walk = path.split("/");
     var n = walk.length;
     if (walk[n-1].length == 0) walk.pop();
+    if (walk[0].length == 0) walk.shift();
     var n = walk.length;
 
     var parentid = 0;
     var id = -1;
     for(var i=0; i<n; i++) {
-        id = this.Search(parentid, walk[i]);
-        if (id == -1) return id;
+        id = this.Search(parentid, walk[i]);        
+        if (id == -1) {
+            if (i < n-1) return {id: -1, parentid: -1, name: walk[i]}; // one name of the path cannot be found
+            return {id: -1, parentid: parentid, name: walk[i]}; // the last element in the path does not exist, but the parent
+        }
         parentid = id;
     }
-    return id;
+    return {id: id, parentid: parentid, name: walk[i]};
 }
 // -----------------------------------------------------
 
 FS.prototype.TAR = function(path) {
     DebugMessage("tar: " + path);
-    var id = this.SearchPath(path);
+    var id = this.SearchPath(path).id;
     if (id == -1) return new Uint8Array(0);
     var size = 0;
     for(var i=0; i<this.inodes.length; i++) {
@@ -492,28 +495,14 @@ FS.prototype.TAR = function(path) {
 
 // -----------------------------------------------------
 
-
 FS.prototype.MergeFile = function(file) {
     DebugMessage("Merge path:" + file.name);
-
-    var walk = file.name.split("/");
-    var n = walk.length;
-    if (walk[n-1].length == 0) walk.pop();
-    var n = walk.length;
-
-    var parentid = 0;
-    var id = -1;
-    for(var i=0; i<n-1; i++) {
-        id = this.Search(parentid, walk[i]);
-        if (id == -1) throw "Error in MergeFile: Could not find inode.";
-        parentid = id;
+    var ids = this.SearchPath(file.name);
+    if (ids.parentid == -1) return; // not even the path seems to exist
+    if (ids.id == -1) {
+        ids.id = this.CreateFile(ids.name, ids.parentid); 
     }
-    id = this.Search(parentid, walk[walk.length-1]);
-    if (id == -1)  {
-        id = this.CreateFile(walk[walk.length-1], parentid); 
-    }
-    this.inodes[id].data = file.data;
-
+    this.inodes[ids.id].data = file.data;
 }
 
 
@@ -551,7 +540,6 @@ FS.prototype.FillDirectory = function(dirid) {
         this.inodes[dirid].qid.mode>>8, 
         ".."],
         inode.data, offset);
-
 
     
     for(var i=0; i<this.inodes.length; i++) {

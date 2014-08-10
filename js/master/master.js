@@ -124,14 +124,6 @@ jor1kGUI.prototype.UploadExternalFile = function(f) {
     reader.readAsArrayBuffer(f);
 }
 
-/*
-function download(filename, text) {
-    var pom = document.createElement('a');
-    pom.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));
-    pom.setAttribute('download', filename);
-    pom.click();
-}
-*/
 jor1kGUI.prototype.OnMessage = function(e) {
 if (e.data.command == "Debug") console.log(e.data.data);
 
@@ -164,8 +156,7 @@ if (e.data.command == "Debug") console.log(e.data.data);
             break;
         case "tar":
             DebugMessage("received tar");
-            //download("user.tar", "Hello world");
-            download(e.data.data, "saved.tar", "application/x-tar");
+            download(e.data.data, "user.tar", "application/x-tar");
             break;
 
         }
