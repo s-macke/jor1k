@@ -111,6 +111,10 @@ function jor1kGUI(termid, fbid, statsid, kernelurl, fsurls, imageurls, relayURL)
     window.setInterval(function(){this.SendToWorker("GetIPS", 0)}.bind(this), 1000);
 }
 
+jor1kGUI.prototype.TAR = function(path) {
+    this.SendToWorker("tar", path);
+}
+
 jor1kGUI.prototype.UploadExternalFile = function(f) {
     var reader = new FileReader();
     reader.onload = function(e) {
@@ -120,7 +124,14 @@ jor1kGUI.prototype.UploadExternalFile = function(f) {
     reader.readAsArrayBuffer(f);
 }
 
-
+/*
+function download(filename, text) {
+    var pom = document.createElement('a');
+    pom.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));
+    pom.setAttribute('download', filename);
+    pom.click();
+}
+*/
 jor1kGUI.prototype.OnMessage = function(e) {
 if (e.data.command == "Debug") console.log(e.data.data);
 
@@ -151,7 +162,13 @@ if (e.data.command == "Debug") console.log(e.data.data);
         case "GetIPS":
             this.stats.innerHTML = this.userpaused ? "Paused" : (Math.floor(e.data.data/100000)/10.) + " MIPS";
             break;
-    }
+        case "tar":
+            DebugMessage("received tar");
+            //download("user.tar", "Hello world");
+            download(e.data.data, "saved.tar", "application/x-tar");
+            break;
+
+        }
 }
 
 // Init Framebuffer if it exists

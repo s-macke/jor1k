@@ -60,6 +60,9 @@ onmessage = function(e) {
         case "MergeFile":
             sys.filesystem.MergeFile(e.data.data);
             break;
+        case "tar":
+            SendToMaster("tar", sys.filesystem.TAR(e.data.data));
+            break;
     }
 
 }

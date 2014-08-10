@@ -22,8 +22,8 @@ var P9_STAT_MODE_SETVTX = 0x00010000;
 
 
 
-//var S_IFMT  00170000
-//var S_IFSOCK 0140000
+var S_IFMT = 0xF000;
+//var S_IFSOCK = 0140000
 var S_IFLNK = 0xA000;
 var S_IFREG = 0x8000;
 var S_IFBLK = 0x6000;
@@ -428,6 +428,70 @@ FS.prototype.ChangeSize = function(idx, newsize)
         inode.data[i] = temp[i];
     }
 }
+
+FS.prototype.SearchPath = function(path) {
+
+    var walk = path.split("/");
+    var n = walk.length;
+    if (walk[n-1].length == 0) walk.pop();
+    var n = walk.length;
+
+    var parentid = 0;
+    var id = -1;
+    for(var i=0; i<n; i++) {
+        id = this.Search(parentid, walk[i]);
+        if (id == -1) return id;
+        parentid = id;
+    }
+    return id;
+}
+// -----------------------------------------------------
+
+FS.prototype.TAR = function(path) {
+    DebugMessage("tar: " + path);
+    var id = this.SearchPath(path);
+    if (id == -1) return new Uint8Array(0);
+    var size = 0;
+    for(var i=0; i<this.inodes.length; i++) {
+        if (!this.inodes[i].valid) continue;
+        if (this.inodes[i].parentid != id) continue;
+        switch(this.inodes[i].mode&S_IFMT)
+        {
+            case S_IFLNK:
+            case S_IFDIR:
+                size += 512;
+               break;
+            case S_IFREG:
+                size += 512;
+                size += this.inodes[i].data.length;
+                if (size & 511) {size = size & (~0x1FF); size += 512;}
+                break;
+        }
+    }
+    DebugMessage("tar: " + this.GetFullPath(id) + " size:" + size);
+
+    var data = new Uint8Array(size);
+    
+    for(var i=0; i<this.inodes.length; i++) {
+        if (!this.inodes[i].valid) continue;
+        if (this.inodes[i].parentid != id) continue;
+        switch(this.inodes[i].mode&S_IFMT)
+        {
+            case S_IFLNK:
+                break;
+
+            case S_IFDIR:
+               break;
+
+            case S_IFREG:
+                break;
+        }
+    }
+    return data;
+}
+
+// -----------------------------------------------------
+
 
 FS.prototype.MergeFile = function(file) {
     DebugMessage("Merge path:" + file.name);
