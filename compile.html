@@ -233,32 +233,13 @@ function RunCode(code,gccoptions) {
 // wakeup hidden tty1
 //tty1-unusedfornow SendKeysToJor1k("\x03\n",true);
    
-   SendKeysToJor1k("cd ~;rm prog.c program 2>/dev/null\n");
-   // not-reliable SendKeysToJor1k("stty -echo\n\n");   // Does not work reliably
+   //SendKeysToJor1k("cd ~;rm prog.c program 2>/dev/null\n");
+    var bufView = new Uint8Array(code.length);
+    for (var i=0; i<code.length; i++) {
+      bufView[i] = code.charCodeAt(i);
+    }
+    jor1kgui.SendToWorker("MergeFile", {name: "home/user/prog.c", data: bufView});
 
-   switch(3) {
-	   case 1: // dd - does not work
-	     SendKeysToJor1k("dd ibs=1 of=prog.c count="+code.length+"\n");
-	     SendKeysToJor1k(code);
-	   break;
-	   case 2:  // cat - does not work
-	     SendKeysToJor1k("cat >prog.c\n");
-	     SendKeysToJor1k(code);
-	     SendKeysToJor1k("\x04"); //  why does this not work?
-	   break
-	   case 3:  // brain dead echo does work
-	     codeArray= code.match(/[^]{1,256}/gim); // Avoid 1K line-limit (assume escape expansion) so split programing into shorter chuncks
-	     for(var i=0; i < codeArray.length;i++) {
-	          // For happiness, escape *after* splitting
-	          var escaped = codeArray[i] .replace(/\\/g,"\\134").replace(/\t/g,"\\t")
-	                   .replace(/\n/g,"\\n").replace(/\r/g,"\\r").replace(/"/gm,'\\"');
-	          //Todo Handle all chars in the sent file i.e. replace <=0x2f with \xnn
-
-	          SendKeysToJor1k('echo -n -e "');
-	          SendKeysToJor1k(escaped);
-	          SendKeysToJor1k('\">> prog.c\n');
-	     }
-	}
    // For now we want gcc output to be viewable, so this goes on the main terminal
    // To use tty1 we would need to synchronize gcc i.e. wait for prog.c upload
 
