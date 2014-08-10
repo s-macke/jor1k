@@ -168,6 +168,13 @@ Virtio9p.prototype.ReceiveRequest = function (desc, GetByte) {
             return true;            
             break;
 
+        case 52: // lock always suceed
+            ArrayToStruct(["w"], [0], this.replybuffer, 7);
+            this.BuildReply(id, tag, 4);
+            return true;            
+            break;
+        
+        
         case 24: // getattr
             var req = StructToArray2(["w", "d"], GetByte);
             var fid = req[0];
