@@ -375,6 +375,15 @@ FS.prototype.Search = function(idx, name) {
     return -1;
 }
 
+FS.prototype.GetTotalSize = function() {
+    var size = 0;
+    for(var i=0; i<this.inodes.length; i++) {
+        if (!this.inodes[i].valid) continue;
+        size += this.inodes[i].data.length;
+    }
+    return size;
+}
+
 FS.prototype.GetFullPath = function(idx) {
     var path = "";
 

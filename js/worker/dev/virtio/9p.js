@@ -6,7 +6,6 @@
 
 
 // TODO
-// statfs
 // mknod
 // flush
 // fsync
@@ -74,6 +73,24 @@ Virtio9p.prototype.ReceiveRequest = function (desc, GetByte) {
 
     switch(id)
     {
+        case 8: // statfs
+            var size = this.fs.GetTotalSize();
+            var req = [];
+            req[0] = 0x01021997;
+            req[1] = 4096; // optimal transfer block size
+            req[2] = 1000*1000*1024/req[1]; // free blocks, let's say 1GB
+            req[3] = req[2] - size/req[1]; // free blocks in fs
+            req[4] = req[2] - size/req[1]; // free blocks avail to non-superuser
+            req[5] = this.fs.inodes.length; // total number of inodes
+            req[6] = 1024*1024;
+            req[7] = 0; // file system id?
+            req[8] = 256; // maximum length of filenames
+
+            var size = ArrayToStruct(["w", "w", "d", "d", "d", "d", "d", "d", "w"], req, this.replybuffer, 7);
+            this.BuildReply(id, tag, size);
+            return true;
+            break;
+
         case 112: // topen
         case 12: // tlopen
             var req = StructToArray2(["w", "w"], GetByte);
