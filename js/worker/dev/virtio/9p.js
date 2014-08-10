@@ -34,7 +34,8 @@ function Virtio9p(ramdev, filesystem) {
     this.ramdev = ramdev; // uint8 array
     this.deviceid = 0x9; // 9p filesystem
     this.hostfeature = 0x1; // mountpoint
-    this.configspace = [0x0, 0x4, 0x68, 0x6F, 0x73, 0x74]; // length of string and "host" string
+    //this.configspace = [0x0, 0x4, 0x68, 0x6F, 0x73, 0x74]; // length of string and "host" string
+    this.configspace = [0x0, 0x9, 0x2F, 0x64, 0x65, 0x76, 0x2F, 0x72, 0x6F, 0x6F, 0x74 ]; // length of string and "/dev/root" string
     this.VERSION = "9P2000.L";
     this.IOUNIT = 4096;
     this.replybuffer = new Uint8Array(0x2000);
@@ -80,7 +81,7 @@ Virtio9p.prototype.ReceiveRequest = function (desc, GetByte) {
             var mode = req[1];
             var inode = this.fs.GetInode(this.fid2inode[fid]);
             
-            DebugMessage("[open] fid=" + fid + ", mode=" + mode);
+            //DebugMessage("[open] fid=" + fid + ", mode=" + mode);
             req[0] = inode.qid;
             req[1] = this.IOUNIT;
             ArrayToStruct(["Q", "w"], req, this.replybuffer, 7);
@@ -94,7 +95,7 @@ Virtio9p.prototype.ReceiveRequest = function (desc, GetByte) {
             var name = req[1];
             var symgt = req[2];
             var gid = req[3];
-            DebugMessage("[symlink] fid=" + fid + ", name=" + name + ", symgt=" + symgt + ", gid=" + gid); 
+            //DebugMessage("[symlink] fid=" + fid + ", name=" + name + ", symgt=" + symgt + ", gid=" + gid); 
             var idx = this.fs.CreateSymlink(name, this.fid2inode[fid], symgt);
             var inode = this.fs.GetInode(idx);
             ArrayToStruct(["Q"], [inode.qid], this.replybuffer, 7);
@@ -105,7 +106,7 @@ Virtio9p.prototype.ReceiveRequest = function (desc, GetByte) {
         case 22: // TREADLINK
             var req = StructToArray2(["w"], GetByte);
             var fid = req[0];
-            DebugMessage("[readlink] fid=" + fid);
+            //DebugMessage("[readlink] fid=" + fid);
             var inode = this.fs.GetInode(this.fid2inode[fid]);
             var size = ArrayToStruct(["s"], [inode.symlink], this.replybuffer, 7);
             this.BuildReply(id, tag, size);
@@ -119,7 +120,7 @@ Virtio9p.prototype.ReceiveRequest = function (desc, GetByte) {
             var name = req[1];
             var mode = req[2];
             var gid = req[3];
-            DebugMessage("[mkdir] fid=" + fid + ", name=" + name + ", mode=" + mode + ", gid=" + gid); 
+            //DebugMessage("[mkdir] fid=" + fid + ", name=" + name + ", mode=" + mode + ", gid=" + gid); 
             var idx = this.fs.CreateDirectory(name, this.fid2inode[fid]);
             var inode = this.fs.GetInode(idx);
             inode.mode = mode;
@@ -135,7 +136,7 @@ Virtio9p.prototype.ReceiveRequest = function (desc, GetByte) {
             var flags = req[2];
             var mode = req[3];
             var gid = req[4];
-            DebugMessage("[create] fid=" + fid + ", name=" + name + ", flags=" + flags + ", mode=" + mode + ", gid=" + gid); 
+            //DebugMessage("[create] fid=" + fid + ", name=" + name + ", flags=" + flags + ", mode=" + mode + ", gid=" + gid); 
             var idx = this.fs.CreateFile(name, this.fid2inode[fid]);
             this.fid2inode[fid] = idx;
             var inode = this.fs.GetInode(idx);
@@ -148,7 +149,7 @@ Virtio9p.prototype.ReceiveRequest = function (desc, GetByte) {
         case 24: // getattr
             var req = StructToArray2(["w", "d"], GetByte);
             var fid = req[0];
-            DebugMessage("[getattr]: fid=" + fid + " request mask=" + req[1]);
+            //DebugMessage("[getattr]: fid=" + fid + " request mask=" + req[1]);
             var inode = this.fs.GetInode(this.fid2inode[fid]);
             req[0] |= 0x1000; // P9_STATS_GEN
 
@@ -199,7 +200,7 @@ Virtio9p.prototype.ReceiveRequest = function (desc, GetByte) {
                 "d", "d"] // mtime
             , GetByte);
             var fid = req[0];
-            DebugMessage("[setattr]: fid=" + fid + " request mask=" + req[1]);
+            //DebugMessage("[setattr]: fid=" + fid + " request mask=" + req[1]);
             var inode = this.fs.GetInode(this.fid2inode[fid]);
             if (req[1] & P9_SETATTR_MODE) {
                 inode.mode = req[2];
@@ -211,7 +212,7 @@ Virtio9p.prototype.ReceiveRequest = function (desc, GetByte) {
                 inode.gid = req[4];
             }
             if (req[1] & P9_SETATTR_SIZE) {
-                this.fs.ChangeSize(this.fid2inode[fid]);
+                this.fs.ChangeSize(this.fid2inode[fid], req[5]);
             }
             this.BuildReply(id, tag, 0);
             return true;
@@ -223,8 +224,8 @@ Virtio9p.prototype.ReceiveRequest = function (desc, GetByte) {
             var fid = req[0];
             var offset = req[1];
             var count = req[2];
-            if (id == 40) DebugMessage("[treaddir]: fid=" + fid + " offset=" + offset + " count=" + count);
-            if (id == 116) DebugMessage("[read]: fid=" + fid + " offset=" + offset + " count=" + count);
+            //if (id == 40) DebugMessage("[treaddir]: fid=" + fid + " offset=" + offset + " count=" + count);
+            //if (id == 116) DebugMessage("[read]: fid=" + fid + " offset=" + offset + " count=" + count);
             if (id == 40) this.fs.FillDirectory(this.fid2inode[fid]);
             var inode = this.fs.GetInode(this.fid2inode[fid]);
             if (inode.data.length < offset+count) count = inode.data.length-offset;
@@ -240,7 +241,7 @@ Virtio9p.prototype.ReceiveRequest = function (desc, GetByte) {
             var fid = req[0];
             var offset = req[1];
             var count = req[2];
-            DebugMessage("[write]: fid=" + fid + " offset=" + offset + " count=" + count);
+            //DebugMessage("[write]: fid=" + fid + " offset=" + offset + " count=" + count);
             var inode = this.fs.GetInode(this.fid2inode[fid]);
             if (inode.data.length < (offset+count)) {
                 this.fs.ChangeSize(this.fid2inode[fid], offset+count);
@@ -258,7 +259,7 @@ Virtio9p.prototype.ReceiveRequest = function (desc, GetByte) {
             var oldname = req[1];
             var newdirfid = req[2];
             var newname = req[3];
-            DebugMessage("[renameat]: oldname=" + oldname + " newname=" + newname);
+            //DebugMessage("[renameat]: oldname=" + oldname + " newname=" + newname);
             if ((olddirfid == newdirfid) && (oldname == newname)) {
                    this.BuildReply(id, tag, 0);
                    return true;
@@ -285,7 +286,7 @@ Virtio9p.prototype.ReceiveRequest = function (desc, GetByte) {
             var dirfd = req[0];
             var name = req[1];
             var flags = req[2];
-            DebugMessage("[unlink]: dirfd=" + dirfd + " name=" + name + " flags=" + flags);
+            //DebugMessage("[unlink]: dirfd=" + dirfd + " name=" + name + " flags=" + flags);
             var id = this.fs.Search(this.fid2inode[dirfd], name);
             if (id == -1) {
                    this.SendError(tag, "No such file or directory", ENOENT);
@@ -309,7 +310,7 @@ Virtio9p.prototype.ReceiveRequest = function (desc, GetByte) {
             // return root directorie's QID
             var req = StructToArray2(["w", "w", "s", "s"], GetByte);
             var fid = req[0];
-            DebugMessage("[attach]: fid=" + fid + " afid=" + hex8(req[1]) + " uname=" + req[2] + " aname=" + req[3]);
+            //DebugMessage("[attach]: fid=" + fid + " afid=" + hex8(req[1]) + " uname=" + req[2] + " aname=" + req[3]);
             this.fid2inode[fid] = 0;            
             var inode = this.fs.GetInode(this.fid2inode[fid]);
             ArrayToStruct(["Q"], [inode.qid], this.replybuffer, 7);
@@ -322,7 +323,7 @@ Virtio9p.prototype.ReceiveRequest = function (desc, GetByte) {
             var fid = req[0];
             var nwfid = req[1];
             var nwname = req[2];
-            DebugMessage("[walk]: fid=" + req[0] + " nwfid=" + req[1] + " nwname=" + nwname);
+            //DebugMessage("[walk]: fid=" + req[0] + " nwfid=" + req[1] + " nwname=" + nwname);
             if (nwname == 0) {
                 this.fid2inode[nwfid] = this.fid2inode[fid];
                 ArrayToStruct(["h"], [0], this.replybuffer, 7);
@@ -334,7 +335,7 @@ Virtio9p.prototype.ReceiveRequest = function (desc, GetByte) {
                 wnames.push("s");
             }
             walk = StructToArray2(wnames, GetByte);                        
-            DebugMessage("walk to :" + walk.toString());
+            //DebugMessage("walk to :" + walk.toString());
             var idx = this.fid2inode[fid];
             var offset = 7+2;
             var nwidx = 0;
@@ -355,7 +356,7 @@ Virtio9p.prototype.ReceiveRequest = function (desc, GetByte) {
 
         case 120: // clunk
             var req = StructToArray2(["w"], GetByte);
-            DebugMessage("[clunk]: fid=" + req[0]);
+            //DebugMessage("[clunk]: fid=" + req[0]);
             this.fid2inode[req[0]] = -1;
             this.BuildReply(id, tag, 0);
             return true;
