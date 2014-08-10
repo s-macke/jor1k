@@ -77,7 +77,7 @@
 		<Link name='cttyhack' mode='120777' path='busybox' />
 		<Link name='iostat' mode='120777' path='busybox' />
 		<Link name='ash' mode='120777' path='busybox' />
-		<File name='busybox' mode='100755' size='1377488' compressed='1'/>
+		<File name='busybox' mode='104755' size='1377488' compressed='1'/>
 		<Link name='scriptreplay' mode='120777' path='busybox' />
 		<Link name='dumpkmap' mode='120777' path='busybox' />
 		<Link name='fdflush' mode='120777' path='busybox' />
@@ -371,8 +371,9 @@
 	</Dir>
 	<Dir name='dev' mode='40755'></Dir>
 	<Dir name='etc' mode='40755'>
+		<File name='group' mode='100644' size='22'/>
 		<File name='fstab' mode='100755' size='174'/>
-		<File name='passwd' mode='100644' size='77'/>
+		<File name='passwd' mode='100644' size='137'/>
 		<File name='inetd.conf' mode='100644' size='59'/>
 		<File name='services' mode='100644' size='18832'/>
 		<File name='nsswitch.conf' mode='100644' size='134'/>
@@ -385,7 +386,10 @@
 			<File name='interfaces' mode='100644' size='64'/>
 		</Dir>
 	</Dir>
-	<Dir name='home' mode='40755'></Dir>
+	<Dir name='home' mode='40755'>
+		<Dir name='user' mode='42755' uid='1000' gid='1000'>
+		</Dir>
+	</Dir>
 	<Dir name='lib' mode='40555'></Dir>
 	<Dir name='proc' mode='40555'></Dir>
 	<Dir name='root' mode='40555'>
