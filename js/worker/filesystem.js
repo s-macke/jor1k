@@ -95,6 +95,8 @@ function ReadTag(buffer, offset) {
     tag.type = "";
     tag.name = "";
     tag.mode = 0x0;
+    tag.uid = 0x0;
+    tag.gid = 0x0;
     tag.path = "";
     tag.src = "";
     tag.compressed = 0;
@@ -112,6 +114,8 @@ function ReadTag(buffer, offset) {
         var variable = ReadVariable(buffer, offset);
         if (variable.name == "name") tag.name = variable.value;
         if (variable.name == "mode") tag.mode = parseInt(variable.value, 8);
+        if (variable.name == "uid") tag.uid = parseInt(variable.value, 10);
+        if (variable.name == "gid") tag.gid = parseInt(variable.value, 10);
         if (variable.name == "path") tag.path = variable.value;
         if (variable.name == "size") tag.size = parseInt(variable.value, 10);
         if (variable.name == "src") tag.src = variable.value;
@@ -145,6 +149,8 @@ FS.prototype.OnXMLLoaded = function(fs)
 
         var inode = this.CreateInode();
         inode.name = tag.name;
+        inode.uid = tag.uid;
+        inode.gid = tag.gid;
         inode.parentid = parentid;
         inode.mode = tag.mode;
         var size = tag.size;
