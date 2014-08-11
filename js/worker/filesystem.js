@@ -55,6 +55,20 @@ function FS() {
 }
 
 // -----------------------------------------------------
+FS.prototype.LoadImage = function(url)
+{
+    if (!url) return;
+    //DebugMessage("Load Image " + url);
+    LoadBinaryResource(url, 
+    function(buffer){
+        var buffer8 = new Uint8Array(buffer);
+        var length = 0;
+        bzip2.simple(buffer8,this.Untar.bind(this));   
+    }.bind(this), 
+    function(error){DebugMessage("Error: Could not load " + url + ". Skipping.");});
+}
+// -----------------------------------------------------
+
 
 function ReadVariable(buffer, offset) {
     var variable = [];
