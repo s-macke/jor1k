@@ -212,96 +212,6 @@ FS.prototype.LoadFile = function(idx, url, size, compressed) {
         function(error){throw error;});
 }
 
-// -----------------------------------------------------
-
-function ReadStringFromBinary(buffer, offset, numBytes) {
-    var str = "";
-    for(var i=0; i<numBytes; i++) {
-        if (buffer[offset+i] < 32) return str; // no special signs
-        str = str + String.fromCharCode(buffer[offset+i]); 
-    }
-    return str;
-};
-
-FS.prototype.Untar = function(x) {
-    this.tarbuffer[this.tarbufferofs++] = x;
-    if (this.tarbufferofs != 512) return;
-    this.tarbufferofs = 0;
- 
-    if (this.tarmode == 1) {
-        var n = Math.min(512, this.tarfilebuffer.length - this.tarfileoffset);
-        for(var i=0; i<n; i++) {
-            this.tarfilebuffer[this.tarfileoffset++] = this.tarbuffer[i];
-        }
-        if (this.tarfileoffset >= this.tarfilebuffer.length) this.tarmode = 0; // file finished loading, change mode
-        return;
-    }
-
-    // tarmode = 0
-    var magic = ReadStringFromBinary(this.tarbuffer, 257, 5);
-    if (magic != "ustar") return;
-
-    var typeflag = String.fromCharCode(this.tarbuffer[156]);
-    var name = ReadStringFromBinary(this.tarbuffer, 0, 100);    
-    //DebugMessage("name:" + name);
-    //TODO: use searchpath function
-    var walk = name.split("/");
-    var n = walk.length;
-    if (walk[n-1].length == 0) walk.pop();
-    var n = walk.length;
-    DebugMessage("walk:" + walk);
-
-    var parentid = 0;
-    var id = -1;
-    for(var i=0; i<n-1; i++) {
-        id = this.Search(parentid, walk[i]);
-        if (id == -1) throw "Error in untar: Could not find inode.";
-        parentid = id;
-    }
-    id = this.Search(parentid, walk[walk.length-1]);
-
-    if (id != -1) return;
-
-    if ((id != -1) && (typeflag != '5')) {
-        //throw "Warning: File already exists";
-        return; // do not overwrite
-    }
-    if ((id != -1) && (typeflag == '5')) {
-        return;
-    }
-
-    var inode = this.CreateInode();
-    inode.name = walk[n-1];
-    inode.parentid = parentid;
-    inode.mode = parseInt(ReadStringFromBinary(this.tarbuffer, 100, 8), 8);
-    var size = parseInt(ReadStringFromBinary(this.tarbuffer, 124, 12), 8);
-
-    switch(typeflag) {
-    case "5":
-        inode.mode |= S_IFDIR;
-        break;
-
-    case "0":
-        inode.mode |= S_IFREG;
-        inode.data = new Uint8Array(size);
-        if (size == 0) break;
-        this.tarmode = 1;
-        this.tarfileoffset = 0;
-        this.tarfilebuffer = inode.data;
-        break;
-
-    case "1":
-        inode.mode |= S_IFLNK;
-        inode.symlink = "/"+ReadStringFromBinary(this.tarbuffer, 157, 100);
-        break;
-
-    case "2":
-        inode.mode |= S_IFLNK;
-        inode.symlink = ReadStringFromBinary(this.tarbuffer, 157, 100);
-        break;
-    }
-    this.inodes.push(inode);
-}
 
 // -----------------------------------------------------
 
@@ -450,50 +360,17 @@ FS.prototype.SearchPath = function(path) {
 }
 // -----------------------------------------------------
 
-FS.prototype.TAR = function(path) {
-    DebugMessage("tar: " + path);
-    var id = this.SearchPath(path).id;
-    if (id == -1) return new Uint8Array(0);
-    var size = 0;
+FS.prototype.GetRecursiveList = function(dirid, list) {
+
     for(var i=0; i<this.inodes.length; i++) {
         if (!this.inodes[i].valid) continue;
-        if (this.inodes[i].parentid != id) continue;
-        switch(this.inodes[i].mode&S_IFMT)
-        {
-            case S_IFLNK:
-            case S_IFDIR:
-                size += 512;
-               break;
-            case S_IFREG:
-                size += 512;
-                size += this.inodes[i].data.length;
-                if (size & 511) {size = size & (~0x1FF); size += 512;}
-                break;
+        if (this.inodes[i].parentid != dirid) continue;
+        list.push(i);
+        if ((this.inodes[i].mode&S_IFMT) == S_IFDIR) {
+            this.GetRecursiveList(i, list);
         }
     }
-    DebugMessage("tar: " + this.GetFullPath(id) + " size:" + size);
-
-    var data = new Uint8Array(size);
-    
-    for(var i=0; i<this.inodes.length; i++) {
-        if (!this.inodes[i].valid) continue;
-        if (this.inodes[i].parentid != id) continue;
-        switch(this.inodes[i].mode&S_IFMT)
-        {
-            case S_IFLNK:
-                break;
-
-            case S_IFDIR:
-               break;
-
-            case S_IFREG:
-                break;
-        }
-    }
-    return data;
 }
-
-// -----------------------------------------------------
 
 FS.prototype.MergeFile = function(file) {
     DebugMessage("Merge path:" + file.name);
@@ -557,6 +434,188 @@ FS.prototype.FillDirectory = function(dirid) {
 
 }
 
+// -----------------------------------------------------
 
+function ReadStringFromBinary(buffer, offset, numBytes) {
+    var str = "";
+    for(var i=0; i<numBytes; i++) {
+        if (buffer[offset+i] < 32) return str; // no special signs
+        str = str + String.fromCharCode(buffer[offset+i]); 
+    }
+    return str;
+};
+
+function WriteStringToBinary(str, buffer, offset, numBytes) {
+    var n = Math.min(numBytes, str.length+1);
+    for(var i=0; i<n; i++) {
+        buffer[offset+i] = str.charCodeAt(i);
+    }
+    buffer[offset+n-1] = 0;
+};
+
+
+FS.prototype.Untar = function(x) {
+    this.tarbuffer[this.tarbufferofs++] = x;
+    if (this.tarbufferofs != 512) return;
+    this.tarbufferofs = 0;
+ 
+    if (this.tarmode == 1) {
+        var n = Math.min(512, this.tarfilebuffer.length - this.tarfileoffset);
+        for(var i=0; i<n; i++) {
+            this.tarfilebuffer[this.tarfileoffset++] = this.tarbuffer[i];
+        }
+        if (this.tarfileoffset >= this.tarfilebuffer.length) this.tarmode = 0; // file finished loading, change mode
+        return;
+    }
+
+    // tarmode = 0
+    var magic = ReadStringFromBinary(this.tarbuffer, 257, 5);
+    if (magic != "ustar") return;
+
+    var typeflag = String.fromCharCode(this.tarbuffer[156]);
+    var name = ReadStringFromBinary(this.tarbuffer, 0, 100);    
+    //DebugMessage("name:" + name);
+    //TODO: use searchpath function
+    var walk = name.split("/");
+    var n = walk.length;
+    if (walk[n-1].length == 0) walk.pop();
+    var n = walk.length;
+    DebugMessage("walk:" + walk);
+
+    var parentid = 0;
+    var id = -1;
+    for(var i=0; i<n-1; i++) {
+        id = this.Search(parentid, walk[i]);
+        if (id == -1) throw "Error in untar: Could not find inode.";
+        parentid = id;
+    }
+    id = this.Search(parentid, walk[walk.length-1]);
+
+    if (id != -1) return;
+
+    if ((id != -1) && (typeflag != '5')) {
+        //throw "Warning: File already exists";
+        return; // do not overwrite
+    }
+    if ((id != -1) && (typeflag == '5')) {
+        return;
+    }
+
+    var inode = this.CreateInode();
+    inode.name = walk[n-1];
+    inode.parentid = parentid;
+    inode.mode = parseInt(ReadStringFromBinary(this.tarbuffer, 100, 8), 8);
+    var size = parseInt(ReadStringFromBinary(this.tarbuffer, 124, 12), 8);
+
+    switch(typeflag) {
+    case "5":
+        inode.mode |= S_IFDIR;
+        break;
+
+    case "0":
+        inode.mode |= S_IFREG;
+        inode.data = new Uint8Array(size);
+        if (size == 0) break;
+        this.tarmode = 1;
+        this.tarfileoffset = 0;
+        this.tarfilebuffer = inode.data;
+        break;
+
+    case "1":
+        inode.mode |= S_IFLNK;
+        inode.symlink = "/"+ReadStringFromBinary(this.tarbuffer, 157, 100);
+        break;
+
+    case "2":
+        inode.mode |= S_IFLNK;
+        inode.symlink = ReadStringFromBinary(this.tarbuffer, 157, 100);
+        break;
+    }
+    this.inodes.push(inode);
+}
+
+FS.prototype.TAR = function(path) {
+    DebugMessage("tar: " + path);
+    var id = this.SearchPath(path).id;
+    if (id == -1) return new Uint8Array(0);
+    var filelist = [];
+    this.GetRecursiveList(id, filelist);
+    var size = 0;
+    for(var i=0; i<filelist.length; i++) {
+        switch(this.inodes[filelist[i]].mode&S_IFMT)
+        {
+            case S_IFLNK:
+            case S_IFDIR:
+                size += 512;
+               break;
+            case S_IFREG:
+                size += 512;
+                size += this.inodes[filelist[i]].data.length;
+                if (size & 511) {size = size & (~0x1FF); size += 512;}
+                break;
+        }
+    }    
+    DebugMessage("tar: " + this.GetFullPath(id) + " size: " + size + " files: " + filelist.length);
+    DebugMessage(filelist);
+    
+    var buffer = new Uint8Array(size);
+    var offset = 0;
+    for(var i=0; i<filelist.length; i++) {
+        var inode = this.inodes[filelist[i]];
+        var type = inode.mode&S_IFMT;
+        if ((type != S_IFLNK) && (type != S_IFDIR) && (type != S_IFREG)) continue;
+        WriteStringToBinary("ustar  ", buffer, offset+257, 8);
+        WriteStringToBinary(this.GetFullPath(filelist[i]), buffer, offset+0, 100);
+        WriteStringToBinary("00000000000", buffer, offset+124, 12); // size
+        WriteStringToBinary((inode.mode&0xFFF).toString(8), buffer, offset+100, 8); // mode
+        WriteStringToBinary(inode.uid.toString(8), buffer, offset+108, 8); // uid
+        WriteStringToBinary(inode.gid.toString(8), buffer, offset+116, 8); // gid
+        WriteStringToBinary((1356998400).toString(8), buffer, offset+136, 12); // mtime        
+        //WriteStringToBinary("root", buffer, offset+265, 7);
+        //WriteStringToBinary("root", buffer, offset+297, 7); // chksum blank to calculate the checksum
+        
+        buffer[offset+148+0] = 32; // chksum
+        buffer[offset+148+1] = 32;
+        buffer[offset+148+2] = 32;
+        buffer[offset+148+3] = 32;
+        buffer[offset+148+4] = 32;
+        buffer[offset+148+5] = 32;
+        buffer[offset+148+6] = 32;
+        buffer[offset+148+7] = 32;
+
+        switch(type)
+        {
+            case S_IFLNK:
+                buffer[offset+156] = "2".charCodeAt(0);
+                WriteStringToBinary(inode.symlink, buffer, offset+157, 100);
+                break;
+
+            case S_IFDIR:
+                buffer[offset+156] = "5".charCodeAt(0);
+                break;
+
+            case S_IFREG:
+                buffer[offset+156] = "0".charCodeAt(0);
+                WriteStringToBinary(inode.data.length.toString(8), buffer, offset+124, 12);
+                break;
+        }
+        var chksum = 0;
+        for(var j=0; j<512; j++) {
+            chksum += buffer[offset + j];
+        }
+        WriteStringToBinary(chksum.toString(8), buffer, offset+148, 7);
+        offset += 512;
+        
+        if (type == S_IFREG) { // copy the file
+            for(var j=0; j<inode.data.length; j++) {
+                buffer[offset++] = inode.data[j];
+            }
+            if (offset & 511) {offset = offset & (~0x1FF); offset += 512;}
+        }
+    }
+    return buffer;
+}
+
+// -----------------------------------------------------
 
 
