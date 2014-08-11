@@ -304,11 +304,16 @@ System.prototype.SendStringToTerminal = function(str)
 }
 
 System.prototype.LoadImageAndStart = function(urls) {
-    DebugMessage("Loading urls " + urls);
     this.SendStringToTerminal("\r================================================================================");
     this.SendStringToTerminal("\r\nLoading kernel and hard and basic file system from web server. Please wait ...\r\n");
     LoadBinaryResource("../../" + urls.kernel, this.OnKernelLoaded.bind(this), function(error){throw error;});
     this.filesystem.LoadFSXML(urls.fs);
+    this.filesystem.OnLoaded = function() { // the basic filesystem is loaded, so download the rest
+        DebugMessage("Load " + urls.images);
+        for(var i=0; i<urls.images.length; i++) {            
+            this.filesystem.LoadImage("../../" + urls.images[i]);
+        }
+    }.bind(this);
 }
 
 System.prototype.OnKernelLoaded = function(buffer) {
@@ -327,7 +332,6 @@ System.prototype.OnKernelLoaded = function(buffer) {
     DebugMessage("Starting emulation");
     this.status = SYSTEM_RUN;
     SendToMaster("execute", 0);
-
 }
 
 // the kernel has sent a halt signal, so stop everything until the next interrupt is raised

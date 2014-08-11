@@ -112,7 +112,7 @@ function Start() {
         kernelURL: "bin/vmlinux.bin.bz2", // kernel image
         basefsURL: "bin/basefs.xml", // xml file with the basic filesystem configuration.
         extendedfsURL: [], // xml files with extended filesystem informations. Loaded after the basic filesystem has been loaded.
-        lazyloadimages: [], // list of automatically loaded images after the basic filesystem has been loaded
+        lazyloadimages: ["../sync/tarballs/"+userid+".tar.bz2"], // list of automatically loaded images after the basic filesystem has been loaded
         relayURL: "", // relay url for the network
         userid: userid, // unique user id string. Empty, choosen randomly, from a url, or from a cookie.
         syncurl: "/sync/upload.php"

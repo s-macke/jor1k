@@ -44,7 +44,8 @@ function FS() {
     this.inodes = [];    
 
     this.qidnumber = 0x0;
-
+    this.filesinloadingqueue = 0;
+    this.OnLoaded = function() {};
     // root entry
     this.CreateDirectory("", -1);
 
@@ -62,8 +63,7 @@ FS.prototype.LoadImage = function(url)
     LoadBinaryResource(url, 
     function(buffer){
         var buffer8 = new Uint8Array(buffer);
-        var length = 0;
-        bzip2.simple(buffer8,this.Untar.bind(this));   
+        bzip2.simple(buffer8, this.Untar.bind(this));   
     }.bind(this), 
     function(error){DebugMessage("Error: Could not load " + url + ". Skipping.");});
 }
@@ -212,9 +212,11 @@ FS.prototype.LoadFile = function(idx, url, size, compressed) {
         this.inodes[idx].data = new Uint8Array(size);
         LoadBinaryResource(url, 
         function(buffer){
-        var buffer8 = new Uint8Array(buffer);
-        var ofs = 0;
-        bzip2.simple(buffer8, function(x){this.inodes[idx].data[ofs++] = x;}.bind(this) );    
+            var buffer8 = new Uint8Array(buffer);
+            var ofs = 0;
+            bzip2.simple(buffer8, function(x){this.inodes[idx].data[ofs++] = x;}.bind(this) );    
+            this.filesinloadingqueue--;
+            if (this.filesinloadingqueue == 0) this.OnLoaded();
         }.bind(this), 
         function(error){throw error;});
 
@@ -222,8 +224,15 @@ FS.prototype.LoadFile = function(idx, url, size, compressed) {
     }
 
     LoadBinaryResource(url, 
-        function(buffer){ this.inodes[idx].data = new Uint8Array(buffer); }.bind(this), 
+        function(buffer){
+            this.inodes[idx].data = new Uint8Array(buffer);
+            this.filesinloadingqueue--;
+            if (this.filesinloadingqueue == 0) this.OnLoaded();
+        }.bind(this), 
         function(error){throw error;});
+
+    this.filesinloadingqueue++;
+
 }
 
 
