@@ -234,6 +234,10 @@ FS.prototype.CreateDirectory = function(name, parentid) {
     var x = this.CreateInode();
     x.name = name;
     x.parentid = parentid;
+    if (parentid >= 0) {
+        x.uid = this.inodes[parentid].uid;
+        x.gid = this.inodes[parentid].gid;
+    }
     x.qid.type = S_IFDIR >> 8;
     x.mode = 0x01ED | S_IFDIR;
     this.inodes.push(x);
@@ -256,6 +260,8 @@ FS.prototype.CreateSymlink = function(filename, parentid, symlink) {
     var x = this.CreateInode();
     x.name = filename;
     x.parentid = parentid;
+    x.uid = this.inodes[parentid].uid;
+    x.gid = this.inodes[parentid].gid;
     x.qid.type = S_IFLNK >> 8;
     x.symlink = symlink;
     x.mode = S_IFLNK;
