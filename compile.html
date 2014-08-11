@@ -7,7 +7,7 @@
     </head>
     <body onload="Start()">
     <div class="heading">
-    <a href="http://opencores.org/or1k/"><img src="globe.png"></img></a>
+    <a href="http://opencores.org/or1k/"><img src="globe.png"/></a>
     <h1>Web-based C-Compiler demo for <a href='.'>jor1k</a></h1>
     </div>
     
@@ -53,7 +53,7 @@ int main() {
 }
 </div>
 
-gcc options:<input type="text" maxlen=32 id="gccoptions" value="-lm -Wall"></input><button type='button' onclick= "RunCode(GetCodeText(),document.getElementById('gccoptions').value);return false;" >Compile and run</button>
+gcc options:<input type="text" maxlen=32 id="gccoptions" value="-lm -Wall" /><button type='button' onclick= "RunCode(GetCodeText(),document.getElementById('gccoptions').value);return false;" >Compile and run</button>
 <span style="margin: 0 5px 0 5px" id="gcc-compile-status"></span>
 <span style="margin: 0 5px 0 5px">Errors: <span id="gcc-error-count">0</span> Warnings: <span id="gcc-warning-count">0</span></span>
 Theme<select onchange='editor.setTheme("ace/theme/"+this.options[this.selectedIndex].value)'>
@@ -88,15 +88,37 @@ Theme<select onchange='editor.setTheme("ace/theme/"+this.options[this.selectedIn
    <script src="js/lib/ace-editor-src-min-noconflict/ace.js" type="text/javascript" charset="utf-8"></script>
 
 <script>
+
+function RandomString(length) {
+    var chars = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    var result = '';
+    for (var i = length; i > 0; --i) result += chars[Math.round(Math.random() * (chars.length - 1))];
+    return result;
+}
+
 function Start() {
     CreateEditor();
     document.addEventListener("jor1k_terminal_put_char", terminalPutCharListener, false);
-    jor1kgui = new jor1kGUI("tty", "fb", "stats",
-        "bin/vmlinux.bin.bz2",
-        ["bin/basefs.xml"], [],
-        "ws://relay.widgetry.org/");
-}
 
+    var userid = location.search.split('user=')[1];
+    if (!userid) {
+        userid = RandomString(10);
+    }
+
+    jor1kparameters = {
+        termid: "tty",   // canvas id for the terminal
+        fbid: "fb",     // canvas id for the framebuffer
+        statsid: "stats",  // object id for the statistics test
+        kernelURL: "bin/vmlinux.bin.bz2", // kernel image
+        basefsURL: "bin/basefs.xml", // xml file with the basic filesystem configuration.
+        extendedfsURL: [], // xml files with extended filesystem informations. Loaded after the basic filesystem has been loaded.
+        lazyloadimages: [], // list of automatically loaded images after the basic filesystem has been loaded
+        relayURL: "", // relay url for the network
+        userid: userid, // unique user id string. Empty, choosen randomly, from a url, or from a cookie.
+        syncurl: "/sync/upload.php"
+    }
+    jor1kgui = new jor1kGUI(jor1kparameters);
+}
 
 var term_output = "";
 var gcc_output;

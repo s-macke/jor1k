@@ -15,12 +15,14 @@ function UARTDev(worker) {
     };
 }
 
-function jor1kGUI(termid, fbid, statsid, kernelurl, fsurls, imageurls, relayURL)
+function jor1kGUI(parameters)
 {
+    this.params = parameters;
+
     this.urls = [];
-    this.urls.kernel = kernelurl;
-    this.urls.fs = fsurls;
-    this.urls.images = imageurls;
+    this.urls.kernel = this.params.kernelURL;
+    this.urls.fs = [this.params.basefsURL];
+    this.urls.images = this.params.lazyloadimages;
 
     this.worker = new Worker('js/worker/worker.js');
     this.worker.onmessage = this.OnMessage.bind(this);   
@@ -50,6 +52,7 @@ function jor1kGUI(termid, fbid, statsid, kernelurl, fsurls, imageurls, relayURL)
       this.SendToWorker("LoadAndStart", this.urls);
       this.term.PauseBlink(false);
     }
+
     this.Pause = function(pause) {
       pause = !! pause; // coerce to boolean
       if(pause == this.userpaused) return; 
@@ -61,10 +64,10 @@ function jor1kGUI(termid, fbid, statsid, kernelurl, fsurls, imageurls, relayURL)
       this.term.PauseBlink(pause);
     }
 
-    this.terminalcanvas = document.getElementById(termid);
-    this.stats = document.getElementById(statsid);
+    this.terminalcanvas = document.getElementById(this.params.termid);
+    this.stats = document.getElementById(this.params.statsid);
 
-    this.term = new Terminal(24, 80, termid);
+    this.term = new Terminal(24, 80, this.params.termid);
     this.terminput = new TerminalInput(new UARTDev(this));
 
     this.IgnoreKeys = function() {
@@ -74,12 +77,11 @@ function jor1kGUI(termid, fbid, statsid, kernelurl, fsurls, imageurls, relayURL)
     var recordTarget = function(event) {
             this.lastMouseDownTarget = event.target;
         }.bind(this);
-      
+
     if(document.addEventListener)
       document.addEventListener('mousedown', recordTarget, false);
     else
       Window.onmousedown = recordTarget; // IE 10 support (untested)
-        
     
     document.onkeypress = function(event) {
         if(this.IgnoreKeys()) return true;
@@ -99,12 +101,12 @@ function jor1kGUI(termid, fbid, statsid, kernelurl, fsurls, imageurls, relayURL)
         return this.terminput.OnKeyUp(event);
     }.bind(this);
 
-    this.ethernet = new Ethernet(relayURL);
+    this.ethernet = new Ethernet(this.params.relayURL);
     this.ethernet.onmessage = function(e) {
         this.SendToWorker("ethmac", e.data);
     }.bind(this);
 
-    this.InitFramebuffer(fbid);
+    this.InitFramebuffer(this.params.fbid);
     
     this.Reset();
     
