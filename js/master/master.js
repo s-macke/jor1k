@@ -117,6 +117,11 @@ jor1kGUI.prototype.TAR = function(path) {
     this.SendToWorker("tar", path);
 }
 
+jor1kGUI.prototype.Sync = function(path) {
+    this.SendToWorker("sync", path);
+}
+
+
 jor1kGUI.prototype.UploadExternalFile = function(f) {
     var reader = new FileReader();
     reader.onload = function(e) {
@@ -125,6 +130,48 @@ jor1kGUI.prototype.UploadExternalFile = function(f) {
     }.bind(this);
     reader.readAsArrayBuffer(f);
 }
+
+
+function UploadBinaryResource(url, filename, data, OnSuccess, OnError) {
+
+    var boundary = "xxxxxxxxx";
+
+    var xhr = new XMLHttpRequest();
+    xhr.open('post', url, true);
+    xhr.setRequestHeader("Content-Type", "multipart/form-data, boundary=" + boundary);
+    xhr.setRequestHeader("Content-Length", data.length);
+    xhr.onreadystatechange = function () {
+        if (xhr.readyState != 4) {
+            return;
+        }
+        if ((xhr.status != 200) && (xhr.status != 0)) {
+            OnError("Error: Could not upload file " + filename);
+            return;
+        }
+        OnSuccess(this.responseText);
+    };
+
+    var bodyheader = "--" + boundary + "\r\n";
+    bodyheader += 'Content-Disposition: form-data; name="uploaded"; filename="' + filename + ".tar" + '"\r\n';
+    bodyheader += "Content-Type: application/octet-stream\r\n\r\n";
+
+    var bodyfooter = "\r\n";
+    bodyfooter += "--" + boundary + "--";
+
+    var newdata = new Uint8Array(data.length + bodyheader.length + bodyfooter.length);
+    var offset = 0;
+    for(var i=0; i<bodyheader.length; i++)
+        newdata[offset++] = bodyheader.charCodeAt(i);
+
+    for(var i=0; i<data.length; i++)
+        newdata[offset++] = data[i];
+
+    for(var i=0; i<bodyfooter.length; i++)
+        newdata[offset++] = bodyfooter.charCodeAt(i);
+
+    xhr.send(newdata.buffer);
+}
+
 
 jor1kGUI.prototype.OnMessage = function(e) {
 if (e.data.command == "Debug") console.log(e.data.data);
@@ -157,8 +204,16 @@ if (e.data.command == "Debug") console.log(e.data.data);
             this.stats.innerHTML = this.userpaused ? "Paused" : (Math.floor(e.data.data/100000)/10.) + " MIPS";
             break;
         case "tar":
-            DebugMessage("received tar");
             download(e.data.data, "user.tar", "application/x-tar");
+            break;
+        case "sync":
+            UploadBinaryResource(this.params.syncURL, this.params.userid + ".tar", e.data.data, 
+            function(response) {
+                alert(response);
+            }
+           , function(msg) {alert(msg);}
+           );
+            
             break;
 
         }

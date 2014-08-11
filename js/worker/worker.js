@@ -63,6 +63,9 @@ onmessage = function(e) {
         case "tar":
             SendToMaster("tar", sys.filesystem.TAR(e.data.data));
             break;
+        case "sync":
+            SendToMaster("sync", sys.filesystem.TAR(e.data.data));
+            break;
     }
 
 }

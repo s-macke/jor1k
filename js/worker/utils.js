@@ -146,21 +146,21 @@ function UploadBinaryResource(url, filename, data, OnSuccess, OnError) {
         if (req.readyState != 4) {
             return;
         }
-        if ((req.status != 200) && (req.status != 0)) {
-            OnError("Error: Could not upload file " + url);
+        if ((req.status != 200) && (xhr.status != 0)) {
+            OnError("Error: Could not upload file " + filename);
             return;
         }
         OnSuccess(this.responseText);
     };
 
     var bodyheader = "--" + boundary + "\r\n";
-    bodyheader += 'Content-Disposition: form-data; name="uploaded"; filename="' + fileName + ".tar" + '"\r\n';
+    bodyheader += 'Content-Disposition: form-data; name="uploaded"; filename="' + filename + ".tar" + '"\r\n';
     bodyheader += "Content-Type: application/octet-stream\r\n\r\n";
 
     var bodyfooter = "\r\n";
     bodyfooter += "--" + boundary + "--";
 
-    var newdata = new Uint8Array(fileSize + bodyheader.length + bodyfooter.length);
+    var newdata = new Uint8Array(data.length + bodyheader.length + bodyfooter.length);
     var offset = 0;
     for(var i=0; i<bodyheader.length; i++)
         newdata[offset++] = bodyheader.charCodeAt(i);
