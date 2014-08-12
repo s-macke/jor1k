@@ -8,6 +8,9 @@
         <link rel="stylesheet" href="css/default.css">
     </head>
     <body onload="Start()">
+    <canvas id="fbfullscreen" width="640" height="400" style="width: 0px; height: 0px;">
+        Framebuffer uses canvas
+    </canvas>
     <div class="heading">
     <a href="http://opencores.org/or1k/"><img src="globe.png"/></a>
     <h1>jor1k: OpenRISC OR1K Javascript Emulator Running Linux With Network Support</h1>
@@ -48,6 +51,7 @@
                     </fieldset>
                     <button type='button' onclick='jor1kgui.TAR("home/user")'>Download home</button>
                     <button type='button' onclick='jor1kgui.Sync("home/user")'>Sync home</button>
+                    <button type='button' onclick='Fullscreen()'>FullScreen</button>
                     </td></tr>
                     </table>
 
@@ -139,6 +143,28 @@
     
 <script>
 
+function Fullscreen()
+{
+    document.body.style.margin = '0px';
+
+var w = window,
+    d = document,
+    e = d.documentElement,
+    g = d.getElementsByTagName('body')[0],
+    x = w.innerWidth || e.clientWidth || g.clientWidth,
+    y = w.innerHeight|| e.clientHeight|| g.clientHeight;
+
+    var d = x/y;
+    if (d > 1.6) x = y*1.6; else y = x/1.6;
+
+    fb = document.getElementById("fbfullscreen");
+    fb.style.width = "" + x + "px";
+    fb.style.height = "" + y + "px";
+
+    jor1kgui.InitFramebuffer("fbfullscreen");
+}
+
+
 function OnUploadFiles(files)
 {
     for (var i = 0, f; f = files[i]; i++) {
@@ -152,8 +178,6 @@ function RandomString(length) {
     for (var i = length; i > 0; --i) result += chars[Math.round(Math.random() * (chars.length - 1))];
     return result;
 }
-
- 
 
 function Start() {
 

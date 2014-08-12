@@ -110,6 +110,9 @@ function jor1kGUI(parameters)
     
     this.Reset();
     
+    // receive the contents of the framebuffer every 100ms
+    window.setInterval(function(){this.SendToWorker("GetFB", 0)}.bind(this), 100);
+
     window.setInterval(function(){this.SendToWorker("GetIPS", 0)}.bind(this), 1000);
 }
 
@@ -252,9 +255,7 @@ jor1kGUI.prototype.InitFramebuffer = function(fbid) {
         var y = event.clientY - rect.top;
         this.SendToWorker("tsmousemove", {x:x, y:y});
     }.bind(this);
-    
-    // receive the contents of the framebuffer every 100ms
-    window.setInterval(function(){this.SendToWorker("GetFB", 0)}.bind(this), 100);
+  
 }
 
 jor1kGUI.prototype.UpdateFramebuffer = function(buffer) {
