@@ -177,7 +177,7 @@ FS.prototype.OnXMLLoaded = function(fs)
     case "Dir":
         inode.mode |= S_IFDIR;
         parentid = this.inodes.length;
-        this.inodes.push(inode);
+        this.PushInode(inode);
         break;
 
     case "/Dir":
@@ -188,7 +188,7 @@ FS.prototype.OnXMLLoaded = function(fs)
         inode.mode |= S_IFREG;
         //inode.data = new Uint8Array(size);
         var idx = this.inodes.length;
-        this.inodes.push(inode);        
+        this.PushInode(inode);
         var url = sysrootdir + (tag.src.length==0?this.GetFullPath(idx):tag.src);
         //DebugMessage("Load id=" + (idx) + " " + url);
         this.LoadFile(idx, url, size, tag.compressed);
@@ -197,7 +197,7 @@ FS.prototype.OnXMLLoaded = function(fs)
     case "Link":
         inode.mode |= S_IFLNK;
         inode.symlink = tag.path;
-        this.inodes.push(inode);
+        this.PushInode(inode);
         break;
         }
     }
@@ -238,18 +238,26 @@ FS.prototype.LoadFile = function(idx, url, size, compressed) {
 
 // -----------------------------------------------------
 
+FS.prototype.PushInode = function(inode) {
+    this.inodes.push(inode);
+    if (inode.parentid != -1) {
+        this.inodes[inode.parentid].updatedir = true;
+    }
+}
+
 FS.prototype.CreateInode = function() {
     this.qidnumber++;
     return {
         valid : true,
+        updatedir : false,
+        parentid: -1,
         name : "",
         uid : 0x0,
         gid : 0x0,
         data : new Uint8Array(0),
         symlink : "",
         mode : 0x01ED,
-        qid: {type: 0, version: 0, path: this.qidnumber},
-        parentid: -1
+        qid: {type: 0, version: 0, path: this.qidnumber}
     };
 }
 
@@ -263,7 +271,7 @@ FS.prototype.CreateDirectory = function(name, parentid) {
     }
     x.qid.type = S_IFDIR >> 8;
     x.mode = 0x01ED | S_IFDIR;
-    this.inodes.push(x);
+    this.PushInode(x);
     return this.inodes.length-1;
 }
 
@@ -275,7 +283,7 @@ FS.prototype.CreateFile = function(filename, parentid) {
     x.gid = this.inodes[parentid].gid;
     x.qid.type = S_IFREG >> 8;
     x.mode = 0x01B4 | S_IFREG;
-    this.inodes.push(x);
+    this.PushInode(x);
     return this.inodes.length-1;
 }
      
@@ -288,7 +296,7 @@ FS.prototype.CreateSymlink = function(filename, parentid, symlink) {
     x.qid.type = S_IFLNK >> 8;
     x.symlink = symlink;
     x.mode = S_IFLNK;
-    this.inodes.push(x);
+    this.PushInode(x);
     return this.inodes.length-1;
 }
 
@@ -353,6 +361,7 @@ FS.prototype.Unlink = function(idx) {
 
     this.inodes[idx].data = new Uint8Array(0);
     this.inodes[idx].valid = false;
+    this.inodes[this.inodes[idx].parentid].updatedir = true;
     return true;
 }
 
@@ -423,6 +432,7 @@ FS.prototype.MergeFile = function(file) {
 
 FS.prototype.FillDirectory = function(dirid) {
     var inode = this.inodes[dirid];
+    if (!inode.updatedir) return;
     var parentid = this.inodes[dirid].parentid;
     if (parentid == -1) parentid = 0; // if root directory point to the root directory
     
@@ -469,7 +479,7 @@ FS.prototype.FillDirectory = function(dirid) {
         inode.data, offset);
         //DebugMessage("Add file " + this.inodes[i].name);
     }
-
+    inode.updatedir = false;
 }
 
 // -----------------------------------------------------
@@ -571,7 +581,7 @@ FS.prototype.Untar = function(x) {
         inode.symlink = ReadStringFromBinary(this.tarbuffer, 157, 100);
         break;
     }
-    this.inodes.push(inode);
+    this.PushInode(inode);
 }
 
 FS.prototype.TAR = function(path) {

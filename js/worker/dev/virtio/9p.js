@@ -310,11 +310,17 @@ Virtio9p.prototype.ReceiveRequest = function (desc, GetByte) {
             var newid = this.fs.Search(this.fid2inode[newdirfid], newname);
             if (newid != -1) {
                 this.fs.Unlink(newid);
-            }
+            }           
             var inode = this.fs.GetInode(oldid);
             inode.parentid = this.fid2inode[newdirfid];
             inode.name = newname;
             inode.qid.version++;
+
+            inode = this.fs.GetInode(this.fid2inode[olddirfid]);
+            inode.updatedir = true;
+            inode = this.fs.GetInode(this.fid2inode[newdirfid]);
+            inode.updatedir = true;
+           
             this.BuildReply(id, tag, 0);
             return true;
             break;
