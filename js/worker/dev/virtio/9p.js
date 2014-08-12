@@ -10,11 +10,11 @@
 // flush
 // lock?
 
-
 var EPERM = 1;       /* Operation not permitted */
-var ENOENT = 2;       /* No such file or directory */
-var EINVAL = 22;      /* Invalid argument */
-var ENOTSUPP = 524;     /* Operation is not supported */
+var ENOENT = 2;      /* No such file or directory */
+var EINVAL = 22;     /* Invalid argument */
+var ENOTSUPP = 524;  /* Operation is not supported */
+var ENOTEMPTY = 39;  /* Directory not empty */
 
 var P9_SETATTR_MODE = 0x00000001;
 var P9_SETATTR_UID = 0x00000002;
@@ -56,7 +56,8 @@ Virtio9p.prototype.BuildReply = function(id, tag, payloadsize) {
 }
 
 Virtio9p.prototype.SendError = function (tag, errormsg, errorcode) {
-    var size = ArrayToStruct(["s", "w"], [errormsg, errorcode], this.replybuffer, 7);
+    //var size = ArrayToStruct(["s", "w"], [errormsg, errorcode], this.replybuffer, 7);
+    var size = ArrayToStruct(["w"], [errorcode], this.replybuffer, 7);
     this.BuildReply(6, tag, size);
 }
 
@@ -330,7 +331,11 @@ Virtio9p.prototype.ReceiveRequest = function (desc, GetByte) {
                    this.fid2inode[nwfid] = -1;
                    return true;
             }
-            this.fs.Unlink(id);
+            var ret = this.fs.Unlink(id);
+            if (!ret) {
+                this.SendError(tag, "Directory not empty", ENOTEMPTY);
+                return true;
+            }
             this.BuildReply(id, tag, 0);
             return true;
             break;

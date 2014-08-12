@@ -343,8 +343,17 @@ FS.prototype.Rename = function(srcdir, srcname, destdir, destname) {
 
 
 FS.prototype.Unlink = function(idx) {
+
+    if ((this.inodes[idx].mode&S_IFMT) == S_IFDIR) {
+        for(var i=0; i<this.inodes.length; i++) {
+            if (!this.inodes[i].valid) continue;
+            if (this.inodes[i].parentid == idx) return false;
+        }
+    }
+
     this.inodes[idx].data = new Uint8Array(0);
     this.inodes[idx].valid = false;
+    return true;
 }
 
 
