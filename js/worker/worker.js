@@ -5,7 +5,7 @@
 importScripts('utils.js', 'dev/framebuffer.js', 'dev/ethmac.js', 'dev/ata.js',
     'dev/uart.js', 'dev/touchscreen.js', 'dev/keyboard.js', 'dev/virtio.js', 'ram.js',
     'system.js', 'bzip2.js', 'cpu/cpu.js', 'cpu/fastcpu.js', 'cpu/safecpu.js',
-    'dev/virtio/9p.js', 'filesystem.js');
+    'dev/virtio/9p.js', 'filesystem/filesystem.js', 'filesystem/tar.js');
 
 var sys = new System();
 DebugMessage("System initialized");
@@ -68,10 +68,10 @@ onmessage = function(e) {
             sys.filesystem.MergeFile(e.data.data);
             break;
         case "tar":
-            SendToMaster("tar", sys.filesystem.TAR(e.data.data));
+            SendToMaster("tar", sys.filesystem.tar.Pack(e.data.data));
             break;
         case "sync":
-            SendToMaster("sync", sys.filesystem.TAR(e.data.data));
+            SendToMaster("sync", sys.filesystem.tar.Pack(e.data.data));
             break;
     }
 }
