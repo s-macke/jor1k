@@ -12,3 +12,4 @@ if test -z "${XDG_RUNTIME_DIR}"; then
     fi
 fi
 
+alias prboom="prboom -height 400"

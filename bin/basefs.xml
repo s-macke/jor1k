@@ -388,6 +388,7 @@
 	</Dir>
 	<Dir name='home' mode='40755'>
 		<Dir name='user' mode='42755' uid='1000' gid='1000'>
+			<File name='.profile' mode='100644' uid='1000' gid='1000' size='358' src='root/profile'/>
 		</Dir>
 	</Dir>
 	<Dir name='lib' mode='40555'></Dir>
