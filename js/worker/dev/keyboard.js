@@ -4,7 +4,7 @@
 
 // Emulating the Opencores Keyboard Controller
 
-// translation table from Javascript keycodes to US-keyboard keycodes
+// translation table from Javascript keycodes to Linux keyboard scancodes
 
 var kc2kc =
 [
@@ -30,11 +30,11 @@ var kc2kc =
 42,     // shift
 29,     // ctrl
 56,     // alt
-197,    // pause/break
+119,    // pause/break
 
 // 20
 58,     // caps lock
-0,      // 
+0,      //
 0,      //
 0,      //
 0,      //
@@ -48,22 +48,22 @@ var kc2kc =
 0,      //
 0,      //
 57,     // space
-201,    // page up
-209,    // page down
-207,    // end
-199,    // home
-203,    // left arrow
-200,    // up arrow
-205,    // right arrow
+104,    // page up
+109,    // page down
+107,    // end
+102,    // home
+105,    // left arrow
+103,    // up arrow
+106,    // right arrow
 
 // 40
-208,    // down arror
+108,    // down arrow
 0,      //
 0,      //
 0,      //
 0,      //
-210,    // insert
-211,    // delete
+82,    // insert
+84,    // delete
 0,      //
 11,     // 0
 2,      // 1
@@ -118,9 +118,9 @@ var kc2kc =
 
 // 90
 44,     // z
-219,    // left window key
-220,    // right window key
-183,    // select key
+0,    // left window key
+0,    // right window key
+0,    // select key
 0,      // 
 0,      // 
 82,     // numpad 0
@@ -286,10 +286,13 @@ var kc2kc =
 
 ];
 
+
+
 function KeyboardDev(intdev) {
     this.intdev = intdev;
-    this.Reset();    
-    }
+    this.fifo = [];
+    this.Reset();
+}
 
 KeyboardDev.prototype.Reset = function() {
     this.key = 0x0;
@@ -297,20 +300,21 @@ KeyboardDev.prototype.Reset = function() {
 
 KeyboardDev.prototype.OnKeyDown = function(event) {
     this.key = kc2kc[event.keyCode] | 0x0;
-    if (this.key != 0) {
-        this.intdev.RaiseInterrupt(0x5);
-    }
+    if (this.key == 0) return;
+    this.fifo.push(this.key);
+    this.intdev.RaiseInterrupt(0x5);
 }
 
 KeyboardDev.prototype.OnKeyUp = function(event) {
-    this.key = kc2kc[event.keyCode] | 0x80;
-    if (this.key != 0) {
-        this.intdev.RaiseInterrupt(0x5);
-    }
+    this.key = kc2kc[event.keyCode];
+    if (this.key == 0) return;
+    this.key = this.key | 0x80;
+    this.fifo.push(this.key);
+    this.intdev.RaiseInterrupt(0x5);
 }
 
 KeyboardDev.prototype.ReadReg8 = function (addr) {
-    this.intdev.ClearInterrupt(0x5);
-    return this.key;
+    var key = this.fifo.shift();
+    if (this.fifo.length == 0) this.intdev.ClearInterrupt(0x5);
+    return key;
 }
-
