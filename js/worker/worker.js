@@ -10,6 +10,8 @@ importScripts('utils.js', 'dev/framebuffer.js', 'dev/ethmac.js', 'dev/ata.js',
 var sys = new System();
 DebugMessage("System initialized");
 
+fbupdatecount = 0;
+
 onmessage = function(e) {
     switch(e.data.command)
     {
@@ -20,8 +22,13 @@ onmessage = function(e) {
             sys.ethdev.Receive(new Uint8Array(e.data.data));
             break;
         case "GetFB":
+            fbupdatecount++;
             if (sys.status == SYSTEM_RUN) {
-                SendToMaster("GetFB", sys.fbdev.GetBuffer());
+                    SendToMaster("GetFB", sys.fbdev.GetBuffer());
+            } else {
+                if ((fbupdatecount&7) == 0) {
+                    SendToMaster("GetFB", sys.fbdev.GetBuffer());
+                }
             }
             break;
         case "tty0":
@@ -67,5 +74,4 @@ onmessage = function(e) {
             SendToMaster("sync", sys.filesystem.TAR(e.data.data));
             break;
     }
-
 }
