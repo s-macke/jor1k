@@ -248,8 +248,7 @@ SafeCPU.prototype.SetSPR = function (idx, x) {
                 }
             }
             break;
-        case 2:
-            this.PICSR = x;
+        case 2: // PICSR
             break;
         default:
             DebugMessage("Error in SetSPR: interrupt address not supported");

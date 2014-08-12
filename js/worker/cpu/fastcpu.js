@@ -336,8 +336,7 @@ function SetSPR(idx, x) {
                 }
             }
             break;
-        case 2:
-            PICSR = x;
+        case 2: // PICSR
             break;
         default:
             DebugMessage(ERROR_SETSPR_INTERRUPT_ADDRESS|0);
