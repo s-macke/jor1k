@@ -154,7 +154,7 @@ function UploadBinaryResource(url, filename, data, OnSuccess, OnError) {
     };
 
     var bodyheader = "--" + boundary + "\r\n";
-    bodyheader += 'Content-Disposition: form-data; name="uploaded"; filename="' + filename + ".tar" + '"\r\n';
+    bodyheader += 'Content-Disposition: form-data; name="uploaded"; filename="' + filename + '"\r\n';
     bodyheader += "Content-Type: application/octet-stream\r\n\r\n";
 
     var bodyfooter = "\r\n";
