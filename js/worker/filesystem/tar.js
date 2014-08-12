@@ -4,7 +4,6 @@
 // TAR file support for the filesystem
 
 function TAR(filesystem) {
-
     this.fs = filesystem;
     this.tarbuffer = new Uint8Array(512);
     this.tarbufferofs = 0;
@@ -93,6 +92,7 @@ TAR.prototype.Unpack = function(x) {
     case "0":
         inode.mode |= S_IFREG;
         inode.data = new Uint8Array(size);
+        inode.size = size;
         if (size == 0) break;
         this.tarmode = 1;
         this.tarfileoffset = 0;
@@ -112,8 +112,6 @@ TAR.prototype.Unpack = function(x) {
     this.fs.PushInode(inode);
 }
 
-
-
 TAR.prototype.Pack = function(path) {
     DebugMessage("tar: " + path);
     var id = this.fs.SearchPath(path).id;
@@ -130,7 +128,7 @@ TAR.prototype.Pack = function(path) {
                break;
             case S_IFREG:
                 size += 512;
-                size += this.fs.inodes[filelist[i]].data.length;
+                size += this.fs.inodes[filelist[i]].size;
                 if (size & 511) {size = size & (~0x1FF); size += 512;}
                 break;
         }
@@ -176,7 +174,7 @@ TAR.prototype.Pack = function(path) {
 
             case S_IFREG:
                 buffer[offset+156] = "0".charCodeAt(0);
-                WriteStringToBinary(inode.data.length.toString(8), buffer, offset+124, 12);
+                WriteStringToBinary(inode.size.toString(8), buffer, offset+124, 12);
                 break;
         }
         var chksum = 0;
@@ -187,7 +185,7 @@ TAR.prototype.Pack = function(path) {
         offset += 512;
         
         if (type == S_IFREG) { // copy the file
-            for(var j=0; j<inode.data.length; j++) {
+            for(var j=0; j<inode.size; j++) {
                 buffer[offset++] = inode.data[j];
             }
             if (offset & 511) {offset = offset & (~0x1FF); offset += 512;}

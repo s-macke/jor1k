@@ -208,6 +208,7 @@ FS.prototype.LoadFile = function(idx, url, size, compressed) {
     if (compressed) {
         url = url + ".bz2";
         this.inodes[idx].data = new Uint8Array(size);
+        this.inodes[idx].size = size;
         LoadBinaryResource(url, 
         function(buffer){
             var buffer8 = new Uint8Array(buffer);
@@ -224,15 +225,14 @@ FS.prototype.LoadFile = function(idx, url, size, compressed) {
     LoadBinaryResource(url, 
         function(buffer){
             this.inodes[idx].data = new Uint8Array(buffer);
+            this.inodes[idx].size = this.inodes[idx].data.length;
             this.filesinloadingqueue--;
             if (this.filesinloadingqueue == 0) this.OnLoaded();
         }.bind(this), 
         function(error){throw error;});
 
     this.filesinloadingqueue++;
-
 }
-
 
 // -----------------------------------------------------
 
@@ -250,6 +250,7 @@ FS.prototype.CreateInode = function() {
         updatedir : false,
         parentid: -1,
         name : "",
+        size : 0x0,
         uid : 0x0,
         gid : 0x0,
         data : new Uint8Array(0),
@@ -302,6 +303,7 @@ FS.prototype.CreateTextFile = function(filename, parentid, str) {
     var id = this.CreateFile(filename, parentid);
     var x = this.inodes[id];
     x.data = new Uint8Array(str.length);
+    x.size = str.length;
     for (var j in str) {
         x.data[j] = str.charCodeAt(j);
     }
@@ -358,6 +360,7 @@ FS.prototype.Unlink = function(idx) {
     }
 
     this.inodes[idx].data = new Uint8Array(0);
+    this.inodes[idx].size = 0;
     this.inodes[idx].valid = false;
     this.inodes[this.inodes[idx].parentid].updatedir = true;
     return true;
@@ -374,9 +377,10 @@ FS.prototype.ChangeSize = function(idx, newsize)
     var inode = this.inodes[idx];
     var temp = inode.data;
     //DebugMessage("change size to: " + newsize);
+    if (newsize == inode.size) return;
     inode.data = new Uint8Array(newsize);
-    var size = temp.length;
-    if (size > inode.data.length) size = inode.data.length;
+    inode.size = newsize;
+    var size = Math.min(temp.length, inode.size);
     for(var i=0; i<size; i++) {
         inode.data[i] = temp[i];
     }
@@ -425,6 +429,7 @@ FS.prototype.MergeFile = function(file) {
         ids.id = this.CreateFile(ids.name, ids.parentid); 
     }
     this.inodes[ids.id].data = file.data;
+    this.inodes[ids.id].size = file.data.length;
 }
 
 
@@ -446,6 +451,7 @@ FS.prototype.FillDirectory = function(dirid) {
     size += 13 + 8 + 1 + 2 + 2; // ".." entry
     //DebugMessage("size of dir entry: " + size);
     inode.data = new Uint8Array(size);
+    inode.size = size;
 
     var offset = 0x0;
     offset += ArrayToStruct(

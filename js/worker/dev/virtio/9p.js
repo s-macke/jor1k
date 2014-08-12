@@ -193,9 +193,9 @@ Virtio9p.prototype.ReceiveRequest = function (desc, GetByte) {
             
             req[5] = 0x1; // number of hard links
             req[6] = 0x0; // device id low
-            req[7] = inode.data.length; // size low
-            req[8] = inode.data.length; // blk size low
-            req[9] = inode.data.length/512; // number of file system blocks
+            req[7] = inode.size; // size low
+            req[8] = inode.size; // blk size low
+            req[9] = inode.size/512; // number of file system blocks
             req[10] = 0x0; // atime
             req[11] = 0x0;
             req[12] = 0x0; // mtime
@@ -266,7 +266,7 @@ Virtio9p.prototype.ReceiveRequest = function (desc, GetByte) {
             //if (id == 116) DebugMessage("[read]: fid=" + fid + " offset=" + offset + " count=" + count);
             if (id == 40) this.fs.FillDirectory(this.fid2inode[fid]);
             var inode = this.fs.GetInode(this.fid2inode[fid]);
-            if (inode.data.length < offset+count) count = inode.data.length-offset;
+            if (inode.size < offset+count) count = inode.size-offset;
             for(var i=0; i<count; i++)
                 this.replybuffer[7+4+i] = inode.data[offset+i];
             ArrayToStruct(["w"], [count], this.replybuffer, 7);
@@ -281,7 +281,7 @@ Virtio9p.prototype.ReceiveRequest = function (desc, GetByte) {
             var count = req[2];
             //DebugMessage("[write]: fid=" + fid + " offset=" + offset + " count=" + count);
             var inode = this.fs.GetInode(this.fid2inode[fid]);
-            if (inode.data.length < (offset+count)) {
+            if (inode.size < (offset+count)) {
                 this.fs.ChangeSize(this.fid2inode[fid], offset+count);
             }
             for(var i=0; i<count; i++)
