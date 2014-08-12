@@ -509,7 +509,7 @@ FS.prototype.Untar = function(x) {
     var n = walk.length;
     if (walk[n-1].length == 0) walk.pop();
     var n = walk.length;
-    DebugMessage("walk:" + walk);
+    //DebugMessage("walk:" + walk);
 
     var parentid = 0;
     var id = -1;
@@ -534,6 +534,8 @@ FS.prototype.Untar = function(x) {
     inode.name = walk[n-1];
     inode.parentid = parentid;
     inode.mode = parseInt(ReadStringFromBinary(this.tarbuffer, 100, 8), 8);
+    inode.uid = parseInt(ReadStringFromBinary(this.tarbuffer, 108, 8), 8);
+    inode.gid = parseInt(ReadStringFromBinary(this.tarbuffer, 116, 8), 8);
     var size = parseInt(ReadStringFromBinary(this.tarbuffer, 124, 12), 8);
 
     switch(typeflag) {

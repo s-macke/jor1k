@@ -146,6 +146,7 @@ Virtio9p.prototype.ReceiveRequest = function (desc, GetByte) {
             var idx = this.fs.CreateDirectory(name, this.fid2inode[fid]);
             var inode = this.fs.GetInode(idx);
             inode.mode = mode;
+            inode.gid = gid;
             ArrayToStruct(["Q"], [inode.qid], this.replybuffer, 7);
             this.BuildReply(id, tag, 13);
             return true;            
@@ -162,7 +163,7 @@ Virtio9p.prototype.ReceiveRequest = function (desc, GetByte) {
             var idx = this.fs.CreateFile(name, this.fid2inode[fid]);
             this.fid2inode[fid] = idx;
             var inode = this.fs.GetInode(idx);
-            inode.mode = mode;
+            inode.gid = gid;
             ArrayToStruct(["Q", "w"], [inode.qid, this.IOUNIT], this.replybuffer, 7);
             this.BuildReply(id, tag, 13+4);
             return true;            
