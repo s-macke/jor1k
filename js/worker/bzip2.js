@@ -116,7 +116,7 @@ onmessage = function(e) {
 
             unpacked[length++] = x;
             if (length >= unpacked.length) {
-               var newdata = new Uint8Array(unpacked.length*4/3);
+               var newdata = new Uint8Array(Math.floor(unpacked.length*4/3));
                for(var j=0; j<unpacked.length; j++) {
                     newdata[j] = unpacked[j];
                }
