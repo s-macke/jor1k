@@ -84,6 +84,51 @@ bzip2.crcTable =
    0xbcb4666d, 0xb8757bda, 0xb5365d03, 0xb1f740b4
 ];
 
+function LoadBinaryResource(url, OnSuccess, OnError) {
+    var req = new XMLHttpRequest();
+    req.open('GET', url, true);
+    req.responseType = "arraybuffer";
+    req.onreadystatechange = function () {
+        if (req.readyState != 4) {
+            return;
+        }
+        if ((req.status != 200) && (req.status != 0)) {
+            OnError("Error: Could not load file " + url);
+            return;
+        }
+        var arrayBuffer = req.response;
+        if (arrayBuffer) {
+            OnSuccess(arrayBuffer);
+        } else {
+            OnError("Error: No data received from: " + url);
+        }
+    };
+    req.send(null);
+}
+
+
+onmessage = function(e) {
+    LoadBinaryResource(e.data, function(buffer) {
+        var buffer8 = new Uint8Array(buffer);
+        var unpacked = new Uint8Array(buffer8.length*3); // this should be enough for most cases
+        var length = 0;
+        bzip2.simple(buffer8, function(x){
+
+            unpacked[length++] = x;
+            if (length >= unpacked.length) {
+               var newdata = new Uint8Array(unpacked.length*4/3);
+               for(var j=0; j<unpacked.length; j++) {
+                    newdata[j] = unpacked[j];
+               }
+               unpacked = newdata;
+            }
+            
+            }.bind(this)
+            );
+        postMessage({size: length, data: unpacked});
+    }, function(e){}
+    );
+}
 
 bzip2.array = function(bytes) {
     var bit = 0, byte = 0;

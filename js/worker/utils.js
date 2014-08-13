@@ -321,3 +321,14 @@ function StructToArray2(typelist, GetByte) {
     return output;
 };
 
+function LoadBZIP2Resource(url, OnSuccess, OnError)
+{
+    var worker = new Worker('bzip2.js');
+    worker.onmessage = function(e) {
+        OnSuccess(e.data);
+    }    
+    worker.onerror = function(e) {
+        OnError("Error at " + e.filename + ":" + e.lineno + ": " + e.message);
+    }
+    worker.postMessage(url);    
+}
