@@ -1,0 +1,115 @@
+#!/bin/sh
+
+Main () {
+
+showmenu \
+"Choices" \
+"Graphic Games" \
+"Terminal Games" \
+"Terminal Demos"
+
+case $? in
+	1 )
+		GGames ;;
+	2 )
+		TGames ;;
+	3)
+		TDemos ;;
+esac
+
+}
+
+
+GGames () {
+
+showmenu \
+"Graphic Games" \
+"ScummVM - Monkey Island demo" \
+"PrBoom  - Doom"
+
+case $? in
+	0 )
+		Main ;;
+	1 )
+		scummvm ;;
+	2)
+		prboom -height 400 ;;
+esac
+	GGames
+}
+
+TGames () {
+
+showmenu \
+"Text Games" \
+"blue    - Blue Moon, a nifty solitaire (uses color)" \
+"bs      - the game of Battleships (uses color) " \
+"hanoi   - the game of hanoi (uses color essentially)" \
+"knight  - the game of Knight's Tour (uses color)"
+
+case $? in
+	0 )
+		Main ;;
+	1 )
+		blue ;;
+	2 )
+		bs ;;
+	3 )
+		hanoi ;;
+	4 )
+		knight ;;
+esac
+	TGames
+}
+
+
+
+TDemos () {
+
+showmenu \
+"Terminal Demos" \
+"firework - multi-colored fireworks (uses color)" \
+"gdc      - Great Digital Clock (uses color)" \
+"lrtest   - test of access to the lower-right corner" \
+"ncurses  - multi-test program (uses color)" \
+"newdemo  - another test from PDCurses (uses color)" \
+"rain     - rain drops keep falling on my head..." \
+"tclock   - analog/digital clock" \
+"testcurs - a test from the PDCurses people (uses color)" \
+"worm     - worms run all over your screen (uses color)" \
+"xmas     - Xmas greeting card" \
+"nano     - Text editor (CTRL+X to exit)"
+
+case $? in
+	0 )
+		Main ;;
+	1 )
+		firework ;;
+	2)
+		gdc ;;
+	3 )
+		lrtest ;;
+	4 )
+		ncurses ;;
+	5 )
+		newdemo ;;
+	6 )
+		rain ;;
+	7 )
+		tclock ;;
+	8 )
+		textcurs ;;
+	9 )
+		worm ;;
+	10 )
+		xmas ;;
+	11 )
+		nano ;;
+esac
+	TDemos
+}
+
+Main
+
+
+

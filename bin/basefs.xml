@@ -212,6 +212,8 @@
 			<Link name='popmaildir' mode='120777' path='../../bin/busybox' />
 		</Dir>
 		<Dir name='bin' mode='40755'>
+			<File name='showmenu' mode='100755' size='8056'/>
+			<File name='help' mode='100755' size='138'/>
 			<Link name='cmp' mode='120777' path='../../bin/busybox' />
 			<Link name='nmeter' mode='120777' path='../../bin/busybox' />
 			<Link name='sv' mode='120777' path='../../bin/busybox' />
