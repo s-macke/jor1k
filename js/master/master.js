@@ -126,6 +126,7 @@ jor1kGUI.prototype.Sync = function(path) {
 // receive interval of the contents of the framebuffer
 jor1kGUI.prototype.SetFPS = function(fps) {
     this.params.fps = fps;
+    if(!this.fbcanvas) return;
     if (this.fbinterval) {
         window.clearInterval(this.fbinterval);
     }
