@@ -110,9 +110,8 @@ function jor1kGUI(parameters)
     
     this.Reset();
     
-    // receive the contents of the framebuffer every 100ms
-    window.setInterval(function(){this.SendToWorker("GetFB", 0)}.bind(this), 100);
-
+    this.SetFPS(this.params.fps);
+   
     window.setInterval(function(){this.SendToWorker("GetIPS", 0)}.bind(this), 1000);
 }
 
@@ -124,6 +123,16 @@ jor1kGUI.prototype.Sync = function(path) {
     this.SendToWorker("sync", path);
 }
 
+// receive interval of the contents of the framebuffer
+jor1kGUI.prototype.SetFPS = function(fps) {
+    this.params.fps = fps;
+    if (this.fbinterval) {
+        window.clearInterval(this.fbinterval);
+    }
+    if (fps != 0) {
+        this.fbinterval = window.setInterval(function(){this.SendToWorker("GetFB", 0)}.bind(this), 1000/this.params.fps);
+    }
+}
 
 jor1kGUI.prototype.UploadExternalFile = function(f) {
     var reader = new FileReader();

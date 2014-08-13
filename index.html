@@ -12,7 +12,7 @@
         Framebuffer uses canvas
     </canvas>
     <div class="heading">
-    <a href="http://opencores.org/or1k/"><img src="globe.png"/></a>
+    <a href="http://opencores.org/or1k/"><img src="images/globe.png"/></a>
     <h1>jor1k: OpenRISC OR1K Javascript Emulator Running Linux With Network Support</h1>
     </div>
     <div class="windows">
@@ -26,32 +26,32 @@
                     </canvas>
                     </td></tr>
                     <tr><td>
-                    <span style="float: left">
-                    <form>
+                    <span style="float: left" >
+                    <form style="display: inline;">
                         <select id="coreselect" onchange='jor1kgui.ChangeCore(this.options[this.selectedIndex].value)'>
                             <option value="asm">asm.js Core</option>
                             <option value="std">Standard Core</option>
                             <option value="safe">Safe Core (Slow)</option>
                         </select>
-                        <select id="hdselect" onchange='jor1kgui.ChangeImage(this.options[this.selectedIndex].value)'>
-                            <option value="../../bin/netdemo.bz2">Network tools (links, lynx, nmap, ssh, wget) (8.2MB)</option>
-                            <option value="../../bin/hddemo.bz2">Graphic demos, games, and ScummVM (Monkey island) (7MB)</option>
-                            <option value="../../bin/hdgcc.bz2">Gnu C Compiler. Compile Frotz to play a text adventure (10 MB) </option>
-                            <option value="../../bin/hdX.bz2">Basic X window system running twm, glxgears, xterm and xeyes (9MB)</option>
-                            <option value="../../bin/hdwayland.bz2">Wayland/Weston running a few demos and a terminal (4MB)</option>
+                        <select id="fpsselect" onchange='jor1kgui.SetFPS(this.options[this.selectedIndex].value)'>
+                            <option value="0">0 FPS</option>
+                            <option value="5"> 5 FPS</option>
+                            <option value="10" selected>10 FPS </option>
+                            <option value="20">20 FPS</option>
+                            <option value="30">30 FPS</option>
                         </select>
                     </form>
+                    <label>
+                        <img src="images/upload.png" width="5%" height="5%" title="Upload to home folder" />
+                        <input type="file" id="files" style="visibility:hidden;width:0; height:0;" name="files[]" onchange='OnUploadFiles(this.files)' multiple />
+                    </label>
+                    <img src="images/tar.png" width="5%" height="5%"  onclick='jor1kgui.TAR("home/user")' title="Download of home folder" />
+                    <img src="images/sync.png" width="5%" height="5%"  onclick='jor1kgui.Sync("home/user")' title="Sync with server" />
+                    <img src="images/fullscreen.png" width="5%" height="5%"  onclick='Fullscreen()' title="Windowed fullscreen of framebuffer" />
                     </span>
-                    <span id="stats" style="float: right"></span>
-                    <br>
                     
-                    <fieldset  style="width:100px;border:2px solid #a1a1a1;">
-                    <legend>Upload To Home</legend>
-                    <input type="file" id="files" name="files[]" onchange='OnUploadFiles(this.files)' multiple />
-                    </fieldset>
-                    <button type='button' onclick='jor1kgui.TAR("home/user")'>Download home</button>
-                    <button type='button' onclick='jor1kgui.Sync("home/user")'>Sync home</button>
-                    <button type='button' onclick='Fullscreen()'>FullScreen</button>
+                    <span id="stats" style="float: right"></span>
+                    
                     </td></tr>
                     </table>
 
@@ -209,7 +209,8 @@ function Start() {
         ], // list of automatically loaded images after the basic filesystem has been loaded
         relayURL: "ws://relay.widgetry.org/", // relay url for the network
         userid: userid, // unique user id string. Empty, choosen randomly, from a url, or from a cookie.
-        syncURL: "/sync/upload.php"
+        syncURL: "/sync/upload.php", // url to sync a certain folder
+        fps: 10 // update interval of framebuffer
     }
 
     jor1kgui = new jor1kGUI(jor1kparameters);
