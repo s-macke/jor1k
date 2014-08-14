@@ -58,17 +58,18 @@ FS.prototype.LoadImage = function(url)
 {
     if (!url) return;
     //DebugMessage("Load Image " + url);
-    LoadBZIP2Resource(url, 
-        function(m){ for(var i=0; i<m.size; i++) this.tar.Unpack(m.data[i]); }.bind(this), 
-        function(e){DebugMessage("Error: Could not load " + url + ". Skipping.");});
-    /*
-    LoadBinaryResource(url, 
-    function(buffer){
-        var buffer8 = new Uint8Array(buffer);
-        bzip2.simple(buffer8, this.tar.Unpack.bind(this.tar));
-    }.bind(this), 
-    function(error){DebugMessage("Error: Could not load " + url + ". Skipping.");});
-*/
+    if (typeof Worker !== 'undefined') {
+        LoadBZIP2Resource(url, 
+            function(m){ for(var i=0; i<m.size; i++) this.tar.Unpack(m.data[i]); }.bind(this), 
+            function(e){DebugMessage("Error: Could not load " + url + ". Skipping.");});
+    } else {
+        LoadBinaryResource(url, 
+        function(buffer){
+            var buffer8 = new Uint8Array(buffer);
+            bzip2.simple(buffer8, this.tar.Unpack.bind(this.tar));
+        }.bind(this), 
+        function(error){DebugMessage("Error: Could not load " + url + ". Skipping.");});
+    }
 }
 // -----------------------------------------------------
 
