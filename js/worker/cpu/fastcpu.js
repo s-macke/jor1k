@@ -81,6 +81,7 @@ var read8utlbcheck = -1;
 var write32tlbcheck = -1;
 var write8tlbcheck = -1;
 
+var EA = 0x0; // hidden register for atomic lwa and swa operation
 
 var TTMR = 0x0; // Tick timer mode register
 var TTCR = 0x0; // Tick timer count register
@@ -1016,9 +1017,24 @@ function Step(steps, clockspeed) {
             steps = steps - 1|0;
             continue;
 
-        case 0x1B:
+        case 0x1B: 
+            // lwa
+            vaddr = (r[((ins >> 14) & 0x7C) >> 2]|0) + ((ins << 16) >> 16)|0;
+            EA = vaddr;
+            if ((read32tlbcheck ^ vaddr) >> 13) {
+                paddr = DTLBLookup(vaddr, 0)|0;
+                if ((paddr|0) == -1) {
+                    break;
+                }
+                read32tlbcheck = vaddr;
+                read32tlblookup = ((paddr^vaddr) >> 13) << 13;
+            }
+            paddr = read32tlblookup ^ vaddr;
+            r[((ins >> 19) & 0x7C)>>2] = (paddr|0)>0?h[ramp+paddr >> 2]|0:ReadMemory32(paddr|0)|0;
+            break;
+
         case 0x21:
-            // lwa and lwz
+            // lwz
             vaddr = (r[((ins >> 14) & 0x7C) >> 2]|0) + ((ins << 16) >> 16)|0;
             if ((read32tlbcheck ^ vaddr) >> 13) {
                 paddr = DTLBLookup(vaddr, 0)|0;
@@ -1287,6 +1303,7 @@ function Step(steps, clockspeed) {
             // swa
             imm = ((((ins >> 10) & 0xF800) | (ins & 0x7FF)) << 16) >> 16;
             vaddr = (r[((ins >> 14) & 0x7C)>>2]|0) + imm|0;
+            SR_F = ((vaddr|0) == (EA|0))?1|0:0|0;
             if ((write32tlbcheck ^ vaddr) >> 13) {
                 paddr = DTLBLookup(vaddr, 1)|0;
                 if ((paddr|0) == -1) {
@@ -1301,7 +1318,6 @@ function Step(steps, clockspeed) {
             } else {
                 WriteMemory32(paddr|0, r[((ins >> 9) & 0x7C)>>2]|0);
             }
-            SR_F = 1|0;
             break;
 
         case 0x35:
