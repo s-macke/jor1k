@@ -7,7 +7,7 @@
     </head>
     <body onload="Start()">
     <div class="heading">
-    <a href="http://opencores.org/or1k/"><img src="globe.png"/></a>
+    <a href="http://opencores.org/or1k/"><img src="images/globe.png"/></a>
     <h1>Web-based C-Compiler demo for <a href='.'>jor1k</a></h1>
     </div>
     
@@ -125,7 +125,8 @@ function Start() {
         ], // list of automatically loaded images after the basic filesystem has been loaded
         relayURL: "", // relay url for the network
         userid: userid, // unique user id string. Empty, choosen randomly, from a url, or from a cookie.
-        syncURL: "/sync/upload.php" 
+        syncURL: "/sync/upload.php", // url to sync a certain folder
+        fps: 10 // update interval of framebuffer
     }
     jor1kgui = new jor1kGUI(jor1kparameters);
 }
