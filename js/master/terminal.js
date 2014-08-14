@@ -55,7 +55,7 @@ Terminal.prototype.Blink = function() {
 Terminal.prototype.DeleteRow = function(row) {
     for (var j = 0; j < this.ncolumns; j++) {
         this.screen[row][j] = 0x0;
-        this.color[row][j] = 0x7;
+        this.color[row][j] = this.currentcolor;
     }
     this.PlotRow(row);
 };
@@ -64,7 +64,7 @@ Terminal.prototype.DeleteArea = function(row, column, row2, column2) {
     for (var i = row; i <= row2; i++) {
         for (var j = column; j <= column2; j++) {
             this.screen[i][j] = 0x0;
-            this.color[i][j] = 0x7;
+            this.color[i][j] = this.currentcolor;
         }
         this.PlotRow(i);
     }
@@ -111,19 +111,8 @@ Terminal.prototype.ScreenUpdate = function() {
     }
 };
 
-Terminal.prototype.ScrollDown = function() {
-    if (this.cursory != this.scrolltop) {
-        this.cursory--;
-        if (this.cursorvisible) {
-            this.PlotRow(this.cursory+1); // delete old cursor position
-            this.PlotRow(this.cursory); // show new cursor position
-        }
-        return;
-    }
-    this.ScrollDown2();
-}
 
-Terminal.prototype.ScrollDown2 = function(draw) {
+Terminal.prototype.ScrollDown = function(draw) {
     for (var i = this.scrollbottom-1; i >= this.scrolltop; i--) {
         if (i == this.nrows-1) continue;
         for (var j = 0; j < this.ncolumns; j++) {
@@ -241,7 +230,7 @@ Terminal.prototype.HandleEscapeSequence = function() {
         return;
     } else
     if (this.escapestring == "M") {
-        this.ScrollDown2(true);
+        this.ScrollDown(true);
         return;
     }
     // Testing for [x;y;z
@@ -386,12 +375,12 @@ Terminal.prototype.HandleEscapeSequence = function() {
             var top = this.scrolltop;
             this.scrolltop = this.cursory;
             if (count == 1) {
-                this.ScrollDown2(true);
+                this.ScrollDown(true);
             } else {
                 for (var j = 0; j < count-1; j++) {
-                    this.ScrollDown2(false);
+                    this.ScrollDown(false);
                 }
-                this.ScrollDown2(true);
+                this.ScrollDown(true);
             }
             this.scrolltop = top;
             break;
@@ -442,7 +431,7 @@ Terminal.prototype.HandleEscapeSequence = function() {
             if (count == 0) count = 1;
             for (var j = 0; j < count; j++) {
                 this.screen[this.cursory][this.cursorx+j] = 0x0;
-                this.color[this.cursory][this.cursorx+j] = 0x7;
+                this.color[this.cursory][this.cursorx+j] = this.currentcolor;
             }
             this.PlotRow(this.cursory);
             break;    
