@@ -442,7 +442,9 @@ Terminal.prototype.HandleEscapeSequence = function() {
             if (count == 0) count = 1;
             for (var j = 0; j < count; j++) {
                 this.screen[this.cursory][this.cursorx+j] = 0x0;
+                this.color[this.cursory][this.cursorx+j] = 0x7;
             }
+            this.PlotRow(this.cursory);
             break;    
 
         default:
