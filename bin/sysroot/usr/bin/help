@@ -6,15 +6,20 @@ showmenu \
 "Choices" \
 "Graphic Games" \
 "Terminal Games" \
-"Terminal Demos"
+"Terminal Demos" \
+"Benchmarks"
 
 case $? in
+	0 )
+		exit ;;
 	1 )
 		GGames ;;
 	2 )
 		TGames ;;
 	3)
 		TDemos ;;
+	4)
+		Benchmarks ;;
 esac
 
 }
@@ -108,6 +113,27 @@ case $? in
 esac
 	TDemos
 }
+
+
+Benchmarks () {
+
+showmenu \
+"Benchmarks" \
+"nbench    - BYTE Magazine's BYTEmark benchmark (soft fpu)"
+
+case $? in
+	0 )
+		Main ;;
+	1 )
+		nbench
+		read -p "Press any key to continue... " ;;
+esac
+	Benchmarks
+}
+
+
+
+
 
 Main
 
