@@ -31,12 +31,28 @@ var ETHMAC_ADDR_BD_START = 0x400;
 var ETHMAC_ADDR_BD_END = 0x7FF;
 
 
-var MII_BMCR = 0x0;
-var MII_BMSR = 0x1;
-var MII_PHYIDR1 = 0x2;
-var MII_PHYIDR2 = 0x3;
-var MII_ANAR = 0x4;
-var MII_ANLPAR = 0x5;
+var MII_BMCR =           0x00;        /* Basic mode control register */
+var MII_BMSR =           0x01;        /* Basic mode status register  */
+var MII_PHYSID1 =        0x02;        /* PHYS ID 1                   */
+var MII_PHYSID2 =        0x03;        /* PHYS ID 2                   */
+var MII_ADVERTISE =      0x04;        /* Advertisement control reg   */
+var MII_LPA =            0x05;        /* Link partner ability reg    */
+var MII_EXPANSION =      0x06;        /* Expansion register          */
+var MII_CTRL1000 =       0x09;        /* 1000BASE-T control          */
+var MII_STAT1000 =       0x0a;        /* 1000BASE-T status           */
+var MII_ESTATUS =        0x0f;        /* Extended Status */
+var MII_DCOUNTER =       0x12;        /* Disconnect counter          */
+var MII_FCSCOUNTER =     0x13;        /* False carrier counter       */
+var MII_NWAYTEST =       0x14;        /* N-way auto-neg test reg     */
+var MII_RERRCOUNTER =    0x15;        /* Receive error counter       */
+var MII_SREVISION =      0x16;        /* Silicon revision            */
+var MII_RESV1 =          0x17;        /* Reserved...                 */
+var MII_LBRERROR =       0x18;        /* Lpback, rx, bypass error    */
+var MII_PHYADDR =        0x19;        /* PHY address                 */
+var MII_RESV2 =          0x1a;        /* Reserved...                 */
+var MII_TPISTATUS =      0x1b;        /* TPI status for 10mbps       */
+var MII_NCONFIG =        0x1c;        /* Network interface config    */
+
 
 
 
@@ -214,15 +230,17 @@ function EthDev(ram, intdev, mac) {
         }
          
         this.MIIregs = new Uint16Array(16);
-        this.MIIregs[MII_BMCR] = 0x1000;
-        this.MIIregs[MII_BMSR] = 0x7848; /* no ext regs */
-        this.MIIregs[MII_PHYIDR1] = 0x2000;
-        this.MIIregs[MII_PHYIDR2] = 0x5c90;
-        this.MIIregs[MII_ANAR] = 0x01e1;
+        this.MIIregs[MII_BMCR] = 0x0100; // Full duplex
+        // link ok, negotiation complete, 10Mbit and 100Mbit available
+        this.MIIregs[MII_BMSR] = 0x4 | 0x20 | 0x800 | 0x1000 | 0x2000 | 0x4000;
+
+        this.MIIregs[MII_PHYSID1] = 0x2000;
+        this.MIIregs[MII_PHYSID2] = 0x5c90;
+        this.MIIregs[MII_ADVERTISE] = 0x01e1;
+	this.MIIregs[MII_PHYADDR] = 0x0;
 
         // link ok
-        this.MIIregs[MII_BMSR] |= 0x4;
-        this.MIIregs[MII_ANLPAR] |= 0x01e1;
+        // this.MIIregs[MII_LPA] |= 0x01e1;
 
         this.currRX = (this.TX_BD_NUM << 1);
     };
@@ -557,7 +575,46 @@ function EthDev(ram, intdev, mac) {
         return ret;
     };
 
+    this.HandleMIICommand = function()
+    {
+        var fiad = this.MIIADDRESS & 0x1F;
+        var rgad = (this.MIIADDRESS >> 8) & 0x1F;
+        var phy_addr = 0x0;
+        switch(this.MIICOMMAND) {
+            case 0:
+                break;
+
+            case 1: // scan status
+                break;
+
+            case 2: // read status
+                if (fiad != phy_addr) {
+                    this.MIIRX_DATA = 0xFFFF;
+                } else {
+                    // DebugMessage("MIICOMMAND read" + " " + hex8(rgad));
+                    this.MIIRX_DATA = this.MIIregs[rgad];
+                }
+                break;
+
+            case 4: // write status
+                if (fiad != phy_addr) {
+                } else {
+                    // DebugMessage("MIICOMMAND write" + " " + hex8(rgad) + " " + hex8(this.MIITX_DATA));
+                    //this.MIIregs[rgad] = this.MIITX_DATA & 0xFFFF;
+                }
+                break;
+
+            default:
+                DebugMessage("Error in ethmac: Unknown mii command detected");
+                break;
+        }
+
+    }
+
+
+
     this.WriteReg32 = function (addr, val) {
+        // DebugMessage("write ethmac " + hex8(addr));
         switch (addr) {
             case ETHMAC_ADDR_MODER:
                 this.MODER = val;
@@ -622,23 +679,7 @@ function EthDev(ram, intdev, mac) {
 
             case ETHMAC_ADDR_MIICOMMAND:
                 this.MIICOMMAND = val;
-                var fiad = this.MIIADDRESS & 0x1F;
-                var rgad = (this.MIIADDRESS >> 8) & 0x1F;
-                if (val & 0x4) { // write control data                    
-                    if (fiad != 0x1) break;
-                    if ((rgad == MII_BMCR) && (this.MIITX_DATA & 0x8000)) {
-                        this.MIIregs[MII_BMCR] = 0x1000; // some sort of reset
-                    } else {
-                        this.MIIregs[rgad] = this.MIITX_DATA & 0xFFFF;
-                    }
-                }
-                if (val & 0x2) { // read control data                    
-                    if (fiad != 0x1) {
-                        this.MIIRX_DATA = 0xFFFF;
-                    } else {
-                        this.MIIRX_DATA = this.MIIregs[rgad];
-                    }
-                }
+		this.HandleMIICommand();
                 break;
 
             case ETHMAC_ADDR_MIIADDRESS:
