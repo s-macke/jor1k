@@ -97,8 +97,8 @@ Virtio9p.prototype.ReceiveRequest = function (desc, GetByte) {
             var req = StructToArray2(["w", "w"], GetByte);
             var fid = req[0];
             var mode = req[1];
+            this.fs.OpenInode(this.fid2inode[fid], mode);
             var inode = this.fs.GetInode(this.fid2inode[fid]);
-            
             //DebugMessage("[open] fid=" + fid + ", mode=" + mode);
             req[0] = inode.qid;
             req[1] = this.IOUNIT;
@@ -146,7 +146,8 @@ Virtio9p.prototype.ReceiveRequest = function (desc, GetByte) {
             //DebugMessage("[mkdir] fid=" + fid + ", name=" + name + ", mode=" + mode + ", gid=" + gid); 
             var idx = this.fs.CreateDirectory(name, this.fid2inode[fid]);
             var inode = this.fs.GetInode(idx);
-            inode.mode = mode;
+            inode.mode = mode | S_IFDIR;
+            inode.uid = gid;
             inode.gid = gid;
             ArrayToStruct(["Q"], [inode.qid], this.replybuffer, 7);
             this.BuildReply(id, tag, 13);
@@ -164,6 +165,7 @@ Virtio9p.prototype.ReceiveRequest = function (desc, GetByte) {
             var idx = this.fs.CreateFile(name, this.fid2inode[fid]);
             this.fid2inode[fid] = idx;
             var inode = this.fs.GetInode(idx);
+            inode.uid = gid;
             inode.gid = gid;
             ArrayToStruct(["Q", "w"], [inode.qid, this.IOUNIT], this.replybuffer, 7);
             this.BuildReply(id, tag, 13+4);
@@ -265,6 +267,7 @@ Virtio9p.prototype.ReceiveRequest = function (desc, GetByte) {
             //if (id == 40) DebugMessage("[treaddir]: fid=" + fid + " offset=" + offset + " count=" + count);
             //if (id == 116) DebugMessage("[read]: fid=" + fid + " offset=" + offset + " count=" + count);
             if (id == 40) this.fs.FillDirectory(this.fid2inode[fid]);
+            
             var inode = this.fs.GetInode(this.fid2inode[fid]);
             if (inode.size < offset+count) count = inode.size-offset;
             for(var i=0; i<count; i++)
@@ -280,12 +283,7 @@ Virtio9p.prototype.ReceiveRequest = function (desc, GetByte) {
             var offset = req[1];
             var count = req[2];
             //DebugMessage("[write]: fid=" + fid + " offset=" + offset + " count=" + count);
-            var inode = this.fs.GetInode(this.fid2inode[fid]);
-            if (inode.size < (offset+count)) {
-                this.fs.ChangeSize(this.fid2inode[fid], offset+count);
-            }
-            for(var i=0; i<count; i++)
-                inode.data[offset+i] = GetByte();
+            this.fs.Write(this.fid2inode[fid], offset, count, GetByte);
             ArrayToStruct(["w"], [count], this.replybuffer, 7);
             this.BuildReply(id, tag, 4);
             return true;
@@ -298,29 +296,11 @@ Virtio9p.prototype.ReceiveRequest = function (desc, GetByte) {
             var newdirfid = req[2];
             var newname = req[3];
             //DebugMessage("[renameat]: oldname=" + oldname + " newname=" + newname);
-            if ((olddirfid == newdirfid) && (oldname == newname)) {
-                   this.BuildReply(id, tag, 0);
-                   return true;
-            }
-            var oldid = this.fs.Search(this.fid2inode[olddirfid], oldname);
-            if (oldid == -1) {
+            var ret = this.fs.Rename(this.fid2inode[olddirfid], oldname, this.fid2inode[newdirfid], newname);
+            if (ret == false) {
                    this.SendError(tag, "No such file or directory", ENOENT);                   
                    return true;
             }
-            var newid = this.fs.Search(this.fid2inode[newdirfid], newname);
-            if (newid != -1) {
-                this.fs.Unlink(newid);
-            }           
-            var inode = this.fs.GetInode(oldid);
-            inode.parentid = this.fid2inode[newdirfid];
-            inode.name = newname;
-            inode.qid.version++;
-
-            inode = this.fs.GetInode(this.fid2inode[olddirfid]);
-            inode.updatedir = true;
-            inode = this.fs.GetInode(this.fid2inode[newdirfid]);
-            inode.updatedir = true;
-           
             this.BuildReply(id, tag, 0);
             return true;
             break;
@@ -405,6 +385,7 @@ Virtio9p.prototype.ReceiveRequest = function (desc, GetByte) {
         case 120: // clunk
             var req = StructToArray2(["w"], GetByte);
             //DebugMessage("[clunk]: fid=" + req[0]);
+            this.fs.CloseInode(this.fid2inode[req[0]]);
             this.fid2inode[req[0]] = -1;
             this.BuildReply(id, tag, 0);
             return true;

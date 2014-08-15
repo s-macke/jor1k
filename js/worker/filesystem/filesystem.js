@@ -34,11 +34,12 @@ var S_IFCHR = 0x2000;
 //var S_ISGID  0002000
 //var S_ISVTX  0001000
 
-var O_RDONLY = 0x0000 // open for reading only 
-var O_WRONLY = 0x0001 // open for writing only
-var	O_RDWR = 0x0002 // open for reading and writing
-var	O_ACCMODE = 0x0003 // mask for above modes
+var O_RDONLY = 0x0000; // open for reading only 
+var O_WRONLY = 0x0001; // open for writing only
+var	O_RDWR = 0x0002; // open for reading and writing
+var	O_ACCMODE = 0x0003; // mask for above modes
 
+var STATUS_OPEN = 0x1;
 
 function FS() {
     this.inodes = [];    
@@ -255,6 +256,7 @@ FS.prototype.CreateInode = function() {
         valid : true,
         updatedir : false,
         parentid: -1,
+        status : 0,
         name : "",
         size : 0x0,
         uid : 0x0,
@@ -266,16 +268,19 @@ FS.prototype.CreateInode = function() {
     };
 }
 
+
+
 FS.prototype.CreateDirectory = function(name, parentid) {
     var x = this.CreateInode();
     x.name = name;
     x.parentid = parentid;
+    x.mode = 0x01FF | S_IFDIR;
     if (parentid >= 0) {
         x.uid = this.inodes[parentid].uid;
         x.gid = this.inodes[parentid].gid;
+        x.mode = (this.inodes[parentid].mode & 0x1FF) | S_IFDIR;
     }
     x.qid.type = S_IFDIR >> 8;
-    x.mode = 0x01ED | S_IFDIR;
     this.PushInode(x);
     return this.inodes.length-1;
 }
@@ -287,7 +292,7 @@ FS.prototype.CreateFile = function(filename, parentid) {
     x.uid = this.inodes[parentid].uid;
     x.gid = this.inodes[parentid].gid;
     x.qid.type = S_IFREG >> 8;
-    x.mode = 0x01B4 | S_IFREG;
+    x.mode = (this.inodes[parentid].mode & 0x1B6) | S_IFREG;
     this.PushInode(x);
     return this.inodes.length-1;
 }
@@ -316,6 +321,48 @@ FS.prototype.CreateTextFile = function(filename, parentid, str) {
     return id;
 }
 
+FS.prototype.OpenInode = function(id, mode) {
+    //DebugMessage("open:" + this.GetFullPath(id));
+    this.inodes[id].status = STATUS_OPEN;
+}
+
+FS.prototype.CloseInode = function(id) {
+    if (id < 0) return;
+    //DebugMessage("close: " + this.GetFullPath(id));
+    //this.inodes[id].status = 0;
+}
+
+FS.prototype.Rename = function(olddirid, oldname, newdirid, newname) {
+
+    if ((olddirid == newdirid) && (oldname == newname)) {
+        return true;
+    }
+    var oldid = this.Search(olddirid, oldname);
+    if (oldid == -1) {
+        return false;
+    }
+    var newid = this.Search(newdirid, newname);
+    if (newid != -1) {
+        this.Unlink(newid);
+    }           
+    var inode = this.inodes[oldid];
+    inode.parentid = newdirid;
+    inode.name = newname;
+    inode.qid.version++;
+
+    this.inodes[olddirid].updatedir = true;
+    this.inodes[newdirid].updatedir = true;
+    return true;
+}
+
+FS.prototype.Write = function(id, offset, count, GetByte) {
+    var inode = this.inodes[id];
+    if (inode.size < (offset+count)) {
+        this.ChangeSize(id, offset+count);
+    }
+    for(var i=0; i<count; i++)
+        inode.data[offset+i] = GetByte();
+}
 
 
 FS.prototype.GetRoot = function() {
@@ -352,8 +399,6 @@ FS.prototype.GetFullPath = function(idx) {
     return path.substring(1);
 }
 
-FS.prototype.Rename = function(srcdir, srcname, destdir, destname) {
-}
 
 
 FS.prototype.Unlink = function(idx) {
