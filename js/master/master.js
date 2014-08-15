@@ -247,22 +247,22 @@ jor1kGUI.prototype.InitFramebuffer = function(fbid) {
     this.fbcanvas.onmousedown = function(event) {
         this.fbcanvas.style.border = "2px solid #FF0000";
         var rect = this.fbcanvas.getBoundingClientRect();
-        var x = event.clientX - rect.left;
-        var y = event.clientY - rect.top;
+        var x = (event.clientX - rect.left)*640/rect.width;
+        var y = (event.clientY - rect.top)*400/rect.height;
         this.SendToWorker("tsmousedown", {x:x, y:y});
     }.bind(this);
 
     this.fbcanvas.onmouseup = function(event) {
         var rect = this.fbcanvas.getBoundingClientRect();
-        var x = event.clientX - rect.left;
-        var y = event.clientY - rect.top;
+        var x = (event.clientX - rect.left)*640/rect.width;
+        var y = (event.clientY - rect.top)*400/rect.height;
         this.SendToWorker("tsmouseup", {x:x, y:y});
     }.bind(this);
 
     this.fbcanvas.onmousemove = function(event) {
         var rect = this.fbcanvas.getBoundingClientRect();
-        var x = event.clientX - rect.left;
-        var y = event.clientY - rect.top;
+        var x = (event.clientX - rect.left)*640/rect.width;
+        var y = (event.clientY - rect.top)*400/rect.height;
         this.SendToWorker("tsmousemove", {x:x, y:y});
     }.bind(this);
   

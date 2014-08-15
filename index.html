@@ -146,22 +146,24 @@
 function Fullscreen()
 {
     document.body.style.margin = '0px';
+    window.onresize = function(event) {
+        var w = window,
+        d = document,
+        e = d.documentElement,
+        g = d.getElementsByTagName('body')[0],
+        x = w.innerWidth || e.clientWidth || g.clientWidth,
+        y = w.innerHeight|| e.clientHeight|| g.clientHeight;
 
-var w = window,
-    d = document,
-    e = d.documentElement,
-    g = d.getElementsByTagName('body')[0],
-    x = w.innerWidth || e.clientWidth || g.clientWidth,
-    y = w.innerHeight|| e.clientHeight|| g.clientHeight;
+        var d = x/y;
+        if (d > 1.6) x = y*1.6; else y = x/1.6;
 
-    var d = x/y;
-    if (d > 1.6) x = y*1.6; else y = x/1.6;
-
-    fb = document.getElementById("fbfullscreen");
-    fb.style.width = "" + x + "px";
-    fb.style.height = "" + y + "px";
-
+        var fb = document.getElementById("fbfullscreen");
+        fb.style.width = "" + x + "px";
+        fb.style.height = "" + y + "px";
+};
+    window.onresize();
     jor1kgui.InitFramebuffer("fbfullscreen");
+    
 }
 
 
@@ -206,6 +208,8 @@ function Start() {
             "bin/scummvm.tar.bz2",
             "bin/monkey.tar.bz2",
             "bin/prboom.tar.bz2",
+            "bin/dosbox.tar.bz2",
+            "bin/Frodo.tar.bz2",
             "bin/nbench.tar.bz2"
         ], // list of automatically loaded images after the basic filesystem has been loaded
         relayURL: "ws://relay.widgetry.org/", // relay url for the network
