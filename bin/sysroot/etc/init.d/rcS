@@ -22,6 +22,9 @@ mkdir -p /root &
 mkdir -p /dev/pts && \
 mount -t devpts none /dev/pts &
 
+mkdir -p /dev/shm && \
+mount -t tmpfs none /dev/shm &
+
 #echo "Configuring loopback device"
 #ifconfig lo 127.0.0.1
 
@@ -34,7 +37,7 @@ mount -t devpts none /dev/pts &
 
 #route add default gw 192.168.1.1
 
-#ifup -a
+ifup -a
 
 #alternative
 #setup dhcp
@@ -43,5 +46,5 @@ mount -t devpts none /dev/pts &
 
 
 # inetd startup
-#inetd &
+inetd &
 
