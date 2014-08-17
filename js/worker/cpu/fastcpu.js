@@ -81,7 +81,7 @@ var read8utlbcheck = -1;
 var write32tlbcheck = -1;
 var write8tlbcheck = -1;
 
-var EA = 0x0; // hidden register for atomic lwa and swa operation
+var EA = -1; // hidden register for atomic lwa and swa operation
 
 var TTMR = 0x0; // Tick timer mode register
 var TTCR = 0x0; // Tick timer count register
@@ -482,6 +482,7 @@ function Exception(excepttype, addr) {
     SetSPR(SPR_EEAR_BASE, addr);
     SetSPR(SPR_ESR_BASE, GetFlags()|0);
 
+    EA = -1;
     SR_OVE = 0;
     SR_SM = 1;
     SR_IEE = 0;
@@ -1020,7 +1021,6 @@ function Step(steps, clockspeed) {
         case 0x1B: 
             // lwa
             vaddr = (r[((ins >> 14) & 0x7C) >> 2]|0) + ((ins << 16) >> 16)|0;
-            EA = vaddr;
             if ((read32tlbcheck ^ vaddr) >> 13) {
                 paddr = DTLBLookup(vaddr, 0)|0;
                 if ((paddr|0) == -1) {
@@ -1030,6 +1030,7 @@ function Step(steps, clockspeed) {
                 read32tlblookup = ((paddr^vaddr) >> 13) << 13;
             }
             paddr = read32tlblookup ^ vaddr;
+            EA = paddr;
             r[((ins >> 19) & 0x7C)>>2] = (paddr|0)>0?h[ramp+paddr >> 2]|0:ReadMemory32(paddr|0)|0;
             break;
 
@@ -1303,7 +1304,6 @@ function Step(steps, clockspeed) {
             // swa
             imm = ((((ins >> 10) & 0xF800) | (ins & 0x7FF)) << 16) >> 16;
             vaddr = (r[((ins >> 14) & 0x7C)>>2]|0) + imm|0;
-            SR_F = ((vaddr|0) == (EA|0))?1|0:0|0;
             if ((write32tlbcheck ^ vaddr) >> 13) {
                 paddr = DTLBLookup(vaddr, 1)|0;
                 if ((paddr|0) == -1) {
@@ -1313,6 +1313,11 @@ function Step(steps, clockspeed) {
                 write32tlblookup = ((paddr^vaddr) >> 13) << 13;
             }
             paddr = write32tlblookup ^ vaddr;
+            SR_F = ((paddr|0) == (EA|0))?(1|0):(0|0);
+            EA = -1;
+            if ((SR_F|0) == 0) {
+                break;
+            }
             if ((paddr|0) > 0) {
                 h[ramp + paddr >> 2] = r[((ins >> 9) & 0x7C)>>2]|0;
             } else {

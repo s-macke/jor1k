@@ -57,7 +57,7 @@ function SafeCPU(ram) {
 
     this.clock = 0x0;
 
-    this.EA = 0x0; // hidden register for atomic lwa operation
+    this.EA = -1; // hidden register for atomic lwa operation
 
     this.TTMR = 0x0; // Tick timer mode register
     this.TTCR = 0x0; // Tick timer count register
@@ -385,6 +385,7 @@ SafeCPU.prototype.Exception = function (excepttype, addr) {
     this.SetSPR(SPR_EEAR_BASE, addr);
     this.SetSPR(SPR_ESR_BASE, this.GetFlags());
 
+    this.EA = -1;
     this.SR_OVE = false;
     this.SR_SM = true;
     this.SR_IEE = false;
@@ -650,7 +651,6 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
         case 0x1B:
             // lwa
             r[32] = r[(ins >> 16) & 0x1F] + ((ins << 16) >> 16);
-            this.EA = r[32];
             if ((r[32] & 3) != 0) {
                 DebugMessage("Error in lwz: no unaligned access allowed");
                 abort();
@@ -659,6 +659,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
             if (r[33] == -1) {
                 break;
             }
+            this.EA = r[33];
             r[(ins >> 21) & 0x1F] = r[33]>0?ram.int32mem[r[33] >> 2]:ram.ReadMemory32(r[33]);
             break;
 
@@ -900,7 +901,6 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
             // swa
             imm = ((((ins >> 10) & 0xF800) | (ins & 0x7FF)) << 16) >> 16;
             r[32] = r[(ins >> 16) & 0x1F] + imm;
-            SR_F = (r[32] == this.EA)?1:0;
             if (r[32] & 0x3) {
                 DebugMessage("Error in sw: no aligned memory access");
                 abort();
@@ -909,7 +909,12 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
             if (r[33] == -1) {
                 break;
             }
-            if (r[33]>0) {
+            this.SR_F = (r[33] == this.EA)?true:false;
+            this.EA = -1;
+            if (this.SR_F == false) {
+                break;
+            }
+            if (r[33] > 0) {
                 int32mem[r[33] >> 2] = r[(ins >> 11) & 0x1F];
             } else {
                 ram.WriteMemory32(r[33], r[(ins >> 11) & 0x1F]);

@@ -69,7 +69,7 @@ function CPU(ram) {
 
     //this.clock = 0x0;
 
-    this.EA = 0x0; // hidden register for atomic lwa and swa operation
+    this.EA = -1; // hidden register for atomic lwa and swa operation
 
     this.TTMR = 0x0; // Tick timer mode register
     this.TTCR = 0x0; // Tick timer count register
@@ -422,6 +422,7 @@ CPU.prototype.Exception = function (excepttype, addr) {
     this.SetSPR(SPR_EEAR_BASE, addr);
     this.SetSPR(SPR_ESR_BASE, this.GetFlags());
 
+    this.EA = -1;
     this.SR_OVE = false;
     this.SR_SM = true;
     this.SR_IEE = false;
@@ -799,7 +800,6 @@ CPU.prototype.Step = function (steps, clockspeed) {
         case 0x1B:
             // lwa
             r[32] = r[(ins >> 16) & 0x1F] + ((ins << 16) >> 16);
-            this.EA = r[32];
             if ((r[32] & 3) != 0) {
                 DebugMessage("Error in lwz: no unaligned access allowed");
                 abort();
@@ -813,6 +813,7 @@ CPU.prototype.Step = function (steps, clockspeed) {
                 ftlb[1] = ((r[33]^r[32]) >> 13) << 13;
             }
             r[33] = ftlb[1] ^ r[32];
+            this.EA = r[33];
             r[(ins >> 21) & 0x1F] = r[33]>0?ram.int32mem[r[33] >> 2]:ram.ReadMemory32(r[33]);
             break;
 
@@ -1069,7 +1070,6 @@ CPU.prototype.Step = function (steps, clockspeed) {
             // swa
             imm = ((((ins >> 10) & 0xF800) | (ins & 0x7FF)) << 16) >> 16;
             r[32] = r[(ins >> 16) & 0x1F] + imm;
-            SR_F = (r[32] == this.EA)?1:0;
             if (r[32] & 0x3) {
                 DebugMessage("Error in sw: no aligned memory access");
                 abort();
@@ -1083,6 +1083,11 @@ CPU.prototype.Step = function (steps, clockspeed) {
                 ftlb[4] = ((r[33]^r[32]) >> 13) << 13;
             }
             r[33] = ftlb[4] ^ r[32];
+            this.SR_F = (r[33] == this.EA)?true:false;
+            this.EA = -1;
+            if (this.SR_F == false) {
+                break;
+            }
             if (r[33]>0) {
                 int32mem[r[33] >> 2] = r[(ins >> 11) & 0x1F];
             } else {
