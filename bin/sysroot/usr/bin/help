@@ -7,7 +7,9 @@ showmenu \
 "Graphic Games" \
 "Terminal Games" \
 "Terminal Demos" \
-"Benchmarks"
+"Benchmarks" \
+"Programming Languages" \
+"Network Tools & Web Browsers"
 
 case $? in
 	0 )
@@ -20,6 +22,10 @@ case $? in
 		TDemos ;;
 	4)
 		Benchmarks ;;
+	5)
+		Programming ;;
+	6)
+		Network ;;
 esac
 
 }
@@ -114,7 +120,6 @@ esac
 	TDemos
 }
 
-
 Benchmarks () {
 
 showmenu \
@@ -134,13 +139,76 @@ case $? in
 		coremark 0x0 0x0 0x66 0 7 1 2000
 		#echo "Validation run"
 		#coremark 0x3415 0x3415 0x66 0 7 1 2000
-		read -p "Press any key to continue... " ;;
+		read -p "Press any key to continue... "
+		;;
 esac
 	Benchmarks
 }
 
 
+Programming () {
 
+showmenu \
+"Programming" \
+"gcc   - The GNU C Compiler" \
+"lua   - The programming language Lua" \
+"bc    - The arbitrary precision calculator language"
+
+case $? in
+	0 )
+		Main ;;
+	1 )
+		echo "Please use 'gcc' from the command line"
+		exit
+		;;
+	2 )
+		echo "==============================="
+		echo "print 'Hello world'"
+		echo "CTRL+C to quit"
+		echo "==============================="
+		lua
+		;;
+	3 )
+		echo "==============================="
+		echo "2^1000  # to caluclate a big power"
+		echo "4*a(1)  # to caluclate Pi"
+		echo "quit    # to quit"
+		echo "==============================="
+		bc -l
+		;;
+esac
+	Programming
+}
+
+Network () {
+
+showmenu \
+"Network" \
+"lynx  - Text Web Browser. Start page is google.com" \
+"ssh   - Secure Shell" \
+"nmap  - Free Security Scanner For Network Exploration & Security Audits" \
+"sshd  - start a sshd server"
+
+case $? in
+	0 )
+		Main ;;
+	1 )
+		lynx http://www.google.com
+		;;
+	2 )
+		echo "Please use 'ssh' from the command line"
+		exit
+		;;
+	3 )
+		echo "Please use 'nmap' from the command line"
+		exit
+		;;
+	4 )
+		/usr/sbin/sshd
+		;;
+esac
+	Network
+}
 
 
 Main
