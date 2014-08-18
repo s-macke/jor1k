@@ -33,7 +33,15 @@
                     <button type='button' onclick='term_output="";waitingForActivate=true;jor1kgui.Reset()'>Reset</button>
                     <button type='button' onclick='jor1kgui.Pause(true)'>Pause</button>
                     <button type='button' onclick='jor1kgui.Pause(false)'>Run</button>
-                    </form>                    </span>
+                    </form>                    
+                    </span>
+                    <label>
+                        <img src="images/upload.png" width="4%" height="4%" title="Upload to home folder" />
+                        <input type="file" id="files" style="visibility:hidden;width:0; height:0;" name="files[]" onchange='OnUploadFiles(this.files)' multiple />
+                    </label>
+                    <img src="images/tar.png" width="4%" height="4%"  onclick='jor1kgui.TAR("home/user")' title="Download of home folder" />
+                    <img src="images/sync.png" width="4%" height="4%"  onclick='jor1kgui.Sync("home/user")' title="Sync with server" />
+
                     <span id="stats" style="float: right"></span>
                     </td></tr>
                     </table>
@@ -80,7 +88,8 @@ Theme<select onchange='editor.setTheme("ace/theme/"+this.options[this.selectedIn
        <ul>Lawrence and UIUC students are building a more complete learning environment to playfully learn C and system programming at <a href='http://angrave.github.io/sys'>angrave.github.io/sys</a>.</ul>
        <br>
         </div>
-
+        
+    <script src="http://danml.com/js/download.js"></script>
     <script src="js/master/terminal.js"></script>
     <script src="js/master/terminal-input.js"></script>
     <script src="js/master/ethernet.js"></script>
@@ -88,6 +97,14 @@ Theme<select onchange='editor.setTheme("ace/theme/"+this.options[this.selectedIn
    <script src="js/lib/ace-editor-src-min-noconflict/ace.js" type="text/javascript" charset="utf-8"></script>
 
 <script>
+
+
+function OnUploadFiles(files)
+{
+    for (var i = 0, f; f = files[i]; i++) {
+        jor1kgui.UploadExternalFile(f);
+    }
+}
 
 function RandomString(length) {
     var chars = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -103,6 +120,7 @@ function Start() {
     var userid = location.search.split('user=')[1];
     if (!userid) {
         userid = RandomString(10);
+        window.history.pushState([], "", location + "?user="+userid);
     }
 
     jor1kparameters = {

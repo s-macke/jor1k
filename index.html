@@ -186,6 +186,7 @@ function Start() {
     var userid = location.search.split('user=')[1];
     if (!userid) {
         userid = RandomString(10);
+        window.history.pushState([], "", location + "?user="+userid);
     }
 
     jor1kparameters = {
