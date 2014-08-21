@@ -357,9 +357,13 @@ FS.prototype.Rename = function(olddirid, oldname, newdirid, newname) {
 
 FS.prototype.Write = function(id, offset, count, GetByte) {
     var inode = this.inodes[id];
+
     if (inode.data.length < (offset+count)) {
         this.ChangeSize(id, Math.floor(((offset+count)*3)/2) );
-        inode.size = offset+count;
+        inode.size = offset + count;
+    } else
+    if (inode.size < (offset+count)) {
+        inode.size = offset + count;
     }
     for(var i=0; i<count; i++)
         inode.data[offset+i] = GetByte();
