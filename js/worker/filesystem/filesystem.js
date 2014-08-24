@@ -32,6 +32,7 @@ var STATUS_LOADING = 0x3;
 
 function FS() {
     this.inodes = [];
+    this.events = [];
 
     this.qidnumber = 0x0;
     this.filesinloadingqueue = 0;
@@ -51,12 +52,19 @@ FS.prototype.AddEvent = function(id, OnEvent) {
         OnEvent();
         return;
     }
+    this.events.push({id: id, OnEvent: OnEvent});    
 }
 
 FS.prototype.HandleEvent = function(id) {
     if (this.filesinloadingqueue == 0) {
         this.OnLoaded();
         this.OnLoad = function() {}
+    }
+    //DebugMessage("number of events: " + this.events.length);
+    for(var i = this.events.length - 1; i >= 0; i--) {
+        if (this.events[i].id != id) continue;
+        this.events[i].OnEvent();
+        this.events.splice(i, 1);
     }
 }
 
@@ -228,6 +236,7 @@ FS.prototype.LoadFile = function(idx) {
         return;
     }
     inode.status = STATUS_LOADING;
+    this.filesinloadingqueue++;
 
     if (inode.compressed) {
         inode.data = new Uint8Array(inode.size);
@@ -255,7 +264,6 @@ FS.prototype.LoadFile = function(idx) {
         }.bind(this), 
         function(error){throw error;});
 
-    this.filesinloadingqueue++;
 }
 
 // -----------------------------------------------------
@@ -349,8 +357,8 @@ FS.prototype.OpenInode = function(id, mode) {
         case S_IFCHR: type = "Character Device"; break;
     }
     DebugMessage("open:" + this.GetFullPath(id) +  " type: " + type + " status:" + inode.status);
-    if (inode.status != 0) {
-        this.LoadFile(idx);
+    if (inode.status == STATUS_ON_SERVER) {
+        this.LoadFile(id);
         return false;
     }
     return true;

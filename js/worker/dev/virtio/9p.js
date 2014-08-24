@@ -47,7 +47,6 @@ var P9_STAT_MODE_SETVTX = 0x00010000;
 function Virtio9p(ramdev, filesystem) {
     this.fs = filesystem;
     this.SendReply = function() {};
-    this.ramdev = ramdev; // uint8 array
     this.deviceid = 0x9; // 9p filesystem
     this.hostfeature = 0x1; // mountpoint
     //this.configspace = [0x0, 0x4, 0x68, 0x6F, 0x73, 0x74]; // length of string and "host" string
@@ -78,11 +77,7 @@ Virtio9p.prototype.SendError = function (tag, errormsg, errorcode) {
     this.BuildReply(6, tag, size);
 }
 
-Virtio9p.prototype.ReceiveRequest = function (desc, GetByte) {
-
-    var buffer = new Uint8Array(desc.len);
-    CopyMemoryToBuffer(this.ramdev, buffer, desc.addr, desc.len);
-
+Virtio9p.prototype.ReceiveRequest = function (GetByte) {
     var header = StructToArray2(["w", "b", "h"], GetByte);
     var size = header[0];
     var id = header[1];
@@ -106,7 +101,7 @@ Virtio9p.prototype.ReceiveRequest = function (desc, GetByte) {
 
             var size = ArrayToStruct(["w", "w", "d", "d", "d", "d", "d", "d", "w"], req, this.replybuffer, 7);
             this.BuildReply(id, tag, size);
-            this.SendReply(desc);
+            this.SendReply();
             break;
 
         case 112: // topen
@@ -120,29 +115,23 @@ Virtio9p.prototype.ReceiveRequest = function (desc, GetByte) {
             req[1] = this.IOUNIT;
             ArrayToStruct(["Q", "w"], req, this.replybuffer, 7);
             this.BuildReply(id, tag, 13+4);
-
+            //DebugMessage("file open " + inode.name);
             var ret = this.fs.OpenInode(this.fid2inode[fid], mode);
             this.fs.AddEvent(this.fid2inode[fid], 
                 function() {
-                    this.SendReply(desc);
+                    //DebugMessage("file opened " + inode.name + " tag:"+tag);
+                    req[0] = inode.qid;
+                    req[1] = this.IOUNIT;
+                    ArrayToStruct(["Q", "w"], req, this.replybuffer, 7);
+                    this.BuildReply(id, tag, 13+4);
+                    this.SendReply();
                 }.bind(this)
             );
-/*
-            if (ret == false) {
-                this.fs.LoadFileEvent(this.fid2inode[fid], 
-                function() {
-                    DebugMessage("SendReply");
-                    this.SendReply(desc);
-                }.bind(this)
-                );
-                return;                
-            }
-*/
             break;
 
         case 70: // link
             this.SendError(tag, "Operation not permitted", EPERM);                   
-            this.SendReply(desc);
+            this.SendReply();
             break;
 
         case 16: // symlink
@@ -156,7 +145,7 @@ Virtio9p.prototype.ReceiveRequest = function (desc, GetByte) {
             var inode = this.fs.GetInode(idx);
             ArrayToStruct(["Q"], [inode.qid], this.replybuffer, 7);
             this.BuildReply(id, tag, 13);
-            this.SendReply(desc);
+            this.SendReply();
             break;
 
         case 22: // TREADLINK
@@ -166,7 +155,7 @@ Virtio9p.prototype.ReceiveRequest = function (desc, GetByte) {
             var inode = this.fs.GetInode(this.fid2inode[fid]);
             var size = ArrayToStruct(["s"], [inode.symlink], this.replybuffer, 7);
             this.BuildReply(id, tag, size);
-            this.SendReply(desc);
+            this.SendReply();
             break;
 
 
@@ -184,7 +173,7 @@ Virtio9p.prototype.ReceiveRequest = function (desc, GetByte) {
             inode.gid = gid;
             ArrayToStruct(["Q"], [inode.qid], this.replybuffer, 7);
             this.BuildReply(id, tag, 13);
-            this.SendReply(desc);
+            this.SendReply();
             break;
 
         case 14: // tlcreate
@@ -202,13 +191,13 @@ Virtio9p.prototype.ReceiveRequest = function (desc, GetByte) {
             inode.gid = gid;
             ArrayToStruct(["Q", "w"], [inode.qid, this.IOUNIT], this.replybuffer, 7);
             this.BuildReply(id, tag, 13+4);
-            this.SendReply(desc);
+            this.SendReply();
             break;
 
         case 52: // lock always suceed
             ArrayToStruct(["w"], [0], this.replybuffer, 7);
             this.BuildReply(id, tag, 4);
-            this.SendReply(desc);
+            this.SendReply();
             break;
         
         
@@ -254,7 +243,7 @@ Virtio9p.prototype.ReceiveRequest = function (desc, GetByte) {
             "d", "d",
             ], req, this.replybuffer, 7);
             this.BuildReply(id, tag, 8 + 13 + 4 + 4+ 4 + 8*15);
-            this.SendReply(desc);
+            this.SendReply();
             break;
 
         case 26: // setattr
@@ -281,14 +270,14 @@ Virtio9p.prototype.ReceiveRequest = function (desc, GetByte) {
                 this.fs.ChangeSize(this.fid2inode[fid], req[5]);
             }
             this.BuildReply(id, tag, 0);
-            this.SendReply(desc);
+            this.SendReply();
             break;
 
         case 50: // fsync
             var req = StructToArray2(["w", "d"], GetByte);
             var fid = req[0];
             this.BuildReply(id, tag, 0);
-            this.SendReply(desc);
+            this.SendReply();
             break;
 
         case 40: // TREADDIR
@@ -307,7 +296,7 @@ Virtio9p.prototype.ReceiveRequest = function (desc, GetByte) {
                 this.replybuffer[7+4+i] = inode.data[offset+i];
             ArrayToStruct(["w"], [count], this.replybuffer, 7);
             this.BuildReply(id, tag, 4 + count);
-            this.SendReply(desc);
+            this.SendReply();
             break;
 
         case 118: // write
@@ -319,7 +308,7 @@ Virtio9p.prototype.ReceiveRequest = function (desc, GetByte) {
             this.fs.Write(this.fid2inode[fid], offset, count, GetByte);
             ArrayToStruct(["w"], [count], this.replybuffer, 7);
             this.BuildReply(id, tag, 4);
-            this.SendReply(desc);
+            this.SendReply();
             break;
 
         case 74: // RENAMEAT
@@ -331,11 +320,11 @@ Virtio9p.prototype.ReceiveRequest = function (desc, GetByte) {
             //DebugMessage("[renameat]: oldname=" + oldname + " newname=" + newname);
             var ret = this.fs.Rename(this.fid2inode[olddirfid], oldname, this.fid2inode[newdirfid], newname);
             if (ret == false) {
-                   this.SendError(tag, "No such file or directory", ENOENT);                   
-                   this.SendReply(desc);
+                this.SendError(tag, "No such file or directory", ENOENT);                   
+                this.SendReply();
             }
             this.BuildReply(id, tag, 0);
-            this.SendReply(desc);
+            this.SendReply();
             break;
 
         case 76: // TUNLINKAT
@@ -348,15 +337,15 @@ Virtio9p.prototype.ReceiveRequest = function (desc, GetByte) {
             if (id == -1) {
                    this.SendError(tag, "No such file or directory", ENOENT);
                    this.fid2inode[nwfid] = -1;
-                   this.SendReply(desc);
+                   this.SendReply();
             }
             var ret = this.fs.Unlink(id);
             if (!ret) {
                 this.SendError(tag, "Directory not empty", ENOTEMPTY);
-                this.SendReply(desc);
+                this.SendReply();
             }
             this.BuildReply(id, tag, 0);
-            this.SendReply(desc);
+            this.SendReply();
             break;
 
         case 100: // version
@@ -364,7 +353,7 @@ Virtio9p.prototype.ReceiveRequest = function (desc, GetByte) {
             DebugMessage("[version]: msize=" + version[0] + " version=" + version[1]);
             var size = ArrayToStruct(["w", "s"], [version[0], this.VERSION], this.replybuffer, 7);
             this.BuildReply(id, tag, size);
-            this.SendReply(desc);
+            this.SendReply();
             break;
 
         case 104: // attach
@@ -376,7 +365,7 @@ Virtio9p.prototype.ReceiveRequest = function (desc, GetByte) {
             var inode = this.fs.GetInode(this.fid2inode[fid]);
             ArrayToStruct(["Q"], [inode.qid], this.replybuffer, 7);
             this.BuildReply(id, tag, 13);
-            this.SendReply(desc);
+            this.SendReply();
             break;
 
         case 110: // walk
@@ -389,7 +378,7 @@ Virtio9p.prototype.ReceiveRequest = function (desc, GetByte) {
                 this.fid2inode[nwfid] = this.fid2inode[fid];
                 ArrayToStruct(["h"], [0], this.replybuffer, 7);
                 this.BuildReply(id, tag, 2);
-                this.SendReply(desc);
+                this.SendReply();
             }
             var wnames = [];
             for(var i=0; i<nwname; i++) {
@@ -412,7 +401,7 @@ Virtio9p.prototype.ReceiveRequest = function (desc, GetByte) {
             }
             ArrayToStruct(["h"], [nwidx], this.replybuffer, 7);
             this.BuildReply(id, tag, offset-7);
-            this.SendReply(desc);
+            this.SendReply();
             break;
 
         case 120: // clunk
@@ -421,14 +410,14 @@ Virtio9p.prototype.ReceiveRequest = function (desc, GetByte) {
             this.fs.CloseInode(this.fid2inode[req[0]]);
             this.fid2inode[req[0]] = -1;
             this.BuildReply(id, tag, 0);
-            this.SendReply(desc);
+            this.SendReply();
             break;
 
         default:
             DebugMessage("Error in Virtio9p: Unknown id " + id + " received");
             abort();
             //this.SendError(tag, "Operation i not supported",  ENOTSUPP);
-            //this.SendReply(desc);
+            //this.SendReply();
             break;
     }
 

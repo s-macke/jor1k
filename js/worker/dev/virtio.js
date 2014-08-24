@@ -12,6 +12,8 @@
 // http://www-numi.fnal.gov/offline_software/srt_public_context/WebDocs/Errors/unix_system_errors.html
 // https://github.com/ozaki-r/arm-js/tree/master/js
 
+"use strict";
+
 var VIRTIO_MAGIC_REG = 0x0;
 var VIRTIO_VERSION_REG = 0x4;
 var VIRTIO_DEVICE_REG = 0x8;
@@ -65,6 +67,8 @@ VirtIODev.prototype.Reset = function() {
     this.pagesize = 0x0;
     this.queuenum = 0x100;
     this.align = 0x0;
+    
+    this.currentindex = 0;
 }
 
 
@@ -171,26 +175,29 @@ VirtIODev.prototype.ConsumeDescriptor = function(descindex, desclen) {
     this.ramdev.WriteMemory16(addr + 2, (index+1));
 }
 
-VirtIODev.prototype.SendReply = function (desc) {
-    var nextdesc = this.GetDescriptor(desc.next);
-    //this.ConsumeDescriptor(0, desc.len);
-    if ((nextdesc.flags & VRING_DESC_F_WRITE) == 0) {
+VirtIODev.prototype.SendReply = function () {
+    //this.ConsumeDescriptor(this.currentindex, this.GetDescriptor(this.currentindex).len);
+    //DebugMessage(this.currentindex);
+    this.desc = this.GetDescriptor(this.desc.next);
+    //this.ConsumeDescriptor(0, this.desc.len);
+    
+    if ((this.desc.flags & VRING_DESC_F_WRITE) == 0) {
         DebugMessage("Error in virtiodev: Descriptor is not allowed to write");
         abort();
     }
 
     var offset = 0;
     for(var i=0; i<this.dev.replybuffersize; i++) {
-        if (offset >= nextdesc.len) {
-            nextdesc = this.GetDescriptor(nextdesc.next);
+        if (offset >= this.desc.len) {
+            this.desc = this.GetDescriptor(this.desc.next);
             //this.ConsumeDescriptor(nextdesc.next-2, desc.len);
-            offset = 0;
-            if ((nextdesc.flags & VRING_DESC_F_WRITE) == 0) {
+            offset = 0;            
+            if ((this.desc.flags & VRING_DESC_F_WRITE) == 0) {
                 DebugMessage("Error in virtiodev: Descriptor is not allowed to write");
                 abort();
             }
         }
-        this.ramdev.WriteMemory8(nextdesc.addr+offset, this.dev.replybuffer[i]);
+        this.ramdev.WriteMemory8(this.desc.addr+offset, this.dev.replybuffer[i]);
         offset++;
     }
     this.intstatus = /*desc.next*/1;
@@ -245,26 +252,25 @@ VirtIODev.prototype.WriteReg32 = function (addr, val) {
 
         case VIRTIO_QUEUENOTIFY_REG:
             //DebugMessage("write queuenotify reg : " + hex8(val));
-            var currentindex = val;
+            this.currentindex = val;
             
             // build stream function
-            var offset = 0;            
-            desc = this.GetDescriptor(currentindex);
-            this.ConsumeDescriptor(currentindex, desc.len);
+            var offset = 0;
+            this.desc = this.GetDescriptor(this.currentindex);
+            this.ConsumeDescriptor(this.currentindex, this.desc.len);
+            
             this.GetByte = function() {
-                if (offset >= desc.len) {
+                if (offset >= this.desc.len) {
                     offset = 0;
-                    currentindex = desc.next;
-                    desc = this.GetDescriptor(currentindex);
-                    //this.ConsumeDescriptor(currentindex, desc.len);
+                    this.desc = this.GetDescriptor(this.desc.next);
+                    //this.ConsumeDescriptor(this.currentindex, desc.len);
                 }
-                var x = this.ramdev.ReadMemory8(desc.addr+offset);
+                var x = this.ramdev.ReadMemory8(this.desc.addr+offset);
                 offset++;
                 return x;
             }.bind(this);
 
-            this.dev.ReceiveRequest(desc, this.GetByte);
-            //this.SendReply(desc);
+            this.dev.ReceiveRequest(this.GetByte);
             break;
 
         case VIRTIO_INTERRUPTACK_REG:
