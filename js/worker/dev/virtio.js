@@ -52,6 +52,7 @@ function CopyBufferToMemory(from, to, offset, size)
 function VirtIODev(intdev, ramdev, device) {
     "use strict";
     this.dev = device;
+    this.dev.SendReply = this.SendReply.bind(this);
     this.intdev = intdev;
     this.ramdev = ramdev;
     this.Reset();
@@ -170,6 +171,32 @@ VirtIODev.prototype.ConsumeDescriptor = function(descindex, desclen) {
     this.ramdev.WriteMemory16(addr + 2, (index+1));
 }
 
+VirtIODev.prototype.SendReply = function (desc) {
+    var nextdesc = this.GetDescriptor(desc.next);
+    //this.ConsumeDescriptor(0, desc.len);
+    if ((nextdesc.flags & VRING_DESC_F_WRITE) == 0) {
+        DebugMessage("Error in virtiodev: Descriptor is not allowed to write");
+        abort();
+    }
+
+    var offset = 0;
+    for(var i=0; i<this.dev.replybuffersize; i++) {
+        if (offset >= nextdesc.len) {
+            nextdesc = this.GetDescriptor(nextdesc.next);
+            //this.ConsumeDescriptor(nextdesc.next-2, desc.len);
+            offset = 0;
+            if ((nextdesc.flags & VRING_DESC_F_WRITE) == 0) {
+                DebugMessage("Error in virtiodev: Descriptor is not allowed to write");
+                abort();
+            }
+        }
+        this.ramdev.WriteMemory8(nextdesc.addr+offset, this.dev.replybuffer[i]);
+        offset++;
+    }
+    this.intstatus = /*desc.next*/1;
+    this.intdev.RaiseInterrupt(0x6);
+}
+
 
 VirtIODev.prototype.WriteReg32 = function (addr, val) {
     val = Swap32(val);
@@ -236,33 +263,8 @@ VirtIODev.prototype.WriteReg32 = function (addr, val) {
                 return x;
             }.bind(this);
 
-            if (!this.dev.ReceiveRequest(desc, this.GetByte))
-                break;
-
-            var nextdesc = this.GetDescriptor(desc.next);
-            //this.ConsumeDescriptor(0, desc.len);
-            if ((nextdesc.flags & VRING_DESC_F_WRITE) == 0) {
-                DebugMessage("Error in virtiodev: Descriptor is not allowed to write");
-                abort();
-            }
-
-                var offset = 0;
-                for(var i=0; i<this.dev.replybuffersize; i++)
-                {
-                    if (offset >= nextdesc.len) {
-                        nextdesc = this.GetDescriptor(nextdesc.next);
-                        //this.ConsumeDescriptor(nextdesc.next-2, desc.len);
-                        offset = 0;
-                        if ((nextdesc.flags & VRING_DESC_F_WRITE) == 0) {
-                            DebugMessage("Error in virtiodev: Descriptor is not allowed to write");
-                            abort();
-                        }
-                    }
-                    this.ramdev.WriteMemory8(nextdesc.addr+offset, this.dev.replybuffer[i]);
-                    offset++;
-                }
-                this.intstatus = /*desc.next*/1;
-                this.intdev.RaiseInterrupt(0x6);
+            this.dev.ReceiveRequest(desc, this.GetByte);
+            //this.SendReply(desc);
             break;
 
         case VIRTIO_INTERRUPTACK_REG:

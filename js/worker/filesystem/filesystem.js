@@ -5,22 +5,6 @@
 
 "use strict";
 
-var P9_STAT_MODE_DIR = 0x80000000;
-var P9_STAT_MODE_APPEND = 0x40000000;
-var P9_STAT_MODE_EXCL = 0x20000000;
-var P9_STAT_MODE_MOUNT = 0x10000000;
-var P9_STAT_MODE_AUTH = 0x08000000;
-var P9_STAT_MODE_TMP = 0x04000000;
-var P9_STAT_MODE_SYMLINK = 0x02000000;
-var P9_STAT_MODE_LINK = 0x01000000;
-var P9_STAT_MODE_DEVICE = 0x00800000;
-var P9_STAT_MODE_NAMED_PIPE = 0x00200000;
-var P9_STAT_MODE_SOCKET = 0x00100000;
-var P9_STAT_MODE_SETUID = 0x00080000;
-var P9_STAT_MODE_SETGID = 0x00040000;
-var P9_STAT_MODE_SETVTX = 0x00010000;
-
-
 
 var S_IFMT = 0xF000;
 //var S_IFSOCK = 0140000
@@ -36,13 +20,18 @@ var S_IFCHR = 0x2000;
 
 var O_RDONLY = 0x0000; // open for reading only 
 var O_WRONLY = 0x0001; // open for writing only
-var	O_RDWR = 0x0002; // open for reading and writing
-var	O_ACCMODE = 0x0003; // mask for above modes
+var O_RDWR = 0x0002; // open for reading and writing
+var O_ACCMODE = 0x0003; // mask for above modes
 
+var STATUS_INVALID = -0x1;
+var STATUS_OK = 0x0;
 var STATUS_OPEN = 0x1;
+var STATUS_ON_SERVER = 0x2;
+var STATUS_LOADING = 0x3;
+
 
 function FS() {
-    this.inodes = [];    
+    this.inodes = [];
 
     this.qidnumber = 0x0;
     this.filesinloadingqueue = 0;
@@ -53,6 +42,24 @@ function FS() {
     // root entry
     this.CreateDirectory("", -1);
 }
+
+// -----------------------------------------------------
+
+FS.prototype.AddEvent = function(id, OnEvent) {
+    var inode = this.inodes[id];
+    if (inode.status == STATUS_OK) {
+        OnEvent();
+        return;
+    }
+}
+
+FS.prototype.HandleEvent = function(id) {
+    if (this.filesinloadingqueue == 0) {
+        this.OnLoaded();
+        this.OnLoad = function() {}
+    }
+}
+
 
 // -----------------------------------------------------
 FS.prototype.LoadImage = function(url)
@@ -161,7 +168,7 @@ FS.prototype.OnXMLLoaded = function(fs)
     for(var i=0; i<fs.length; i++)
     {
         if (fs[i] != '<') continue;
-        var tag = ReadTag(fs, i, ' '); 
+        var tag = ReadTag(fs, i, ' ');
         var id = this.Search(parentid, tag.name);
         if (id != -1) continue;
 
@@ -191,12 +198,15 @@ FS.prototype.OnXMLLoaded = function(fs)
 
     case "File":
         inode.mode |= S_IFREG;
-        //inode.data = new Uint8Array(size);
         var idx = this.inodes.length;
+        inode.status = STATUS_ON_SERVER;
+        inode.compressed = tag.compressed;
+        inode.size = size;
         this.PushInode(inode);
         var url = sysrootdir + (tag.src.length==0?this.GetFullPath(idx):tag.src);
+        inode.url = url;
         //DebugMessage("Load id=" + (idx) + " " + url);
-        this.LoadFile(idx, url, size, tag.compressed);
+        this.LoadFile(idx);
         break;
 
     case "Link":
@@ -209,32 +219,39 @@ FS.prototype.OnXMLLoaded = function(fs)
     DebugMessage("processed " + this.inodes.length + " inodes");
 }
 
-// Loads the data from a url for a specific inode
-FS.prototype.LoadFile = function(idx, url, size, compressed) {
 
-    if (compressed) {
-        url = url + ".bz2";
-        this.inodes[idx].data = new Uint8Array(size);
-        this.inodes[idx].size = size;
-        LoadBinaryResource(url, 
+
+// Loads the data from a url for a specific inode
+FS.prototype.LoadFile = function(idx) {
+    var inode = this.inodes[idx];
+    if (inode.status != STATUS_ON_SERVER) {
+        return;
+    }
+    inode.status = STATUS_LOADING;
+
+    if (inode.compressed) {
+        inode.data = new Uint8Array(inode.size);
+        LoadBinaryResource(inode.url + ".bz2",
         function(buffer){
             var buffer8 = new Uint8Array(buffer);
             var ofs = 0;
-            bzip2.simple(buffer8, function(x){this.inodes[idx].data[ofs++] = x;}.bind(this) );    
+            bzip2.simple(buffer8, function(x){inode.data[ofs++] = x;}.bind(this) );    
+            inode.status = STATUS_OK;
             this.filesinloadingqueue--;
-            if (this.filesinloadingqueue == 0) this.OnLoaded();
+            this.HandleEvent(idx);            
         }.bind(this), 
         function(error){throw error;});
 
         return;
     }
 
-    LoadBinaryResource(url, 
+    LoadBinaryResource(inode.url, 
         function(buffer){
-            this.inodes[idx].data = new Uint8Array(buffer);
-            this.inodes[idx].size = this.inodes[idx].data.length;
+            inode.data = new Uint8Array(buffer);
+            inode.size = this.inodes[idx].data.length; // correct size if the previous was wrong. 
+            inode.status = STATUS_OK;
             this.filesinloadingqueue--;
-            if (this.filesinloadingqueue == 0) this.OnLoaded();
+            this.HandleEvent(idx);            
         }.bind(this), 
         function(error){throw error;});
 
@@ -253,8 +270,7 @@ FS.prototype.PushInode = function(inode) {
 FS.prototype.CreateInode = function() {
     this.qidnumber++;
     return {
-        valid : true,
-        updatedir : false,
+        updatedir : false, // did the directory listing changed?
         parentid: -1,
         status : 0,
         name : "",
@@ -264,7 +280,9 @@ FS.prototype.CreateInode = function() {
         data : new Uint8Array(0),
         symlink : "",
         mode : 0x01ED,
-        qid: {type: 0, version: 0, path: this.qidnumber}
+        qid: {type: 0, version: 0, path: this.qidnumber},
+        url: "", // url to download the file
+        compressed: false
     };
 }
 
@@ -322,8 +340,20 @@ FS.prototype.CreateTextFile = function(filename, parentid, str) {
 }
 
 FS.prototype.OpenInode = function(id, mode) {
-    //DebugMessage("open:" + this.GetFullPath(id));
-    this.inodes[id].status = STATUS_OPEN;
+    var inode = this.inodes[id];
+    var type = "";
+    switch(inode.mode) {
+        case S_IFREG: type = "File"; break;
+        case S_IFBLK: type = "Block Device"; break;
+        case S_IFDIR: type = "Directory"; break;
+        case S_IFCHR: type = "Character Device"; break;
+    }
+    DebugMessage("open:" + this.GetFullPath(id) +  " type: " + type + " status:" + inode.status);
+    if (inode.status != 0) {
+        this.LoadFile(idx);
+        return false;
+    }
+    return true;
 }
 
 FS.prototype.CloseInode = function(id) {
@@ -377,7 +407,7 @@ FS.prototype.GetRoot = function() {
 
 FS.prototype.Search = function(idx, name) {
     for(var i=0; i<this.inodes.length; i++) {
-        if (!this.inodes[i].valid) continue;
+        if (this.inodes[i].status == STATUS_INVALID) continue;
         if (this.inodes[i].parentid != idx) continue;
         if (this.inodes[i].name != name) continue;
         return i;
@@ -388,7 +418,7 @@ FS.prototype.Search = function(idx, name) {
 FS.prototype.GetTotalSize = function() {
     var size = 0;
     for(var i=0; i<this.inodes.length; i++) {
-        if (!this.inodes[i].valid) continue;
+        if (this.inodes[i].status == STATUS_INVALID) continue;
         size += this.inodes[i].data.length;
     }
     return size;
@@ -410,14 +440,14 @@ FS.prototype.Unlink = function(idx) {
 
     if ((this.inodes[idx].mode&S_IFMT) == S_IFDIR) {
         for(var i=0; i<this.inodes.length; i++) {
-            if (!this.inodes[i].valid) continue;
+            if (this.inodes[i].status == STATUS_INVALID) continue;
             if (this.inodes[i].parentid == idx) return false;
         }
     }
 
     this.inodes[idx].data = new Uint8Array(0);
     this.inodes[idx].size = 0;
-    this.inodes[idx].valid = false;
+    this.inodes[idx].status = STATUS_INVALID;
     this.inodes[this.inodes[idx].parentid].updatedir = true;
     return true;
 }
@@ -468,7 +498,7 @@ FS.prototype.SearchPath = function(path) {
 FS.prototype.GetRecursiveList = function(dirid, list) {
 
     for(var i=0; i<this.inodes.length; i++) {
-        if (!this.inodes[i].valid) continue;
+        if (this.inodes[i].status == STATUS_INVALID) continue;
         if (this.inodes[i].parentid != dirid) continue;
         list.push(i);
         if ((this.inodes[i].mode&S_IFMT) == S_IFDIR) {
@@ -498,7 +528,7 @@ FS.prototype.FillDirectory = function(dirid) {
     // first get size
     var size = 0;
     for(var i=0; i<this.inodes.length; i++) {
-        if (!this.inodes[i].valid) continue;
+        if (this.inodes[i].status == STATUS_INVALID) continue;
         if (this.inodes[i].parentid != dirid) continue;
         size += 13 + 8 + 1 + 2 + this.inodes[i].name.length;
     }
@@ -528,7 +558,7 @@ FS.prototype.FillDirectory = function(dirid) {
 
     
     for(var i=0; i<this.inodes.length; i++) {
-        if (!this.inodes[i].valid) continue;
+        if (this.inodes[i].status == STATUS_INVALID) continue;
         if (this.inodes[i].parentid != dirid) continue;
         offset += ArrayToStruct(
         ["Q", "d", "b", "s"],
