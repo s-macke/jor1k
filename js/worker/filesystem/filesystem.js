@@ -58,7 +58,7 @@ FS.prototype.AddEvent = function(id, OnEvent) {
 FS.prototype.HandleEvent = function(id) {
     if (this.filesinloadingqueue == 0) {
         this.OnLoaded();
-        this.OnLoad = function() {}
+        this.OnLoaded = function() {}
     }
     //DebugMessage("number of events: " + this.events.length);
     for(var i = this.events.length - 1; i >= 0; i--) {
@@ -188,7 +188,6 @@ FS.prototype.OnXMLLoaded = function(fs)
         inode.mode = tag.mode;
         var size = tag.size;
 
-
     switch(tag.type) {
     case "FS":
         sysrootdir = "../../" + tag.src + "/";
@@ -214,7 +213,7 @@ FS.prototype.OnXMLLoaded = function(fs)
         var url = sysrootdir + (tag.src.length==0?this.GetFullPath(idx):tag.src);
         inode.url = url;
         //DebugMessage("Load id=" + (idx) + " " + url);
-        this.LoadFile(idx);
+        //this.LoadFile(idx);
         break;
 
     case "Link":
