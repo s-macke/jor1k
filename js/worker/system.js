@@ -307,8 +307,9 @@ System.prototype.LoadImageAndStart = function(urls) {
     this.SendStringToTerminal("\r================================================================================");
     this.SendStringToTerminal("\r\nLoading kernel and hard and basic file system from web server. Please wait ...\r\n");
     LoadBinaryResource("../../" + urls.kernel, this.OnKernelLoaded.bind(this), function(error){throw error;});
-    this.filesystem.LoadFSXML(urls.fs);
+    this.filesystem.LoadFSXML(urls.fs, true);
     this.filesystem.OnLoaded = function() { // the basic filesystem is loaded, so download the rest
+        this.filesystem.LoadFSXML(urls.extendedfs, false);
         DebugMessage("Load " + urls.images);
         for(var i=0; i<urls.images.length; i++) {            
             this.filesystem.LoadImage("../../" + urls.images[i]);

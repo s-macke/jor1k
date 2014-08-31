@@ -160,13 +160,16 @@ function ReadTag(buffer, offset) {
 };
 
 
-FS.prototype.LoadFSXML = function(urls)
+FS.prototype.LoadFSXML = function(urls, load)
 {
     DebugMessage("Load filesystem information from " + urls[0]);
-    LoadXMLResource("../../" + urls[0], this.OnXMLLoaded.bind(this), function(error){throw error;});
+    LoadXMLResource("../../" + urls[0], 
+    function(fs) { 
+         this.OnXMLLoaded(fs, load);
+    }.bind(this), function(error){throw error;});
 }
 
-FS.prototype.OnXMLLoaded = function(fs)
+FS.prototype.OnXMLLoaded = function(fs, load)
 {
     // At this point I realized, that the dom is not available in worker threads and that I cannot get the xml information directly.
     // So let's analyze ourself
@@ -178,14 +181,17 @@ FS.prototype.OnXMLLoaded = function(fs)
         if (fs[i] != '<') continue;
         var tag = ReadTag(fs, i, ' ');
         var id = this.Search(parentid, tag.name);
-        if (id != -1) continue;
-
+        if (id != -1) {
+            if (tag.type == "Dir") parentid = id;             
+            continue;
+        }
         var inode = this.CreateInode();
         inode.name = tag.name;
         inode.uid = tag.uid;
         inode.gid = tag.gid;
         inode.parentid = parentid;
         inode.mode = tag.mode;
+	
         var size = tag.size;
 
     switch(tag.type) {
@@ -213,7 +219,9 @@ FS.prototype.OnXMLLoaded = function(fs)
         var url = sysrootdir + (tag.src.length==0?this.GetFullPath(idx):tag.src);
         inode.url = url;
         //DebugMessage("Load id=" + (idx) + " " + url);
-        //this.LoadFile(idx);
+        if (load) {
+            this.LoadFile(idx);
+        }
         break;
 
     case "Link":

@@ -22,6 +22,7 @@ function jor1kGUI(parameters)
     this.urls = [];
     this.urls.kernel = this.params.kernelURL;
     this.urls.fs = [this.params.basefsURL];
+    this.urls.extendedfs = this.params.extendedfsURL;
     this.urls.images = this.params.lazyloadimages;
 
     this.worker = new Worker('js/worker/worker.js');
@@ -222,8 +223,19 @@ if (e.data.command == "Debug") console.log(e.data.data);
         case "sync":
             UploadBinaryResource(this.params.syncURL, this.params.userid + ".tar", e.data.data, 
             function(response) {
-                alert(response);
-            }
+//                alert(response);
+        alert(
+       "Message from Server:" + response + "\n" +
+       "The home folder '/home/user' has been synced with the server\n" +
+       "In order to access the data at a later date,\n" +
+       "start the next session with \n" +
+       "http://jor1k.com/jor1k/?user="+ this.params.userid + "\n"+
+       "The folder size is limited to 1MB and is saved only for a few days\n" +
+       "the content can be downloaded under http://jor1k.com/sync/tarballs/" + this.params.userid+".tar.bz2");
+
+
+
+            }.bind(this)
            , function(msg) {alert(msg);}
            );
             

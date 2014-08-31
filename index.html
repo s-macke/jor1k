@@ -195,27 +195,9 @@ function Start() {
         statsid: "stats",  // object id for the statistics test
         kernelURL: "bin/vmlinux.bin.bz2", // kernel image
         basefsURL: "bin/basefs.xml", // xml file with the basic filesystem configuration.
-        extendedfsURL: [], // xml files with extended filesystem informations. Loaded after the basic filesystem has been loaded.
+        extendedfsURL: ["../lfs/fs.xml"], // xml files with extended filesystem informations. Loaded after the basic filesystem has been loaded.
         lazyloadimages: [
-            "../sync/tarballs/"+userid+".tar.bz2",
-            "bin/musl.tar.bz2", 
-            "bin/gcc-libs.tar.bz2", 
-            "bin/zlib.tar.bz2", 
-            "bin/ncurses.tar.bz2", 
-            "bin/nano.tar.bz2",
-            "bin/tslib.tar.bz2",
-            "bin/SDL.tar.bz2",
-            "bin/libpng.tar.bz2",
-            "bin/scummvm.tar.bz2",
-            "bin/monkey.tar.bz2",
-            "bin/prboom.tar.bz2",
-            "bin/nbench.tar.bz2",
-            "bin/bc.tar.bz2",
-            "bin/lua.tar.bz2",
-            "bin/openssl.tar.bz2",
-            "bin/lynx.tar.bz2",
-            "bin/openssh.tar.bz2",
-            "bin/nmap.tar.bz2"
+            "../sync/tarballs/"+userid+".tar.bz2"
         ], // list of automatically loaded images after the basic filesystem has been loaded
         relayURL: "ws://relay.widgetry.org/", // relay url for the network
         userid: userid, // unique user id string. Empty, choosen randomly, from a url, or from a cookie.
