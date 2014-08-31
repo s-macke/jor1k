@@ -7,7 +7,6 @@
 "use strict";
 
 // TODO
-// mknod
 // flush
 // lock?
 
@@ -144,10 +143,32 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             //DebugMessage("[symlink] fid=" + fid + ", name=" + name + ", symgt=" + symgt + ", gid=" + gid); 
             var idx = this.fs.CreateSymlink(name, this.fid2inode[fid], symgt);
             var inode = this.fs.GetInode(idx);
+            inode.uid = gid;
+            inode.gid = gid;
             ArrayToStruct(["Q"], [inode.qid], this.replybuffer, 7);
             this.BuildReply(id, tag, 13);
             this.SendReply(index);
             break;
+
+        case 18: // mknod
+            var req = StructToArray2(["w", "s", "w", "w", "w", "w"], GetByte);
+            var fid = req[0];
+            var name = req[1];
+            var mode = req[2];
+            var major = req[3];
+            var minor = req[4];
+            //var gid = req[5];
+            DebugMessage("[mknod] fid=" + fid + ", name=" + name + ", major=" + major + ", minor=" + minor+ ", gid=" + gid);
+            var idx = this.fs.CreateNode(name, this.fid2inode[fid], major, minor);
+            var inode = this.fs.GetInode(idx);
+            inode.mode = mode;
+            inode.uid = gid;
+            inode.gid = gid;
+            ArrayToStruct(["Q"], [inode.qid], this.replybuffer, 7);
+            this.BuildReply(id, tag, 13);
+            this.SendReply(index);
+            break;
+
 
         case 22: // TREADLINK
             var req = StructToArray2(["w"], GetByte);
@@ -217,7 +238,7 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             req[4] = inode.gid; // group id
             
             req[5] = 0x1; // number of hard links
-            req[6] = 0x0; // device id low
+            req[6] = (inode.major<<8) | (inode.minor); // device id low
             req[7] = inode.size; // size low
             req[8] = inode.size; // blk size low
             req[9] = inode.size/512; // number of file system blocks

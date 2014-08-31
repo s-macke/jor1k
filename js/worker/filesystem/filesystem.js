@@ -7,7 +7,7 @@
 
 
 var S_IFMT = 0xF000;
-//var S_IFSOCK = 0140000
+var S_IFSOCK = 0xC000;
 var S_IFLNK = 0xA000;
 var S_IFREG = 0x8000;
 var S_IFBLK = 0x6000;
@@ -292,6 +292,8 @@ FS.prototype.CreateInode = function() {
         size : 0x0,
         uid : 0x0,
         gid : 0x0,
+        major : 0x0,
+        minor : 0x0,
         data : new Uint8Array(0),
         symlink : "",
         mode : 0x01ED,
@@ -326,6 +328,21 @@ FS.prototype.CreateFile = function(filename, parentid) {
     x.gid = this.inodes[parentid].gid;
     x.qid.type = S_IFREG >> 8;
     x.mode = (this.inodes[parentid].mode & 0x1B6) | S_IFREG;
+    this.PushInode(x);
+    return this.inodes.length-1;
+}
+
+
+FS.prototype.CreateNode = function(filename, parentid, major, minor) {
+    var x = this.CreateInode();
+    x.name = filename;
+    x.parentid = parentid;
+    x.major = major;
+    x.minor = minor;
+    x.uid = this.inodes[parentid].uid;
+    x.gid = this.inodes[parentid].gid;
+    x.qid.type = S_IFSOCK >> 8;
+    x.mode = (this.inodes[parentid].mode & 0x1B6);
     this.PushInode(x);
     return this.inodes.length-1;
 }
