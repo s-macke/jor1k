@@ -133,7 +133,8 @@ function ReadTag(buffer, offset) {
     tag.gid = 0x0;
     tag.path = "";
     tag.src = "";
-    tag.compressed = 0;
+    tag.compressed = false;
+    tag.load = false;
 
     if (buffer[offset] != '<') return tag;
     for(var i=offset+1; i<buffer.length; i++) {
@@ -154,22 +155,20 @@ function ReadTag(buffer, offset) {
         if (variable.name == "size") tag.size = parseInt(variable.value, 10);
         if (variable.name == "src") tag.src = variable.value;
         if (variable.name == "compressed") tag.compressed = true;
+        if (variable.name == "load") tag.load = true;
         offset = variable.offset;
     } while(variable.name.length != 0);
     return tag;
 };
 
 
-FS.prototype.LoadFSXML = function(urls, load)
+FS.prototype.LoadFSXML = function(urls)
 {
     DebugMessage("Load filesystem information from " + urls[0]);
-    LoadXMLResource("../../" + urls[0], 
-    function(fs) { 
-         this.OnXMLLoaded(fs, load);
-    }.bind(this), function(error){throw error;});
+    LoadXMLResource("../../" + urls[0], this.OnXMLLoaded.bind(this), function(error){throw error;});
 }
 
-FS.prototype.OnXMLLoaded = function(fs, load)
+FS.prototype.OnXMLLoaded = function(fs)
 {
     // At this point I realized, that the dom is not available in worker threads and that I cannot get the xml information directly.
     // So let's analyze ourself
@@ -219,7 +218,7 @@ FS.prototype.OnXMLLoaded = function(fs, load)
         var url = sysrootdir + (tag.src.length==0?this.GetFullPath(idx):tag.src);
         inode.url = url;
         //DebugMessage("Load id=" + (idx) + " " + url);
-        if (load) {
+        if (tag.load) {
             this.LoadFile(idx);
         }
         break;

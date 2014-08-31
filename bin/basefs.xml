@@ -77,7 +77,7 @@
 		<Link name='cttyhack' mode='120777' path='busybox' />
 		<Link name='iostat' mode='120777' path='busybox' />
 		<Link name='ash' mode='120777' path='busybox' />
-		<File name='busybox' mode='104755' size='1377488' compressed='1'/>
+		<File name='busybox' mode='104755' size='1377488' compressed='1' load='1'/>
 		<Link name='scriptreplay' mode='120777' path='busybox' />
 		<Link name='dumpkmap' mode='120777' path='busybox' />
 		<Link name='fdflush' mode='120777' path='busybox' />
@@ -212,8 +212,8 @@
 			<Link name='popmaildir' mode='120777' path='../../bin/busybox' />
 		</Dir>
 		<Dir name='bin' mode='40755'>
-			<File name='showmenu' mode='100755' size='8056'/>
-			<File name='help' mode='100755' size='138'/>
+			<File name='showmenu' mode='100755' size='8056' load='1'/>
+			<File name='help' mode='100755' size='138' load='1'/>
 			<Link name='cmp' mode='120777' path='../../bin/busybox' />
 			<Link name='nmeter' mode='120777' path='../../bin/busybox' />
 			<Link name='sv' mode='120777' path='../../bin/busybox' />
@@ -366,37 +366,37 @@
 		<Dir name='lib' mode='40755'></Dir>
 		<Dir name='share' mode='40755'>
 			<Dir name='udhcpc' mode='40755'>
-				<File name='default.script' mode='100755' size='1285'/>
+				<File name='default.script' mode='100755' size='1285' load='1'/>
 			</Dir>
 		</Dir>
 		<Dir name='libexec' mode='40755'></Dir>
 	</Dir>
 	<Dir name='dev' mode='40755'></Dir>
 	<Dir name='etc' mode='40755'>
-		<File name='group' mode='100644' size='22'/>
-		<File name='fstab' mode='100755' size='174'/>
-		<File name='passwd' mode='100644' size='137'/>
-		<File name='inetd.conf' mode='100644' size='59'/>
-		<File name='services' mode='100644' size='18832'/>
-		<File name='nsswitch.conf' mode='100644' size='134'/>
-		<File name='host.conf' mode='100644' size='27'/>
-		<File name='inittab' mode='100755' size='233'/>
+		<File name='group' mode='100644' size='22' load='1'/>
+		<File name='fstab' mode='100755' size='174' load='1'/>
+		<File name='passwd' mode='100644' size='137' load='1'/>
+		<File name='inetd.conf' mode='100644' size='59' load='1'/>
+		<File name='services' mode='100644' size='18832' load='1'/>
+		<File name='nsswitch.conf' mode='100644' size='134' load='1'/>
+		<File name='host.conf' mode='100644' size='27' load='1'/>
+		<File name='inittab' mode='100755' size='233' load='1'/>
 		<Dir name='init.d' mode='40755'>
-			<File name='rcS' mode='100755' size='788'/>
+			<File name='rcS' mode='100755' size='788' load='1'/>
 		</Dir>
 		<Dir name='network' mode='40755'>
-			<File name='interfaces' mode='100644' size='64'/>
+			<File name='interfaces' mode='100644' size='64' load='1'/>
 		</Dir>
 	</Dir>
 	<Dir name='home' mode='40755'>
 		<Dir name='user' mode='42755' uid='1000' gid='1000'>
-			<File name='.profile' mode='100644' uid='1000' gid='1000' size='358' src='root/profile'/>
+			<File name='.profile' mode='100644' uid='1000' gid='1000' size='358' src='root/profile' load='1'/>
 		</Dir>
 	</Dir>
 	<Dir name='lib' mode='40555'></Dir>
 	<Dir name='proc' mode='40555'></Dir>
 	<Dir name='root' mode='40555'>
-		<File name='.profile' mode='100644' size='358' src='root/profile'/>
+		<File name='.profile' mode='100644' size='358' src='root/profile' load='1'/>
 	</Dir>
 	<Dir name='sys' mode='40755'></Dir>
 	<Dir name='tmp' mode='41777'></Dir>
