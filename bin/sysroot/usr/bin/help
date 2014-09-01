@@ -10,7 +10,8 @@ showmenu \
 "Terminal Demos" \
 "Benchmarks" \
 "Programming Languages" \
-"Network Tools & Web Browsers"
+"Network Tools & Web Browsers" \
+"Start X Server (glxgears, xterm, ...)"
 
 case $? in
 	0 )
@@ -29,6 +30,9 @@ case $? in
 		Programming ;;
 	7)
 		Network ;;
+	8)
+		echo "Loading files from server. This may take a while."
+		startx
 esac
 
 }
