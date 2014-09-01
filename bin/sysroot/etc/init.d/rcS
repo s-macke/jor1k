@@ -25,6 +25,8 @@ mount -t devpts none /dev/pts &
 mkdir -p /dev/shm && \
 mount -t tmpfs none /dev/shm &
 
+chmod a+rw /dev/fb0
+
 #echo "Configuring loopback device"
 #ifconfig lo 127.0.0.1
 

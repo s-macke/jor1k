@@ -5,6 +5,7 @@ Main () {
 showmenu \
 "Choices" \
 "Graphic Games" \
+"Graphic Demos" \
 "Terminal Games" \
 "Terminal Demos" \
 "Benchmarks" \
@@ -17,14 +18,16 @@ case $? in
 	1 )
 		GGames ;;
 	2 )
+		GDemos ;;
+	3 )
 		TGames ;;
-	3)
-		TDemos ;;
 	4)
-		Benchmarks ;;
+		TDemos ;;
 	5)
-		Programming ;;
+		Benchmarks ;;
 	6)
+		Programming ;;
+	7)
 		Network ;;
 esac
 
@@ -49,10 +52,40 @@ esac
 	GGames
 }
 
+GDemos () {
+
+showmenu \
+"Graphic Demos" \
+"fbdemo      - very simple demo" \
+"df_neo      - moving sprites" \
+"df_knuckles - rotating knuckle" \
+"df_fire     - simple fire demo" \
+"df_matrix   - rotating objects" \
+
+case $? in
+	0 )
+		Main ;;
+	1 )
+		fbdemo ;;
+	2)
+		df_neo ;;
+	3)
+		df_knuckles ;;
+	4)
+		df_fire ;;
+	5)
+		df_matrix ;;
+esac
+	GDemos
+}
+
+
+
 TGames () {
 
 showmenu \
 "Text Games" \
+"Frotz   - Z-machine interpreter. Play the 20 minute text adventure '9:05'" \
 "blue    - Blue Moon, a nifty solitaire (uses color)" \
 "bs      - the game of Battleships (uses color) " \
 "hanoi   - the game of hanoi (uses color essentially)" \
@@ -62,12 +95,14 @@ case $? in
 	0 )
 		Main ;;
 	1 )
-		blue ;;
+		frotz /usr/share/frotz/905.z5 ;;
 	2 )
-		bs ;;
+		blue ;;
 	3 )
-		hanoi ;;
+		bs ;;
 	4 )
+		hanoi ;;
+	5)
 		knight ;;
 esac
 	TGames
@@ -184,26 +219,38 @@ Network () {
 
 showmenu \
 "Network" \
-"lynx  - Text Web Browser. Start page is google.com" \
-"ssh   - Secure Shell" \
-"nmap  - Free Security Scanner For Network Exploration & Security Audits" \
-"sshd  - start a sshd server"
+"links     - Graphical Web Browser. Start page is google.com" \
+"lynx      - Text Web Browser. Start page is google.com" \
+"links     - Text Web Browser. Start page is google.com" \
+"telnet    - Watch an ASCII version of Star Wars over a telnet connection" \
+"ssh       - Secure Shell" \
+"nmap      - Free Security Scanner For Network Exploration & Security Audits" \
+"sshd      - start a sshd server"
 
 case $? in
 	0 )
 		Main ;;
 	1 )
-		lynx http://www.google.com
+		links -g "http://www.google.com/webhp?hl=all"
 		;;
 	2 )
+		lynx "http://www.google.com/webhp?hl=all"
+		;;
+	3 )
+		links "http://www.google.com/webhp?hl=all"
+		;;
+	4 )
+		telnet towel.blinkenlights.nl
+		;;
+	5 )
 		echo "Please use 'ssh' from the command line"
 		exit
 		;;
-	3 )
+	6 )
 		echo "Please use 'nmap' from the command line"
 		exit
 		;;
-	4 )
+	7 )
 		/usr/sbin/sshd
 		;;
 esac
