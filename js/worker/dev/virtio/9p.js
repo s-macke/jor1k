@@ -130,8 +130,24 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             break;
 
         case 70: // link
-            this.SendError(tag, "Operation not permitted", EPERM);                   
-            this.SendReply(index);
+            var req = StructToArray2(["w", "w", "s"], GetByte);
+            var dfid = req[0];
+            var fid = req[1];
+            var name = req[2];
+            //DebugMessage("[link] dfid=" + dfid + ", name=" + name); 
+            //var idx = this.fs.CreateSymlink(name, this.fid2inode[dfid], symgt);
+            //var inode =  this.fs.GetInode(idx);
+            var inode = this.fs.CreateInode();
+            var inodetarget = this.fs.GetInode(this.fid2inode[fid]);
+            inode = inodetarget;
+            inode.data = new Uint8Array(inode.data);
+            this.fs.PushInode(inode);
+            
+            //inode.uid = inodetarget.uid;
+            //inode.gid = inodetarget.gid;
+            //inode.mode = inodetarget.mode | S_IFLNK;
+            this.BuildReply(id, tag, 0);
+            this.SendReply(index);       
             break;
 
         case 16: // symlink
@@ -211,18 +227,23 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             var inode = this.fs.GetInode(idx);
             inode.uid = gid;
             inode.gid = gid;
+            inode.mode = mode;
             ArrayToStruct(["Q", "w"], [inode.qid, this.IOUNIT], this.replybuffer, 7);
             this.BuildReply(id, tag, 13+4);
             this.SendReply(index);
             break;
 
         case 52: // lock always suceed
+            // DebugMessage("lock file\n");
             ArrayToStruct(["w"], [0], this.replybuffer, 7);
-            this.BuildReply(id, tag, 4);
+            this.BuildReply(id, tag, 1);
             this.SendReply(index);
             break;
-        
-        
+        /*
+        case 54: // getlock
+            break;        
+        */
+
         case 24: // getattr
             var req = StructToArray2(["w", "d"], GetByte);
             var fid = req[0];
@@ -392,6 +413,16 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             this.BuildReply(id, tag, 13);
             this.SendReply(index);
             break;
+
+        case 108: // tflush
+            var req = StructToArray2(["h"], GetByte);
+            var oldtag = req[0];
+            DebugMessage("[flush] " + tag);
+            //ArrayToStruct(["Q"], [inode.qid], this.replybuffer, 7);
+            this.BuildReply(id, tag, 0);
+            this.SendReply(index);
+            break;
+
 
         case 110: // walk
             var req = StructToArray2(["w", "w", "h"], GetByte);
