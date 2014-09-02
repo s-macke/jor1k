@@ -202,7 +202,18 @@ case $? in
 	0 )
 		Main ;;
 	1 )
-		echo "Please use 'gcc' from the command line"
+		echo "Write hello.c file"
+		echo '#include<stdio.h>' > hello.c
+		echo 'int main()' >> hello.c
+		echo '{' >> hello.c
+		echo 'printf("Hello world\n");' >> hello.c
+		echo 'return 0;' >> hello.c
+		echo '}' >> hello.c
+		cat hello.c
+		echo compile hello.c.
+		gcc -o hello hello.c
+		echo run hello
+		./hello
 		exit
 		;;
 	2 )
