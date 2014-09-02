@@ -5,6 +5,7 @@
 // Emulating the Opencores Keyboard Controller
 
 // translation table from Javascript keycodes to Linux keyboard scancodes
+// http://lxr.free-electrons.com/source/include/dt-bindings/input/input.h
 
 var kc2kc =
 [
@@ -62,8 +63,8 @@ var kc2kc =
 0,      //
 0,      //
 0,      //
-82,    // insert
-84,    // delete
+110,    // insert
+111,    // delete
 0,      //
 11,     // 0
 2,      // 1
@@ -78,11 +79,11 @@ var kc2kc =
 9,      // 8
 10,     // 9
 0,      // 
-0,      // 
+39,      // semi colon
 
 // 60
-0,      // 
-0,      // 
+,      // equal sign
+13,      // 
 0,      // 
 0,      // 
 0,      // 
@@ -216,7 +217,7 @@ var kc2kc =
 0,      // 
 0,      // 
 0,      // 
-0,      // 
+12,     // minus
 0,      // 
 0,      // 
 0,      // 
@@ -299,6 +300,7 @@ KeyboardDev.prototype.Reset = function() {
 }
 
 KeyboardDev.prototype.OnKeyDown = function(event) {
+    //DebugMessage(event.keyCode);
     this.key = kc2kc[event.keyCode] | 0x0;
     if (this.key == 0) return;
     this.fifo.push(this.key);
