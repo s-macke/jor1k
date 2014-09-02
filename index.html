@@ -42,16 +42,15 @@
                         </select>
                     </form>
                     <label>
-                        <img src="images/upload.png" width="5%" height="5%" title="Upload to home folder" />
+                        <img src="images/upload.png" width="20px" height="20px" title="Upload to home folder" />
                         <input type="file" id="files" style="visibility:hidden;width:0; height:0;" name="files[]" onchange='OnUploadFiles(this.files)' multiple />
                     </label>
-                    <img src="images/tar.png" width="5%" height="5%"  onclick='jor1kgui.TAR("home/user")' title="Download of home folder" />
-                    <img src="images/sync.png" width="5%" height="5%"  onclick='jor1kgui.Sync("home/user")' title="Sync with server" />
-                    <img src="images/fullscreen.png" width="5%" height="5%"  onclick='Fullscreen()' title="Windowed fullscreen of framebuffer" />
-                    </span>
+                    <img src="images/tar.png" width="20px" height="20px"  onclick='jor1kgui.TAR("home/user")' title="Download of home folder" />
+                    <img src="images/sync.png" width="20px" height="20px"  onclick='jor1kgui.Sync("home/user")' title="Sync with server" />
+                    <img src="images/fullscreen.png" width="20px" height="20px"  onclick='Fullscreen()' title="Windowed fullscreen of framebuffer" />
                     
+                    </span>                    
                     <span id="stats" style="float: right"></span>
-                    
                     </td></tr>
                     </table>
 
@@ -197,7 +196,7 @@ function Start() {
         basefsURL: "bin/basefs.xml", // xml file with the basic filesystem configuration.
         extendedfsURL: ["../jor1k-sysroot/fs.xml"], // xml files with extended filesystem informations. Loaded after the basic filesystem has been loaded.
         lazyloadimages: [
-            "http://www.jor1k.com/sync/tarballs/"+userid+".tar.bz2"
+            "http://jor1k.com/sync/tarballs/"+userid+".tar.bz2"
         ], // list of automatically loaded images after the basic filesystem has been loaded
         relayURL: "ws://relay.widgetry.org/", // relay url for the network
         userid: userid, // unique user id string. Empty, choosen randomly, from a url, or from a cookie.
