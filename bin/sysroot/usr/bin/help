@@ -11,7 +11,8 @@ showmenu \
 "Benchmarks" \
 "Programming Languages" \
 "Network Tools & Web Browsers" \
-"Start X Server (glxgears, xterm, ...)"
+"Start X Server (glxgears, xterm, ...)" \
+"Start wayland/weston (currently not working, use an old version of jor1k)"
 
 case $? in
 	0 )
@@ -33,6 +34,10 @@ case $? in
 	8)
 		echo "Loading files from server. This may take a while."
 		startx
+		exit ;;
+	9)
+		echo "Loading files from server. This may take a while."
+		startweston ;;
 esac
 
 }
