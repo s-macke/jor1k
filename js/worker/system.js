@@ -312,7 +312,7 @@ System.prototype.LoadImageAndStart = function(urls) {
         this.filesystem.LoadFSXML(urls.extendedfs);
         DebugMessage("Load " + urls.images);
         for(var i=0; i<urls.images.length; i++) {            
-            this.filesystem.LoadImage("../../" + urls.images[i]);
+            this.filesystem.LoadImage(urls.images[i]);
         }
     }.bind(this);
 }
