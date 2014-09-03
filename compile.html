@@ -129,7 +129,7 @@ function Start() {
         statsid: "stats",  // object id for the statistics test
         kernelURL: "bin/vmlinux.bin.bz2", // kernel image
         basefsURL: "bin/basefs-compile.xml", // xml file with the basic filesystem configuration.
-        extendedfsURL: ["http://jor1k.com/jor1k-sysroot/fs.xml"], // xml files with extended filesystem informations. Loaded after the basic filesystem has been loaded.
+        extendedfsURL: ["../jor1k-sysroot/fs.xml"], // xml files with extended filesystem informations. Loaded after the basic filesystem has been loaded.
         lazyloadimages: [
             "http://jor1k.com/sync/tarballs/"+userid+".tar.bz2",
         ], // list of automatically loaded images after the basic filesystem has been loaded
