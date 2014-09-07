@@ -233,6 +233,32 @@ FS.prototype.OnXMLLoaded = function(fs)
     DebugMessage("processed " + this.inodes.length + " inodes");
 }
 
+// The filesystem is responsible to add the correct time. This is a hack
+// Have to find a better solution.
+FS.prototype.AppendDateHack = function(idx) {
+    if (this.GetFullPath(idx) != "etc/init.d/rcS") return; 
+    var inode = this.inodes[idx];
+    var date = new Date();
+    var datestring = 
+        "\ndate -s \"" + 
+        date.getFullYear() + 
+        "-" + 
+        (date.getMonth()+1) + 
+        "-" + 
+        date.getDate() + 
+        " " + 
+        date.getHours() +
+        ":" + 
+        date.getMinutes() +
+        ":" + 
+        date.getSeconds() +
+        "\"\n";
+    var size = inode.size;
+    this.ChangeSize(idx, size+datestring.length);
+    for(var i=0; i<datestring.length; i++) {
+        inode.data[i+size] = datestring.charCodeAt(i); 
+    }
+}
 
 
 // Loads the data from a url for a specific inode
@@ -265,6 +291,9 @@ FS.prototype.LoadFile = function(idx) {
             inode.data = new Uint8Array(buffer);
             inode.size = this.inodes[idx].data.length; // correct size if the previous was wrong. 
             inode.status = STATUS_OK;
+            if (inode.name == "rcS") {
+                this.AppendDateHack(idx);
+            }
             this.filesinloadingqueue--;
             this.HandleEvent(idx);            
         }.bind(this), 
