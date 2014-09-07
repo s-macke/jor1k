@@ -82,6 +82,9 @@ TAR.prototype.Unpack = function(x) {
     inode.mode = parseInt(ReadStringFromBinary(this.tarbuffer, 100, 8), 8);
     inode.uid = parseInt(ReadStringFromBinary(this.tarbuffer, 108, 8), 8);
     inode.gid = parseInt(ReadStringFromBinary(this.tarbuffer, 116, 8), 8);
+    inode.atime = parseInt(ReadStringFromBinary(this.tarbuffer, 136, 12), 8);
+    inode.ctime = this.atime;
+    inode.mtime = this.atime;
     var size = parseInt(ReadStringFromBinary(this.tarbuffer, 124, 12), 8);
 
     switch(typeflag) {
@@ -148,7 +151,7 @@ TAR.prototype.Pack = function(path) {
         WriteStringToBinary((inode.mode&0xFFF).toString(8), buffer, offset+100, 8); // mode
         WriteStringToBinary(inode.uid.toString(8), buffer, offset+108, 8); // uid
         WriteStringToBinary(inode.gid.toString(8), buffer, offset+116, 8); // gid
-        WriteStringToBinary((1356998400).toString(8), buffer, offset+136, 12); // mtime        
+        WriteStringToBinary((inode.mtime).toString(8), buffer, offset+136, 12); // mtime        
         //WriteStringToBinary("root", buffer, offset+265, 7);
         //WriteStringToBinary("root", buffer, offset+297, 7); // chksum blank to calculate the checksum
         

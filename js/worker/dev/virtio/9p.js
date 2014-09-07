@@ -263,11 +263,11 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             req[7] = inode.size; // size low
             req[8] = inode.size; // blk size low
             req[9] = inode.size/512; // number of file system blocks
-            req[10] = 0x0; // atime
+            req[10] = inode.atime; // atime
             req[11] = 0x0;
-            req[12] = 0x0; // mtime
+            req[12] = inode.mtime; // mtime
             req[13] = 0x0;
-            req[14] = 0x0; // ctime
+            req[14] = inode.ctime; // ctime
             req[15] = 0x0;
             req[16] = 0x0; // btime
             req[17] = 0x0; 
@@ -308,6 +308,21 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             }
             if (req[1] & P9_SETATTR_GID) {
                 inode.gid = req[4];
+            }
+            if (req[1] & P9_SETATTR_ATIME_SET) {
+                inode.atime = req[6];
+            }
+            if (req[1] & P9_SETATTR_MTIME_SET) {
+                inode.atime = req[8];
+            }
+            if (req[1] & P9_SETATTR_ATIME) {
+                inode.atime = Math.floor((new Date()).getTime()/1000);
+            }
+            if (req[1] & P9_SETATTR_MTIME) {
+                inode.mtime = Math.floor((new Date()).getTime()/1000);
+            }
+            if (req[1] & P9_SETATTR_CTIME) {
+                inode.ctime = Math.floor((new Date()).getTime()/1000);
             }
             if (req[1] & P9_SETATTR_SIZE) {
                 this.fs.ChangeSize(this.fid2inode[fid], req[5]);
