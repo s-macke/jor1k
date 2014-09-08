@@ -281,12 +281,17 @@ jor1kGUI.prototype.UpdateFramebuffer = function(buffer) {
     var i=0, n = buffer.length;
     var data = this.fbimageData.data;
     
-    for (i = 0; i < n; ++i) {
+    var offset = 0x0;
+    for (i = 0; i < n; i++) {
         var x = buffer[i];
-        data[(i<<2)+0] = (x>>16)&0xFF;
-        data[(i<<2)+1] = (x>>8)&0xFF;
-        data[(i<<2)+2] = (x)&0xFF;
-        data[(i<<2)+3] = 0xFF;
+        data[offset++] = (x >> 24) & 0xF8;
+        data[offset++] = (x >> 19) & 0xFC;
+        data[offset++] = (x >> 13) & 0xF8;
+        data[offset++] = 0xFF;
+        data[offset++] = (x >> 8) & 0xF8;
+        data[offset++] = (x >> 3) & 0xFC;
+        data[offset++] = (x << 3) & 0xF8;
+        data[offset++] = 0xFF;
     }
 
     //data.set(buffer);

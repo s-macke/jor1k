@@ -8,7 +8,7 @@ function FBDev(ram) {
     this.width = 640;
     this.height = 400;
     this.addr = 16000000;
-    this.n = this.width * this.height;
+    this.n = (this.width * this.height)>>1;
     this.buffer = new Int32Array(this.n);
     //this.buffer = new Uint8Array(0);
 }
