@@ -47,8 +47,9 @@ GGames () {
 
 showmenu \
 "Graphic Games" \
-"ScummVM - Monkey Island demo" \
-"PrBoom  - Doom"
+"ScummVM  - Monkey Island demo" \
+"PrBoom   - Doom" \
+"Toppler  - Jump and run. Climb a tower"
 
 case $? in
 	0 )
@@ -57,6 +58,8 @@ case $? in
 		scummvm ;;
 	2)
 		prboom -height 400 ;;
+	3)
+		toppler ;;
 esac
 	GGames
 }
