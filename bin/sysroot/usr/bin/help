@@ -69,9 +69,10 @@ GDemos () {
 showmenu \
 "Graphic Demos" \
 "fbdemo      - very simple demo" \
+"mplayer     - Orion flythrough (mpeg1)" \
+"mplayer     - Mandelbulb flythrough (mpeg4)" \
 "df_neo      - moving sprites" \
 "df_knuckles - rotating knuckle" \
-"df_fire     - simple fire demo" \
 "df_matrix   - rotating objects" \
 
 case $? in
@@ -80,12 +81,16 @@ case $? in
 	1 )
 		fbdemo ;;
 	2)
-		df_neo ;;
+		echo "Loading executable and video from server. This may take a while."
+		mplayer /usr/share/mplayer/orion_1.mpg ;;
 	3)
-		df_knuckles ;;
+		echo "Loading executable and video from server. This may take a while."
+		mplayer /usr/share/mplayer/Mandelbulb_Flight.3gp ;;
 	4)
-		df_fire ;;
+		df_neo ;;
 	5)
+		df_knuckles ;;
+	6)
 		df_matrix ;;
 esac
 	GDemos
