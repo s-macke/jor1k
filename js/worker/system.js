@@ -6,10 +6,8 @@ var SYSTEM_RUN = 0x1;
 var SYSTEM_STOP = 0x2;
 var SYSTEM_HALT = 0x3; // Idle
 
-
 function System() {
-    sys = this; // one global variable used by the abort() function
-    this.Init();
+    // the Init function is called by the master thread.
 }
 
 System.prototype.ChangeCore = function(coretype, change) {
@@ -121,14 +119,14 @@ System.prototype.Reset = function() {
     this.ips = 0;
 }
 
-System.prototype.Init = function() {
+System.prototype.Init = function(memorysize) {
     this.status = SYSTEM_STOP;
-   
+    this.memorysize = memorysize;
     // this must be a power of two.
     DebugMessage("Init Heap");
     var ramoffset = 0x10000;
-    this.heap = new ArrayBuffer(0x2000000); 
-    DebugMessage("Init RAM");
+    this.heap = new ArrayBuffer(this.memorysize*0x100000); 
+    this.memorysize--;
     this.ram = new RAM(this.heap, ramoffset);
 
 
@@ -167,10 +165,7 @@ if (typeof Math.imul == "undefined") {
     this.fastcpu = FastCPU(stdlib, foreign, this.heap);
     this.fastcpu.Init();
 
-    DebugMessage("Init CPU");
     this.ChangeCore("asm", false);
-
-    DebugMessage("Init Devices");
 
     this.uartdev0 = new UARTDev(this, 0x2);
     this.uartdev0.TransmitCallback = function(data) {
@@ -196,7 +191,6 @@ if (typeof Math.imul == "undefined") {
     this.virtio9pdev = new Virtio9p(this.ram, this.filesystem);
     this.virtiodev = new VirtIODev(this, this.ram, this.virtio9pdev);
 
-    DebugMessage("Add Devices");  
     this.ram.AddDevice(this.atadev, 0x9e000000, 0x1000);
     this.ram.AddDevice(this.uartdev0, 0x90000000, 0x7);
     this.ram.AddDevice(this.uartdev1, 0x96000000, 0x7);
@@ -317,11 +311,32 @@ System.prototype.LoadImageAndStart = function(urls) {
     }.bind(this);
 }
 
+System.prototype.PatchKernel = function(length)
+{
+    var m = this.ram.uint8mem;
+    // set the correct memory size
+    for(var i=0; i<length; i++) { // search for the compiled dts file in the kernel
+        if (m[i+0] == 0x6d) // find "memory\0"
+        if (m[i+1] == 0x65)
+        if (m[i+2] == 0x6d)
+        if (m[i+3] == 0x6f)
+        if (m[i+4] == 0x72)
+        if (m[i+5] == 0x79)
+        if (m[i+6] == 0x00) {
+            m[i+24] = (this.memorysize*0x100000)>>24;
+            m[i+25] = (this.memorysize*0x100000)>>16;
+            m[i+26] = 0x00;
+            m[i+27] = 0x00;
+        }
+    }
+}
+
 System.prototype.OnKernelLoaded = function(buffer) {
     this.SendStringToTerminal("Decompressing kernel...\r\n");
     var buffer8 = new Uint8Array(buffer);
     var length = 0;
     bzip2.simple(buffer8, function(x){this.ram.uint8mem[length++] = x;}.bind(this));
+    this.PatchKernel(length);
     for (var i = 0; i < length >> 2; i++) this.ram.int32mem[i] = Swap32(this.ram.int32mem[i]); // big endian to little endian
     DebugMessage("Kernel loaded: " + length + " bytes");
     this.SendStringToTerminal("Booting\r\n");

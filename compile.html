@@ -136,7 +136,8 @@ function Start() {
         relayURL: "", // relay url for the network
         userid: userid, // unique user id string. Empty, choosen randomly, from a url, or from a cookie.
         syncURL: "http://jor1k.com/sync/upload.php", // url to sync a certain folder
-        fps: 10 // update interval of framebuffer
+        fps: 10, // update interval of framebuffer
+        memorysize: 32 // in MB, must be a power of two
     }
     jor1kgui = new jor1kGUI(jor1kparameters);
 }

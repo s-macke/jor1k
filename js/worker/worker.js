@@ -7,8 +7,9 @@ importScripts('utils.js', 'dev/framebuffer.js', 'dev/ethmac.js', 'dev/ata.js',
     'system.js', 'bzip2.js', 'cpu/cpu.js', 'cpu/fastcpu.js', 'cpu/safecpu.js',
     'dev/virtio/9p.js', 'filesystem/filesystem.js', 'filesystem/tar.js');
 
-var sys = new System();
-DebugMessage("System initialized");
+DebugMessage("Starting web worker");
+
+var sys = new System(); // one global variable for the abort function
 
 fbupdatecount = 0;
 
@@ -65,6 +66,9 @@ onmessage = function(e) {
             break;
         case "sync":
             SendToMaster("sync", sys.filesystem.tar.Pack(e.data.data));
+            break;
+        case "Init":
+            sys.Init(e.data.data);
             break;
     }
 }

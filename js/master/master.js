@@ -31,7 +31,7 @@ function jor1kGUI(parameters)
         console.log("Error at " + e.filename + ":" + e.lineno + ": " + e.message);
         this.stop = true;
     }
-    
+
     this.SendToWorker = function(command, data) {
         this.worker.postMessage(
         {
@@ -48,6 +48,7 @@ function jor1kGUI(parameters)
       this.stop = false; // VM Stopped/Aborted
       this.userpaused = false;
       this.executepending=false; // if we rec an execute message while paused      
+      this.SendToWorker("Init", this.params.memorysize);
       this.SendToWorker("Reset");
       
       this.SendToWorker("LoadAndStart", this.urls);
