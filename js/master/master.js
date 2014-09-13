@@ -2,6 +2,8 @@
 // -------------------- Master ---------------------
 // -------------------------------------------------
 
+"use strict";
+
 function DebugMessage(message) {
     console.log(message);
 }
@@ -43,28 +45,6 @@ function jor1kGUI(parameters)
     this.ChangeCore = function(core) {
         this.SendToWorker("ChangeCore", core);
     };
-
-    this.Reset= function () {
-      this.stop = false; // VM Stopped/Aborted
-      this.userpaused = false;
-      this.executepending=false; // if we rec an execute message while paused      
-      this.SendToWorker("Init", this.params.memorysize);
-      this.SendToWorker("Reset");
-      
-      this.SendToWorker("LoadAndStart", this.urls);
-      this.term.PauseBlink(false);
-    }
-
-    this.Pause = function(pause) {
-      pause = !! pause; // coerce to boolean
-      if(pause == this.userpaused) return; 
-      this.userpaused = pause;
-      if(! this.userpaused && this.executepending) {
-        this.executepending = false;
-         this.SendToWorker("execute", 0);
-      }
-      this.term.PauseBlink(pause);
-    }
 
     this.terminalcanvas = document.getElementById(this.params.termid);
     this.stats = document.getElementById(this.params.statsid);
@@ -116,6 +96,31 @@ function jor1kGUI(parameters)
    
     window.setInterval(function(){this.SendToWorker("GetIPS", 0)}.bind(this), 1000);
 }
+
+jor1kGUI.prototype.Reset = function () {
+    this.stop = false; // VM Stopped/Aborted
+    this.userpaused = false;
+    this.executepending=false; // if we rec an execute message while paused      
+    this.SendToWorker("Init", this.params.memorysize);
+    this.SendToWorker("Reset");
+      
+    this.SendToWorker("LoadAndStart", this.urls);
+    this.term.PauseBlink(false);
+}
+
+jor1kGUI.prototype.Pause = function(pause) {
+    pause = !! pause; // coerce to boolean
+    if(pause == this.userpaused) return; 
+    this.userpaused = pause;
+    if(! this.userpaused && this.executepending) {
+      this.executepending = false;
+       this.SendToWorker("execute", 0);
+    }
+    this.term.PauseBlink(pause);
+}
+
+
+
 
 jor1kGUI.prototype.TAR = function(path) {
     this.SendToWorker("tar", path);

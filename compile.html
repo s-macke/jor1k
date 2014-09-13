@@ -115,7 +115,6 @@ function RandomString(length) {
 
 function Start() {
     CreateEditor();
-    document.addEventListener("jor1k_terminal_put_char", terminalPutCharListener, false);
 
     var userid = location.search.split('user=')[1];
     if (!userid) {
@@ -140,6 +139,7 @@ function Start() {
         memorysize: 32 // in MB, must be a power of two
     }
     jor1kgui = new jor1kGUI(jor1kparameters);
+    jor1kgui.term.OnCharReceived = terminalPutCharListener;
 }
 
 var term_output = "";
@@ -148,8 +148,8 @@ var gcc_output_capture_re = /###GCC_COMPILE###\s*([\S\s]*?)\s*###GCC_COMPILE_FIN
 var gcc_exit_code_capture_re = /GCC_EXIT_CODE: (\d+)/;
 
 var waitingForActivate = true;
-function terminalPutCharListener(e) {
-    term_output = term_output + e.detail.character;
+function terminalPutCharListener(c) {
+    term_output = term_output + c;
     if(waitingForActivate  && (term_output.indexOf('activate this console.') != -1)) {
       SendKeysToJor1k("\n");
       waitingForActivate = false;

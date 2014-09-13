@@ -25,6 +25,7 @@ function Terminal(rows, columns, elemId) {
     this.scrollbottom = this.nrows-1;
     this.currentcolor = 0x7;
     this.pauseblink = false;
+    this.OnCharReceived = function (){};
 
     this.screen = new Array(this.nrows);
     this.color = new Array(this.nrows);
@@ -485,7 +486,7 @@ Terminal.prototype.PutChar = function(c) {
     case 0xA:
         // line feed
         this.LineFeed();
-        document.dispatchEvent(new CustomEvent("jor1k_terminal_put_char", { detail: { character: "\n" }}));
+        this.OnCharReceived("\n");
         //DebugMessage("LineFeed");
         return;
     case 0xD:
@@ -542,9 +543,10 @@ Terminal.prototype.PutChar = function(c) {
     var cx = this.cursorx;
     var cy = this.cursory;
     this.screen[cy][cx] = c;
-    document.dispatchEvent(new CustomEvent("jor1k_terminal_put_char", { detail: { character: String.fromCharCode(c) }}));
+    this.OnCharReceived(String.fromCharCode(c));
     //DebugMessage("Write: " + String.fromCharCode(c));
     this.color[cy][cx] = this.currentcolor;
+
     this.cursorx++;
     this.PlotRow(this.cursory);
 };
