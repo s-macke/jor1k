@@ -264,7 +264,14 @@ jor1kGUI.prototype.OnMessage = function(e) {
             break;
 
         case "GetIPS":
-            this.stats.innerHTML = this.userpaused ? "Paused" : (Math.floor(e.data.data/100000)/10.) + " MIPS";
+            if (this.userpaused) {
+                this.stats.innerHTML = "Paused"; 
+            } else {
+                this.stats.innerHTML = e.data.data<1000000?
+                    Math.floor(e.data.data/1000) + " KIPS" 
+                    :
+                    (Math.floor(e.data.data/100000)/10.) + " MIPS";
+            }
             break;
 
         case "tar":
