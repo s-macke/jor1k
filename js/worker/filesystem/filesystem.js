@@ -411,7 +411,7 @@ FS.prototype.OpenInode = function(id, mode) {
         case S_IFDIR: type = "Directory"; break;
         case S_IFCHR: type = "Character Device"; break;
     }
-    DebugMessage("open:" + this.GetFullPath(id) +  " type: " + type + " status:" + inode.status);
+    //DebugMessage("open:" + this.GetFullPath(id) +  " type: " + type + " status:" + inode.status);
     if (inode.status == STATUS_ON_SERVER) {
         this.LoadFile(id);
         return false;

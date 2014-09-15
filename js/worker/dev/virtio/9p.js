@@ -411,7 +411,7 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
 
         case 100: // version
             var version = StructToArray2(["w", "s"], GetByte);
-            DebugMessage("[version]: msize=" + version[0] + " version=" + version[1]);
+            //DebugMessage("[version]: msize=" + version[0] + " version=" + version[1]);
             var size = ArrayToStruct(["w", "s"], [version[0], this.VERSION], this.replybuffer, 7);
             this.BuildReply(id, tag, size);
             this.SendReply(index);

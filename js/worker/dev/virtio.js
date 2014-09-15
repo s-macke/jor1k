@@ -234,7 +234,7 @@ VirtIODev.prototype.WriteReg32 = function (addr, val) {
             break;
 
         case VIRTIO_STATUS_REG:
-            DebugMessage("write status reg : " + hex8(val));
+            //DebugMessage("write status reg : " + hex8(val));
             this.status = val;
             break;
 
@@ -243,15 +243,15 @@ VirtIODev.prototype.WriteReg32 = function (addr, val) {
             break;
 
         case VIRTIO_GUESTFEATURESSEL_REG:
-            DebugMessage("write guestfeaturesel reg : " + hex8(val));
+            //DebugMessage("write guestfeaturesel reg : " + hex8(val));
             break;
 
         case VIRTIO_GUESTFEATURES_REG:
-            DebugMessage("write guestfeatures reg : " + hex8(val));
+            //DebugMessage("write guestfeatures reg : " + hex8(val));
             break;
 
         case VIRTIO_QUEUESEL_REG:
-            DebugMessage("write queuesel reg : " + hex8(val));
+            //DebugMessage("write queuesel reg : " + hex8(val));
             break;
 
         case VIRTIO_QUEUENUM_REG:
