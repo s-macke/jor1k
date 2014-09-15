@@ -17,6 +17,36 @@ function UARTDev(worker) {
     };
 }
 
+function SoundOutput(samplerate) {
+    this.samplerate = samplerate;
+    this.initialized = false;
+
+    if (typeof AudioContext !== "undefined") {
+        this.context = new AudioContext();
+        this.initialized = true;
+    }
+}
+
+SoundOutput.prototype.PlayBuffer = function(toplaybuffer) {
+    if (!this.initialized) return;
+    console.log("play " + toplaybuffer.length + " samples");
+
+    this.soundBuffer = this.context.createBuffer(
+        1, 
+        toplaybuffer.length, 
+        this.samplerate);
+
+    var buffer = this.soundBuffer.getChannelData(0);
+    for(var i=0; i< toplaybuffer.length; i++) {
+        buffer[i] = toplaybuffer[i]/128.;
+    }
+    this.source = this.context.createBufferSource(); 
+    this.source.buffer = this.soundBuffer;
+    this.source.connect(this.context.destination);
+    this.source.start(0);
+}
+
+
 function jor1kGUI(parameters)
 {
     this.params = parameters;
@@ -46,6 +76,8 @@ function jor1kGUI(parameters)
         this.SendToWorker("ChangeCore", core);
     };
 
+    this.sound = new SoundOutput(96000);
+    
     this.terminalcanvas = document.getElementById(this.params.termid);
     this.stats = document.getElementById(this.params.statsid);
 
@@ -56,6 +88,7 @@ function jor1kGUI(parameters)
       //Simpler but not as general, return( document.activeElement.type==="textarea" || document.activeElement.type==='input');
       return ((this.lastMouseDownTarget != this.terminalcanvas) && (this.lastMouseDownTarget != this.fbcanvas));
     }
+
     var recordTarget = function(event) {
             this.lastMouseDownTarget = event.target;
         }.bind(this);
@@ -194,7 +227,8 @@ function UploadBinaryResource(url, filename, data, OnSuccess, OnError) {
 
 
 jor1kGUI.prototype.OnMessage = function(e) {
-if (e.data.command == "Debug") console.log(e.data.data);
+    // print debug messages even if emulator is stopped
+    if (e.data.command == "Debug") console.log(e.data.data);
 
     if (this.stop) return;
     switch(e.data.command)
@@ -207,25 +241,36 @@ if (e.data.command == "Debug") console.log(e.data.data);
               this.SendToWorker("execute", 0);
             }
             break;
+
+        case "sound":
+            this.sound.PlayBuffer(e.data.data);
+            break;
+
         case "ethmac":
             this.ethernet.SendFrame(e.data.data);
             break;
+
         case "tty0":
             this.term.PutChar(e.data.data);
             break;
+
         case "GetFB":
             this.UpdateFramebuffer(e.data.data);
             break;
+
         case "Stop":
             console.log("Received stop signal");
             this.stop = true;
             break;
+
         case "GetIPS":
             this.stats.innerHTML = this.userpaused ? "Paused" : (Math.floor(e.data.data/100000)/10.) + " MIPS";
             break;
+
         case "tar":
             download(e.data.data, "user.tar", "application/x-tar");
             break;
+
         case "sync":
             UploadBinaryResource(this.params.syncURL, this.params.userid + ".tar", e.data.data, 
             function(response) {
@@ -245,6 +290,7 @@ if (e.data.command == "Debug") console.log(e.data.data);
 
         }
 }
+
 
 // Init Framebuffer if it exists
 jor1kGUI.prototype.InitFramebuffer = function(fbid) {

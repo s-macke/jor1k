@@ -112,6 +112,7 @@ System.prototype.Reset = function() {
     this.fbdev.Reset();
     this.atadev.Reset();
     this.tsdev.Reset();
+    this.snddev.Reset();
     this.kbddev.Reset();
     this.virtiodev.Reset();
     this.virtio9pdev.Reset();
@@ -186,6 +187,7 @@ if (typeof Math.imul == "undefined") {
     this.atadev = new ATADev(this);
     this.tsdev = new TouchscreenDev(this);
     this.kbddev = new KeyboardDev(this);
+    this.snddev = new SoundDev(this);
 
     this.filesystem = new FS();
     this.virtio9pdev = new Virtio9p(this.ram, this.filesystem);
@@ -194,6 +196,7 @@ if (typeof Math.imul == "undefined") {
     this.ram.AddDevice(this.atadev, 0x9e000000, 0x1000);
     this.ram.AddDevice(this.uartdev0, 0x90000000, 0x7);
     this.ram.AddDevice(this.uartdev1, 0x96000000, 0x7);
+    this.ram.AddDevice(this.snddev, 0x98000000, 0x400);
     this.ram.AddDevice(this.ethdev, 0x92000000, 0x1000);
     this.ram.AddDevice(this.virtiodev, 0x97000000, 0x1000);
     this.ram.AddDevice(this.fbdev, 0x91000000, 0x1000);
