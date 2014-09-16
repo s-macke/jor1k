@@ -8,15 +8,6 @@ function DebugMessage(message) {
     console.log(message);
 }
 
-// small uart device
-function UARTDev(worker) {
-    this.ReceiveChar = function(c) {
-        if (worker.lastMouseDownTarget != worker.fbcanvas) {
-            worker.SendToWorker("tty0", c);
-        }
-    };
-}
-
 function SoundOutput(samplerate) {
     this.samplerate = samplerate;
     this.initialized = false;
@@ -82,7 +73,7 @@ function jor1kGUI(parameters)
     this.stats = document.getElementById(this.params.statsid);
 
     this.term = new Terminal(24, 80, this.params.termid);
-    this.terminput = new TerminalInput(new UARTDev(this));
+    this.terminput = new TerminalInput(this.SendChars.bind(this));
 
     this.IgnoreKeys = function() {
       //Simpler but not as general, return( document.activeElement.type==="textarea" || document.activeElement.type==='input');
@@ -152,7 +143,11 @@ jor1kGUI.prototype.Pause = function(pause) {
     this.term.PauseBlink(pause);
 }
 
-
+// sends the input characters for the terminal
+jor1kGUI.prototype.SendChars = function(chars) {
+    if (this.lastMouseDownTarget == this.fbcanvas) return;
+    this.SendToWorker("tty0", chars);
+}
 
 
 jor1kGUI.prototype.TAR = function(path) {

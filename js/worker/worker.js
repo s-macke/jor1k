@@ -26,7 +26,9 @@ onmessage = function(e) {
             SendToMaster("GetFB", sys.fbdev.GetBuffer());
             break;
         case "tty0":
-            sys.uartdev0.ReceiveChar(e.data.data);
+            e.data.data.forEach(function(c) {
+                sys.uartdev0.ReceiveChar(c);
+            });
             break;
         case "tty1":
             sys.uartdev1.ReceiveChar(e.data.data);
