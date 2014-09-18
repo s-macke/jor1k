@@ -1,0 +1,95 @@
+
+set -e
+
+mkdir -p packages
+mkdir -p fs
+
+#--------------------------------
+
+packages=(
+"DirectFB-examples.tar.bz2"
+"gcc.tar.bz2"
+"nbench.tar.bz2"
+"Frodo.tar.bz2"
+"joe.tar.bz2"
+"ncurses-dev.tar.bz2"
+"SDL-dev.tar.bz2"
+"ncurses.tar.bz2"
+"alsa.tar.bz2"
+"SDL.tar.bz2"
+"libjpeg-turbo.tar.bz2"
+"nmap.tar.bz2"
+"openssh.tar.bz2"
+"libpng.tar.bz2"
+"bc.tar.bz2"
+"links.tar.bz2"
+"openssl.tar.bz2"
+"binutils.tar.bz2"
+"prboom.tar.bz2"
+"lua.tar.bz2"
+"scummvm.tar.bz2"
+"lynx.tar.bz2"
+"strace.tar.bz2"
+"directfb.tar.bz2"
+"make.tar.bz2"
+"dosbox.tar.bz2"
+"monkey.tar.bz2"
+"tslib.tar.bz2"
+"freetype.tar.bz2"
+"fontconfig.tar.bz2"
+"pixman.tar.bz2"
+"musl-dev.tar.bz2"
+"zlib.tar.bz2"
+"zlib-dev.tar.bz2"
+"frotz.tar.bz2"
+"musl.tar.bz2"
+"gcc-libs.tar.bz2"
+"nano.tar.bz2"
+"libX11.tar.bz2"
+"xkbcomp.tar.bz2"
+"font.tar.bz2"
+"mesa.tar.bz2"
+"xorg-server.tar.bz2"
+"glxgears.tar.bz2"
+"xinit.tar.bz2"
+"xclock.tar.bz2"
+"xterm.tar.bz2"
+"twm.tar.bz2"
+"xeyes.tar.bz2"
+"expat.tar.bz2"
+"libffi.tar.bz2"
+"cairo.tar.bz2"
+"wayland.tar.bz2"
+"libdrm.tar.bz2"
+"mtdev.tar.bz2"
+"eudev.tar.bz2"
+"libxkbcommon.tar.bz2"
+"weston.tar.bz2"
+"xsetroot.tar.bz2"
+"curl.tar.bz2"
+"fltk.tar.bz2"
+"dillo.tar.bz2"
+"toppler.tar.bz2"
+"mplayer.tar.bz2"
+"frontier.tar.bz2"
+"alsa-utils.tar.bz2"
+)
+
+list=""
+
+for i in "${packages[@]}"
+do
+	if [ ! -f packages/$i ] ; then
+		echo Download $i
+		wget --quiet --directory-prefix=packages/ "http://jor1k.com/packages/$i"
+	fi
+	echo Testing $i
+	tar -tjf packages/$i &> /dev/null
+	list+=packages/$i" "
+done
+echo All files downloaded
+
+echo Compile converter
+gcc -O2 fs2xml.c -lbz2 -o fs2xml
+
+./fs2xml $list
