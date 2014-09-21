@@ -23,7 +23,8 @@ var EXCEPT_DPF = 0x300; // instruction page fault
 var EXCEPT_BUSERR = 0x200; // wrong memory access
 var EXCEPT_TICK = 0x500; // tick counter interrupt
 var EXCEPT_INT = 0x800; // interrupt of external devices
-var EXCEPT_SYSCALL = 0xc00; // syscall, jump into supervisor mode
+var EXCEPT_SYSCALL = 0xC00; // syscall, jump into supervisor mode
+var EXCEPT_TRAP = 0xE00; // trap
 
 // constructor
 function CPU(ram) {
@@ -455,6 +456,7 @@ CPU.prototype.Exception = function (excepttype, addr) {
     case EXCEPT_BUSERR:
     case EXCEPT_TICK:
     case EXCEPT_INT:
+    case EXCEPT_TRAP:
         this.SetSPR(SPR_EPCR_BASE, (this.pc<<2) - (this.delayedins ? 4 : 0));
         break;
  
@@ -768,8 +770,12 @@ CPU.prototype.Step = function (steps, clockspeed) {
             return steps;
             break;
         case 0x8:
-            //sys
-            this.Exception(EXCEPT_SYSCALL, this.group0[SPR_EEAR_BASE]);
+            //sys and trap
+            if ((ins&0xFFFF0000) == 0x21000000) {
+                this.Exception(EXCEPT_TRAP, this.group0[SPR_EEAR_BASE]);
+            } else {
+                this.Exception(EXCEPT_SYSCALL, this.group0[SPR_EEAR_BASE]);
+            }
             break;
 
         case 0x9:

@@ -45,7 +45,8 @@ var EXCEPT_DPF = 0x300; // instruction page fault
 var EXCEPT_BUSERR = 0x200; // wrong memory access
 var EXCEPT_TICK = 0x500; // tick counter interrupt
 var EXCEPT_INT = 0x800; // interrupt of external devices
-var EXCEPT_SYSCALL = 0xc00; // syscall, jump into supervisor mode
+var EXCEPT_SYSCALL = 0xC00; // syscall, jump into supervisor mode
+var EXCEPT_TRAP = 0xE00; // trap
 
 
 var r = new stdlib.Int32Array(heap); // registers
@@ -515,6 +516,7 @@ function Exception(excepttype, addr) {
     case 0x200: // EXCEPT_BUSERR
     case 0x500: // EXCEPT_TICK
     case 0x800: // EXCEPT_INT
+    case 0xE00: // EXCEPT_TRAP
         SetSPR(SPR_EPCR_BASE, (pc<<2) - (delayedins ? 4 : 0)|0);
         break;
 
@@ -985,8 +987,12 @@ function Step(steps, clockspeed) {
         break;
 
         case 0x8:
-            //sys
-            Exception(EXCEPT_SYSCALL, h[group0p+SPR_EEAR_BASE >> 2]|0);
+            //sys and trap
+            if ((ins&0xFFFF0000) == 0x21000000) {
+                Exception(EXCEPT_TRAP, h[group0p+SPR_EEAR_BASE >> 2]|0);
+            } else {
+                Exception(EXCEPT_SYSCALL, h[group0p+SPR_EEAR_BASE >> 2]|0);
+            }
             break;
 
         case 0x9:

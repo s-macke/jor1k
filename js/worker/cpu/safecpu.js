@@ -23,7 +23,8 @@ var EXCEPT_DPF = 0x300; // instruction page fault
 var EXCEPT_BUSERR = 0x200; // wrong memory access
 var EXCEPT_TICK = 0x500; // tick counter interrupt
 var EXCEPT_INT = 0x800; // interrupt of external devices
-var EXCEPT_SYSCALL = 0xc00; // syscall, jump into supervisor mode
+var EXCEPT_SYSCALL = 0xC00; // syscall, jump into supervisor mode
+var EXCEPT_TRAP = 0xE00; // syscall, jump into supervisor mode
 
 // constructor
 function SafeCPU(ram) {
@@ -405,6 +406,7 @@ SafeCPU.prototype.Exception = function (excepttype, addr) {
     case EXCEPT_BUSERR:
     case EXCEPT_TICK:
     case EXCEPT_INT:
+    case EXCEPT_TRAP:
         this.SetSPR(SPR_EPCR_BASE, (this.pc<<2) - (this.delayedins ? 4 : 0));
         break;
 
@@ -614,14 +616,20 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                 r[rindex] = ((ins & 0xFFFF) << 16); // movhi
             }
             break;
+
         case 0x7: 
             // halt
             // the safe cpu should ignore it for now. 
-        break;
+            break;
 
         case 0x8:
-            //sys
-            this.Exception(EXCEPT_SYSCALL, this.group0[SPR_EEAR_BASE]);
+            // sys and trap
+            if ((ins&0xFFFF0000) == 0x21000000) {
+                DebugMessage("Trap at " + hex8(this.pc<<2));
+                this.Exception(EXCEPT_TRAP, this.group0[SPR_EEAR_BASE]);
+            } else {
+                this.Exception(EXCEPT_SYSCALL, this.group0[SPR_EEAR_BASE]);
+            }
             break;
 
         case 0x9:
