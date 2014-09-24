@@ -325,7 +325,11 @@ System.prototype.PatchKernel = function(length)
         if (m[i+3] == 0x6f)
         if (m[i+4] == 0x72)
         if (m[i+5] == 0x79)
-        if (m[i+6] == 0x00) {
+        if (m[i+6] == 0x00) 
+        if (m[i+24] == 0x01) 
+        if (m[i+25] == 0xF0) 
+        if (m[i+26] == 0x00) 
+        if (m[i+27] == 0x00) {
             m[i+24] = (this.memorysize*0x100000)>>24;
             m[i+25] = (this.memorysize*0x100000)>>16;
             m[i+26] = 0x00;
@@ -379,11 +383,11 @@ System.prototype.MainLoop = function() {
     SendToMaster("execute", 0);
     var stepsleft = this.cpu.Step(this.instructionsperloop, this.timercyclesperinstruction);
     var totalsteps = this.instructionsperloop - stepsleft;
-    totalsteps++; // at least one instruction    
+    totalsteps++; // at least one instruction
     this.ips += totalsteps;
     this.uartdev0.RxRateLimitBump(totalsteps);
     this.uartdev1.RxRateLimitBump(totalsteps);
-    
+
     if (!stepsleft) {
       // recalibrate timer
       var delta = GetMilliseconds() - time;
