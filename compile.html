@@ -132,7 +132,15 @@ function Start() {
         fs: {
             basefsURL: "bin/basefs-compile.xml", // xml file with the basic filesystem configuration.
             extendedfsURL: "../jor1k-sysroot/fs.xml", // xml file with extended filesystem informations. Loaded after the basic filesystem has been loaded.
-            earlyload: ["usr/bin/gcc"], // list of files which should be loaded immediately after they appear in the filesystem
+            earlyload: [
+                "usr/bin/gcc", 
+                "usr/libexec/gcc/or1k-linux-musl/4.9.0/cc1",
+                "usr/libexec/gcc/or1k-linux-musl/4.9.0/collect2",
+                "usr/lib/libbfd-2.24.51.20140817.so",
+                "usr/lib/gcc/or1k-linux-musl/4.9.0/libgcc.a",
+                "usr/bin/as",
+                "usr/include/stdio.h"
+            ], // list of files which should be loaded immediately after they appear in the filesystem
             lazyloadimages: [
                 "http://jor1k.com/sync/tarballs/"+userid+".tar.bz2"
             ] // list of automatically loaded images after the basic filesystem has been loaded

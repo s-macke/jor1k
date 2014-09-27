@@ -178,6 +178,15 @@ function ReadTag(buffer, offset) {
     return tag;
 };
 
+FS.prototype.CheckEarlyload = function(path)
+{
+    for(var i=0; i<this.userinfo.earlyload.length; i++) {
+        if (this.userinfo.earlyload[i] == path) {
+            return true;
+        }
+    }
+    return false;
+}
 
 FS.prototype.LoadFSXML = function(urls)
 {
@@ -235,7 +244,7 @@ FS.prototype.OnXMLLoaded = function(fs)
         var url = sysrootdir + (tag.src.length==0?this.GetFullPath(idx):tag.src);
         inode.url = url;
         //DebugMessage("Load id=" + (idx) + " " + url);
-        if (tag.load) {
+        if (tag.load || this.CheckEarlyload(this.GetFullPath(idx)) ) {
             this.LoadFile(idx);
         }
         break;
