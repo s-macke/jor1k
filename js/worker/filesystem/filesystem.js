@@ -39,10 +39,27 @@ function FS() {
     this.OnLoaded = function() {};
 
     this.tar = new TAR(this);
+    this.userinfo = [];
 
     // root entry
     this.CreateDirectory("", -1);
 }
+
+
+// -----------------------------------------------------
+FS.prototype.LoadFilesystem = function(userinfo)
+{
+    this.userinfo = userinfo;
+    this.LoadFSXML(this.userinfo.basefsURL);
+    this.OnLoaded = function() { // the basic filesystem is loaded, so download the rest
+        this.LoadFSXML(this.userinfo.extendedfsURL);
+        for(var i=0; i<this.userinfo.lazyloadimages.length; i++) {
+            this.LoadImage(this.userinfo.lazyloadimages[i]);
+        }
+    }.bind(this);
+
+}
+
 
 // -----------------------------------------------------
 
@@ -164,8 +181,8 @@ function ReadTag(buffer, offset) {
 
 FS.prototype.LoadFSXML = function(urls)
 {
-    DebugMessage("Load filesystem information from " + urls[0]);
-    LoadXMLResource("../../" + urls[0], this.OnXMLLoaded.bind(this), function(error){throw error;});
+    DebugMessage("Load filesystem information from " + urls);
+    LoadXMLResource("../../" + urls, this.OnXMLLoaded.bind(this), function(error){throw error;});
 }
 
 FS.prototype.OnXMLLoaded = function(fs)

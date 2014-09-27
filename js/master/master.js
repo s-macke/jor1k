@@ -42,12 +42,6 @@ function jor1kGUI(parameters)
 {
     this.params = parameters;
 
-    this.urls = [];
-    this.urls.kernel = this.params.kernelURL;
-    this.urls.fs = [this.params.basefsURL];
-    this.urls.extendedfs = this.params.extendedfsURL;
-    this.urls.images = this.params.lazyloadimages;
-
     this.worker = new Worker('js/worker/worker.js');
     this.worker.onmessage = this.OnMessage.bind(this);   
     this.worker.onerror = function(e) {
@@ -55,17 +49,6 @@ function jor1kGUI(parameters)
         this.stop = true;
     }
 
-    this.SendToWorker = function(command, data) {
-        this.worker.postMessage(
-        {
-            "command": command,
-            "data": data
-        });
-    }
-
-    this.ChangeCore = function(core) {
-        this.SendToWorker("ChangeCore", core);
-    };
 
     this.sound = new SoundOutput(96000);
     
@@ -121,14 +104,28 @@ function jor1kGUI(parameters)
     window.setInterval(function(){this.SendToWorker("GetIPS", 0)}.bind(this), 1000);
 }
 
+jor1kGUI.prototype.SendToWorker = function(command, data) {
+    this.worker.postMessage(
+    {
+        "command": command,
+        "data": data
+    });
+}
+
+jor1kGUI.prototype.ChangeCore = function(core) {
+    this.SendToWorker("ChangeCore", core);
+};
+
+
 jor1kGUI.prototype.Reset = function () {
     this.stop = false; // VM Stopped/Aborted
     this.userpaused = false;
     this.executepending=false; // if we rec an execute message while paused      
-    this.SendToWorker("Init", this.params.memorysize);
+    this.SendToWorker("Init", this.params.system);
     this.SendToWorker("Reset");
       
-    this.SendToWorker("LoadAndStart", this.urls);
+    this.SendToWorker("LoadAndStart", this.params.system.kernelURL);
+    this.SendToWorker("LoadFilesystem", this.params.fs);
     this.term.PauseBlink(false);
 }
 

@@ -120,9 +120,9 @@ System.prototype.Reset = function() {
     this.ips = 0;
 }
 
-System.prototype.Init = function(memorysize) {
+System.prototype.Init = function(system) {
     this.status = SYSTEM_STOP;
-    this.memorysize = memorysize;
+    this.memorysize = system.memorysize;
     // this must be a power of two.
     DebugMessage("Init Heap");
     var ramoffset = 0x10000;
@@ -166,7 +166,7 @@ if (typeof Math.imul == "undefined") {
     this.fastcpu = FastCPU(stdlib, foreign, this.heap);
     this.fastcpu.Init();
 
-    this.ChangeCore("asm", false);
+    this.ChangeCore(system.cpu, false);
 
     this.uartdev0 = new UARTDev(this, 0x2);
     this.uartdev0.TransmitCallback = function(data) {
@@ -300,18 +300,10 @@ System.prototype.SendStringToTerminal = function(str)
     }
 }
 
-System.prototype.LoadImageAndStart = function(urls) {
+System.prototype.LoadImageAndStart = function(url) {
     this.SendStringToTerminal("\r================================================================================");
     this.SendStringToTerminal("\r\nLoading kernel and hard and basic file system from web server. Please wait ...\r\n");
-    LoadBinaryResource("../../" + urls.kernel, this.OnKernelLoaded.bind(this), function(error){throw error;});
-    this.filesystem.LoadFSXML(urls.fs);
-    this.filesystem.OnLoaded = function() { // the basic filesystem is loaded, so download the rest
-        this.filesystem.LoadFSXML(urls.extendedfs);
-        DebugMessage("Load " + urls.images);
-        for(var i=0; i<urls.images.length; i++) {            
-            this.filesystem.LoadImage(urls.images[i]);
-        }
-    }.bind(this);
+    LoadBinaryResource("../../" + url, this.OnKernelLoaded.bind(this), function(error){throw error;});
 }
 
 System.prototype.PatchKernel = function(length)
