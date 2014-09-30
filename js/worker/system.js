@@ -187,7 +187,7 @@ if (typeof Math.imul == "undefined") {
     this.atadev = new ATADev(this);
     this.tsdev = new TouchscreenDev(this);
     this.kbddev = new KeyboardDev(this);
-    this.snddev = new SoundDev(this);
+    this.snddev = new SoundDev(this, this.ram);
 
     this.filesystem = new FS();
     this.virtio9pdev = new Virtio9p(this.ram, this.filesystem);
@@ -379,6 +379,8 @@ System.prototype.MainLoop = function() {
     this.ips += totalsteps;
     this.uartdev0.RxRateLimitBump(totalsteps);
     this.uartdev1.RxRateLimitBump(totalsteps);
+
+    this.snddev.Step();
 
     if (!stepsleft) {
       // recalibrate timer

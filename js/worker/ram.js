@@ -13,6 +13,7 @@ function RAM(heap, ramoffset) {
     this.mem = heap;
     this.int32mem = new Int32Array(this.mem, ramoffset);
     this.uint8mem = new Uint8Array(this.mem, ramoffset);
+    this.sint8mem = new Int8Array(this.mem, ramoffset);
     this.devices = new Array(0x100);
 }
 

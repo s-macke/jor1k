@@ -8,36 +8,6 @@ function DebugMessage(message) {
     console.log(message);
 }
 
-function SoundOutput(samplerate) {
-    this.samplerate = samplerate;
-    this.initialized = false;
-
-    if (typeof AudioContext !== "undefined") {
-        this.context = new AudioContext();
-        this.initialized = true;
-    }
-}
-
-SoundOutput.prototype.PlayBuffer = function(toplaybuffer) {
-    if (!this.initialized) return;
-    console.log("play " + toplaybuffer.length + " samples");
-
-    this.soundBuffer = this.context.createBuffer(
-        1, 
-        toplaybuffer.length, 
-        this.samplerate);
-
-    var buffer = this.soundBuffer.getChannelData(0);
-    for(var i=0; i< toplaybuffer.length; i++) {
-        buffer[i] = toplaybuffer[i]/128.;
-    }
-    this.source = this.context.createBufferSource(); 
-    this.source.buffer = this.soundBuffer;
-    this.source.connect(this.context.destination);
-    this.source.start(0);
-}
-
-
 function jor1kGUI(parameters)
 {
     this.params = parameters;
@@ -49,8 +19,7 @@ function jor1kGUI(parameters)
         this.stop = true;
     }
 
-
-    this.sound = new SoundOutput(96000);
+    //this.sound = new LoopSoundBuffer(22050);
     
     this.terminalcanvas = document.getElementById(this.params.termid);
     this.stats = document.getElementById(this.params.statsid);
@@ -235,7 +204,7 @@ jor1kGUI.prototype.OnMessage = function(e) {
             break;
 
         case "sound":
-            this.sound.PlayBuffer(e.data.data);
+            //this.sound.AddBuffer(e.data.data);
             break;
 
         case "ethmac":
