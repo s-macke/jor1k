@@ -26,6 +26,8 @@ mkdir -p /dev/shm && \
 mount -t tmpfs none /dev/shm &
 
 chmod a+rw /dev/fb0
+chmod a+rw /dev/dsp*
+chmod -R a+rw /dev/snd
 
 #echo "Configuring loopback device"
 #ifconfig lo 127.0.0.1
