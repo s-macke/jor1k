@@ -2,6 +2,28 @@
 // ------------------- SYSTEM ----------------------
 // -------------------------------------------------
 
+
+/* 
+Heap Layout
+The heap is needed by the asm.js cpu. 
+For compatibility all cpus use the same layout
+------ CPU 1 ------
+0x0     -  0x80     registers
+0x80    -  0x2000   cpu specific
+0x2000  -  0x4000   group0
+0x4000  -  0x6000   group 1
+0x6000  -  0x8000   group 2
+------ CPU 2 ------
+0x8000  -  0x8080   registers
+0x8080  -  0xA000   cpu specific
+0xA000  -  0xC000   group0
+0xC000  -  0xE000   group 1
+0xE000  -  0x10000  group 2
+------- RAM -------
+0x10000 -  0xyyyy   ram
+*/
+
+
 var SYSTEM_RUN = 0x1;
 var SYSTEM_STOP = 0x2;
 var SYSTEM_HALT = 0x3; // Idle
@@ -37,14 +59,6 @@ if (change) {
 
         if (this.currentcore == "asm") {
             var h = new Int32Array(this.heap);
-            for(var i=0; i<32; i++) {
-                this.cpu.r[i] = h[0x0+i];
-            }
-            for(var i=0; i<1024; i++) {
-                this.cpu.group0[i] = h[0x800+i];
-                this.cpu.group1[i] = h[0x1800+i];
-                this.cpu.group2[i] = h[0x2800+i];
-            }
             oldcpu.GetState();
             this.cpu.pc = h[(0x40 + 0)];
             this.cpu.nextpc = h[(0x40 + 1)];
@@ -59,14 +73,6 @@ if (change) {
         } else 
         if (coretype == "asm") {
             var h = new Int32Array(this.heap);
-            for(var i=0; i<32; i++) {
-                h[0x0+i] = oldcpu.r[i];
-            }
-            for(var i=0; i<1024; i++) {
-                h[0x800+i] = oldcpu.group0[i];
-                h[0x1800+i] = oldcpu.group1[i];
-                h[0x2800+i] = oldcpu.group2[i];
-            }
             h[(0x40 + 0)] = oldcpu.pc;
             h[(0x40 + 1)] = oldcpu.nextpc;
             h[(0x40 + 2)] = oldcpu.delayedins;
@@ -80,15 +86,6 @@ if (change) {
             h[(0x40 + 10)] = oldcpu.current_pgd;
             this.cpu.PutState();
         } else {
-            for(var i=0; i<32; i++) {
-                this.cpu.r[i] = oldcpu.r[i];
-            }
-            for(var i=0; i<1024; i++) {
-                this.cpu.group0[i] = oldcpu.group0[i];
-                this.cpu.group1[i] = oldcpu.group1[i];
-                this.cpu.group2[i] = oldcpu.group2[i];
-            }
-
             this.cpu.pc = oldcpu.pc;
             this.cpu.nextpc = oldcpu.nextpc;
             this.cpu.delayedins = oldcpu.delayedins;

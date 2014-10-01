@@ -10,10 +10,10 @@
 // constructor
 function RAM(heap, ramoffset) {
     //use typed arrays
-    this.mem = heap;
-    this.int32mem = new Int32Array(this.mem, ramoffset);
-    this.uint8mem = new Uint8Array(this.mem, ramoffset);
-    this.sint8mem = new Int8Array(this.mem, ramoffset);
+    this.heap = heap;
+    this.int32mem = new Int32Array(this.heap, ramoffset);
+    this.uint8mem = new Uint8Array(this.heap, ramoffset);
+    this.sint8mem = new Int8Array(this.heap, ramoffset);
     this.devices = new Array(0x100);
 }
 

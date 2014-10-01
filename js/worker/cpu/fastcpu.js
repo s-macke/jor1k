@@ -59,8 +59,8 @@ var rp = 0x0; // pointer to registers, not used
 var ramp = 0x10000;
 
 var group0p = 0x2000; // special purpose registers
-var group1p = 0x6000; // data tlb registers
-var group2p = 0xA000; // instruction tlb registers
+var group1p = 0x4000; // data tlb registers
+var group2p = 0x6000; // instruction tlb registers
 
 // define variables and initialize
 var pc = 0x0; // instruction pointer in multiples of four

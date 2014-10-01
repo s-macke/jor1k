@@ -33,21 +33,17 @@ function CPU(ram) {
     // registers
     // r[32] and r[33] are used to calculate the virtual address and physical address
     // to make sure that they are not transformed accidently into a floating point number
-    var array = new ArrayBuffer(34 << 2);
-    this.r = new Int32Array(array);
-    this.f = new Float32Array(array);
+    this.r = new Int32Array(this.ram.heap, 0, 34 << 2);
+    this.f = new Float32Array(this.ram.heap, 0, 32 << 2);
 
     // special purpose registers
-    array = new ArrayBuffer(1024 << 2);
-    this.group0 = new Int32Array(array);
+    this.group0 = new Int32Array(this.ram.heap, 0x2000, 0x2000);
 
     // data tlb
-    array = new ArrayBuffer(1024 << 2);
-    this.group1 = new Int32Array(array);
+    this.group1 = new Int32Array(this.ram.heap, 0x4000, 0x2000);
 
     // instruction tlb
-    array = new ArrayBuffer(1024 << 2);
-    this.group2 = new Int32Array(array);
+    this.group2 = new Int32Array(this.ram.heap, 0x6000, 0x2000);
 
     // define variables and initialize
     this.pc = 0x0; // instruction pointer in multiples of four
