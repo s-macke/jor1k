@@ -33,7 +33,7 @@
                             <option value="std">Standard Core</option>
                             <option value="safe">Safe Core (Slow)</option>
                         </select>
-                        <select id="fpsselect" onchange='jor1kgui.SetFPS(this.options[this.selectedIndex].value)'>
+                        <select id="fpsselect" onchange='jor1kgui.framebuffer.SetFPS(this.options[this.selectedIndex].value)'>
                             <option value="0">0 FPS</option>
                             <option value="5"> 5 FPS</option>
                             <option value="10" selected>10 FPS </option>
@@ -135,10 +135,12 @@
 
     <script src="http://danml.com/js/download.js"></script>
 
-    <script src="js/master/terminal.js"></script>
-    <script src="js/master/terminal-input.js"></script>
-    <script src="js/master/ethernet.js"></script>
-    <script src="js/master/sound.js"></script>
+    <script src="js/master/utils.js"></script>
+    <script src="js/master/dev/terminal.js"></script>
+    <script src="js/master/dev/terminal-input.js"></script>
+    <script src="js/master/dev/ethernet.js"></script>
+    <script src="js/master/dev/sound.js"></script>
+    <script src="js/master/dev/framebuffer.js"></script>
     <script src="js/master/master.js"></script>
     
 <script>

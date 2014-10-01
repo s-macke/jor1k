@@ -23,9 +23,16 @@ function jor1kGUI(parameters)
     
     this.terminalcanvas = document.getElementById(this.params.termid);
     this.stats = document.getElementById(this.params.statsid);
-
     this.term = new Terminal(24, 80, this.params.termid);
     this.terminput = new TerminalInput(this.SendChars.bind(this));
+    this.framebuffer = new Framebuffer(this.params.fbid, this.params.fps, this.SendToWorker.bind(this));
+
+
+    this.terminalcanvas.onmousedown = function(event) {
+        this.framebuffer.fbcanvas.style.border = "2px solid #000000";
+    }.bind(this);
+
+
 
     this.IgnoreKeys = function() {
       //Simpler but not as general, return( document.activeElement.type==="textarea" || document.activeElement.type==='input');
@@ -64,11 +71,8 @@ function jor1kGUI(parameters)
         this.SendToWorker("ethmac", e.data);
     }.bind(this);
 
-    this.InitFramebuffer(this.params.fbid);
-    
     this.Reset();
     
-    this.SetFPS(this.params.fps);
    
     window.setInterval(function(){this.SendToWorker("GetIPS", 0)}.bind(this), 1000);
 }
@@ -124,18 +128,6 @@ jor1kGUI.prototype.Sync = function(path) {
     this.SendToWorker("sync", path);
 }
 
-// receive interval of the contents of the framebuffer
-jor1kGUI.prototype.SetFPS = function(fps) {
-    this.params.fps = fps;
-    if(!this.fbcanvas) return;
-    if (this.fbinterval) {
-        window.clearInterval(this.fbinterval);
-    }
-    if (fps != 0) {
-        this.fbinterval = window.setInterval(function(){this.SendToWorker("GetFB", 0)}.bind(this), 1000/this.params.fps);
-    }
-}
-
 jor1kGUI.prototype.UploadExternalFile = function(f) {
     var reader = new FileReader();
     reader.onload = function(e) {
@@ -144,48 +136,6 @@ jor1kGUI.prototype.UploadExternalFile = function(f) {
     }.bind(this);
     reader.readAsArrayBuffer(f);
 }
-
-
-function UploadBinaryResource(url, filename, data, OnSuccess, OnError) {
-
-    var boundary = "xxxxxxxxx";
-
-    var xhr = new XMLHttpRequest();
-    xhr.open('post', url, true);
-    xhr.setRequestHeader("Content-Type", "multipart/form-data, boundary=" + boundary);
-    xhr.setRequestHeader("Content-Length", data.length);
-    xhr.onreadystatechange = function () {
-        if (xhr.readyState != 4) {
-            return;
-        }
-        if ((xhr.status != 200) && (xhr.status != 0)) {
-            OnError("Error: Could not upload file " + filename);
-            return;
-        }
-        OnSuccess(this.responseText);
-    };
-
-    var bodyheader = "--" + boundary + "\r\n";
-    bodyheader += 'Content-Disposition: form-data; name="uploaded"; filename="' + filename + '"\r\n';
-    bodyheader += "Content-Type: application/octet-stream\r\n\r\n";
-
-    var bodyfooter = "\r\n";
-    bodyfooter += "--" + boundary + "--";
-
-    var newdata = new Uint8Array(data.length + bodyheader.length + bodyfooter.length);
-    var offset = 0;
-    for(var i=0; i<bodyheader.length; i++)
-        newdata[offset++] = bodyheader.charCodeAt(i);
-
-    for(var i=0; i<data.length; i++)
-        newdata[offset++] = data[i];
-
-    for(var i=0; i<bodyfooter.length; i++)
-        newdata[offset++] = bodyfooter.charCodeAt(i);
-
-    xhr.send(newdata.buffer);
-}
-
 
 jor1kGUI.prototype.OnMessage = function(e) {
     // print debug messages even if emulator is stopped
@@ -216,7 +166,7 @@ jor1kGUI.prototype.OnMessage = function(e) {
             break;
 
         case "GetFB":
-            this.UpdateFramebuffer(e.data.data);
+            this.framebuffer.Update(e.data.data);
             break;
 
         case "Stop":
@@ -257,64 +207,5 @@ jor1kGUI.prototype.OnMessage = function(e) {
             break;
 
         }
-}
-
-
-// Init Framebuffer if it exists
-jor1kGUI.prototype.InitFramebuffer = function(fbid) {
-    this.fbcanvas = document.getElementById(fbid);
-    if(!this.fbcanvas) return;
-
-    this.fbctx = this.fbcanvas.getContext("2d");
-    this.fbimageData = this.fbctx.createImageData(this.fbcanvas.width, this.fbcanvas.height);
-
-    this.terminalcanvas.onmousedown = function(event) {
-        this.fbcanvas.style.border = "2px solid #000000";
-    }.bind(this);
-
-    this.fbcanvas.onmousedown = function(event) {
-        this.fbcanvas.style.border = "2px solid #FF0000";
-        var rect = this.fbcanvas.getBoundingClientRect();
-        var x = (event.clientX - rect.left)*640/rect.width;
-        var y = (event.clientY - rect.top)*400/rect.height;
-        this.SendToWorker("tsmousedown", {x:x, y:y});
-    }.bind(this);
-
-    this.fbcanvas.onmouseup = function(event) {
-        var rect = this.fbcanvas.getBoundingClientRect();
-        var x = (event.clientX - rect.left)*640/rect.width;
-        var y = (event.clientY - rect.top)*400/rect.height;
-        this.SendToWorker("tsmouseup", {x:x, y:y});
-    }.bind(this);
-
-    this.fbcanvas.onmousemove = function(event) {
-        var rect = this.fbcanvas.getBoundingClientRect();
-        var x = (event.clientX - rect.left)*640/rect.width;
-        var y = (event.clientY - rect.top)*400/rect.height;
-        this.SendToWorker("tsmousemove", {x:x, y:y});
-    }.bind(this);
-  
-}
-
-jor1kGUI.prototype.UpdateFramebuffer = function(buffer) {
-    if(this.userpaused) return;
-    var i=0, n = buffer.length;
-    var data = this.fbimageData.data;
-    
-    var offset = 0x0;
-    for (i = 0; i < n; i++) {
-        var x = buffer[i];
-        data[offset++] = (x >> 24) & 0xF8;
-        data[offset++] = (x >> 19) & 0xFC;
-        data[offset++] = (x >> 13) & 0xF8;
-        data[offset++] = 0xFF;
-        data[offset++] = (x >> 8) & 0xF8;
-        data[offset++] = (x >> 3) & 0xFC;
-        data[offset++] = (x << 3) & 0xF8;
-        data[offset++] = 0xFF;
-    }
-
-    //data.set(buffer);
-    this.fbctx.putImageData(this.fbimageData, 0, 0); // at coords 0,0
 }
 
