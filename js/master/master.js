@@ -36,7 +36,7 @@ function jor1kGUI(parameters)
 
     this.IgnoreKeys = function() {
       //Simpler but not as general, return( document.activeElement.type==="textarea" || document.activeElement.type==='input');
-      return ((this.lastMouseDownTarget != this.terminalcanvas) && (this.lastMouseDownTarget != this.fbcanvas));
+      return ((this.lastMouseDownTarget != this.terminalcanvas) && (this.lastMouseDownTarget != this.framebuffer.fbcanvas));
     }
 
     var recordTarget = function(event) {
