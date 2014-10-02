@@ -4,23 +4,28 @@
 
 
 /* 
-Heap Layout
-The heap is needed by the asm.js cpu. 
-For compatibility all cpus use the same layout
------- CPU 1 ------
-0x0     -  0x80     registers
-0x80    -  0x2000   cpu specific
-0x2000  -  0x4000   group0
-0x4000  -  0x6000   group 1
-0x6000  -  0x8000   group 2
------- CPU 2 ------
-0x8000  -  0x8080   registers
-0x8080  -  0xA000   cpu specific
-0xA000  -  0xC000   group0
-0xC000  -  0xE000   group 1
-0xE000  -  0x10000  group 2
-------- RAM -------
-0x10000 -  0xyyyy   ram
+    Heap Layout
+    ===========
+    The heap is needed by the asm.js CPU. 
+    For compatibility all CPUs use the same layout
+    by using the different views of typed arrays
+
+    ------ Core 1 ------
+    0x0     -  0x7F     32 CPU registers 
+    0x80    -  0x1FFF   CPU specific, usually unused or temporary data
+    0x2000  -  0x3FFF   group 0 (system control and status)
+    0x4000  -  0x5FFF   group 1 (data MMU)
+    0x6000  -  0x7FFF   group 2 (instruction MMU)
+    ------ Core 2 ------
+    0x8000  -  0x807F   32 CPU registers
+    0x8080  -  0x9FFF   CPU specific, usually unused or temporary data
+    0xA000  -  0xBFFF   group 0 (system control and status)
+    0xC000  -  0xDFFF   group 1 (data MMU)
+    0xE000  -  0xFFFF   group 2 (instruction MMU)
+    ------ Core 3 ------
+    ...
+    ------- RAM --------
+    0x100000 -  ...     RAM
 */
 
 
@@ -122,9 +127,9 @@ System.prototype.Init = function(system) {
     this.memorysize = system.memorysize;
     // this must be a power of two.
     DebugMessage("Init Heap");
-    var ramoffset = 0x10000;
+    var ramoffset = 0x100000;
     this.heap = new ArrayBuffer(this.memorysize*0x100000); 
-    this.memorysize--;
+    this.memorysize--; // - the lower 1 MB are used for the cpu cores
     this.ram = new RAM(this.heap, ramoffset);
 
 
