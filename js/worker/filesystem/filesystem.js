@@ -41,6 +41,19 @@ function FS() {
     this.tar = new TAR(this);
     this.userinfo = [];
 
+    RegisterMessage("LoadFilesystem", this.LoadFilesystem.bind(this) );
+    RegisterMessage("MergeFile", this.MergeFile.bind(this) );
+    RegisterMessage("tar",
+        function(data) {
+            SendToMaster("tar", this.tar.Pack(data));
+        }.bind(this)
+    );
+    RegisterMessage("sync",
+        function(data) {
+            SendToMaster("sync", this.tar.Pack(data));
+        }.bind(this)
+    );
+
     // root entry
     this.CreateDirectory("", -1);
 }
@@ -91,18 +104,20 @@ FS.prototype.LoadImage = function(url)
 {
     if (!url) return;
     //DebugMessage("Load Image " + url);
+/*
     if (typeof Worker !== 'undefined') {
         LoadBZIP2Resource(url, 
             function(m){ for(var i=0; i<m.size; i++) this.tar.Unpack(m.data[i]); }.bind(this), 
             function(e){DebugMessage("Error: Could not load " + url + ". Skipping.");});
-    } else {
-        LoadBinaryResource(url, 
-        function(buffer){
-            var buffer8 = new Uint8Array(buffer);
-            bzip2.simple(buffer8, this.tar.Unpack.bind(this.tar));
-        }.bind(this), 
-        function(error){DebugMessage("Error: Could not load " + url + ". Skipping.");});
+        return;
     }
+*/
+    LoadBinaryResource(url,
+    function(buffer){
+        var buffer8 = new Uint8Array(buffer);
+        bzip2.simple(buffer8, this.tar.Unpack.bind(this.tar));
+    }.bind(this),
+    function(error){DebugMessage("Error: Could not load " + url + ". Skipping.");});
 }
 // -----------------------------------------------------
 

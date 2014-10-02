@@ -56,7 +56,7 @@ var b = new stdlib.Uint8Array(heap);
 
 
 var rp = 0x0; // pointer to registers, not used
-var ramp = 0x10000;
+var ramp = 0x100000;
 
 var group0p = 0x2000; // special purpose registers
 var group1p = 0x4000; // data tlb registers

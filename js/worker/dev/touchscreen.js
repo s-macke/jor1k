@@ -29,7 +29,10 @@ LPC32XX_TSC_FIFO_TS_P_LEVEL = (1 << 31) // touched
 function TouchscreenDev(intdev) {
     this.intdev = intdev;
     this.Reset();
-    }
+    RegisterMessage("tsmousedown", this.onmousedown.bind(this) );
+    RegisterMessage("tsmouseup", this.onmouseup.bind(this) );
+    RegisterMessage("tsmousemove", this.onmousemove.bind(this) );
+}
 
 TouchscreenDev.prototype.Reset = function() {
     this.control = 0x0; // control register

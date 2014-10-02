@@ -2,18 +2,6 @@
 // ------------------ Utils ------------------------
 // -------------------------------------------------
 
-function SendToMaster(command, data) {
-    postMessage(
-    {
-        "command" : command,
-        "data" : data
-    }
-    );
-}
-
-function DebugMessage(message) {
-    SendToMaster("Debug", message);
-}
 
 function abort() {
     DebugMessage("Abort execution.");
@@ -321,6 +309,7 @@ function StructToArray2(typelist, GetByte) {
     return output;
 };
 
+/*
 function LoadBZIP2Resource(url, OnSuccess, OnError)
 {
     var worker = new Worker('bzip2.js');
@@ -332,3 +321,4 @@ function LoadBZIP2Resource(url, OnSuccess, OnError)
     }
     worker.postMessage(url);    
 }
+*/

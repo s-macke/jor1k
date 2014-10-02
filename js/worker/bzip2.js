@@ -106,7 +106,7 @@ function LoadBinaryResource(url, OnSuccess, OnError) {
     req.send(null);
 }
 
-
+/*
 onmessage = function(e) {
     LoadBinaryResource(e.data, function(buffer) {
         var buffer8 = new Uint8Array(buffer);
@@ -129,6 +129,7 @@ onmessage = function(e) {
     }, function(e){}
     );
 }
+*/
 
 bzip2.array = function(bytes) {
     var bit = 0, byte = 0;

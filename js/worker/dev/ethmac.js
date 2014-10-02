@@ -64,8 +64,10 @@ var MII_NCONFIG =        0x1c;        /* Network interface config    */
 function EthDev(ram, intdev, mac) {
     "use strict";
 
+    this.ram = ram;
     this.intdev = intdev;
     this.TransmitCallback = function(data){}; // Should call handler to send data asynchronously.
+
 
     this.toTxStat = function(val) {
         return {
@@ -193,7 +195,6 @@ function EthDev(ram, intdev, mac) {
         return (crc ^ (-1)) >>> 0;
     };
 
-    this.ram = ram;
     this.Reset = function () {
         this.MODER = 0xA000;
         this.INT_SOURCE = 0x0;
@@ -245,13 +246,12 @@ function EthDev(ram, intdev, mac) {
         this.currRX = (this.TX_BD_NUM << 1);
     };
 
-    this.Reset();
-
-    this.Receive = function(data) {
+    this.Receive = function(data_arraybuffer) {
         //check RXEN
         if ((this.MODER & 0x1) == 0) {
             return;
         }
+        var data = new Uint8Array(data_arraybuffer);
 
         //if this is a binary transmission, it's a frame
         var promiscuous = false;
@@ -743,4 +743,8 @@ function EthDev(ram, intdev, mac) {
                 }
         }
     };
+
+    this.Reset();
+    RegisterMessage("ethmac", this.Receive.bind(this) );
+
 }

@@ -2,25 +2,31 @@
 // ------------------- SYSTEM ----------------------
 // -------------------------------------------------
 
+"use strict";
 
 /* 
-Heap Layout
-The heap is needed by the asm.js cpu. 
-For compatibility all cpus use the same layout
------- CPU 1 ------
-0x0     -  0x80     registers
-0x80    -  0x2000   cpu specific
-0x2000  -  0x4000   group0
-0x4000  -  0x6000   group 1
-0x6000  -  0x8000   group 2
------- CPU 2 ------
-0x8000  -  0x8080   registers
-0x8080  -  0xA000   cpu specific
-0xA000  -  0xC000   group0
-0xC000  -  0xE000   group 1
-0xE000  -  0x10000  group 2
-------- RAM -------
-0x10000 -  0xyyyy   ram
+    Heap Layout
+    ===========
+    The heap is needed by the asm.js CPU. 
+    For compatibility all CPUs use the same layout
+    by using the different views of typed arrays
+
+    ------ Core 1 ------
+    0x0     -  0x7F     32 CPU registers 
+    0x80    -  0x1FFF   CPU specific, usually unused or temporary data
+    0x2000  -  0x3FFF   group 0 (system control and status)
+    0x4000  -  0x5FFF   group 1 (data MMU)
+    0x6000  -  0x7FFF   group 2 (instruction MMU)
+    ------ Core 2 ------
+    0x8000  -  0x807F   32 CPU registers
+    0x8080  -  0x9FFF   CPU specific, usually unused or temporary data
+    0xA000  -  0xBFFF   group 0 (system control and status)
+    0xC000  -  0xDFFF   group 1 (data MMU)
+    0xE000  -  0xFFFF   group 2 (instruction MMU)
+    ------ Core 3 ------
+    ...
+    ------- RAM --------
+    0x100000 -  ...     RAM
 */
 
 
@@ -30,75 +36,88 @@ var SYSTEM_HALT = 0x3; // Idle
 
 function System() {
     // the Init function is called by the master thread.
+    RegisterMessage("LoadAndStart", this.LoadImageAndStart.bind(this) );
+    RegisterMessage("execute", this.MainLoop.bind(this)	);
+    RegisterMessage("Init", this.Init.bind(this) );
+    RegisterMessage("Reset", this.Reset.bind(this) );
+    RegisterMessage("ChangeCore", this.ChangeCPU.bind(this) );
+
+    RegisterMessage("GetIPS", function(data) {
+            SendToMaster("GetIPS", this.ips);
+            this.ips=0;
+        }.bind(this)
+    );
 }
 
-System.prototype.ChangeCore = function(coretype, change) {
-
-if (change) {
-    var oldcpu = this.cpu;
-}
-
-    if (coretype == "std") {
+System.prototype.CreateCPU = function(cpuname) {
+    if (cpuname == "std") {
         this.cpu = new CPU(this.ram);
     } else 
-    if (coretype == "safe") {
+    if (cpuname == "safe") {
         this.cpu = new SafeCPU(this.ram);
     } else 
-    if (coretype == "asm") {
+    if (cpuname == "asm") {
         this.cpu = this.fastcpu;
         this.cpu.Init();
     } else {
-        DebugMessage("Error: Core type unknown");
+        DebugMessage("Error: CPU name unknown");
+        return;
     }
+    this.currentcpuname = cpuname;
+}
 
-    if (change) {
-        DebugMessage("Change Core");
-        this.cpu.InvalidateTLB(); // reset TLB
-        var f = oldcpu.GetFlags();
-        this.cpu.SetFlags(f|0);
 
-        if (this.currentcore == "asm") {
-            var h = new Int32Array(this.heap);
-            oldcpu.GetState();
-            this.cpu.pc = h[(0x40 + 0)];
-            this.cpu.nextpc = h[(0x40 + 1)];
-            this.cpu.delayedins = h[(0x40 + 2)]?true:false;
-            this.cpu.TTMR = h[(0x40 + 4)];
-            this.cpu.TTCR = h[(0x40 + 5)];
-            this.cpu.PICMR = h[(0x40 + 6)];
-            this.cpu.PICSR = h[(0x40 + 7)];
-            this.cpu.boot_dtlb_misshandler_address = h[(0x40 + 8)];
-            this.cpu.boot_itlb_misshandler_address = h[(0x40 + 9)];
-            this.cpu.current_pgd = h[(0x40 + 10)];
-        } else 
-        if (coretype == "asm") {
-            var h = new Int32Array(this.heap);
-            h[(0x40 + 0)] = oldcpu.pc;
-            h[(0x40 + 1)] = oldcpu.nextpc;
-            h[(0x40 + 2)] = oldcpu.delayedins;
-            h[(0x40 + 3)] = 0x0;
-            h[(0x40 + 4)] = oldcpu.TTMR;
-            h[(0x40 + 5)] = oldcpu.TTCR;
-            h[(0x40 + 6)] = oldcpu.PICMR;
-            h[(0x40 + 7)] = oldcpu.PICSR;
-            h[(0x40 + 8)] = oldcpu.boot_dtlb_misshandler_address;
-            h[(0x40 + 9)] = oldcpu.boot_itlb_misshandler_address;
-            h[(0x40 + 10)] = oldcpu.current_pgd;
-            this.cpu.PutState();
-        } else {
-            this.cpu.pc = oldcpu.pc;
-            this.cpu.nextpc = oldcpu.nextpc;
-            this.cpu.delayedins = oldcpu.delayedins;
-            this.cpu.TTMR = oldcpu.TTMR;
-            this.cpu.TTCR = oldcpu.TTCR;
-            this.cpu.PICMR = oldcpu.PICMR;
-            this.cpu.PICSR = oldcpu.PICSR;
-            this.cpu.boot_dtlb_misshandler_address = oldcpu.boot_dtlb_misshandler_address;
-            this.cpu.boot_itlb_misshandler_address = oldcpu.itlb_misshandler_address;
-            this.cpu.current_pgd = oldcpu.current_pgd;
-        }
+System.prototype.ChangeCPU = function(cpuname) {
+
+    var oldcpu = this.cpu;
+    var oldcpuname = this.currentcpuname;
+
+    this.CreateCPU(cpuname);
+
+    this.cpu.InvalidateTLB(); // reset TLB
+    var f = oldcpu.GetFlags();
+    this.cpu.SetFlags(f|0);
+
+    if (oldcpuname == "asm") {
+        var h = new Int32Array(this.heap);
+        oldcpu.GetState();
+        this.cpu.pc = h[(0x40 + 0)];
+        this.cpu.nextpc = h[(0x40 + 1)];
+        this.cpu.delayedins = h[(0x40 + 2)]?true:false;
+        this.cpu.TTMR = h[(0x40 + 4)];
+        this.cpu.TTCR = h[(0x40 + 5)];
+        this.cpu.PICMR = h[(0x40 + 6)];
+        this.cpu.PICSR = h[(0x40 + 7)];
+        this.cpu.boot_dtlb_misshandler_address = h[(0x40 + 8)];
+        this.cpu.boot_itlb_misshandler_address = h[(0x40 + 9)];
+        this.cpu.current_pgd = h[(0x40 + 10)];
+    } else
+    if (cpuname == "asm") {
+        var h = new Int32Array(this.heap);
+        h[(0x40 + 0)] = oldcpu.pc;
+        h[(0x40 + 1)] = oldcpu.nextpc;
+        h[(0x40 + 2)] = oldcpu.delayedins;
+        h[(0x40 + 3)] = 0x0;
+        h[(0x40 + 4)] = oldcpu.TTMR;
+        h[(0x40 + 5)] = oldcpu.TTCR;
+        h[(0x40 + 6)] = oldcpu.PICMR;
+        h[(0x40 + 7)] = oldcpu.PICSR;
+        h[(0x40 + 8)] = oldcpu.boot_dtlb_misshandler_address;
+        h[(0x40 + 9)] = oldcpu.boot_itlb_misshandler_address;
+        h[(0x40 + 10)] = oldcpu.current_pgd;
+        this.cpu.PutState();
+    } else {
+        this.cpu.pc = oldcpu.pc;
+        this.cpu.nextpc = oldcpu.nextpc;
+        this.cpu.delayedins = oldcpu.delayedins;
+        this.cpu.TTMR = oldcpu.TTMR;
+        this.cpu.TTCR = oldcpu.TTCR;
+        this.cpu.PICMR = oldcpu.PICMR;
+        this.cpu.PICSR = oldcpu.PICSR;
+        this.cpu.boot_dtlb_misshandler_address = oldcpu.boot_dtlb_misshandler_address;
+        this.cpu.boot_itlb_misshandler_address = oldcpu.itlb_misshandler_address;
+        this.cpu.current_pgd = oldcpu.current_pgd;
     }
-    this.currentcore = coretype;
 }
 
 System.prototype.Reset = function() {
@@ -121,10 +140,9 @@ System.prototype.Init = function(system) {
     this.status = SYSTEM_STOP;
     this.memorysize = system.memorysize;
     // this must be a power of two.
-    DebugMessage("Init Heap");
-    var ramoffset = 0x10000;
+    var ramoffset = 0x100000;
     this.heap = new ArrayBuffer(this.memorysize*0x100000); 
-    this.memorysize--;
+    this.memorysize--; // - the lower 1 MB are used for the cpu cores
     this.ram = new RAM(this.heap, ramoffset);
 
 
@@ -163,14 +181,14 @@ if (typeof Math.imul == "undefined") {
     this.fastcpu = FastCPU(stdlib, foreign, this.heap);
     this.fastcpu.Init();
 
-    this.ChangeCore(system.cpu, false);
+    this.CreateCPU(system.cpu);
 
-    this.uartdev0 = new UARTDev(this, 0x2);
+    this.uartdev0 = new UARTDev(0, this, 0x2);
     this.uartdev0.TransmitCallback = function(data) {
         SendToMaster("tty0", data);
     }
 
-    this.uartdev1 = new UARTDev(this, 0x3);
+    this.uartdev1 = new UARTDev(1, this, 0x3);
     this.uartdev1.TransmitCallback = function(data) {
         SendToMaster("tty1", data);
     }
@@ -211,20 +229,13 @@ if (typeof Math.imul == "undefined") {
     this.cyclesperms = 20000; // 20 MHz    
 }
 
-// Timer function. Runs every second
-System.prototype.GetIPS = function() {
-    var ret = this.ips;
-    this.ips = 0;
-    return ret;
-}
-
 System.prototype.RaiseInterrupt = function(line) {
     this.cpu.RaiseInterrupt(line);
     if (this.status == SYSTEM_HALT)
     {
         this.status = SYSTEM_RUN;
         clearTimeout(this.idletimeouthandle);
-        delta = (GetMilliseconds() - this.idletime) * this.cyclesperms;
+        var delta = (GetMilliseconds() - this.idletime) * this.cyclesperms;
         if (delta > this.idlemaxwait) delta = this.idlemaxwait;
         this.cpu.ProgressTime(delta);
         this.MainLoop();
@@ -343,6 +354,7 @@ System.prototype.OnKernelLoaded = function(buffer) {
     this.cpu.AnalyzeImage();
     DebugMessage("Starting emulation");
     this.status = SYSTEM_RUN;
+
     SendToMaster("execute", 0);
 }
 

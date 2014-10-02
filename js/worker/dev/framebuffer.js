@@ -10,6 +10,7 @@ function FBDev(ram) {
     this.addr = 16000000;
     this.n = (this.width * this.height)>>1;
     this.buffer = new Int32Array(this.n);
+    RegisterMessage("GetFB", this.OnGetFB.bind(this) );
     //this.buffer = new Uint8Array(0);
 }
 
@@ -32,6 +33,10 @@ FBDev.prototype.WriteReg32 = function (addr, value) {
         return;
     }
 };
+
+FBDev.prototype.OnGetFB = function() {
+    SendToMaster("GetFB", this.GetBuffer() );
+}
 
 FBDev.prototype.GetBuffer = function () {
     //return this.buffer;

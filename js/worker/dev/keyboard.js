@@ -291,12 +291,14 @@ var kc2kc =
 
 function KeyboardDev(intdev) {
     this.intdev = intdev;
-    this.fifo = [];
+    RegisterMessage("keydown", this.OnKeyDown.bind(this) );
+    RegisterMessage("keyup", this.OnKeyUp.bind(this) );
     this.Reset();
 }
 
 KeyboardDev.prototype.Reset = function() {
     this.key = 0x0;
+    this.fifo = [];
 }
 
 KeyboardDev.prototype.OnKeyDown = function(event) {

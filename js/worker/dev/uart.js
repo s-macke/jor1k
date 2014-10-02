@@ -5,6 +5,8 @@
 // http://www.lammertbies.nl/comm/info/serial-uart.html#IIR
 // http://www.freebsd.org/doc/en/articles/serial-uart/
 
+"use strict";
+
 var UART_LSR_DATA_READY = 0x1;
 var UART_LSR_FIFO_EMPTY = 0x20;
 var UART_LSR_TRANSMITTER_EMPTY = 0x40;
@@ -65,11 +67,12 @@ var ASCII_XON = 0x11;
 
 
 // constructor
-function UARTDev(intdev, intno) {
+function UARTDev(id, intdev, intno) {
     this.intno = intno;
     this.intdev = intdev;
     this.TransmitCallback = function(data){}; // Should call handler to send data asynchronously.
-    this.Reset();  
+    RegisterMessage("tty" + id, this.ReceiveChar.bind(this) );
+    this.Reset();
 }
 
 UARTDev.prototype.ToBitDescription = function(val, desc) {
@@ -137,9 +140,12 @@ UARTDev.prototype.RxRateLimitBump = function(stepsperloop) {
   if(this.ratelimitcounter > 0) this.UpdateRx(); // Wake up RX
   
 }
+
 // To prevent the character from being overwritten we use a javascript array-based fifo and request a character timeout. 
-UARTDev.prototype.ReceiveChar = function(x) {
-    this.rxbuf.push(x&0xFF);
+UARTDev.prototype.ReceiveChar = function(data) {
+    data.forEach(function(c) {
+        this.rxbuf.push(c&0xFF);
+    }.bind(this));
     this.UpdateRx();
 }
 
