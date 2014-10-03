@@ -68,6 +68,8 @@ function CPU(ram) {
 
     this.EA = -1; // hidden register for atomic lwa and swa operation
 
+    this.doze = 0x0; // doze or not
+
     this.TTMR = 0x0; // Tick timer mode register
     this.TTCR = 0x0; // Tick timer count register
 
@@ -105,6 +107,17 @@ CPU.prototype.Reset = function() {
 
     this.group0[SPR_IMMUCFGR] = 0x18; // 0 ITLB has one way and 64 sets
     this.group0[SPR_DMMUCFGR] = 0x18; // 0 DTLB has one way and 64 sets
+    this.group0[SPR_ICCFGR] = 0x48;
+    this.group0[SPR_DCCFGR] = 0x48;
+    this.group0[SPR_VR] = 0x12000001;
+
+    // UPR present
+    // data mmu present
+    // instruction mmu present
+    // PIC present (architecture manual seems to be wrong here)
+    // Tick timer present
+    this.group0[SPR_UPR] = 0x619;
+
     this.Exception(EXCEPT_RESET, 0x0); // set pc values
     this.pc = this.nextpc;
     this.nextpc++;
@@ -239,12 +252,6 @@ CPU.prototype.CheckForInterrupt = function () {
 
 CPU.prototype.RaiseInterrupt = function (line) {
     var lmask = 1 << line;
-/*
-    if (this.PICSR & lmask) {
-        // Interrupt already signaled and pending
-        // DebugMessage("Warning: Int pending, ignored");
-    }
-*/
     this.PICSR |= lmask;
     this.CheckForInterrupt();
 };
@@ -258,19 +265,29 @@ CPU.prototype.SetSPR = function (idx, x) {
     var group = (idx >> 11) & 0x1F;
 
     switch (group) {
+    case 0:
+        if (address == SPR_SR) {
+            this.SetFlags(x);
+        }
+        this.group0[address] = x;
+        break;
     case 1:
         // Data MMU
         this.group1[address] = x;
-        return;
+        break;
     case 2:
         // ins MMU
         this.group2[address] = x;
-        return;
+        break;
     case 3:
         // data cache, not supported
     case 4:
         // ins cache, not supported
-        return;
+        break;
+    case 8:
+        // power
+        this.doze = 0x1;
+        break;
     case 9:
         // pic
         switch (address) {
@@ -290,7 +307,7 @@ CPU.prototype.SetSPR = function (idx, x) {
             DebugMessage("Error in SetSPR: interrupt address not supported");
             abort();
         }
-        return;
+        break;
     case 10:
         //tick timer
         switch (address) {
@@ -306,33 +323,12 @@ CPU.prototype.SetSPR = function (idx, x) {
             abort();
             break;
         }
-        return;
+        break;
 
     default:
-        break;
-    }
-
-    if (group != 0) {
         DebugMessage("Error in SetSPR: group " + group + " not found");
         abort();
-    }
-
-    switch (address) {
-    case SPR_SR:
-        this.SetFlags(x);
         break;
-    case SPR_EEAR_BASE:
-        this.group0[SPR_EEAR_BASE] = x;
-        break;
-    case SPR_EPCR_BASE:
-        this.group0[SPR_EPCR_BASE] = x;
-        break;
-    case SPR_ESR_BASE:
-        this.group0[SPR_ESR_BASE] = x;
-        break;
-    default:
-        DebugMessage("Error in SetSPR: address " + hex8(address) + " not found");
-        abort();
     }
 };
 
@@ -341,11 +337,17 @@ CPU.prototype.GetSPR = function (idx) {
     var group = (idx >> 11) & 0x1F;
 
     switch (group) {
+    case 0:
+        if (address == SPR_SR) {
+            return this.GetFlags();
+        }
+        return this.group0[address];
     case 1:
         return this.group1[address];
     case 2:
         return this.group2[address];
-
+    case 8:  
+        return 0x0;
     case 9:
         // pic
         switch (address) {
@@ -382,32 +384,57 @@ CPU.prototype.GetSPR = function (idx) {
         abort();
     }
 
+//    return this.group0[address];
+
     switch (idx) {
     case SPR_SR:
         return this.GetFlags();
 
+    case SPR_ICCFGR:
+    case SPR_DCCFGR:
+    case SPR_VR:
     case SPR_UPR:
-        // UPR present
-        // data mmu present
-        // instruction mmu present
-        // PIC present (architecture manual seems to be wrong here)
-        // Tick timer present
-        return 0x619;
-
     case SPR_IMMUCFGR:
     case SPR_DMMUCFGR:
     case SPR_EEAR_BASE:
     case SPR_EPCR_BASE:
     case SPR_ESR_BASE:
         return this.group0[idx];
-    case SPR_ICCFGR:
-        return 0x48;
-    case SPR_DCCFGR:
-        return 0x48;
-    case SPR_VR:
-        return 0x12000001;
+    case 0x421:
+    case 0x422:
+    case 0x423:
+    case 0x424:
+    case 0x425:
+    case 0x426:
+    case 0x427:
+    case 0x428:
+    case 0x429:
+    case 0x42A:
+    case 0x42B:
+    case 0x42C:
+    case 0x42D:
+    case 0x42E:
+    case 0x42F:
+    case 0x430:
+    case 0x431:
+    case 0x432:
+    case 0x433:
+    case 0x434:
+    case 0x435:
+    case 0x435:
+    case 0x436:
+    case 0x437:
+    case 0x438:
+    case 0x439:
+    case 0x43A:
+    case 0x43B:
+    case 0x43C:
+    case 0x43D:
+    case 0x43E:
+        return this.group0[idx];
+         
     default:
-        DebugMessage("Error in GetSPR: address unknown");
+        DebugMessage("Error in GetSPR: address " + hex8(idx) + " unknown");
         abort();
     }
 };
@@ -758,13 +785,6 @@ CPU.prototype.Step = function (steps, clockspeed) {
                 r[rindex] = ((ins & 0xFFFF) << 16); // movhi
             }
             break;
-        case 0x7:
-            //halt
-            if (this.TTMR & (1 << 28)) break;
-            this.pc = this.nextpc++;
-            this.delayedins = false;
-            return steps;
-            break;
         case 0x8:
             //sys and trap
             if ((ins&0xFFFF0000) == 0x21000000) {
@@ -1001,6 +1021,12 @@ CPU.prototype.Step = function (steps, clockspeed) {
             this.pc = this.nextpc++;
             this.delayedins = false;
             this.SetSPR(r[(ins >> 16) & 0x1F] | imm, r[(ins >> 11) & 0x1F]); // Could raise an exception
+            if (this.doze) {
+                this.doze = 0x0;
+                if (!(this.TTMR & (1 << 28))) {
+                    return steps;
+                }
+            }
             continue;
 
         case 0x32:

@@ -114,6 +114,9 @@ var boot_dtlb_misshandler_address = 0x0;
 var boot_itlb_misshandler_address = 0x0;
 var current_pgd = 0x0;
 
+var doze = 0x0;
+
+
 function Init() {
     AnalyzeImage();
     Reset();
@@ -125,8 +128,19 @@ function Reset() {
     PICMR = 0x3;
     PICSR = 0x0;
 
-    h[group0p+(SPR_IMMUCFGR<<2) >> 2] = 0x18|0; // 0 ITLB has one way and 64 sets
-    h[group0p+(SPR_DMMUCFGR<<2) >> 2] = 0x18|0; // 0 DTLB has one way and 64 sets
+    h[group0p+(SPR_IMMUCFGR<<2) >> 2] = 0x18; // 0 ITLB has one way and 64 sets
+    h[group0p+(SPR_DMMUCFGR<<2) >> 2] = 0x18; // 0 DTLB has one way and 64 sets
+    h[group0p+(SPR_ICCFGR<<2) >> 2] = 0x48;
+    h[group0p+(SPR_DCCFGR<<2) >> 2] = 0x48;
+    h[group0p+(SPR_VR<<2) >> 2] = 0x12000001;
+
+    // UPR present
+    // data mmu present
+    // instruction mmu present
+    // PIC present (architecture manual seems to be wrong here)
+    // Tick timer present
+    h[group0p+(SPR_UPR<<2) >> 2] = 0x619;
+
     Exception(EXCEPT_RESET, 0x0); // set pc values
     pc = nextpc|0;
     nextpc = nextpc + 1|0;
@@ -287,12 +301,6 @@ function RaiseInterrupt(line) {
     line = line|0;
     var lmask = 0;
     lmask = (1 << (line))|0;
-/*
-    if (this.PICSR & lmask) {
-        // Interrupt already signaled and pending
-        // DebugMessage("Warning: Int pending, ignored");
-    }
-*/
     PICSR = PICSR | lmask;
     CheckForInterrupt();
 }
@@ -312,19 +320,28 @@ function SetSPR(idx, x) {
     group = (idx >> 11) & 0x1F;
 
     switch (group|0) {
+    case 0:
+        if ((address|0) == (SPR_SR|0)) {
+            SetFlags(x);
+        }
+        h[group0p+(address<<2) >> 2] = x;
+        break;
     case 1:
         // Data MMU
         h[group1p+(address<<2) >> 2] = x;
-        return;
+        break;
     case 2:
         // ins MMU
         h[group2p+(address<<2) >> 2] = x;
-        return;
+        break;
     case 3:
         // data cache, not supported
     case 4:
         // ins cache, not supported
-        return;
+        break;
+    case 8:
+        doze = 0x1; // doze mode
+        break;
     case 9:
         // pic
         switch (address|0) {
@@ -344,7 +361,7 @@ function SetSPR(idx, x) {
             DebugMessage(ERROR_SETSPR_INTERRUPT_ADDRESS|0);
             abort();
         }
-        return;
+        break;
     case 10:
         //tick timer
         switch (address|0) {
@@ -361,31 +378,12 @@ function SetSPR(idx, x) {
             abort();
             break;
         }
-        return;
+        break;
 
     default:
-        break;
-    }
-
-    if ((group|0) != 0) {
-        //DebugMessage("Error in SetSPR: group " + group + " not found");
         DebugMessage(ERROR_UNKNOWN|0);
         abort();
-    }
-
-    switch (address|0) {
-    case 17: // SPR_SR
-        SetFlags(x);
         break;
-    case 48: // SPR_EEAR_BASE
-    case 32: // SPR_EPCR_BASE
-    case 64: // SPR_ESR_BASE
-        h[group0p+(address<<2)>>2] = x;
-        break;
-    default:
-        DebugMessage(ERROR_UNKNOWN|0);
-        //DebugMessage("Error in SetSPR: address " + hex8(address) + " not found");
-        abort();
     }
 };
 
@@ -396,12 +394,18 @@ function GetSPR(idx) {
     address = idx & 0x7FF;
     group = (idx >> 11) & 0x1F;
     switch (group|0) {
+    case 0:
+        if ((address|0) == (SPR_SR|0)) {
+            return GetFlags()|0;
+        }
+        return h[group0p+(address<<2) >> 2]|0;
     case 1:
         return h[group1p+(address<<2) >> 2]|0;
 
     case 2:
         return h[group2p+(address<<2) >> 2]|0;
-
+    case 8:
+        return 0x0;
     case 9:
         // pic
         switch (address|0) {
@@ -433,7 +437,6 @@ function GetSPR(idx) {
         break;
     default:
         break;
-
     }
 
     if ((group|0) != 0) {
@@ -446,26 +449,16 @@ function GetSPR(idx) {
     case 17: // SPR_SR
         return GetFlags()|0;
 
+    case 0: // SPR_VR
     case 1: // SPR_UPR
-        // UPR present
-        // data mmu present
-        // instruction mmu present
-        // PIC present (architecture manual seems to be wrong here)
-        // Tick timer present
-        return 0x619|0;
-
     case 4: // SPR_IMMUCFGR
+    case 5: // SPR_DCCFGR
+    case 6: // SPR_ICCFGR
     case 3: // SPR_DMMUCFGR
     case 48: // SPR_EEAR_BASE
     case 32: // SPR_EEPCR_BASE
-    case 64:  // SPR_ESR_BASE
+    case 64: // SPR_ESR_BASE
         return h[group0p+(idx<<2) >> 2]|0;
-    case 6: // SPR_ICCFGR
-        return 0x48|0;
-    case 5: // SPR_DCCFGR
-        return 0x48|0;
-    case 0: // SPR_VR
-        return 0x12000001|0;
     default:
         DebugMessage(ERROR_UNKNOWN|0);
         //DebugMessage("Error in GetSPR: address unknown");
@@ -976,15 +969,6 @@ function Step(steps, clockspeed) {
             rindex = (ins >> 21) & 0x1F;
             r[rindex << 2 >> 2] = ((ins & 0xFFFF) << 16); // movhi
             break;
-        case 0x7:
-            // halt emulator specific
-            if (TTMR & (1 << 28)) break; // don't go idle if a timer interrupt is pending
-            pc = nextpc;
-            nextpc = nextpc + 1|0;
-            delayedins = 0;
-            return steps|0;
-            
-        break;
 
         case 0x8:
             //sys and trap
@@ -1238,6 +1222,12 @@ function Step(steps, clockspeed) {
             delayedins = 0;
             steps = steps - 1|0;
             SetSPR(r[((ins >> 14) & 0x7C)>>2] | imm, r[((ins >> 9) & 0x7C)>>2]|0);
+            if (doze) { // doze
+                doze = 0x0;               
+                if (!(TTMR & (1 << 28))) {
+                    return steps|0;
+                }
+            }
             continue;
 
        case 0x32:

@@ -81,7 +81,6 @@ function SafeCPU(ram) {
     this.SR_FO = true; // Fixed One, always set
     this.SR_SUMRA = false; // SPRS User Mode Read Access, or TRAP exception disable?
     this.SR_CID = 0x0; //Context ID
-
     
     this.Reset();
 }
@@ -94,6 +93,16 @@ SafeCPU.prototype.Reset = function() {
 
     this.group0[SPR_IMMUCFGR] = 0x18; // 0 ITLB has one way and 64 sets
     this.group0[SPR_DMMUCFGR] = 0x18; // 0 DTLB has one way and 64 sets
+    this.group0[SPR_ICCFGR] = 0x48;
+    this.group0[SPR_DCCFGR] = 0x48;
+    this.group0[SPR_VR] = 0x12000001;
+
+    // UPR present
+    // data mmu present
+    // instruction mmu present
+    // PIC present (architecture manual seems to be wrong here)
+    // Tick timer present
+    this.group0[SPR_UPR] = 0x619;
 
     this.Exception(EXCEPT_RESET, 0x0); // set pc values
     this.pc = this.nextpc;
@@ -202,12 +211,6 @@ SafeCPU.prototype.CheckForInterrupt = function () {
 
 SafeCPU.prototype.RaiseInterrupt = function (line) {
     var lmask = 1 << line;
-/*
-    if (this.PICSR & lmask) {
-        // Interrupt already signaled and pending
-        // DebugMessage("Warning: Int pending, ignored");
-    }
-*/
     this.PICSR |= lmask;
     this.CheckForInterrupt();
 };
@@ -221,19 +224,27 @@ SafeCPU.prototype.SetSPR = function (idx, x) {
     var group = (idx >> 11) & 0x1F;
 
     switch (group) {
+    case 0:
+        if (address == SPR_SR) {
+            this.SetFlags(x);
+        }
+        this.group0[address] = x;
+        break;
     case 1:
         // Data MMU
         this.group1[address] = x;
-        return;
+        break;
     case 2:
         // ins MMU
         this.group2[address] = x;
-        return;
+        break;
     case 3:
         // data cache, not supported
     case 4:
         // ins cache, not supported
-        return;
+        break;
+    case 8:
+        break;
     case 9:
         // pic
         switch (address) {
@@ -253,7 +264,7 @@ SafeCPU.prototype.SetSPR = function (idx, x) {
             DebugMessage("Error in SetSPR: interrupt address not supported");
             abort();
         }
-        return;
+        break;
     case 10:
         //tick timer
         switch (address) {
@@ -269,33 +280,12 @@ SafeCPU.prototype.SetSPR = function (idx, x) {
             abort();
             break;
         }
-        return;
+        break;
 
     default:
-        break;
-    }
-
-    if (group != 0) {
         DebugMessage("Error in SetSPR: group " + group + " not found");
         abort();
-    }
-
-    switch (address) {
-    case SPR_SR:
-        this.SetFlags(x);
         break;
-    case SPR_EEAR_BASE:
-        this.group0[SPR_EEAR_BASE] = x;
-        break;
-    case SPR_EPCR_BASE:
-        this.group0[SPR_EPCR_BASE] = x;
-        break;
-    case SPR_ESR_BASE:
-        this.group0[SPR_ESR_BASE] = x;
-        break;
-    default:
-        DebugMessage("Error in SetSPR: address " + hex8(address) + " not found");
-        abort();
     }
 };
 
@@ -304,10 +294,17 @@ SafeCPU.prototype.GetSPR = function (idx) {
     var group = (idx >> 11) & 0x1F;
 
     switch (group) {
+    case 0:
+        if (address == SPR_SR) {
+            return this.GetFlags();
+        }
+        return this.group0[address];
     case 1:
         return this.group1[address];
     case 2:
         return this.group2[address];
+    case 8:
+        return 0x0;
 
     case 9:
         // pic
@@ -337,42 +334,11 @@ SafeCPU.prototype.GetSPR = function (idx) {
         }
         break;
     default:
+        DebugMessage("Error in GetSPR: group " + group +  " unknown");
+        abort();
         break;
     }
 
-    if (group != 0) {
-        DebugMessage("Error in GetSPR: group " + group +  " unknown");
-        abort();
-    }
-
-    switch (idx) {
-    case SPR_SR:
-        return this.GetFlags();
-
-    case SPR_UPR:
-        // UPR present
-        // data mmu present
-        // instruction mmu present
-        // PIC present (architecture manual seems to be wrong here)
-        // Tick timer present
-        return 0x619;
-
-    case SPR_IMMUCFGR:
-    case SPR_DMMUCFGR:
-    case SPR_EEAR_BASE:
-    case SPR_EPCR_BASE:
-    case SPR_ESR_BASE:
-        return this.group0[idx];
-    case SPR_ICCFGR:
-        return 0x48;
-    case SPR_DCCFGR:
-        return 0x48;
-    case SPR_VR:
-        return 0x12000001;
-    default:
-        DebugMessage("Error in GetSPR: address unknown");
-        abort();
-    }
 };
 
 SafeCPU.prototype.Exception = function (excepttype, addr) {
@@ -611,11 +577,6 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
             } else {
                 r[rindex] = ((ins & 0xFFFF) << 16); // movhi
             }
-            break;
-
-        case 0x7: 
-            // halt
-            // the safe cpu should ignore it for now. 
             break;
 
         case 0x8:
