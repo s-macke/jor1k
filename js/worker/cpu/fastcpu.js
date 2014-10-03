@@ -436,33 +436,10 @@ function GetSPR(idx) {
         }
         break;
     default:
-        break;
-    }
-
-    if ((group|0) != 0) {
         DebugMessage(ERROR_UNKNOWN|0);
         //DebugMessage("Error in GetSPR: group unknown");
         abort();
-    }
-
-    switch (idx|0) {
-    case 17: // SPR_SR
-        return GetFlags()|0;
-
-    case 0: // SPR_VR
-    case 1: // SPR_UPR
-    case 4: // SPR_IMMUCFGR
-    case 5: // SPR_DCCFGR
-    case 6: // SPR_ICCFGR
-    case 3: // SPR_DMMUCFGR
-    case 48: // SPR_EEAR_BASE
-    case 32: // SPR_EEPCR_BASE
-    case 64: // SPR_ESR_BASE
-        return h[group0p+(idx<<2) >> 2]|0;
-    default:
-        DebugMessage(ERROR_UNKNOWN|0);
-        //DebugMessage("Error in GetSPR: address unknown");
-        abort();
+        break;
     }
     return 0|0;
 }

@@ -376,67 +376,11 @@ CPU.prototype.GetSPR = function (idx) {
         }
         break;
     default:
+        DebugMessage("Error in GetSPR: group " + group +  " unknown");
+        abort();
         break;
     }
 
-    if (group != 0) {
-        DebugMessage("Error in GetSPR: group " + group +  " unknown");
-        abort();
-    }
-
-//    return this.group0[address];
-
-    switch (idx) {
-    case SPR_SR:
-        return this.GetFlags();
-
-    case SPR_ICCFGR:
-    case SPR_DCCFGR:
-    case SPR_VR:
-    case SPR_UPR:
-    case SPR_IMMUCFGR:
-    case SPR_DMMUCFGR:
-    case SPR_EEAR_BASE:
-    case SPR_EPCR_BASE:
-    case SPR_ESR_BASE:
-        return this.group0[idx];
-    case 0x421:
-    case 0x422:
-    case 0x423:
-    case 0x424:
-    case 0x425:
-    case 0x426:
-    case 0x427:
-    case 0x428:
-    case 0x429:
-    case 0x42A:
-    case 0x42B:
-    case 0x42C:
-    case 0x42D:
-    case 0x42E:
-    case 0x42F:
-    case 0x430:
-    case 0x431:
-    case 0x432:
-    case 0x433:
-    case 0x434:
-    case 0x435:
-    case 0x435:
-    case 0x436:
-    case 0x437:
-    case 0x438:
-    case 0x439:
-    case 0x43A:
-    case 0x43B:
-    case 0x43C:
-    case 0x43D:
-    case 0x43E:
-        return this.group0[idx];
-         
-    default:
-        DebugMessage("Error in GetSPR: address " + hex8(idx) + " unknown");
-        abort();
-    }
 };
 
 CPU.prototype.Exception = function (excepttype, addr) {
