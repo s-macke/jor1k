@@ -246,6 +246,7 @@ System.prototype.ClearInterrupt = function (line) {
 }
 
 System.prototype.PrintState = function() {
+    var r = new Uint32Array(this.heap);
     DebugMessage("Current state of the machine")
     //DebugMessage("clock: " + hex8(cpu.clock));
     DebugMessage("PC: " + hex8(this.cpu.pc<<2));
@@ -257,10 +258,10 @@ System.prototype.PrintState = function() {
 
     for (var i = 0; i < 32; i += 4) {
         DebugMessage("   r" + (i + 0) + ": " +
-            hex8(this.cpu.r[i + 0]) + "   r" + (i + 1) + ": " +
-            hex8(this.cpu.r[i + 1]) + "   r" + (i + 2) + ": " +
-            hex8(this.cpu.r[i + 2]) + "   r" + (i + 3) + ": " +
-            hex8(this.cpu.r[i + 3]));
+            hex8(r[i + 0]) + "   r" + (i + 1) + ": " +
+            hex8(r[i + 1]) + "   r" + (i + 2) + ": " +
+            hex8(r[i + 2]) + "   r" + (i + 3) + ": " +
+            hex8(r[i + 3]));
     }
     
     if (this.cpu.delayedins) {
