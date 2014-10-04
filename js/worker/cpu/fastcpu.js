@@ -208,6 +208,12 @@ function ProgressTime(delta) {
     TTCR = (TTCR + delta)|0;
 }
 
+function GetTicks() {
+    if ((TTMR >> 30) == 0) return -1;
+    return (TTCR & 0xFFFFFFF)|0;
+}
+
+
 function AnalyzeImage() { // get addresses for fast refill
     boot_dtlb_misshandler_address = h[ramp+0x900 >> 2]|0;
     boot_itlb_misshandler_address = h[ramp+0xA00 >> 2]|0;
@@ -1538,6 +1544,7 @@ return {
     GetState: GetState,    
     GetTimeToNextInterrupt: GetTimeToNextInterrupt,
     ProgressTime: ProgressTime,
+    GetTicks: GetTicks,
     RaiseInterrupt: RaiseInterrupt,
     ClearInterrupt: ClearInterrupt,
     AnalyzeImage: AnalyzeImage,

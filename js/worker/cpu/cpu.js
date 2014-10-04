@@ -154,6 +154,11 @@ CPU.prototype.GetTimeToNextInterrupt = function () {
     return delta;
 }
 
+CPU.prototype.GetTicks = function () {
+    if ((this.TTMR >> 30) == 0) return -1;
+    return this.TTCR & 0xFFFFFFF;
+}
+
 CPU.prototype.ProgressTime = function (delta) {
     this.TTCR = (this.TTCR + delta) & 0xFFFFFFFF;
 }
