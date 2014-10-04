@@ -165,6 +165,7 @@ if (typeof Math.imul == "undefined") {
         Int32Array : Int32Array,
         Float32Array : Float32Array,
         Uint8Array : Uint8Array,
+        Uint16Array : Uint16Array,
         Math : Math
     };
     var foreign = 

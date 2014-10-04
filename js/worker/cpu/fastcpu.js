@@ -51,8 +51,10 @@ var EXCEPT_TRAP = 0xE00; // trap
 
 var r = new stdlib.Int32Array(heap); // registers
 var f = new stdlib.Float32Array(heap); // registers
+
 var h = new stdlib.Int32Array(heap);
 var b = new stdlib.Uint8Array(heap);
+var w = new stdlib.Uint16Array(heap);
 
 
 var rp = 0x0; // pointer to registers, not used
@@ -1068,7 +1070,7 @@ function Step(steps, clockspeed) {
                 break;
             }
             if ((paddr|0) >= 0) {
-                r[((ins >> 19) & 0x7C)>>2] = ((b[ramp + ((paddr ^ 2)+1)|0] << 8) | b[ramp + (paddr ^ 2)|0]);
+                r[((ins >> 19) & 0x7C)>>2] = w[ramp + (paddr ^ 2) >> 1];
             } else {
                 r[((ins >> 19) & 0x7C)>>2] = (ReadMemory16(paddr|0)|0);
             }
@@ -1082,7 +1084,7 @@ function Step(steps, clockspeed) {
                 break;
             }
             if ((paddr|0) >= 0) {
-                r[((ins >> 19) & 0x7C)>>2] = (((b[ramp + ((paddr ^ 2)+1)|0] << 8) | b[ramp + (paddr ^ 2)|0]) << 16) >> 16;
+                r[((ins >> 19) & 0x7C)>>2] =  (w[ramp + (paddr ^ 2) >> 1] << 16) >> 16;
             } else {
                 r[((ins >> 19) & 0x7C)>>2] = ((ReadMemory16(paddr|0)|0) << 16) >> 16;
             }
@@ -1354,8 +1356,7 @@ function Step(steps, clockspeed) {
                 break;
             }
             if ((paddr|0) >= 0) {
-                b[ramp + ((paddr ^ 2)+1)|0] = r[((ins >> 9) & 0x7C)>>2] >> 8;
-                b[ramp + (paddr ^ 2)|0] = r[((ins >> 9) & 0x7C)>>2] & 0xFF;
+                w[ramp + (paddr ^ 2) >> 1] = r[((ins >> 9) & 0x7C)>>2];
             } else {
                 WriteMemory16(paddr|0, r[((ins >> 9) & 0x7C)>>2]|0);
             }
