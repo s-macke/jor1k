@@ -129,6 +129,7 @@ System.prototype.Reset = function() {
     this.atadev.Reset();
     this.tsdev.Reset();
     this.snddev.Reset();
+    this.rtcdev.Reset();
     this.kbddev.Reset();
     this.virtiodev.Reset();
     this.virtio9pdev.Reset();
@@ -203,6 +204,7 @@ if (typeof Math.imul == "undefined") {
     this.tsdev = new TouchscreenDev(this);
     this.kbddev = new KeyboardDev(this);
     this.snddev = new SoundDev(this, this.ram);
+    this.rtcdev = new RTCDev(this);
 
     this.filesystem = new FS();
     this.virtio9pdev = new Virtio9p(this.ram, this.filesystem);
@@ -217,6 +219,7 @@ if (typeof Math.imul == "undefined") {
     this.ram.AddDevice(this.fbdev, 0x91000000, 0x1000);
     this.ram.AddDevice(this.tsdev, 0x93000000, 0x1000);
     this.ram.AddDevice(this.kbddev, 0x94000000, 0x100);
+    this.ram.AddDevice(this.rtcdev, 0x99000000, 0x1000);
 
     this.instructionsperloop = 0x40000;
     this.ips = 0; // external instruction per second counter
