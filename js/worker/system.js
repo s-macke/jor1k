@@ -227,10 +227,13 @@ if (typeof Math.imul == "undefined") {
     this.timercyclesperinstruction = 1; // clock cycles per instruction
     this.idletime = 0; // start time of the idle routine
     this.idlemaxwait = 0; // maximum waiting time in cycles
+
+    this.lastlooptime = -1;
+    this.internalips = 0x0;
     
     // constants
     this.loopspersecond = 100; // main loops per second, to keep the system responsive
-    this.cyclesperms = 20000; // 20 MHz    
+    this.cyclesperms = 20000; // 20 MHz
 }
 
 System.prototype.RaiseInterrupt = function(line) {
@@ -385,12 +388,12 @@ System.prototype.HandleHalt = function() {
 
 System.prototype.MainLoop = function() {
     if (this.status != SYSTEM_RUN) return;
-    var time = GetMilliseconds();
     SendToMaster("execute", 0);
     var stepsleft = this.cpu.Step(this.instructionsperloop, this.timercyclesperinstruction);
     var totalsteps = this.instructionsperloop - stepsleft;
     totalsteps++; // at least one instruction
     this.ips += totalsteps;
+    this.internalips += totalsteps;
     this.uartdev0.RxRateLimitBump(totalsteps);
     this.uartdev1.RxRateLimitBump(totalsteps);
 
@@ -398,21 +401,27 @@ System.prototype.MainLoop = function() {
 
     if (!stepsleft) {
       // recalibrate timer
-      var delta = GetMilliseconds() - time;
-      if (delta > 1 && totalsteps > 1000)
+      if (this.lastlooptime < 1) {
+          this.lastlooptime = GetMilliseconds();
+          return; // don't calibrate, because we don't have the data
+      }
+      var delta = GetMilliseconds() - this.lastlooptime;
+      if (delta > 50 && this.internalips > 2000) // we need statistics for calibration
       {
-          var ipms = totalsteps / delta; // ipms (per millisecond) of current run
+          var ipms = this.internalips / delta; // ipms (per millisecond) of current run
           this.instructionsperloop = Math.floor(ipms*1000. / this.loopspersecond);
-          this.instructionsperloop = this.instructionsperloop<1000?1000:this.instructionsperloop;
+          this.instructionsperloop = this.instructionsperloop<2000?2000:this.instructionsperloop;
           this.instructionsperloop = this.instructionsperloop>4000000?4000000:this.instructionsperloop;    
     
           this.timercyclesperinstruction = Math.floor(this.cyclesperms * 64 / ipms);
           this.timercyclesperinstruction  = this.timercyclesperinstruction<=1?1:this.timercyclesperinstruction;
           this.timercyclesperinstruction  = this.timercyclesperinstruction>=1000?1000:this.timercyclesperinstruction;
-          this.internalips = 0x0;
+          //reset the integration parameters
+          this.lastlooptime = GetMilliseconds();
+          this.internalips = 0;
       }
     } else { // stepsleft != 0 indicates CPU idle
-      
+      this.lastlooptime = -1;
       // uart may raise an interrupt if the fifo is non-empty
       if( this.uartdev0.HaltPending() && this.uartdev1.HaltPending()) {
         this.HandleHalt(); 
