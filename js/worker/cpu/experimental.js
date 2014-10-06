@@ -85,15 +85,21 @@ var instlblookup = -1;
 var read32tlblookup = -1;
 var read8stlblookup = -1;
 var read8utlblookup = -1;
+var read16stlblookup = -1;
+var read16utlblookup = -1;
 var write32tlblookup = -1;
 var write8tlblookup = -1;
+var write16tlblookup = -1;
 
 var instlbcheck = -1;
 var read32tlbcheck = -1;
 var read8stlbcheck = -1;
 var read8utlbcheck = -1;
+var read16stlbcheck = -1;
+var read16utlbcheck = -1;
 var write32tlbcheck = -1;
 var write8tlbcheck = -1;
+var write16tlbcheck = -1;
 
 var EA = -1; // hidden register for atomic lwa and swa operation
 
@@ -167,14 +173,20 @@ function InvalidateTLB() {
     read32tlblookup = -1;
     read8stlblookup = -1;
     read8utlblookup = -1;
+    read16stlblookup = -1;
+    read16utlblookup = -1;
     write32tlblookup = -1;
     write8tlblookup = -1;
+    write16tlblookup = -1;
     instlbcheck = -1;
     read32tlbcheck = -1;
     read8stlbcheck = -1;
     read8utlbcheck = -1;
+    read16stlbcheck = -1;
+    read16utlbcheck = -1;
     write32tlbcheck = -1;
     write8tlbcheck = -1;
+    write16tlbcheck = -1;
 }
 
 
@@ -482,14 +494,20 @@ function Exception(excepttype, addr) {
     read32tlblookup = 0;
     read8stlblookup = 0;
     read8utlblookup = 0;
+    read16stlblookup = 0;
+    read16utlblookup = 0;
     write32tlblookup = 0;
     write8tlblookup = 0;
+    write16tlblookup = 0;
     instlbcheck = 0;
     read32tlbcheck = 0;
     read8utlbcheck = 0;
     read8stlbcheck = 0;
+    read16utlbcheck = 0;
+    read16stlbcheck = 0;
     write32tlbcheck = 0;
     write8tlbcheck = 0;
+    write16tlbcheck = 0;
 
     fence = ppc|0;
     nextpc = (except_vector>>2)|0;
@@ -790,6 +808,9 @@ function Step(steps, clockspeed) {
             } 
 
             dsteps = dsteps + ((ppc - ppcorigin) >> 2)|0;
+//h[0x100 + ((ppc|0) - (ppcorigin|0)) >> 2] = (h[0x100 + ((ppc|0) - (ppcorigin|0)) >> 2]|0) + 1|0;
+
+
 
         // do this not so often
         if ((dsteps|0) >= 64)
@@ -1072,10 +1093,21 @@ function Step(steps, clockspeed) {
         case 0x25:
             // lhz 
             vaddr = (r[((ins >> 14) & 0x7C)>>2]|0) + ((ins << 16) >> 16)|0;
+            if ((read16utlbcheck ^ vaddr) >> 13) {
+                paddr = DTLBLookup(vaddr, 0)|0;
+                if ((paddr|0) == -1) {
+                    break;
+                }
+                read16utlbcheck = vaddr;
+                read16utlblookup = ((paddr^vaddr) >> 13) << 13;
+            }
+            paddr = read16utlblookup ^ vaddr;
+/*
             paddr = DTLBLookup(vaddr, 0)|0;
             if ((paddr|0) == -1) {
                 break;
             }
+*/
             if ((paddr|0) >= 0) {
                 r[((ins >> 19) & 0x7C)>>2] = w[ramp + (paddr ^ 2) >> 1];
             } else {
@@ -1086,10 +1118,21 @@ function Step(steps, clockspeed) {
         case 0x26:
             // lhs
             vaddr = (r[((ins >> 14) & 0x7C)>>2]|0) + ((ins << 16) >> 16)|0;
+            if ((read16stlbcheck ^ vaddr) >> 13) {
+                paddr = DTLBLookup(vaddr, 0)|0;
+                if ((paddr|0) == -1) {
+                    break;
+                }
+                read16stlbcheck = vaddr;
+                read16stlblookup = ((paddr^vaddr) >> 13) << 13;
+            }
+            paddr = read16stlblookup ^ vaddr;
+/*
             paddr = DTLBLookup(vaddr, 0)|0;
             if ((paddr|0) == -1) {
                 break;
             }
+*/
             if ((paddr|0) >= 0) {
                 r[((ins >> 19) & 0x7C)>>2] =  (w[ramp + (paddr ^ 2) >> 1] << 16) >> 16;
             } else {
@@ -1355,10 +1398,20 @@ function Step(steps, clockspeed) {
             // sh
             imm = ((((ins >> 10) & 0xF800) | (ins & 0x7FF)) << 16) >> 16;
             vaddr = (r[((ins >> 14) & 0x7C)>>2]|0) + imm|0;
+            if ((write16tlbcheck ^ vaddr) >> 13) {
+                paddr = DTLBLookup(vaddr, 1)|0;
+                if ((paddr|0) == -1) {
+                    break;
+                }
+                write16tlbcheck = vaddr;
+                write16tlblookup = ((paddr^vaddr) >> 13) << 13;
+            }
+            paddr = write16tlblookup ^ vaddr;
+/*
             paddr = DTLBLookup(vaddr|0, 1)|0;
             if ((paddr|0) == -1) {
                 break;
-            }
+            }*/
             if ((paddr|0) >= 0) {
                 w[ramp + (paddr ^ 2) >> 1] = r[((ins >> 9) & 0x7C)>>2];
             } else {
