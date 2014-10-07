@@ -2,6 +2,7 @@
 function FastCPU(stdlib, foreign, heap) {
 "use asm";
 
+
 //var imul = stdlib.Math.imul;
 var imul = foreign.imul;
 var floor = stdlib.Math.floor;
@@ -56,7 +57,6 @@ var h = new stdlib.Int32Array(heap);
 var b = new stdlib.Uint8Array(heap);
 var w = new stdlib.Uint16Array(heap);
 
-
 var rp = 0x0; // pointer to registers, not used
 var ramp = 0x100000;
 
@@ -65,19 +65,20 @@ var group1p = 0x4000; // data tlb registers
 var group2p = 0x6000; // instruction tlb registers
 
 // define variables and initialize
-var pc = 0x0; // instruction pointer in multiples of four
-var delayedins = 0; // the current instruction is an delayed instruction, one cycle before a jump
 
-var fence = 0;
+var pc = 0x0;
 var ppc = 0;
 var ppcorigin = 0;
-var pcorigin = 0;
+var pcbase = -4; // helper variable to calculate the real pc
+var fence = 0; // the ppc pointer to the next jump or page boundary
+
+var delayedins = 0; // the current instruction is an delayed instruction, one cycle before a jump
 
 var nextpc = 0x0; // pointer to the next instruction after the fence
-var jump = 0x0; // inprinciple the jump variable should contain the same as nextpc2.
+var jump = 0x0; // in principle the jump variable should contain the same as nextpc.
                 // But for delayed ins at page boundaries, this is taken as temporary
-                // storage for nextpc2
-var delayedins_at_page_boundary = 0;
+                // storage for nextpc
+var delayedins_at_page_boundary = 0; //flag
 
 
 // fast tlb lookup tables, invalidate
@@ -161,9 +162,10 @@ function Reset() {
     // PIC present (architecture manual seems to be wrong here)
     // Tick timer present
     h[group0p+(SPR_UPR<<2) >> 2] = 0x619;
+
     ppc = 0;
     ppcorigin = 0;
-    pcorigin = 0;
+    pcbase = -4;
 
     Exception(EXCEPT_RESET, 0x0);
 }
@@ -191,12 +193,12 @@ function InvalidateTLB() {
 
 
 function GetStat() {
-    return pc|0;
+    return (pc>>>2)|0;
 }
 
 function PutState() {
-    pc = h[(0x100 + 0) >> 2]|0;
-    nextpc = h[(0x100 + 4) >> 2]|0;
+    pc = h[(0x100 + 0) >> 2] << 2;
+    nextpc = h[(0x100 + 4) >> 2] << 2;
     delayedins = h[(0x100 + 8) >> 2]|0;
     TTMR = h[(0x100 + 16) >> 2]|0;
     TTCR = h[(0x100 + 20) >> 2]|0;
@@ -205,11 +207,28 @@ function PutState() {
     boot_dtlb_misshandler_address = h[(0x100 + 32) >> 2]|0;
     boot_itlb_misshandler_address = h[(0x100 + 36) >> 2]|0;
     current_pgd = h[(0x100 + 40) >> 2]|0;
+
+    // we have to call the fence
+    ppc = 0x0;  
+    ppcorigin = 0x0; 
+    fence = 0x0;
+
+    if (delayedins|0) { 
+    }
+    nextpc = pc;    
+
+
+
 }
 
 function GetState() {
-    h[(0x100 + 0) >> 2] = pc|0;
-    h[(0x100 + 4) >> 2] = nextpc|0;
+    // pc is always valid when this function is called
+    h[(0x100 + 0) >> 2] = pc >>> 2;
+
+    h[(0x100 + 4) >> 2] = (pc+4) >>> 2;
+    if ((ppc|0) == (fence|0)) {
+        h[(0x100 + 4) >> 2] = nextpc >>> 2; 
+    }
     h[(0x100 + 8) >> 2] = delayedins|0;
     h[(0x100 + 12) >> 2] = 0;
     h[(0x100 + 16) >> 2] = TTMR|0;
@@ -510,7 +529,7 @@ function Exception(excepttype, addr) {
     write16tlbcheck = 0;
 
     fence = ppc|0;
-    nextpc = (except_vector>>2)|0;
+    nextpc = except_vector;
 
     switch (excepttype|0) {
 
@@ -521,8 +540,8 @@ function Exception(excepttype, addr) {
     case 0x900: // EXCEPT_DTLBMISS
     case 0xE00: // EXCEPT_TRAP
     case 0x200: // EXCEPT_BUSERR
-        pc = (pcorigin-1) + ((ppc-ppcorigin) >> 2)|0;
-        SetSPR(SPR_EPCR_BASE, (pc<<2) - (delayedins ? 4 : 0)|0);
+        pc = pcbase + ppc|0;
+        SetSPR(SPR_EPCR_BASE, pc - (delayedins ? 4 : 0)|0);
         break;
 
     case 0xA00: // EXCEPT_ITLBMISS
@@ -530,12 +549,12 @@ function Exception(excepttype, addr) {
     case 0x500: // EXCEPT_TICK
     case 0x800: // EXCEPT_INT
         // per definition, the pc must be valid here
-        SetSPR(SPR_EPCR_BASE, (pc<<2) - (delayedins ? 4 : 0)|0);
+        SetSPR(SPR_EPCR_BASE, pc - (delayedins ? 4 : 0)|0);
         break;
 
     case 0xC00: // EXCEPT_SYSCALL
-        pc = (pcorigin-1) + ((ppc-ppcorigin) >> 2)|0;
-        SetSPR(SPR_EPCR_BASE, (pc<<2) + 4 - (delayedins ? 4 : 0)|0);
+        pc = pcbase + ppc|0;
+        SetSPR(SPR_EPCR_BASE, pc + 4 - (delayedins ? 4 : 0)|0);
         break;
 
     default:
@@ -794,7 +813,7 @@ function Step(steps, clockspeed) {
     var tlbtr = 0x0;
     var delta = 0x0;
 
-    var dsteps = 0;
+    var dsteps = 0; // small counter
 
 // -----------------------------------------------------
 
@@ -808,13 +827,10 @@ function Step(steps, clockspeed) {
             } 
 
             dsteps = dsteps + ((ppc - ppcorigin) >> 2)|0;
-//h[0x100 + ((ppc|0) - (ppcorigin|0)) >> 2] = (h[0x100 + ((ppc|0) - (ppcorigin|0)) >> 2]|0) + 1|0;
-
-
 
         // do this not so often
         if ((dsteps|0) >= 64)
-        if ((!delayedins_at_page_boundary|0)) { // for now. Not sure if we need this
+        if (!(delayedins_at_page_boundary|0)) { // for now. Not sure if we need this
 
             dsteps = dsteps - 64|0;
             steps = steps - 64|0;
@@ -850,57 +866,59 @@ function Step(steps, clockspeed) {
                 Exception(EXCEPT_INT, h[group0p + (SPR_EEAR_BASE<<2)>>2]|0);
                 pc = nextpc;
             }
-
         }
 
         // Get Instruction Fast version
-        if ((instlbcheck ^ pc) >> 11) // short check if it is still the correct page
+        if ((instlbcheck ^ pc) & 0xFFFFE000) // short check if it is still the correct page
         {
             instlbcheck = pc; // save the new page, lower 11 bits are ignored
             if (!SR_IME) {
                 instlblookup = 0x0;
             } else {
-                setindex = (pc >> 11) & 63; // check this values
+                setindex = (pc >> 13) & 63; // check this values
                 tlmbr = h[group2p + ((0x200 | setindex) << 2) >> 2]|0;
                 // test if tlmbr is valid
                 if ((tlmbr & 1) == 0) {
-                    if (ITLBRefill(pc<<2, 64)|0) {
+                    if (ITLBRefill(pc, 64)|0) {
                         tlmbr = h[group2p + ((0x200 | setindex)<<2) >> 2]|0; // reload the new value
                     } else {
                         // just make sure he doesn't count this 'continue' as steps
                         ppcorigin = ppc;
+                        delayedins_at_page_boundary = 0;
                         continue;
                     }
                 }
-                if ((tlmbr >> 19) != (pc >> 17)) {
-                    if (ITLBRefill(pc<<2, 64)|0) {
+                if ((tlmbr >> 19) != (pc >> 19)) {
+                    if (ITLBRefill(pc, 64)|0) {
                         tlmbr = h[group2p + ((0x200 | setindex)<<2) >> 2]|0; // reload the new value
                     } else {
                         // just make sure he doesn't count this 'continue' as steps
                         ppcorigin = ppc;
+                        delayedins_at_page_boundary = 0;
                         continue;
                     }
                 }
                 tlbtr = h[group2p + ((0x280 | setindex) << 2) >> 2]|0;
-                instlblookup = ((tlbtr ^ tlmbr) >> 13) << 11;
+                instlblookup = ((tlbtr ^ tlmbr) >> 13) << 13;
             }
         }
 
-            //set pc and set the correcponding physical pc pointer
+            // set pc and set the correcponding physical pc pointer
             //pc = pc;
-            pcorigin = pc;
-            ppc = ramp + ((instlblookup ^ pc)<<2)|0;
+            ppc = ramp + (instlblookup ^ pc)|0;
             ppcorigin = ppc;
-           // TODO Do we really consider all cases? itlbmiss for example? or timer at the same time?
+            pcbase = pc - 4 - ppcorigin|0;
+
            if (delayedins_at_page_boundary|0) {
                delayedins_at_page_boundary = 0;
                fence = ppc + 4|0;
                nextpc = jump;
            } else {
-               fence = ((ppc >> 13) + 1) << 13; // next page
-               nextpc = ((pc>>11) + 1) << 11;
+               fence  = ((ppc >> 13) + 1) << 13; // next page
+               nextpc = ((pc  >> 13) + 1) << 13;
            }
         }
+
         ins = h[ppc >> 2]|0;
         ppc = ppc + 4|0;
 
@@ -908,8 +926,8 @@ function Step(steps, clockspeed) {
         switch ((ins >> 26)&0x3F) {
         case 0x0:
             // j
-            pc = (pcorigin - 1) + ((ppc-ppcorigin) >> 2)|0;
-            jump = pc + ((ins << 6) >> 6)|0;
+            pc = pcbase + ppc|0;
+            jump = pc + ((ins << 6) >> 4)|0;
             if ((fence|0) == (ppc|0)) { // delayed instruction directly at page boundary
                 delayedins_at_page_boundary = 1;
             } else {
@@ -921,9 +939,9 @@ function Step(steps, clockspeed) {
 
         case 0x1:
             // jal
-            pc = (pcorigin - 1) + ((ppc-ppcorigin) >> 2)|0;
-            jump = pc + ((ins << 6) >> 6)|0;
-            r[9] = ((pc+1)<<2) + 4;
+            pc = pcbase + ppc|0;
+            jump = pc + ((ins << 6) >> 4)|0;
+            r[9] = pc + 8|0;
             if ((fence|0) == (ppc|0)) { // delayed instruction directly at page boundary
                 delayedins_at_page_boundary = 1;
             } else {
@@ -938,8 +956,8 @@ function Step(steps, clockspeed) {
             if (SR_F) {
                 break;
             }
-            pc = (pcorigin - 1) + ((ppc-ppcorigin) >> 2)|0;
-            jump = pc + ((ins << 6) >> 6)|0;
+            pc = pcbase + ppc|0;
+            jump = pc + ((ins << 6) >> 4)|0;
             if ((fence|0) == (ppc|0)) { // delayed instruction directly at page boundary
                 delayedins_at_page_boundary = 1;
             } else {
@@ -954,8 +972,8 @@ function Step(steps, clockspeed) {
             if (!SR_F) {
                 break;
             }
-            pc = (pcorigin - 1) + ((ppc-ppcorigin) >> 2)|0;
-            jump = pc + ((ins << 6) >> 6)|0;
+            pc = pcbase + ppc|0;
+            jump = pc + ((ins << 6) >> 4)|0;
             if ((fence|0) == (ppc|0)) { // delayed instruction directly at page boundary
                 delayedins_at_page_boundary = 1;
             } else {
@@ -986,7 +1004,7 @@ function Step(steps, clockspeed) {
 
         case 0x9:
             // rfe
-            jump = (GetSPR(SPR_EPCR_BASE)|0)>>2;
+            jump = GetSPR(SPR_EPCR_BASE)|0;
             InvalidateTLB();
             fence = ppc;
             nextpc = jump;
@@ -997,7 +1015,7 @@ function Step(steps, clockspeed) {
 
         case 0x11:
             // jr
-            jump = r[((ins >> 9) & 0x7C)>>2]>>2;
+            jump = r[((ins >> 9) & 0x7C)>>2]|0;
             if ((fence|0) == (ppc|0)) { // delayed instruction directly at page boundary
                 delayedins_at_page_boundary = 1;
             } else {
@@ -1009,9 +1027,9 @@ function Step(steps, clockspeed) {
 
         case 0x12:
             // jalr
-            pc = (pcorigin - 1) + ((ppc-ppcorigin) >> 2)|0;
-            jump = r[((ins >> 9) & 0x7C)>>2]>>2;
-            r[9] = ((pc+1)<<2) + 4;
+            pc = pcbase + ppc|0;
+            jump = r[((ins >> 9) & 0x7C)>>2]|0;
+            r[9] = pc + 8|0;
             if ((fence|0) == (ppc|0)) { // delayed instruction directly at page boundary
                 delayedins_at_page_boundary = 1;
             } else {
@@ -1252,7 +1270,7 @@ function Step(steps, clockspeed) {
         case 0x30:
             // mtspr
             imm = (ins & 0x7FF) | ((ins >> 10) & 0xF800);
-            //pc = (pcorigin-1) + ((ppc - ppcorigin) >> 2)|0;
+            //pc = pcbase + ppc|0;
             SetSPR(r[((ins >> 14) & 0x7C)>>2] | imm, r[((ins >> 9) & 0x7C)>>2]|0); // can raise an interrupt
             if (doze) { // doze
                 doze = 0x0;               
