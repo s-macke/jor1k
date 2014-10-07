@@ -50,20 +50,29 @@ function jor1kGUI(parameters)
     
     document.onkeypress = function(event) {
         if(this.IgnoreKeys()) return true;
+        if (this.lastMouseDownTarget == this.terminalcanvas) {
+            return this.terminput.OnKeyPress(event);
+        }
         this.SendToWorker("keypress", {keyCode:event.keyCode, charCode:event.charCode});
-        return this.terminput.OnKeyPress(event);
+        return false;
     }.bind(this);
 
     document.onkeydown = function(event) {
         if(this.IgnoreKeys()) return true;
+        if (this.lastMouseDownTarget == this.terminalcanvas) {
+            return this.terminput.OnKeyDown(event);
+        }
         this.SendToWorker("keydown", {keyCode:event.keyCode, charCode:event.charCode});
-        return this.terminput.OnKeyDown(event);
+        return false;
     }.bind(this);
 
     document.onkeyup = function(event) {
         if(this.IgnoreKeys()) return true;
+        if (this.lastMouseDownTarget == this.terminalcanvas) {
+            return this.terminput.OnKeyUp(event);
+        }
         this.SendToWorker("keyup", {keyCode:event.keyCode, charCode:event.charCode});
-        return this.terminput.OnKeyUp(event);
+        return false;
     }.bind(this);
 
     this.ethernet = new Ethernet(this.params.relayURL);
