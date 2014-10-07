@@ -47,9 +47,10 @@ GGames () {
 
 showmenu \
 "Graphic Games" \
-"ScummVM  - Monkey Island demo" \
-"PrBoom   - Doom" \
-"Toppler  - Jump and run. Climb a tower"
+"ScummVM            - Monkey Island demo" \
+"PrBoom             - Doom" \
+"Toppler            - Jump and run. Climb a tower" \
+"Frontier: Elite II - Space trading and combat simulator "
 
 case $? in
 	0 )
@@ -60,6 +61,9 @@ case $? in
 		prboom -height 400 ;;
 	3)
 		toppler ;;
+	4)
+		cd /usr/share/games/frontier
+		./frontier ;;
 esac
 	GGames
 }
