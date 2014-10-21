@@ -395,7 +395,6 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             var id = this.fs.Search(this.fid2inode[dirfd], name);
             if (id == -1) {
                    this.SendError(tag, "No such file or directory", ENOENT);
-                   this.fid2inode[nwfid] = -1;
                    this.SendReply(index);
                    break;
             }
