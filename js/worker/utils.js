@@ -202,7 +202,11 @@ function ArrayToStruct(typelist, input, struct, offset) {
                 struct[offset++] = (item.length >> 8) & 0xFF;
                 size += 2;
                 for (var j in item) {
-                    struct[offset++] = item.charCodeAt(j);
+                    var c = item.charCodeAt(j);
+                    if ((c < 32) || (c > 127)) {
+                        DebugMessage("Warning in Array to Struct: Unusual character detected");
+                    }
+                    struct[offset++] = c;
                     size += 1;
                 }
                 break;
@@ -252,7 +256,11 @@ function StructToArray(typelist, struct, offset) {
                 len += struct[offset++] << 8;
                 var str = '';
                 for (var j=0; j < len; j++) {
-                    str += String.fromCharCode(struct[offset++]);
+                    var c = struct[offset++];
+                    if ((c < 32) || (c > 127)) {
+                        DebugMessage("Warning in Struct to Array: Unusual character detected");
+                    }
+                    str += String.fromCharCode(c);
                 }
                 output.push(str);
                 break;
@@ -297,7 +305,11 @@ function StructToArray2(typelist, GetByte) {
                 len += GetByte() << 8;
                 var str = '';
                 for (var j=0; j < len; j++) {
-                    str += String.fromCharCode(GetByte());
+                    var c = GetByte();
+                    if ((c < 32) || (c > 127)) {
+                        DebugMessage("Warning in Struct to Array2: Unusual character detected");
+                    }
+                    str += String.fromCharCode(c);
                 }
                 output.push(str);
                 break;

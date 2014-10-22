@@ -135,8 +135,6 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             var fid = req[1];
             var name = req[2];
             //DebugMessage("[link] dfid=" + dfid + ", name=" + name); 
-            //var idx = this.fs.CreateSymlink(name, this.fid2inode[dfid], symgt);
-            //var inode =  this.fs.GetInode(idx);
             var inode = this.fs.CreateInode();
             var inodetarget = this.fs.GetInode(this.fid2inode[fid]);
             inode = inodetarget;
@@ -247,8 +245,8 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
         case 24: // getattr
             var req = StructToArray2(["w", "d"], GetByte);
             var fid = req[0];
-            //DebugMessage("[getattr]: fid=" + fid + " request mask=" + req[1]);
             var inode = this.fs.GetInode(this.fid2inode[fid]);
+            //DebugMessage("[getattr]: fid=" + fid + " name=" + inode.name + " request mask=" + req[1]);
             req[0] |= 0x1000; // P9_STATS_GEN
 
             req[0] = req[1]; // request mask
@@ -464,10 +462,12 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
                 idx = this.fs.Search(idx, walk[i]);
                 
                 if (idx == -1) {
+                   //DebugMessage("Could not find :" + walk[i]);
                    break;
                 }
                 offset += ArrayToStruct(["Q"], [this.fs.inodes[idx].qid], this.replybuffer, offset);
                 nwidx++;
+                //DebugMessage(this.fid2inode[nwfid]);
                 this.fid2inode[nwfid] = idx;
             }
             ArrayToStruct(["h"], [nwidx], this.replybuffer, 7);

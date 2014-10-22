@@ -272,6 +272,7 @@ FS.prototype.OnXMLLoaded = function(fs)
         }
     }
     DebugMessage("processed " + this.inodes.length + " inodes");
+    this.Check();
 }
 
 // The filesystem is responsible to add the correct time. This is a hack
@@ -444,7 +445,7 @@ FS.prototype.CreateTextFile = function(filename, parentid, str) {
 }
 
 FS.prototype.OpenInode = function(id, mode) {
-    var inode = this.inodes[id];
+    var inode = this.GetInode(id);
     var type = "";
     switch(inode.mode) {
         case S_IFREG: type = "File"; break;
@@ -510,6 +511,7 @@ FS.prototype.GetRoot = function() {
 
 
 FS.prototype.Search = function(idx, name) {
+    
     for(var i=0; i<this.inodes.length; i++) {
         if (this.inodes[i].status == STATUS_INVALID) continue;
         if (this.inodes[i].parentid != idx) continue;
@@ -538,33 +540,41 @@ FS.prototype.GetFullPath = function(idx) {
     return path.substring(1);
 }
 
-
-
 FS.prototype.Unlink = function(idx) {
+    if (idx == 0) return false; // root node cannot be deleted
+    var inode = this.GetInode(idx);
 
-    if ((this.inodes[idx].mode&S_IFMT) == S_IFDIR) {
+    if ((inode.mode&S_IFMT) == S_IFDIR) {
         for(var i=0; i<this.inodes.length; i++) {
             if (this.inodes[i].status == STATUS_INVALID) continue;
             if (this.inodes[i].parentid == idx) return false;
         }
     }
 
-    this.inodes[idx].data = new Uint8Array(0);
-    this.inodes[idx].size = 0;
-    this.inodes[idx].status = STATUS_INVALID;
-    this.inodes[this.inodes[idx].parentid].updatedir = true;
+    inode.data = new Uint8Array(0);
+    inode.size = 0;
+    inode.status = STATUS_INVALID;
+    this.inodes[inode.parentid].updatedir = true;
     return true;
 }
 
-
 FS.prototype.GetInode = function(idx)
 {
+    if (isNaN(idx)) {
+        DebugMessage("Error in filesystem: id is not a number ");
+        return 0;
+    }
+
+    if ((idx < 0) || (idx > this.inodes.length)) {
+        DebugMessage("Error in filesystem: Attempt to get inode with id " + idx);
+        return 0;
+    }
     return this.inodes[idx];
 }
 
 FS.prototype.ChangeSize = function(idx, newsize)
 {
-    var inode = this.inodes[idx];
+    var inode = this.GetInode(idx);
     var temp = inode.data;
     //DebugMessage("change size to: " + newsize);
     if (newsize == inode.size) return;
@@ -623,10 +633,38 @@ FS.prototype.MergeFile = function(file) {
 }
 
 
+FS.prototype.Check = function() {
+    for(var i=1; i<this.inodes.length; i++)
+    {
+        if (this.inodes[i].status == STATUS_INVALID) continue;
+        
+        var inode = this.GetInode(i);
+        if (inode.parentid < 0) {
+            DebugMessage("Error in filesystem: negative parent id " + i);
+        }
+        var n = inode.name.length;
+        if (n == 0) {
+            DebugMessage("Error in filesystem: inode with no name and id " + i);
+        }
+
+        for (var j in inode.name) {
+            var c = inode.name.charCodeAt(j);
+            if (c < 32) {
+                DebugMessage("Error in filesystem: Unallowed char in filename");
+            } else
+            if (c > 127) {
+                DebugMessage("Error in filesystem: Unallowed char in filename");
+            }
+        }
+    }
+
+}
+
+
 FS.prototype.FillDirectory = function(dirid) {
-    var inode = this.inodes[dirid];
+    var inode = this.GetInode(dirid);
     if (!inode.updatedir) return;
-    var parentid = this.inodes[dirid].parentid;
+    var parentid = inode.parentid;
     if (parentid == -1) parentid = 0; // if root directory point to the root directory
     
     // first get size
@@ -648,7 +686,7 @@ FS.prototype.FillDirectory = function(dirid) {
         ["Q", "d", "b", "s"],
         [this.inodes[dirid].qid, 
         offset+13+8+1+2+1, 
-        this.inodes[dirid].qid.mode>>8, 
+        this.inodes[dirid].mode>>8, 
         "."],
         inode.data, offset);
 
@@ -656,7 +694,7 @@ FS.prototype.FillDirectory = function(dirid) {
         ["Q", "d", "b", "s"],
         [this.inodes[parentid].qid,
         offset+13+8+1+2+2, 
-        this.inodes[dirid].qid.mode>>8, 
+        this.inodes[parentid].mode >> 8, 
         ".."],
         inode.data, offset);
 
@@ -668,7 +706,7 @@ FS.prototype.FillDirectory = function(dirid) {
         ["Q", "d", "b", "s"],
         [this.inodes[i].qid, 
         offset+13+8+1+2+this.inodes[i].name.length, 
-        this.inodes[i].qid.mode>>8, 
+        this.inodes[i].mode >> 8, 
         this.inodes[i].name], 
         inode.data, offset);
         //DebugMessage("Add file " + this.inodes[i].name);
