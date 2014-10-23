@@ -52,7 +52,7 @@ function Virtio9p(ramdev, filesystem) {
     this.configspace = [0x0, 0x9, 0x2F, 0x64, 0x65, 0x76, 0x2F, 0x72, 0x6F, 0x6F, 0x74 ]; // length of string and "/dev/root" string
     this.VERSION = "9P2000.L";
     this.IOUNIT = 4096;
-    this.replybuffer = new Uint8Array(0x2000);
+    this.replybuffer = new Uint8Array(0x2000); // twice the IOUNIT to be on the safe side
     this.replybuffersize = 0;
     
     this.fid2inode = [];
@@ -89,10 +89,10 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             var size = this.fs.GetTotalSize();
             var req = [];
             req[0] = 0x01021997;
-            req[1] = 4096; // optimal transfer block size
-            req[2] = 1000*1000*1024/req[1]; // free blocks, let's say 1GB
-            req[3] = req[2] - size/req[1]; // free blocks in fs
-            req[4] = req[2] - size/req[1]; // free blocks avail to non-superuser
+            req[1] = this.IOUNIT; // optimal transfer block size
+            req[2] = Math.floor(1024*1024*1024/req[1]); // free blocks, let's say 1GB
+            req[3] = req[2] - Math.floor(size/req[1]); // free blocks in fs
+            req[4] = req[2] - Math.floor(size/req[1]); // free blocks avail to non-superuser
             req[5] = this.fs.inodes.length; // total number of inodes
             req[6] = 1024*1024;
             req[7] = 0; // file system id?
@@ -260,7 +260,7 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             req[6] = (inode.major<<8) | (inode.minor); // device id low
             req[7] = inode.size; // size low
             req[8] = inode.size; // blk size low
-            req[9] = inode.size/512; // number of file system blocks
+            req[9] = Math.floor(inode.size/this.IOUNIT+1); // number of file system blocks
             req[10] = inode.atime; // atime
             req[11] = 0x0;
             req[12] = inode.mtime; // mtime
@@ -342,12 +342,11 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             var fid = req[0];
             var offset = req[1];
             var count = req[2];
-            //if (id == 40) DebugMessage("[treaddir]: fid=" + fid + " offset=" + offset + " count=" + count);
+            if (id == 40) DebugMessage("[treaddir]: fid=" + fid + " offset=" + offset + " count=" + count);
             //if (id == 116) DebugMessage("[read]: fid=" + fid + " offset=" + offset + " count=" + count);
-            if (id == 40) this.fs.FillDirectory(this.fid2inode[fid]);
             
             var inode = this.fs.GetInode(this.fid2inode[fid]);
-            if (inode.size < offset+count) count = inode.size-offset;
+            if (inode.size < offset+count) count = inode.size - offset;
             for(var i=0; i<count; i++)
                 this.replybuffer[7+4+i] = inode.data[offset+i];
             ArrayToStruct(["w"], [count], this.replybuffer, 7);

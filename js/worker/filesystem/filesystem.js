@@ -446,13 +446,18 @@ FS.prototype.CreateTextFile = function(filename, parentid, str) {
 
 FS.prototype.OpenInode = function(id, mode) {
     var inode = this.GetInode(id);
+    if ((inode.mode&S_IFMT) == S_IFDIR) {
+        this.FillDirectory(id);
+    }
+    /*
     var type = "";
-    switch(inode.mode) {
+    switch(inode.mode&S_IFMT) {
         case S_IFREG: type = "File"; break;
         case S_IFBLK: type = "Block Device"; break;
         case S_IFDIR: type = "Directory"; break;
         case S_IFCHR: type = "Character Device"; break;
     }
+    */
     //DebugMessage("open:" + this.GetFullPath(id) +  " type: " + type + " status:" + inode.status);
     if (inode.status == STATUS_ON_SERVER) {
         this.LoadFile(id);
@@ -686,7 +691,7 @@ FS.prototype.FillDirectory = function(dirid) {
         ["Q", "d", "b", "s"],
         [this.inodes[dirid].qid, 
         offset+13+8+1+2+1, 
-        this.inodes[dirid].mode>>8, 
+        this.inodes[dirid].mode >> 12, 
         "."],
         inode.data, offset);
 
@@ -694,7 +699,7 @@ FS.prototype.FillDirectory = function(dirid) {
         ["Q", "d", "b", "s"],
         [this.inodes[parentid].qid,
         offset+13+8+1+2+2, 
-        this.inodes[parentid].mode >> 8, 
+        this.inodes[parentid].mode >> 12, 
         ".."],
         inode.data, offset);
 
@@ -706,7 +711,7 @@ FS.prototype.FillDirectory = function(dirid) {
         ["Q", "d", "b", "s"],
         [this.inodes[i].qid, 
         offset+13+8+1+2+this.inodes[i].name.length, 
-        this.inodes[i].mode >> 8, 
+        this.inodes[i].mode >> 12, 
         this.inodes[i].name], 
         inode.data, offset);
         //DebugMessage("Add file " + this.inodes[i].name);
