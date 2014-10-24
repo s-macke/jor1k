@@ -13,9 +13,8 @@ More information can be found on the [Wiki][project wiki] pages.
  * [Wiki][project wiki] containing more detailed descriptions
 
 ### LICENSE
- * The program is distributed under the terms of the GNU General Public License v2 (GPLv2).
+ * The program is distributed under the terms of the Simplified BSD License. The license details can be found in the file "LICENSE.md"
  * The ACE editor is BSD licensed.
- * The bzip2 decompression code is licensed under the GNU Library General Public License (LGPL) version 2.
 
 ### Developer
 Sebastian Macke [simulationcorner.net](http://simulationcorner.net)
