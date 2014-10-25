@@ -115,7 +115,7 @@ VirtIODev.prototype.ReadReg32 = function (addr) {
             break;
 
         case VIRTIO_QUEUENUMMAX_REG:
-            val = 0x100;
+            val = this.queuenum;
             break;
 
         case VIRTIO_QUEUEPFN_REG:
@@ -159,11 +159,11 @@ VirtIODev.prototype.GetDescriptor = function(index) {
 // the memory layout can be found here: include/uapi/linux/virtio_ring.h
 
 VirtIODev.prototype.PrintRing = function() {
-    this.desc = this.GetDescriptor(0);
+    var desc = this.GetDescriptor(0);
     for(var i=0; i<10; i++) {
-        DebugMessage("next: " + this.desc.next + " flags:" + this.desc.flags + " addr:" + hex8(this.desc.addr));
-        if (this.desc.flags & 1)
-        this.desc = this.GetDescriptor(this.desc.next); else
+        DebugMessage("next: " + desc.next + " flags:" + desc.flags + " addr:" + hex8(desc.addr));
+        if (desc.flags & 1)
+            desc = this.GetDescriptor(desc.next); else
         break;
     }
     var availidx = this.ramdev.ReadMemory16(this.availaddr + 2) & (this.queuenum-1);
@@ -190,12 +190,17 @@ VirtIODev.prototype.ConsumeDescriptor = function(descindex, desclen) {
 }
 
 VirtIODev.prototype.SendReply = function (index) {
-    //DebugMessage("Send Reply");
+    //DebugMessage("Send Reply index="+index + " size=" + this.dev.replybuffersize);
     this.ConsumeDescriptor(index, this.dev.replybuffersize);
 
     var desc = this.GetDescriptor(index);
     while ((desc.flags & VRING_DESC_F_WRITE) == 0) {
-        desc = this.GetDescriptor(desc.next);
+        if (desc.flags & 1) { // continuing buffer
+            desc = this.GetDescriptor(desc.next);
+        } else {
+            DebugMessage("Error in virtiodev: Descriptor is not continuing");
+            abort();
+        }
     }
     
     if ((desc.flags & VRING_DESC_F_WRITE) == 0) {
@@ -281,27 +286,26 @@ VirtIODev.prototype.WriteReg32 = function (addr, val) {
                 return;
             }
             var availidx = (this.ramdev.ReadMemory16(this.availaddr + 2)-1) & (this.queuenum-1);
+            //DebugMessage((this.ramdev.ReadMemory16(this.availaddr + 2)-1));
             val = this.ramdev.ReadMemory16(this.availaddr + 4 + (availidx)*2);
             //DebugMessage("write to index : " + hex8(val) + " availidx:" + availidx);
 
             var currentindex = val;
             // build stream function
             var offset = 0;
-            this.desc = this.GetDescriptor(currentindex);
-            //DebugMessage(this.desc.addr);
-            //DebugMessage("consume written " + currentindex + " " + this.desc.len);
+            var desc = this.GetDescriptor(currentindex);
             
             this.GetByte = function() {
-                if (offset >= this.desc.len) {
+                if (offset >= desc.len) {
                     offset = 0;
-                    if (this.desc.flags & 1) { // continuing buffer
-                        this.desc = this.GetDescriptor(this.desc.next);
+                    if (desc.flags & 1) { // continuing buffer
+                        desc = this.GetDescriptor(desc.next);
                     } else {
                         DebugMessage("Error in virtiodev: Descriptor is not continuing");
                         abort();
                     }
                 }
-                var x = this.ramdev.ReadMemory8(this.desc.addr+offset);
+                var x = this.ramdev.ReadMemory8(desc.addr + offset);
                 offset++;
                 return x;
             }.bind(this);

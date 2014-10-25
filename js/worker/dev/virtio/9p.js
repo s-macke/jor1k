@@ -51,8 +51,8 @@ function Virtio9p(ramdev, filesystem) {
     //this.configspace = [0x0, 0x4, 0x68, 0x6F, 0x73, 0x74]; // length of string and "host" string
     this.configspace = [0x0, 0x9, 0x2F, 0x64, 0x65, 0x76, 0x2F, 0x72, 0x6F, 0x6F, 0x74 ]; // length of string and "/dev/root" string
     this.VERSION = "9P2000.L";
-    this.IOUNIT = 4096;
-    this.replybuffer = new Uint8Array(0x2000); // twice the IOUNIT to be on the safe side
+    this.IOUNIT = 4096; // not used at the moment
+    this.replybuffer = new Uint8Array(0x4000); // let's limit the replybuffer. Check needed 
     this.replybuffersize = 0;
     
     this.fid2inode = [];
@@ -64,6 +64,9 @@ Virtio9p.prototype.Reset = function() {
 
 Virtio9p.prototype.BuildReply = function(id, tag, payloadsize) {
     ArrayToStruct(["w", "b", "h"], [payloadsize+7, id+1, tag], this.replybuffer, 0);
+    if ((payloadsize+7) >= this.replybuffer.length) {
+        DebugMessage("Error in 9p: payloadsize exceeds maximum length");
+    }
     //for(var i=0; i<payload.length; i++)
     //    this.replybuffer[7+i] = payload[i];
     this.replybuffersize = payloadsize+7;
@@ -121,7 +124,7 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
                 function() {
                     //DebugMessage("file opened " + inode.name + " tag:"+tag);
                     req[0] = inode.qid;
-                    req[1] = this.IOUNIT;
+                    req[1] = this.IOUNIT*0;
                     ArrayToStruct(["Q", "w"], req, this.replybuffer, 7);
                     this.BuildReply(id, tag, 13+4);
                     this.SendReply(index);
@@ -226,7 +229,7 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             inode.uid = gid;
             inode.gid = gid;
             inode.mode = mode;
-            ArrayToStruct(["Q", "w"], [inode.qid, this.IOUNIT], this.replybuffer, 7);
+            ArrayToStruct(["Q", "w"], [inode.qid, this.IOUNIT*0], this.replybuffer, 7);
             this.BuildReply(id, tag, 13+4);
             this.SendReply(index);
             break;
@@ -342,7 +345,7 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             var fid = req[0];
             var offset = req[1];
             var count = req[2];
-            if (id == 40) DebugMessage("[treaddir]: fid=" + fid + " offset=" + offset + " count=" + count);
+            //if (id == 40) DebugMessage("[treaddir]: fid=" + fid + " offset=" + offset + " count=" + count);
             //if (id == 116) DebugMessage("[read]: fid=" + fid + " offset=" + offset + " count=" + count);
             
             var inode = this.fs.GetInode(this.fid2inode[fid]);

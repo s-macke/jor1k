@@ -548,7 +548,7 @@ FS.prototype.GetFullPath = function(idx) {
 FS.prototype.Unlink = function(idx) {
     if (idx == 0) return false; // root node cannot be deleted
     var inode = this.GetInode(idx);
-
+    //DebugMessage("Unlink " + inode.name);
     if ((inode.mode&S_IFMT) == S_IFDIR) {
         for(var i=0; i<this.inodes.length; i++) {
             if (this.inodes[i].status == STATUS_INVALID) continue;
