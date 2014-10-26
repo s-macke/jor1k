@@ -51,8 +51,9 @@ function Virtio9p(ramdev, filesystem) {
     //this.configspace = [0x0, 0x4, 0x68, 0x6F, 0x73, 0x74]; // length of string and "host" string
     this.configspace = [0x0, 0x9, 0x2F, 0x64, 0x65, 0x76, 0x2F, 0x72, 0x6F, 0x6F, 0x74 ]; // length of string and "/dev/root" string
     this.VERSION = "9P2000.L";
-    this.IOUNIT = 4096; // not used at the moment
-    this.replybuffer = new Uint8Array(0x4000); // let's limit the replybuffer. Check needed 
+    this.BLOCKSIZE = 8192; // Let's define one page.
+    this.msize = 8192; // maximum message size
+    this.replybuffer = new Uint8Array(this.msize*2); // Twice the msize to stay on the safe site
     this.replybuffersize = 0;
     
     this.fid2inode = [];
@@ -92,7 +93,7 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             var size = this.fs.GetTotalSize();
             var req = [];
             req[0] = 0x01021997;
-            req[1] = this.IOUNIT; // optimal transfer block size
+            req[1] = this.BLOCKSIZE; // optimal transfer block size
             req[2] = Math.floor(1024*1024*1024/req[1]); // free blocks, let's say 1GB
             req[3] = req[2] - Math.floor(size/req[1]); // free blocks in fs
             req[4] = req[2] - Math.floor(size/req[1]); // free blocks avail to non-superuser
@@ -114,7 +115,7 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             //DebugMessage("[open] fid=" + fid + ", mode=" + mode);
             var inode = this.fs.GetInode(this.fid2inode[fid]);
             req[0] = inode.qid;
-            req[1] = this.IOUNIT;
+            req[1] = this.msize - 24;
             ArrayToStruct(["Q", "w"], req, this.replybuffer, 7);
             this.BuildReply(id, tag, 13+4);
             //DebugMessage("file open " + inode.name);
@@ -124,7 +125,7 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
                 function() {
                     //DebugMessage("file opened " + inode.name + " tag:"+tag);
                     req[0] = inode.qid;
-                    req[1] = this.IOUNIT*0;
+                    req[1] = this.msize - 24;
                     ArrayToStruct(["Q", "w"], req, this.replybuffer, 7);
                     this.BuildReply(id, tag, 13+4);
                     this.SendReply(index);
@@ -229,7 +230,7 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             inode.uid = gid;
             inode.gid = gid;
             inode.mode = mode;
-            ArrayToStruct(["Q", "w"], [inode.qid, this.IOUNIT*0], this.replybuffer, 7);
+            ArrayToStruct(["Q", "w"], [inode.qid, this.msize - 24], this.replybuffer, 7);
             this.BuildReply(id, tag, 13+4);
             this.SendReply(index);
             break;
@@ -263,7 +264,7 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             req[6] = (inode.major<<8) | (inode.minor); // device id low
             req[7] = inode.size; // size low
             req[8] = inode.size; // blk size low
-            req[9] = Math.floor(inode.size/this.IOUNIT+1); // number of file system blocks
+            req[9] = Math.floor(inode.size/this.BLOCKSIZE+1); // number of file system blocks
             req[10] = inode.atime; // atime
             req[11] = 0x0;
             req[12] = inode.mtime; // mtime
@@ -411,7 +412,8 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
         case 100: // version
             var version = StructToArray2(["w", "s"], GetByte);
             //DebugMessage("[version]: msize=" + version[0] + " version=" + version[1]);
-            var size = ArrayToStruct(["w", "s"], [version[0], this.VERSION], this.replybuffer, 7);
+            this.msize = version[0];
+            var size = ArrayToStruct(["w", "s"], [this.msize, this.VERSION], this.replybuffer, 7);
             this.BuildReply(id, tag, size);
             this.SendReply(index);
             break;
