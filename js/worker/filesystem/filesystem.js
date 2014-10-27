@@ -346,17 +346,32 @@ FS.prototype.LoadFile = function(idx) {
 // -----------------------------------------------------
 
 FS.prototype.PushInode = function(inode) {
-    this.inodes.push(inode);
     if (inode.parentid != -1) {
+        this.inodes.push(inode);
         this.inodes[inode.parentid].updatedir = true;
+        inode.nextid = this.inodes[inode.parentid].firstid;
+        this.inodes[inode.parentid].firstid = this.inodes.length-1;
+        return;
+    } else {
+        if (this.inodes.length == 0) { // if root directory
+            this.inodes.push(inode);
+            return;
+        }
     }
+
+    DebugMessage("Error in Filesystem: Pushed inode with name = "+ inode.name + " has no parent");
+    abort();
+
 }
+
 
 FS.prototype.CreateInode = function() {
     this.qidnumber++;
     return {
         updatedir : false, // did the directory listing changed?
         parentid: -1,
+        firstid : -1, // first file id in directory
+        nextid : -1, // next id in directory
         status : 0,
         name : "",
         size : 0x0,
@@ -473,7 +488,7 @@ FS.prototype.CloseInode = function(id) {
 }
 
 FS.prototype.Rename = function(olddirid, oldname, newdirid, newname) {
-
+    // DebugMessage("Rename " + oldname + " to " + newname);
     if ((olddirid == newdirid) && (oldname == newname)) {
         return true;
     }
@@ -484,11 +499,29 @@ FS.prototype.Rename = function(olddirid, oldname, newdirid, newname) {
     var newid = this.Search(newdirid, newname);
     if (newid != -1) {
         this.Unlink(newid);
-    }           
-    var inode = this.inodes[oldid];
+    }
+
+    var idx = oldid; // idx contains the id which we want to rename
+    var inode = this.inodes[idx];
+
+    // remove inode ids
+    if (this.inodes[inode.parentid].firstid == idx) {
+        this.inodes[inode.parentid].firstid = inode.nextid;
+    } else {
+        var id = this.FindPreviousID(idx);
+        if (id == -1) {
+            DebugMessage("Error in Filesystem: Cannot find previous id of inode");
+            abort();
+        }
+        this.inodes[id].nextid = inode.nextid;
+    }
+
     inode.parentid = newdirid;
     inode.name = newname;
     inode.qid.version++;
+
+    inode.nextid = this.inodes[inode.parentid].firstid;
+    this.inodes[inode.parentid].firstid = idx;
 
     this.inodes[olddirid].updatedir = true;
     this.inodes[newdirid].updatedir = true;
@@ -509,19 +542,14 @@ FS.prototype.Write = function(id, offset, count, GetByte) {
         inode.data[offset+i] = GetByte();
 }
 
-
-FS.prototype.GetRoot = function() {
-    return this.inodes[0];
-}
-
-
-FS.prototype.Search = function(idx, name) {
-    
-    for(var i=0; i<this.inodes.length; i++) {
-        if (this.inodes[i].status == STATUS_INVALID) continue;
-        if (this.inodes[i].parentid != idx) continue;
-        if (this.inodes[i].name != name) continue;
-        return i;
+FS.prototype.Search = function(parentid, name) {
+    var id = this.inodes[parentid].firstid;
+    while(id != -1) {
+        if (this.inodes[id].parentid != parentid) { // consistency check
+            DebugMessage("Error in Filesystem: Found inode with wrong parent id");
+        }
+        if (this.inodes[id].name == name) return id;
+        id = this.inodes[id].nextid;
     }
     return -1;
 }
@@ -529,7 +557,6 @@ FS.prototype.Search = function(idx, name) {
 FS.prototype.GetTotalSize = function() {
     var size = 0;
     for(var i=0; i<this.inodes.length; i++) {
-        if (this.inodes[i].status == STATUS_INVALID) continue;
         size += this.inodes[i].data.length;
     }
     return size;
@@ -545,21 +572,46 @@ FS.prototype.GetFullPath = function(idx) {
     return path.substring(1);
 }
 
+// no double linked list. So, we need this
+FS.prototype.FindPreviousID = function(idx) {
+    var inode = this.GetInode(idx);
+    var id = this.inodes[inode.parentid].firstid;
+    while(id != -1) {
+        if (this.inodes[id].nextid == idx) return id;
+        id = this.inodes[id].nextid;
+    }
+    return id;
+}
+
 FS.prototype.Unlink = function(idx) {
     if (idx == 0) return false; // root node cannot be deleted
     var inode = this.GetInode(idx);
     //DebugMessage("Unlink " + inode.name);
+
+    // check if directory is not empty
     if ((inode.mode&S_IFMT) == S_IFDIR) {
-        for(var i=0; i<this.inodes.length; i++) {
-            if (this.inodes[i].status == STATUS_INVALID) continue;
-            if (this.inodes[i].parentid == idx) return false;
-        }
+       if (inode.firstid != -1) return false;
     }
 
+    // update ids
+    if (this.inodes[inode.parentid].firstid == idx) {
+        this.inodes[inode.parentid].firstid = inode.nextid;
+    } else {
+        var id = this.FindPreviousID(idx);
+        if (id == -1) {
+            DebugMessage("Error in Filesystem: Cannot find previous id of inode");
+            abort();
+        }
+        this.inodes[id].nextid = inode.nextid;
+    }
+
+    this.inodes[inode.parentid].updatedir = true;
     inode.data = new Uint8Array(0);
     inode.size = 0;
     inode.status = STATUS_INVALID;
-    this.inodes[inode.parentid].updatedir = true;
+    //inode.nextid = -1;
+    //inode.firstid = -1;
+    //inode.parentid = -1;
     return true;
 }
 
@@ -615,14 +667,13 @@ FS.prototype.SearchPath = function(path) {
 // -----------------------------------------------------
 
 FS.prototype.GetRecursiveList = function(dirid, list) {
-
-    for(var i=0; i<this.inodes.length; i++) {
-        if (this.inodes[i].status == STATUS_INVALID) continue;
-        if (this.inodes[i].parentid != dirid) continue;
-        list.push(i);
-        if ((this.inodes[i].mode&S_IFMT) == S_IFDIR) {
-            this.GetRecursiveList(i, list);
+    var id = this.inodes[dirid].firstid;
+    while(id != -1) {
+        list.push(id);
+        if ((this.inodes[id].mode&S_IFMT) == S_IFDIR) {
+            this.GetRecursiveList(id, list);
         }
+        id = this.inodes[id].nextid;
     }
 }
 
@@ -642,7 +693,11 @@ FS.prototype.Check = function() {
     for(var i=1; i<this.inodes.length; i++)
     {
         if (this.inodes[i].status == STATUS_INVALID) continue;
-        
+        if (this.inodes[i].nextid == i) {
+            DebugMessage("Error in filesystem: file points to itself");
+            abort();
+        }
+
         var inode = this.GetInode(i);
         if (inode.parentid < 0) {
             DebugMessage("Error in filesystem: negative parent id " + i);
@@ -671,13 +726,13 @@ FS.prototype.FillDirectory = function(dirid) {
     if (!inode.updatedir) return;
     var parentid = inode.parentid;
     if (parentid == -1) parentid = 0; // if root directory point to the root directory
-    
+
     // first get size
     var size = 0;
-    for(var i=0; i<this.inodes.length; i++) {
-        if (this.inodes[i].status == STATUS_INVALID) continue;
-        if (this.inodes[i].parentid != dirid) continue;
-        size += 13 + 8 + 1 + 2 + this.inodes[i].name.length;
+    var id = this.inodes[dirid].firstid;
+    while(id != -1) {
+        size += 13 + 8 + 1 + 2 + this.inodes[id].name.length;
+        id = this.inodes[id].nextid;
     }
 
     size += 13 + 8 + 1 + 2 + 1; // "." entry
@@ -703,18 +758,17 @@ FS.prototype.FillDirectory = function(dirid) {
         ".."],
         inode.data, offset);
 
-    
-    for(var i=0; i<this.inodes.length; i++) {
-        if (this.inodes[i].status == STATUS_INVALID) continue;
-        if (this.inodes[i].parentid != dirid) continue;
+    var id = this.inodes[dirid].firstid;
+    while(id != -1) {
         offset += Marshall(
         ["Q", "d", "b", "s"],
-        [this.inodes[i].qid, 
-        offset+13+8+1+2+this.inodes[i].name.length, 
-        this.inodes[i].mode >> 12, 
-        this.inodes[i].name], 
+        [this.inodes[id].qid,
+        offset+13+8+1+2+this.inodes[id].name.length,
+        this.inodes[id].mode >> 12,
+        this.inodes[id].name],
         inode.data, offset);
-        //DebugMessage("Add file " + this.inodes[i].name);
+        //DebugMessage("Add file " + this.inodes[id].name);
+        id = this.inodes[id].nextid;
     }
     inode.updatedir = false;
 }

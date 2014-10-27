@@ -9,6 +9,7 @@
 // TODO
 // flush
 // lock?
+// correct hard links
 
 var EPERM = 1;       /* Operation not permitted */
 var ENOENT = 2;      /* No such file or directory */
@@ -138,11 +139,16 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             var dfid = req[0];
             var fid = req[1];
             var name = req[2];
-            //DebugMessage("[link] dfid=" + dfid + ", name=" + name); 
+            //DebugMessage("[link] dfid=" + dfid + ", name=" + name);
             var inode = this.fs.CreateInode();
             var inodetarget = this.fs.GetInode(this.fid2inode[fid]);
-            inode = inodetarget;
-            inode.data = new Uint8Array(inode.data);
+            //inode = inodetarget;
+            inode.mode = inodetarget.mode;
+            inode.size = inodetarget.size;
+            inode.symlink = inodetarget.symlink;
+            inode.data = new Uint8Array(inode.size);
+            inode.name = name;
+            inode.parentid = this.fid2inode[dfid];
             this.fs.PushInode(inode);
             
             //inode.uid = inodetarget.uid;
@@ -176,7 +182,7 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             var major = req[3];
             var minor = req[4];
             //var gid = req[5];
-            DebugMessage("[mknod] fid=" + fid + ", name=" + name + ", major=" + major + ", minor=" + minor+ ", gid=" + gid);
+            DebugMessage("[mknod] fid=" + fid + ", name=" + name + ", major=" + major + ", minor=" + minor+ ");
             var idx = this.fs.CreateNode(name, this.fid2inode[fid], major, minor);
             var inode = this.fs.GetInode(idx);
             inode.mode = mode;
@@ -458,10 +464,10 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
                 wnames.push("s");
             }
             var walk = Unmarshall2(wnames, GetByte);                        
-            //DebugMessage("walk to :" + walk.toString());
             var idx = this.fid2inode[fid];
             var offset = 7+2;
             var nwidx = 0;
+            //DebugMessage("walk in dir " + this.fs.inodes[idx].name  + " to :" + walk.toString());
             for(var i=0; i<nwname; i++) {
                 idx = this.fs.Search(idx, walk[i]);
                 
@@ -495,9 +501,6 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             //this.SendReply(index);
             break;
     }
-
+    this.fs.Check();
 }
-
-
-
 
