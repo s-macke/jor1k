@@ -687,7 +687,7 @@ FS.prototype.FillDirectory = function(dirid) {
     inode.size = size;
 
     var offset = 0x0;
-    offset += ArrayToStruct(
+    offset += Marshall(
         ["Q", "d", "b", "s"],
         [this.inodes[dirid].qid, 
         offset+13+8+1+2+1, 
@@ -695,7 +695,7 @@ FS.prototype.FillDirectory = function(dirid) {
         "."],
         inode.data, offset);
 
-    offset += ArrayToStruct(
+    offset += Marshall(
         ["Q", "d", "b", "s"],
         [this.inodes[parentid].qid,
         offset+13+8+1+2+2, 
@@ -707,7 +707,7 @@ FS.prototype.FillDirectory = function(dirid) {
     for(var i=0; i<this.inodes.length; i++) {
         if (this.inodes[i].status == STATUS_INVALID) continue;
         if (this.inodes[i].parentid != dirid) continue;
-        offset += ArrayToStruct(
+        offset += Marshall(
         ["Q", "d", "b", "s"],
         [this.inodes[i].qid, 
         offset+13+8+1+2+this.inodes[i].name.length, 

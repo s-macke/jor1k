@@ -69,8 +69,6 @@ VirtIODev.prototype.Reset = function() {
     this.descaddr = 0x0;
     this.usedaddr = 0x0;
     this.availaddr = 0x0;
-    
-    this.oldavailaddr = 0x0;
 }
 
 // Ring buffer addresses
@@ -144,7 +142,7 @@ VirtIODev.prototype.GetDescriptor = function(index) {
     var buffer = new Uint8Array(16);
     CopyMemoryToBuffer(this.ramdev, buffer, addr, 16);
 
-    var desc = StructToArray(["w", "w", "w", "h", "h"], buffer, 0);
+    var desc = Unmarshall(["w", "w", "w", "h", "h"], buffer, 0);
 //    DebugMessage("GetDescriptor: index=" + index + " addr=" + hex8(Swap32(desc[1])) + " len=" + Swap32(desc[2]) + " flags=" + Swap16(desc[3])  + " next=" + Swap16(desc[4]));
 
     return {

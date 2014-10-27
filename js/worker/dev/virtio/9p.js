@@ -64,7 +64,7 @@ Virtio9p.prototype.Reset = function() {
 }
 
 Virtio9p.prototype.BuildReply = function(id, tag, payloadsize) {
-    ArrayToStruct(["w", "b", "h"], [payloadsize+7, id+1, tag], this.replybuffer, 0);
+    Marshall(["w", "b", "h"], [payloadsize+7, id+1, tag], this.replybuffer, 0);
     if ((payloadsize+7) >= this.replybuffer.length) {
         DebugMessage("Error in 9p: payloadsize exceeds maximum length");
     }
@@ -75,13 +75,13 @@ Virtio9p.prototype.BuildReply = function(id, tag, payloadsize) {
 }
 
 Virtio9p.prototype.SendError = function (tag, errormsg, errorcode) {
-    //var size = ArrayToStruct(["s", "w"], [errormsg, errorcode], this.replybuffer, 7);
-    var size = ArrayToStruct(["w"], [errorcode], this.replybuffer, 7);
+    //var size = Marshall(["s", "w"], [errormsg, errorcode], this.replybuffer, 7);
+    var size = Marshall(["w"], [errorcode], this.replybuffer, 7);
     this.BuildReply(6, tag, size);
 }
 
 Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
-    var header = StructToArray2(["w", "b", "h"], GetByte);
+    var header = Unmarshall2(["w", "b", "h"], GetByte);
     var size = header[0];
     var id = header[1];
     var tag = header[2];
@@ -102,21 +102,21 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             req[7] = 0; // file system id?
             req[8] = 256; // maximum length of filenames
 
-            var size = ArrayToStruct(["w", "w", "d", "d", "d", "d", "d", "d", "w"], req, this.replybuffer, 7);
+            var size = Marshall(["w", "w", "d", "d", "d", "d", "d", "d", "w"], req, this.replybuffer, 7);
             this.BuildReply(id, tag, size);
             this.SendReply(index);
             break;
 
         case 112: // topen
         case 12: // tlopen
-            var req = StructToArray2(["w", "w"], GetByte);
+            var req = Unmarshall2(["w", "w"], GetByte);
             var fid = req[0];
             var mode = req[1];
             //DebugMessage("[open] fid=" + fid + ", mode=" + mode);
             var inode = this.fs.GetInode(this.fid2inode[fid]);
             req[0] = inode.qid;
             req[1] = this.msize - 24;
-            ArrayToStruct(["Q", "w"], req, this.replybuffer, 7);
+            Marshall(["Q", "w"], req, this.replybuffer, 7);
             this.BuildReply(id, tag, 13+4);
             //DebugMessage("file open " + inode.name);
             //if (inode.status == STATUS_LOADING) return;
@@ -126,7 +126,7 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
                     //DebugMessage("file opened " + inode.name + " tag:"+tag);
                     req[0] = inode.qid;
                     req[1] = this.msize - 24;
-                    ArrayToStruct(["Q", "w"], req, this.replybuffer, 7);
+                    Marshall(["Q", "w"], req, this.replybuffer, 7);
                     this.BuildReply(id, tag, 13+4);
                     this.SendReply(index);
                 }.bind(this)
@@ -134,7 +134,7 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             break;
 
         case 70: // link
-            var req = StructToArray2(["w", "w", "s"], GetByte);
+            var req = Unmarshall2(["w", "w", "s"], GetByte);
             var dfid = req[0];
             var fid = req[1];
             var name = req[2];
@@ -153,7 +153,7 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             break;
 
         case 16: // symlink
-            var req = StructToArray2(["w", "s", "s", "w"], GetByte);
+            var req = Unmarshall2(["w", "s", "s", "w"], GetByte);
             var fid = req[0];
             var name = req[1];
             var symgt = req[2];
@@ -163,13 +163,13 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             var inode = this.fs.GetInode(idx);
             inode.uid = gid;
             inode.gid = gid;
-            ArrayToStruct(["Q"], [inode.qid], this.replybuffer, 7);
+            Marshall(["Q"], [inode.qid], this.replybuffer, 7);
             this.BuildReply(id, tag, 13);
             this.SendReply(index);
             break;
 
         case 18: // mknod
-            var req = StructToArray2(["w", "s", "w", "w", "w", "w"], GetByte);
+            var req = Unmarshall2(["w", "s", "w", "w", "w", "w"], GetByte);
             var fid = req[0];
             var name = req[1];
             var mode = req[2];
@@ -182,25 +182,25 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             inode.mode = mode;
             inode.uid = gid;
             inode.gid = gid;
-            ArrayToStruct(["Q"], [inode.qid], this.replybuffer, 7);
+            Marshall(["Q"], [inode.qid], this.replybuffer, 7);
             this.BuildReply(id, tag, 13);
             this.SendReply(index);
             break;
 
 
         case 22: // TREADLINK
-            var req = StructToArray2(["w"], GetByte);
+            var req = Unmarshall2(["w"], GetByte);
             var fid = req[0];
             //DebugMessage("[readlink] fid=" + fid);
             var inode = this.fs.GetInode(this.fid2inode[fid]);
-            var size = ArrayToStruct(["s"], [inode.symlink], this.replybuffer, 7);
+            var size = Marshall(["s"], [inode.symlink], this.replybuffer, 7);
             this.BuildReply(id, tag, size);
             this.SendReply(index);
             break;
 
 
         case 72: // tmkdir
-            var req = StructToArray2(["w", "s", "w", "w"], GetByte);
+            var req = Unmarshall2(["w", "s", "w", "w"], GetByte);
             var fid = req[0];
             var name = req[1];
             var mode = req[2];
@@ -211,13 +211,13 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             inode.mode = mode | S_IFDIR;
             inode.uid = gid;
             inode.gid = gid;
-            ArrayToStruct(["Q"], [inode.qid], this.replybuffer, 7);
+            Marshall(["Q"], [inode.qid], this.replybuffer, 7);
             this.BuildReply(id, tag, 13);
             this.SendReply(index);
             break;
 
         case 14: // tlcreate
-            var req = StructToArray2(["w", "s", "w", "w", "w"], GetByte);
+            var req = Unmarshall2(["w", "s", "w", "w", "w"], GetByte);
             var fid = req[0];
             var name = req[1];
             var flags = req[2];
@@ -230,14 +230,14 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             inode.uid = gid;
             inode.gid = gid;
             inode.mode = mode;
-            ArrayToStruct(["Q", "w"], [inode.qid, this.msize - 24], this.replybuffer, 7);
+            Marshall(["Q", "w"], [inode.qid, this.msize - 24], this.replybuffer, 7);
             this.BuildReply(id, tag, 13+4);
             this.SendReply(index);
             break;
 
         case 52: // lock always suceed
             // DebugMessage("lock file\n");
-            ArrayToStruct(["w"], [0], this.replybuffer, 7);
+            Marshall(["w"], [0], this.replybuffer, 7);
             this.BuildReply(id, tag, 1);
             this.SendReply(index);
             break;
@@ -247,7 +247,7 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
         */
 
         case 24: // getattr
-            var req = StructToArray2(["w", "d"], GetByte);
+            var req = Unmarshall2(["w", "d"], GetByte);
             var fid = req[0];
             var inode = this.fs.GetInode(this.fid2inode[fid]);
             //DebugMessage("[getattr]: fid=" + fid + " name=" + inode.name + " request mask=" + req[1]);
@@ -275,7 +275,7 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             req[17] = 0x0; 
             req[18] = 0x0; // st_gen
             req[19] = 0x0; // data_version
-            ArrayToStruct([
+            Marshall([
             "d", "Q", 
             "w",  
             "w", "w", 
@@ -292,7 +292,7 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             break;
 
         case 26: // setattr
-            var req = StructToArray2(["w", "w", 
+            var req = Unmarshall2(["w", "w", 
                 "w", // mode 
                 "w", "w", // uid, gid
                 "d", // size
@@ -334,7 +334,7 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             break;
 
         case 50: // fsync
-            var req = StructToArray2(["w", "d"], GetByte);
+            var req = Unmarshall2(["w", "d"], GetByte);
             var fid = req[0];
             this.BuildReply(id, tag, 0);
             this.SendReply(index);
@@ -342,7 +342,7 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
 
         case 40: // TREADDIR
         case 116: // read
-            var req = StructToArray2(["w", "d", "w"], GetByte);
+            var req = Unmarshall2(["w", "d", "w"], GetByte);
             var fid = req[0];
             var offset = req[1];
             var count = req[2];
@@ -353,25 +353,25 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             if (inode.size < offset+count) count = inode.size - offset;
             for(var i=0; i<count; i++)
                 this.replybuffer[7+4+i] = inode.data[offset+i];
-            ArrayToStruct(["w"], [count], this.replybuffer, 7);
+            Marshall(["w"], [count], this.replybuffer, 7);
             this.BuildReply(id, tag, 4 + count);
             this.SendReply(index);
             break;
 
         case 118: // write
-            var req = StructToArray2(["w", "d", "w"], GetByte);
+            var req = Unmarshall2(["w", "d", "w"], GetByte);
             var fid = req[0];
             var offset = req[1];
             var count = req[2];
             //DebugMessage("[write]: fid=" + fid + " offset=" + offset + " count=" + count);
             this.fs.Write(this.fid2inode[fid], offset, count, GetByte);
-            ArrayToStruct(["w"], [count], this.replybuffer, 7);
+            Marshall(["w"], [count], this.replybuffer, 7);
             this.BuildReply(id, tag, 4);
             this.SendReply(index);
             break;
 
         case 74: // RENAMEAT
-            var req = StructToArray2(["w", "s", "w", "s"], GetByte);
+            var req = Unmarshall2(["w", "s", "w", "s"], GetByte);
             var olddirfid = req[0];
             var oldname = req[1];
             var newdirfid = req[2];
@@ -388,7 +388,7 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             break;
 
         case 76: // TUNLINKAT
-            var req = StructToArray2(["w", "s", "w"], GetByte);
+            var req = Unmarshall2(["w", "s", "w"], GetByte);
             var dirfd = req[0];
             var name = req[1];
             var flags = req[2];
@@ -410,45 +410,45 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             break;
 
         case 100: // version
-            var version = StructToArray2(["w", "s"], GetByte);
+            var version = Unmarshall2(["w", "s"], GetByte);
             //DebugMessage("[version]: msize=" + version[0] + " version=" + version[1]);
             this.msize = version[0];
-            var size = ArrayToStruct(["w", "s"], [this.msize, this.VERSION], this.replybuffer, 7);
+            var size = Marshall(["w", "s"], [this.msize, this.VERSION], this.replybuffer, 7);
             this.BuildReply(id, tag, size);
             this.SendReply(index);
             break;
 
         case 104: // attach
             // return root directorie's QID
-            var req = StructToArray2(["w", "w", "s", "s"], GetByte);
+            var req = Unmarshall2(["w", "w", "s", "s"], GetByte);
             var fid = req[0];
             //DebugMessage("[attach]: fid=" + fid + " afid=" + hex8(req[1]) + " uname=" + req[2] + " aname=" + req[3]);
             this.fid2inode[fid] = 0;            
             var inode = this.fs.GetInode(this.fid2inode[fid]);
-            ArrayToStruct(["Q"], [inode.qid], this.replybuffer, 7);
+            Marshall(["Q"], [inode.qid], this.replybuffer, 7);
             this.BuildReply(id, tag, 13);
             this.SendReply(index);
             break;
 
         case 108: // tflush
-            var req = StructToArray2(["h"], GetByte);
+            var req = Unmarshall2(["h"], GetByte);
             var oldtag = req[0];
             DebugMessage("[flush] " + tag);
-            //ArrayToStruct(["Q"], [inode.qid], this.replybuffer, 7);
+            //Marshall(["Q"], [inode.qid], this.replybuffer, 7);
             this.BuildReply(id, tag, 0);
             this.SendReply(index);
             break;
 
 
         case 110: // walk
-            var req = StructToArray2(["w", "w", "h"], GetByte);
+            var req = Unmarshall2(["w", "w", "h"], GetByte);
             var fid = req[0];
             var nwfid = req[1];
             var nwname = req[2];
             //DebugMessage("[walk]: fid=" + req[0] + " nwfid=" + req[1] + " nwname=" + nwname);
             if (nwname == 0) {
                 this.fid2inode[nwfid] = this.fid2inode[fid];
-                ArrayToStruct(["h"], [0], this.replybuffer, 7);
+                Marshall(["h"], [0], this.replybuffer, 7);
                 this.BuildReply(id, tag, 2);
                 this.SendReply(index);
                 break;
@@ -457,7 +457,7 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             for(var i=0; i<nwname; i++) {
                 wnames.push("s");
             }
-            var walk = StructToArray2(wnames, GetByte);                        
+            var walk = Unmarshall2(wnames, GetByte);                        
             //DebugMessage("walk to :" + walk.toString());
             var idx = this.fid2inode[fid];
             var offset = 7+2;
@@ -469,18 +469,18 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
                    //DebugMessage("Could not find :" + walk[i]);
                    break;
                 }
-                offset += ArrayToStruct(["Q"], [this.fs.inodes[idx].qid], this.replybuffer, offset);
+                offset += Marshall(["Q"], [this.fs.inodes[idx].qid], this.replybuffer, offset);
                 nwidx++;
                 //DebugMessage(this.fid2inode[nwfid]);
                 this.fid2inode[nwfid] = idx;
             }
-            ArrayToStruct(["h"], [nwidx], this.replybuffer, 7);
+            Marshall(["h"], [nwidx], this.replybuffer, 7);
             this.BuildReply(id, tag, offset-7);
             this.SendReply(index);
             break;
 
         case 120: // clunk
-            var req = StructToArray2(["w"], GetByte);
+            var req = Unmarshall2(["w"], GetByte);
             //DebugMessage("[clunk]: fid=" + req[0]);
             this.fs.CloseInode(this.fid2inode[req[0]]);
             this.fid2inode[req[0]] = -1;
