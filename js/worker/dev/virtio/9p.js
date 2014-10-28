@@ -182,7 +182,7 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             var major = req[3];
             var minor = req[4];
             //var gid = req[5];
-            DebugMessage("[mknod] fid=" + fid + ", name=" + name + ", major=" + major + ", minor=" + minor+ ");
+            //DebugMessage("[mknod] fid=" + fid + ", name=" + name + ", major=" + major + ", minor=" + minor+ "");
             var idx = this.fs.CreateNode(name, this.fid2inode[fid], major, minor);
             var inode = this.fs.GetInode(idx);
             inode.mode = mode;
