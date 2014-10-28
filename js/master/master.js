@@ -22,6 +22,7 @@ function jor1kGUI(parameters)
     //this.sound = new LoopSoundBuffer(22050);
     
     this.terminalcanvas = document.getElementById(this.params.termid);
+    this.clipboard = document.getElementById(this.params.clipboardid);
     this.stats = document.getElementById(this.params.statsid);
     this.term = new Terminal(24, 80, this.params.termid);
     this.terminput = new TerminalInput(this.SendChars.bind(this));
@@ -29,28 +30,30 @@ function jor1kGUI(parameters)
 
 
     this.terminalcanvas.onmousedown = function(event) {
+        if (!this.framebuffer.fbcanvas) return;
         this.framebuffer.fbcanvas.style.border = "2px solid #000000";
     }.bind(this);
 
-
-
     this.IgnoreKeys = function() {
-      //Simpler but not as general, return( document.activeElement.type==="textarea" || document.activeElement.type==='input');
-      return ((this.lastMouseDownTarget != this.terminalcanvas) && (this.lastMouseDownTarget != this.framebuffer.fbcanvas));
+      return (
+          (this.lastMouseDownTarget != this.terminalcanvas) &&
+          (this.lastMouseDownTarget != this.framebuffer.fbcanvas) &&
+          (this.lastMouseDownTarget != this.clipboard)
+      );
     }
 
     var recordTarget = function(event) {
-            this.lastMouseDownTarget = event.target;
-        }.bind(this);
+        this.lastMouseDownTarget = event.target;
+    }.bind(this);
 
     if(document.addEventListener)
       document.addEventListener('mousedown', recordTarget, false);
     else
       Window.onmousedown = recordTarget; // IE 10 support (untested)
-    
+
     document.onkeypress = function(event) {
         if(this.IgnoreKeys()) return true;
-        if (this.lastMouseDownTarget == this.terminalcanvas) {
+        if ((this.lastMouseDownTarget == this.terminalcanvas) || (this.lastMouseDownTarget == this.clipboard)) {
             return this.terminput.OnKeyPress(event);
         }
         this.SendToWorker("keypress", {keyCode:event.keyCode, charCode:event.charCode});
@@ -59,7 +62,7 @@ function jor1kGUI(parameters)
 
     document.onkeydown = function(event) {
         if(this.IgnoreKeys()) return true;
-        if (this.lastMouseDownTarget == this.terminalcanvas) {
+        if ((this.lastMouseDownTarget == this.terminalcanvas) || (this.lastMouseDownTarget == this.clipboard)) {
             return this.terminput.OnKeyDown(event);
         }
         this.SendToWorker("keydown", {keyCode:event.keyCode, charCode:event.charCode});
@@ -68,7 +71,7 @@ function jor1kGUI(parameters)
 
     document.onkeyup = function(event) {
         if(this.IgnoreKeys()) return true;
-        if (this.lastMouseDownTarget == this.terminalcanvas) {
+        if ((this.lastMouseDownTarget == this.terminalcanvas) || (this.lastMouseDownTarget == this.clipboard)) {
             return this.terminput.OnKeyUp(event);
         }
         this.SendToWorker("keyup", {keyCode:event.keyCode, charCode:event.charCode});
@@ -109,6 +112,7 @@ jor1kGUI.prototype.Reset = function () {
     this.SendToWorker("LoadAndStart", this.params.system.kernelURL);
     this.SendToWorker("LoadFilesystem", this.params.fs);
     this.term.PauseBlink(false);
+    this.lastMouseDownTarget = this.terminalcanvas;
 }
 
 jor1kGUI.prototype.Pause = function(pause) {

@@ -48,8 +48,8 @@
                     <img src="images/tar.png" width="20px" height="20px"  onclick='jor1kgui.TAR("home/user")' title="Download of home folder" />
                     <img src="images/sync.png" width="20px" height="20px"  onclick='jor1kgui.Sync("home/user")' title="Sync with server" />
                     <img src="images/fullscreen.png" width="20px" height="20px"  onclick='Fullscreen()' title="Windowed fullscreen of framebuffer" />
-                    
-                    </span>                    
+                    <input type=text size="4" value="keybd" id="clipboard">
+                    </span>
                     <span id="stats" style="float: right"></span>
                     </td></tr>
                     </table>
@@ -206,13 +206,12 @@ function Start() {
             ] // list of automatically loaded images after the basic filesystem has been loaded
 	},
 
-        termid: "tty",   // canvas id for the terminal
-        fbid: "fb",     // canvas id for the framebuffer
-        statsid: "stats",  // object id for the statistics test
+        termid: "tty",             // canvas id for the terminal
+        fbid: "fb",                // canvas id for the framebuffer
+        clipboardid: "clipboard",  // input id for the clipboard
+        statsid: "stats",          // object id for the statistics test
         fps: 10, // update interval of framebuffer
-
         relayURL: "ws://relay.widgetry.org/", // relay url for the network
-
         userid: userid, // unique user id string. Empty, choosen randomly, from a url, or from a cookie.
         syncURL: "http://jor1k.com/sync/upload.php", // url to sync a certain folder
     }
