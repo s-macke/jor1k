@@ -501,6 +501,8 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             //this.SendReply(index);
             break;
     }
-    this.fs.Check();
+
+    //consistency checks if there are problems with the filesystem
+    //this.fs.Check();
 }
 
