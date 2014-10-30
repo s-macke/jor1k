@@ -175,7 +175,10 @@ jor1kGUI.prototype.OnMessage = function(e) {
             break;
 
         case "tty0":
-            this.term.PutChar(e.data.data);
+            e.data.data.forEach(function(c) {
+                this.term.PutChar(c&0xFF);
+            }.bind(this));
+            //this.term.PutChar(e.data.data);
             break;
 
         case "GetFB":

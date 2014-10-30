@@ -186,15 +186,7 @@ if (typeof Math.imul == "undefined") {
     this.CreateCPU(system.cpu);
 
     this.uartdev0 = new UARTDev(0, this, 0x2);
-    this.uartdev0.TransmitCallback = function(data) {
-        SendToMaster("tty0", data);
-    }
-
     this.uartdev1 = new UARTDev(1, this, 0x3);
-    this.uartdev1.TransmitCallback = function(data) {
-        SendToMaster("tty1", data);
-    }
-    
     this.ethdev = new EthDev(this.ram, this);
     this.ethdev.TransmitCallback = function(data){
         SendToMaster("ethmac", data);
@@ -311,9 +303,11 @@ System.prototype.PrintState = function() {
 
 System.prototype.SendStringToTerminal = function(str)
 {
+    var chars = [];
     for (var i = 0; i < str.length; i++) {
-        SendToMaster("tty0", str.charCodeAt(i));
+        chars.push(str.charCodeAt(i));
     }
+    SendToMaster("tty0", chars);
 }
 
 System.prototype.LoadImageAndStart = function(url) {
@@ -394,9 +388,9 @@ System.prototype.MainLoop = function() {
     totalsteps++; // at least one instruction
     this.ips += totalsteps;
     this.internalips += totalsteps;
-    this.uartdev0.RxRateLimitBump(totalsteps);
-    this.uartdev1.RxRateLimitBump(totalsteps);
 
+    this.uartdev0.Step();
+    this.uartdev1.Step();
     this.snddev.Step();
 
     if (!stepsleft) {
@@ -421,11 +415,8 @@ System.prototype.MainLoop = function() {
           this.internalips = 0;
       }
     } else { // stepsleft != 0 indicates CPU idle
-      this.lastlooptime = -1;
-      // uart may raise an interrupt if the fifo is non-empty
-      if( this.uartdev0.HaltPending() && this.uartdev1.HaltPending()) {
+        this.lastlooptime = -1;
         this.HandleHalt(); 
-      }
     }
     
     // go to worker thread idle state that onmessage is executed
