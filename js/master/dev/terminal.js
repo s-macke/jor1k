@@ -27,12 +27,16 @@ function Terminal(nrows, ncolumns, elemId) {
     this.currentcolor = 0x7;
     this.pauseblink = false;
     this.OnCharReceived = function (){};
+    this.framerequested = false;
+
+    this.updaterow = new Array(this.nrows);
 
     this.screen = new Array(this.nrows);
     this.color = new Array(this.nrows);
     for (var i = 0; i < this.nrows; i++) {
-        this.screen[i] = new Array(this.ncolumns);
-        this.color[i] = new Array(this.ncolumns);
+        this.updaterow[i] = true;
+        this.screen[i] = new Uint8Array(this.ncolumns);
+        this.color[i] = new Uint16Array(this.ncolumns);
 
         for (var j = 0; j < this.ncolumns; j++) {
             this.screen[i][j] = 0x20;
@@ -48,12 +52,12 @@ Terminal.prototype.PauseBlink = function(pause) {
     pause = !! pause;
     this.pauseblink = pause;
     this.cursorvisible = ! pause;
-    this.UpdateChar(this.cursory, this.cursorx);
+    this.PrepareUpdateRow(this.cursory, this.cursorx);
 }
 
 Terminal.prototype.Blink = function() {
     this.cursorvisible = !this.cursorvisible;
-    if(!this.pauseblink) this.UpdateChar(this.cursory, this.cursorx);
+    if(!this.pauseblink) this.PrepareUpdateRow(this.cursory, this.cursorx);
     window.setTimeout(this.Blink.bind(this), 500); // update every half second
 };
 
@@ -62,7 +66,7 @@ Terminal.prototype.DeleteRow = function(row) {
         this.screen[row][j] = 0x20;
         this.color[row][j] = this.currentcolor;
     }
-    this.UpdateRow(row);
+    this.PrepareUpdateRow(row);
 };
 
 Terminal.prototype.DeleteArea = function(row, column, row2, column2) {
@@ -71,21 +75,15 @@ Terminal.prototype.DeleteArea = function(row, column, row2, column2) {
             this.screen[i][j] = 0x20;
             this.color[i][j] = this.currentcolor;
         }
-        this.UpdateRow(i);
+        this.PrepareUpdateRow(i);
     }
 };
 
 Terminal.prototype.UpdateChar = function(row, column) {
-    if (row < 0) return;
-    if (column < 0) return;
-    if (row >= this.nrows) return;
-    if (column >= this.ncolumns) return;
-
     var x = column*8;
     var y = row*16;
     var ccolor = this.color[row][column];
-    var line = " ";
-    line = String.fromCharCode(this.screen[row][column]);
+    var line = String.fromCharCode(this.screen[row][column]);
 
     if (this.cursorvisible)
     if (row == this.cursory)
@@ -107,9 +105,18 @@ Terminal.prototype.UpdateRow = function(row) {
 
 Terminal.prototype.UpdateScreen = function() {
     for (var i = 0; i < this.nrows; i++) {
-        this.UpdateRow(i);
+        if (this.updaterow[i]) this.UpdateRow(i);
+        this.updaterow[i] = false;
     }
-};
+    this.framerequested = false;
+}
+
+Terminal.prototype.PrepareUpdateRow = function(row) {
+    this.updaterow[row] = true;
+    if (this.framerequested) return;
+    window.requestAnimationFrame(this.UpdateScreen.bind(this));
+    this.framerequested = true;
+}
 
 Terminal.prototype.ScrollDown = function(draw) {
     for (var i = this.scrollbottom-1; i >= this.scrolltop; i--) {
@@ -118,10 +125,10 @@ Terminal.prototype.ScrollDown = function(draw) {
             this.screen[i + 1][j] = this.screen[i][j];
             this.color[i + 1][j] = this.color[i][j];
         }
-        if (draw) this.UpdateRow(i+1);
+        if (draw) this.PrepareUpdateRow(i+1);
     }
     this.DeleteRow(this.scrolltop);
-    if (draw) this.UpdateRow(this.scrolltop);
+    if (draw) this.PrepareUpdateRow(this.scrolltop);
 }
 
 Terminal.prototype.ScrollUp = function(draw) {
@@ -131,35 +138,23 @@ Terminal.prototype.ScrollUp = function(draw) {
             this.screen[i - 1][j] = this.screen[i][j];
             this.color[i - 1][j] = this.color[i][j];
         }
-        if (draw) this.UpdateRow(i-1);
+        if (draw) this.PrepareUpdateRow(i-1);
     }
     this.DeleteRow(this.scrollbottom);
-    if (draw) this.UpdateRow(this.scrollbottom);
+    if (draw) this.PrepareUpdateRow(this.scrollbottom);
 };
 
 Terminal.prototype.LineFeed = function() {
     if (this.cursory != this.scrollbottom) {
         this.cursory++;
         if (this.cursorvisible) {
-            this.UpdateChar(this.cursory-1, this.cursorx); // delete old cursor position
-            this.UpdateChar(this.cursory,   this.cursorx); // show new cursor position
+            this.PrepareUpdateRow(this.cursory-1); // delete old cursor position
+            this.PrepareUpdateRow(this.cursory); // show new cursor position
         }
         return;
     }
     this.ScrollUp(true);
 };
-
-
-Terminal.prototype.Scroll = function(count) {
-    if (count < 0) {
-        count = -count;
-        for(var i=0; i<d; i++) {
-            DeleteRow(i);
-        }
-    }
-    this.UpdateScreen();
-}
-
 
 Terminal.prototype.ChangeCursor = function(Numbers) {
     switch (Numbers.length) {
@@ -408,7 +403,7 @@ Terminal.prototype.HandleEscapeSequence = function() {
                 n++;
             }
             this.DeleteArea(this.cursory, this.ncolumns-count, this.cursory, this.ncolumns-1);
-            this.UpdateRow(this.cursory);
+            this.PrepareUpdateRow(this.cursory);
             break;
 
         case 'r': // set scrolling region
@@ -430,7 +425,7 @@ Terminal.prototype.HandleEscapeSequence = function() {
                 this.screen[this.cursory][this.cursorx+j] = 0x20;
                 this.color[this.cursory][this.cursorx+j] = this.currentcolor;
             }
-            this.UpdateRow(this.cursory);
+            this.PrepareUpdateRow(this.cursory);
             break;    
 
         default:
@@ -439,9 +434,9 @@ Terminal.prototype.HandleEscapeSequence = function() {
     }
 
      if (this.cursorvisible) {
-        this.UpdateRow(this.cursory);
+        this.PrepareUpdateRow(this.cursory);
         if (this.cursory != oldcursory) {
-            this.UpdateRow(oldcursory);
+            this.PrepareUpdateRow(oldcursory);
         }
     }
 
@@ -489,10 +484,8 @@ Terminal.prototype.PutChar = function(c) {
         return;
     case 0xD:
         // carriage return
-        var tempx = this.cursorx;
         this.cursorx = 0;
-        this.UpdateChar(this.cursory, tempx);
-        this.UpdateChar(this.cursory, this.cursorx);
+        this.PrepareUpdateRow(this.cursory);
         //DebugMessage("Carriage Return");
         return;
     case 0x7:
@@ -504,8 +497,7 @@ Terminal.prototype.PutChar = function(c) {
         if (this.cursorx < 0) {
             this.cursorx = 0;
         }
-        this.UpdateChar(this.cursory, this.cursorx+1);
-        this.UpdateChar(this.cursory, this.cursorx);
+        this.PrepareUpdateRow(this.cursory);
         //DebugMessage("backspace");
         return;
     case 0x9:
@@ -515,7 +507,7 @@ Terminal.prototype.PutChar = function(c) {
         do
         {
             if (this.cursorx >= this.ncolumns) {
-                this.UpdateRow(this.cursory);
+                this.PrepareUpdateRow(this.cursory);
                 this.LineFeed();
                 this.cursorx = 0;
             }
@@ -523,7 +515,7 @@ Terminal.prototype.PutChar = function(c) {
             this.color[this.cursory][this.cursorx] = this.currentcolor;	
             this.cursorx++;
         } while(spaces--);
-        this.UpdateRow(this.cursory);
+        this.PrepareUpdateRow(this.cursory);
         return;
 
     case 0x00:  case 0x01:  case 0x02:  case 0x03:
@@ -550,6 +542,5 @@ Terminal.prototype.PutChar = function(c) {
     //DebugMessage("Write: " + String.fromCharCode(c));
 
     this.cursorx++;
-    this.UpdateChar(cy, cx-1);
-    this.UpdateChar(cy, cx);
+    this.PrepareUpdateRow(cy);
 };
