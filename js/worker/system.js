@@ -50,9 +50,6 @@ function System() {
 }
 
 System.prototype.CreateCPU = function(cpuname) {
-    if (cpuname == "std") {
-        this.cpu = new CPU(this.ram);
-    } else 
     if (cpuname == "safe") {
         this.cpu = new SafeCPU(this.ram);
     } else 
