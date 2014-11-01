@@ -3,14 +3,9 @@
 "use strict";
 
 function LoopSoundBuffer(samplerate) {
-    this.samplerate = samplerate;
-    this.sampleslen = samplerate;
     this.periods = 6;
-    this.periodsize = Math.floor(this.sampleslen/4);
-    this.sampleslen = this.periodsize*this.periods;
 
     this.initialized = false;
-    this.buffer = new Float32Array(this.sampleslen);
     this.source = new Array(this.periods);
     this.soundbuffer = new Array(this.periods);
     this.period = 0;
@@ -19,13 +14,24 @@ function LoopSoundBuffer(samplerate) {
     if (typeof AudioContext == "undefined") return;
 
     this.context = new AudioContext();
-    for(var i=0; i<this.periods; i++) {
-        this.soundbuffer[i] = this.context.createBuffer(1, this.periodsize, this.samplerate);
-    }
+    this.SetRate(samplerate);
     this.initialized = true;
     this.PlayBuffer(0);
     this.PlayBuffer(1);
     this.period = 2;
+}
+
+LoopSoundBuffer.prototype.SetRate = function(rate) {
+    if (this.samplerate == rate) return;
+    this.samplerate = rate;
+    this.sampleslen = rate;
+    this.periodsize = Math.floor(this.sampleslen/4);
+    this.sampleslen = this.periodsize*this.periods;
+    this.buffer = new Float32Array(this.sampleslen);
+
+    for(var i=0; i<this.periods; i++) {
+        this.soundbuffer[i] = this.context.createBuffer(1, this.periodsize, this.samplerate);
+    }
 }
 
 LoopSoundBuffer.prototype.OnEnded = function()
@@ -39,10 +45,9 @@ LoopSoundBuffer.prototype.PlayBuffer = function(period)
         var idx = period % this.periods;
         var buffer = this.soundbuffer[idx].getChannelData(0);
         var offset = idx * this.periodsize;
-        for(var i=0; i<this.periodsize; i++)
-        {
-                buffer[i] = this.buffer[i + offset];
-                this.buffer[i+offset] = 0;
+        for(var i=0; i<this.periodsize; i++) {
+            buffer[i] = this.buffer[i + offset];
+            this.buffer[i+offset] = 0;
         }
         var source = this.context.createBufferSource(); // creates a sound source
         source.buffer = this.soundbuffer[idx];
@@ -59,11 +64,11 @@ LoopSoundBuffer.prototype.AddBuffer = function(addbuffer)
     var currentperiod = (this.bufferpos / this.periodsize);
     if ((currentperiod) < (this.period+2)) {
         this.bufferpos = this.periodsize*(this.period+3);
-        console.log("Warning: Sound buffer underrun, resetting");
+        //console.log("Warning: Sound buffer underrun, resetting");
     }
     if (currentperiod > (this.period+4)) {
         this.bufferpos = this.periodsize*(this.period+3);
-        console.log("Warning: Sound buffer overrun, resetting");
+        //console.log("Warning: Sound buffer overrun, resetting");
     }
 
     for(var i=0; i<addbuffer.length; i++) {

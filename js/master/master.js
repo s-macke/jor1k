@@ -170,6 +170,10 @@ jor1kGUI.prototype.OnMessage = function(e) {
             //this.sound.AddBuffer(e.data.data);
             break;
 
+        case "sound.rate":
+            //this.sound.SetRate(e.data.data);
+            break;
+
         case "ethmac":
             this.ethernet.SendFrame(e.data.data);
             break;

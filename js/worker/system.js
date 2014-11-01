@@ -372,6 +372,7 @@ System.prototype.HandleHalt = function() {
                 if (this.status == SYSTEM_HALT) {
                     this.status = SYSTEM_RUN;
                     this.cpu.ProgressTime(/*mswait*this.cyclesperms*/delta);
+                    this.snddev.Progress();
                     this.MainLoop();
                 }
             }.bind(this), mswait);
@@ -388,7 +389,7 @@ System.prototype.MainLoop = function() {
 
     this.uartdev0.Step();
     this.uartdev1.Step();
-    this.snddev.Step();
+    this.snddev.Progress();
 
     if (!stepsleft) {
       // recalibrate timer
