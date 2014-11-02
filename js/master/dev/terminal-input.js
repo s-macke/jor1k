@@ -2,6 +2,10 @@
 // -------------- Terminal Input -------------------
 // -------------------------------------------------
 
+// for the special keys look at
+// http://www2.gar.no/glinkj/help/cmds/ansm.htm
+// http://www.comptechdoc.org/os/linux/howlinuxworks/linux_hlkeycodes.html
+
 function TerminalInput(SendChars) {
     this.CTRLpressed = false;
     this.ALTpressed = false;
@@ -94,6 +98,32 @@ TerminalInput.prototype.OnKeyDown = function(e) {
         e.preventDefault();
         return false;
         break;
+    case 112:
+    case 113:
+    case 114:
+    case 115:
+    case 116:
+        // F1 - F5
+        this.SendChars([0x1B, 0x5B, 0x5B, keycode-112+0x41]);
+        e.preventDefault();
+        return false;
+        break;
+    case 117:
+    case 118:
+    case 119:
+        // F6 - F8
+        this.SendChars([0x1B, 0x5B, 0x31, keycode-117+0x37, 0x7E]);
+        e.preventDefault();
+        return false;
+        break;
+    case 120:
+    case 121:
+        // F9 - F10
+        this.SendChars([0x1B, 0x5B, 0x32, keycode-120+0x30, 0x7E]);
+        e.preventDefault();
+        return false;
+        break;
+
     case 36:
         // pos1
         this.SendChars([0x1b, 0x5b, 0x48]);
