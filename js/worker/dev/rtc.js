@@ -32,7 +32,6 @@ RTCDev.prototype.ReadReg32 = function (addr) {
     switch(addr)
     {
         case LPC32XX_RTC_UCOUNT:
-            DebugMessage("ask for time");
             return Math.floor(new Date().getTime()/1000);
             break;
 

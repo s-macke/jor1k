@@ -214,13 +214,13 @@ SafeCPU.prototype.CheckForInterrupt = function () {
     }
 };
 
-SafeCPU.prototype.RaiseInterrupt = function (line) {
+SafeCPU.prototype.RaiseInterrupt = function (line, cpuid) {
     var lmask = 1 << line;
     this.PICSR |= lmask;
     this.CheckForInterrupt();
 };
 
-SafeCPU.prototype.ClearInterrupt = function (line) {
+SafeCPU.prototype.ClearInterrupt = function (line, cpuid) {
     this.PICSR &= ~(1 << line);
 };
 
@@ -279,6 +279,9 @@ SafeCPU.prototype.SetSPR = function (idx, x) {
                 DebugMessage("Error in SetSPR: Timer mode other than continuous not supported");
                 abort();
             }
+            break;
+        case 1:
+            this.TTCR = x;
             break;
         default:
             DebugMessage("Error in SetSPR: Tick timer address not supported");

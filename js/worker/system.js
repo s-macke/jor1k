@@ -56,6 +56,10 @@ System.prototype.CreateCPU = function(cpuname) {
     if (cpuname == "asm") {
         this.cpu = this.fastcpu;
         this.cpu.Init();
+    } else
+    if (cpuname == "smp") {
+        this.cpu = this.smpcpu;
+        this.cpu.Init();
     } else {
         DebugMessage("Error: CPU name unknown");
         return;
@@ -68,6 +72,7 @@ System.prototype.ChangeCPU = function(cpuname) {
 
     var oldcpu = this.cpu;
     var oldcpuname = this.currentcpuname;
+    if (oldcpuname == "smp") return;
 
     this.CreateCPU(cpuname);
 
@@ -119,6 +124,8 @@ System.prototype.ChangeCPU = function(cpuname) {
 
 System.prototype.Reset = function() {
     this.status = SYSTEM_STOP;
+    this.irqdev.Reset();
+    this.timerdev.Reset();
     this.uartdev0.Reset();
     this.uartdev1.Reset();
     this.ethdev.Reset();
@@ -180,8 +187,13 @@ if (typeof Math.imul == "undefined") {
     this.fastcpu = FastCPU(stdlib, foreign, this.heap);
     this.fastcpu.Init();
 
+    this.smpcpu = SMPCPU(stdlib, foreign, this.heap);
+    this.smpcpu.Init();
+
     this.CreateCPU(system.cpu);
 
+    this.irqdev = new IRQDev(this);
+    this.timerdev = new TimerDev();
     this.uartdev0 = new UARTDev(0, this, 0x2);
     this.uartdev1 = new UARTDev(1, this, 0x3);
     this.ethdev = new EthDev(this.ram, this);
@@ -200,16 +212,18 @@ if (typeof Math.imul == "undefined") {
     this.virtio9pdev = new Virtio9p(this.ram, this.filesystem);
     this.virtiodev = new VirtIODev(this, this.ram, this.virtio9pdev);
 
-    this.ram.AddDevice(this.atadev, 0x9e000000, 0x1000);
-    this.ram.AddDevice(this.uartdev0, 0x90000000, 0x7);
-    this.ram.AddDevice(this.uartdev1, 0x96000000, 0x7);
-    this.ram.AddDevice(this.snddev, 0x98000000, 0x400);
-    this.ram.AddDevice(this.ethdev, 0x92000000, 0x1000);
+    this.ram.AddDevice(this.atadev,    0x9e000000, 0x1000);
+    this.ram.AddDevice(this.uartdev0,  0x90000000, 0x7);
+    this.ram.AddDevice(this.uartdev1,  0x96000000, 0x7);
+    this.ram.AddDevice(this.snddev,    0x98000000, 0x400);
+    this.ram.AddDevice(this.ethdev,    0x92000000, 0x1000);
     this.ram.AddDevice(this.virtiodev, 0x97000000, 0x1000);
-    this.ram.AddDevice(this.fbdev, 0x91000000, 0x1000);
-    this.ram.AddDevice(this.tsdev, 0x93000000, 0x1000);
-    this.ram.AddDevice(this.kbddev, 0x94000000, 0x100);
-    this.ram.AddDevice(this.rtcdev, 0x99000000, 0x1000);
+    this.ram.AddDevice(this.fbdev,     0x91000000, 0x1000);
+    this.ram.AddDevice(this.tsdev,     0x93000000, 0x1000);
+    this.ram.AddDevice(this.kbddev,    0x94000000, 0x100);
+    this.ram.AddDevice(this.rtcdev,    0x99000000, 0x1000);
+    this.ram.AddDevice(this.irqdev,    0x9A000000, 0x1000);
+    this.ram.AddDevice(this.timerdev,  0x9B000000, 0x1000);
 
     this.instructionsperloop = 0x40000;
     this.ips = 0; // external instruction per second counter
@@ -226,7 +240,8 @@ if (typeof Math.imul == "undefined") {
 }
 
 System.prototype.RaiseInterrupt = function(line) {
-    this.cpu.RaiseInterrupt(line);
+    //DebugMessage("Raise " + line);
+    this.cpu.RaiseInterrupt(line, -1); // raise all cores
     if (this.status == SYSTEM_HALT)
     {
         this.status = SYSTEM_RUN;
@@ -238,8 +253,19 @@ System.prototype.RaiseInterrupt = function(line) {
     }
 }
 System.prototype.ClearInterrupt = function (line) {
-    this.cpu.ClearInterrupt(line);
+    this.cpu.ClearInterrupt(line, -1); // clear all cores
 }
+
+System.prototype.RaiseSoftInterrupt = function(line, cpuid) {
+    // the cpu cannot be halted when this function is called, so skip this check
+    this.cpu.RaiseInterrupt(line, cpuid);
+}
+
+System.prototype.ClearSoftInterrupt = function (line, cpuid) {
+    this.cpu.ClearInterrupt(line, cpuid);
+}
+
+
 
 System.prototype.PrintState = function() {
     var r = new Uint32Array(this.heap);
@@ -363,6 +389,7 @@ System.prototype.HandleHalt = function() {
     if (delta == -1) return;
         this.idlemaxwait = delta;
         var mswait = Math.floor(delta / this.cyclesperms + 0.5);
+        //DebugMessage("wait " + mswait);
         
         if (mswait <= 1) return;
         if (mswait > 1000) DebugMessage("Warning: idle for " + mswait + "ms");
