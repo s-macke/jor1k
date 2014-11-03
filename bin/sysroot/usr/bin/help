@@ -322,6 +322,7 @@ SMP () {
 showmenu \
 "Symmetric Multiprocessing" \
 "htop            - interactive process viewer" \
+"mandelpar       - Parralelized but very slow fractal plotter" \
 "Back"
 
 case $? in
@@ -330,6 +331,8 @@ case $? in
 	1 )
 		htop ;;
 	2 )
+		mandelpar ;;
+	3 )
 		Main ;;
 esac
 	SMP
