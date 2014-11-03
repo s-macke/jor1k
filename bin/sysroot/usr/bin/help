@@ -12,7 +12,9 @@ showmenu \
 "Programming Languages" \
 "Network Tools & Web Browsers" \
 "Start X Server (glxgears, xterm, ...)" \
-"Start wayland/weston (currently not working, use an old version of jor1k)"
+"Symmetric multiprocessing" \
+"Start wayland/weston (currently not working, use an old version of jor1k)" \
+"Quit"
 
 case $? in
 	0 )
@@ -36,8 +38,12 @@ case $? in
 		startx
 		exit ;;
 	9)
+		SMP ;;
+	10)
 		echo "Loading files from server. This may take a while."
 		startweston ;;
+	11)
+		exit ;;
 esac
 
 }
@@ -50,7 +56,8 @@ showmenu \
 "ScummVM            - Monkey Island demo" \
 "PrBoom             - Doom" \
 "Toppler            - Jump and run. Climb a tower" \
-"Frontier: Elite II - Space trading and combat simulator "
+"Frontier: Elite II - Space trading and combat simulator " \
+"Back"
 
 case $? in
 	0 )
@@ -64,6 +71,8 @@ case $? in
 	4)
 		cd /usr/share/games/frontier
 		./frontier ;;
+	5)
+		Main ;;
 esac
 	GGames
 }
@@ -78,6 +87,7 @@ showmenu \
 "df_neo      - moving sprites" \
 "df_knuckles - rotating knuckle" \
 "df_matrix   - rotating objects" \
+"Back"
 
 case $? in
 	0 )
@@ -96,6 +106,8 @@ case $? in
 		df_knuckles ;;
 	6)
 		df_matrix ;;
+	7)
+		Main ;;
 esac
 	GDemos
 }
@@ -110,7 +122,8 @@ showmenu \
 "blue    - Blue Moon, a nifty solitaire (uses color)" \
 "bs      - the game of Battleships (uses color) " \
 "hanoi   - the game of hanoi (uses color essentially)" \
-"knight  - the game of Knight's Tour (uses color)"
+"knight  - the game of Knight's Tour (uses color)" \
+"Back"
 
 case $? in
 	0 )
@@ -125,6 +138,8 @@ case $? in
 		hanoi ;;
 	5)
 		knight ;;
+	6)
+		Main ;;
 esac
 	TGames
 }
@@ -145,7 +160,8 @@ showmenu \
 "testcurs - a test from the PDCurses people (uses color)" \
 "worm     - worms run all over your screen (uses color)" \
 "xmas     - Xmas greeting card" \
-"nano     - Text editor (CTRL+X to exit)"
+"nano     - Text editor (CTRL+X to exit)" \
+"Back"
 
 case $? in
 	0 )
@@ -172,6 +188,8 @@ case $? in
 		xmas ;;
 	11 )
 		nano ;;
+	12 )
+		Main ;;
 esac
 	TDemos
 }
@@ -181,7 +199,8 @@ Benchmarks () {
 showmenu \
 "Benchmarks" \
 "nbench    - BYTE Magazine's BYTEmark benchmark (soft fpu)" \
-"coremark  - The Embedded Microprocessor Benchmark"
+"coremark  - The Embedded Microprocessor Benchmark" \
+"Back"
 
 case $? in
 	0 )
@@ -197,6 +216,8 @@ case $? in
 		#coremark 0x3415 0x3415 0x66 0 7 1 2000
 		read -p "Press any key to continue... "
 		;;
+	3 )
+		Main ;;
 esac
 	Benchmarks
 }
@@ -208,7 +229,8 @@ showmenu \
 "Programming" \
 "gcc   - The GNU C Compiler" \
 "lua   - The programming language Lua" \
-"bc    - The arbitrary precision calculator language"
+"bc    - The arbitrary precision calculator language" \
+"Back"
 
 case $? in
 	0 )
@@ -243,6 +265,8 @@ case $? in
 		echo "==============================="
 		bc -l
 		;;
+	4 )
+		Main ;;
 esac
 	Programming
 }
@@ -257,7 +281,9 @@ showmenu \
 "telnet    - Watch an ASCII version of Star Wars over a telnet connection" \
 "ssh       - Secure Shell" \
 "nmap      - Free Security Scanner For Network Exploration & Security Audits" \
-"sshd      - start a sshd server"
+"sshd      - start a sshd server" \
+"Back"
+
 
 case $? in
 	0 )
@@ -285,12 +311,29 @@ case $? in
 	7 )
 		/usr/sbin/sshd
 		;;
+	8 )
+		Main ;;
 esac
 	Network
 }
 
+SMP () {
+
+showmenu \
+"Symmetric Multiprocessing" \
+"htop            - interactive process viewer" \
+"Back"
+
+case $? in
+	0 )
+		Main ;;
+	1 )
+		htop ;;
+	2 )
+		Main ;;
+esac
+	SMP
+}
+
 
 Main
-
-
-
