@@ -6,9 +6,16 @@ jor1k is a OpenRISC 1000 emulator written in JavaScript running Linux. It runs i
 Have a try and see if it runs in your browser by opening the [demo][project demo].
 More information can be found on the [Wiki][project wiki] pages. 
 
-### Links
+### Demos
 
- * A project [demo][project demo] is available
+* Main [demo][project demo] page
+* [Edit, compile and run](http://s-macke.github.io/jor1k/compile.html) C code in your browser
+* Symmetric multiprocessing with  [2 cores](http://s-macke.github.io/jor1k/index.html?cpu=smp&n=2), [4 cores](http://s-macke.github.io/jor1k/index.html?cpu=smp&n=2), [8 cores](http://s-macke.github.io/jor1k/index.html?cpu=smp&n=2) (unstable with inreasing cores)
+
+
+### Project Links
+
+ 
  * [Bugtracker][project issues] to report any issues or feature requests
  * [Wiki][project wiki] containing more detailed descriptions
 
