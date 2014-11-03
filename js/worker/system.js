@@ -59,7 +59,7 @@ System.prototype.CreateCPU = function(cpuname) {
     } else
     if (cpuname == "smp") {
         this.cpu = this.smpcpu;
-        this.cpu.Init();
+        this.cpu.Init(this.ncores);
     } else {
         DebugMessage("Error: CPU name unknown");
         return;
@@ -144,6 +144,10 @@ System.prototype.Reset = function() {
 System.prototype.Init = function(system) {
     this.status = SYSTEM_STOP;
     this.memorysize = system.memorysize;
+
+    this.ncores = system.ncores;
+    if (!system.ncores) system.ncores = 1;
+
     // this must be a power of two.
     var ramoffset = 0x100000;
     this.heap = new ArrayBuffer(this.memorysize*0x100000); 
@@ -188,7 +192,7 @@ if (typeof Math.imul == "undefined") {
     this.fastcpu.Init();
 
     this.smpcpu = SMPCPU(stdlib, foreign, this.heap);
-    this.smpcpu.Init();
+    this.smpcpu.Init(system.ncores);
 
     this.CreateCPU(system.cpu);
 

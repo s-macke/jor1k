@@ -184,24 +184,20 @@ function RandomString(length) {
 
 function Start() {
 
-    var userid = location.search.split('user=')[1];
-    if (!userid) {
-        userid = RandomString(10);
-        window.history.pushState([], "", location + "?user="+userid);
-    }
+    var userid = RandomString(10);
 
     jor1kparameters = {
         system: {
             kernelURL: "bin/vmlinux.bin.bz2", // kernel image
             memorysize: 32, // in MB, must be a power of two
-            cpu: "asm", // short name for the cpu to use 
+            cpu: "asm", // short name for the cpu to use
+            ncores: 1,
         },
         fs: {
             basefsURL: "bin/basefs.xml", // xml file with the basic filesystem configuration.
             extendedfsURL: "../jor1k-sysroot/fs.xml", // xml file with extended filesystem informations. Loaded after the basic filesystem has been loaded.
             earlyload: [], // list of files which should be loaded immediately after they appear in the filesystem
             lazyloadimages: [
-                "http://jor1k.com/sync/tarballs/"+userid+".tar.bz2"
             ] // list of automatically loaded images after the basic filesystem has been loaded
 	},
 
@@ -215,7 +211,42 @@ function Start() {
         syncURL: "http://jor1k.com/sync/upload.php", // url to sync a certain folder
     }
 
+    // --------------------------------------------------------
+    // parse URL
+    var loc = document.URL.split('?');
+    userid = "";
+    if (loc[1]) {
+        var params = loc[1].split('&');
+        for(var i=0; i<params.length; i++) {
+            if (params[i].substr(0,4) == "user") {
+                userid = params[i].split('=')[1];
+                jor1kparameters.userid = userid;
+                jor1kparameters.fs.lazyloadimages.push("http://jor1k.com/sync/tarballs/"+userid+".tar.bz2");
+            }
+            if (params[i].substr(0,3) == "cpu") {
+                jor1kparameters.system.cpu = params[i].split('=')[1];
+                if (jor1kparameters.system.cpu == "smp") {
+                    console.log("Load smp kernel");
+                    jor1kparameters.system.kernelURL = "bin/vmlinuxsmp.bin.bz2";
+                    jor1kparameters.system.ncores = 4;
+                }
+            }
+            if (params[i].substr(0,1) == "n") {
+                jor1kparameters.system.ncores = params[i].split('=')[1];
+            }
+        }
+    }
+    if (userid == "") {
+        if (loc[1])
+              window.history.pushState([], "", location + "&user="+jor1kparameters.userid);
+          else
+              window.history.pushState([], "", location + "?user="+jor1kparameters.userid);
+    }
+
+    // --------------------------------------------------------
+
     jor1kgui = new jor1kGUI(jor1kparameters);
+
 }
 </script>
 

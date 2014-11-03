@@ -60,7 +60,7 @@ var h = new stdlib.Int32Array(heap);
 var b = new stdlib.Uint8Array(heap);
 var w = new stdlib.Uint16Array(heap);
 
-var ncores = 8; // the total number of cores
+var ncores = 4; // the total number of cores
 
 var coreid = 0; // the currently active core.
 var corep = 0x0; // the pointer to the core related structures
@@ -147,7 +147,9 @@ var current_pgd = 0x0;
 var dozebitfield = 0x0;
 
 
-function Init() { 
+function Init(_ncores) {
+    _ncores = _ncores|0;
+    ncores = _ncores|0;
     AnalyzeImage();
     Reset();
 }
@@ -195,7 +197,6 @@ function ChangeCore()
     //dozebitfield = 0;
 
     newcoreid = coreid|0;
-
     if ( (dozebitfield|0) == ( (1 << ncores)-1|0)  ) {   
          // All cpu are idle. This should never happen in this function.
          DebugMessage(ERROR_ALL_CORES_IDLE|0);
