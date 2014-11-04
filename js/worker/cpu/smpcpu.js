@@ -146,6 +146,7 @@ var current_pgd = 0x0;
 
 var dozebitfield = 0x0;
 
+var snoopbitfield = 0x0; // fot atomic instructions
 
 function Init(_ncores) {
     _ncores = _ncores|0;
@@ -156,14 +157,14 @@ function Init(_ncores) {
 
 function Reset() {
     var i = 0;
-    dozebitfield = 0;
+    dozebitfield = 0x0;
+    snoopbitfield = 0x0;
 
     for(i=0; (i|0)<(ncores|0); i=i+1|0) {
         h[corep + TTMRp >>2] = 0x0;
         h[corep + TTCRp >>2] = 0x0;
         h[corep + PICMRp >>2] = 0x3;
         h[corep + PICSRp >>2] = 0x0;
-        h[EAp >> 2] = -1;
 
         h[corep + group0p+(SPR_IMMUCFGR<<2) >> 2] = 0x18; // 0 ITLB has one way and 64 sets
         h[corep + group0p+(SPR_DMMUCFGR<<2) >> 2] = 0x18; // 0 DTLB has one way and 64 sets
@@ -220,6 +221,8 @@ function ChangeCore()
     h[corep + 0x138 >>2] = nextpc;
     h[corep + 0x13C >>2] = jump;
     h[corep + 0x190 >>2] = delayedins;
+    h[corep + 0x194 >>2] = delayedins_at_page_boundary;
+
 
     h[corep + 0x140 >>2] = instlblookup;
     h[corep + 0x144 >>2] = read32tlblookup;
@@ -252,6 +255,7 @@ function ChangeCore()
     nextpc      = h[corep + 0x138 >>2]|0;
     jump        = h[corep + 0x13C >>2]|0;
     delayedins  = h[corep + 0x190 >>2]|0;
+    delayedins_at_page_boundary  = h[corep + 0x194 >>2]|0;
 
     instlblookup     = h[corep + 0x140 >>2]|0;
     read32tlblookup  = h[corep + 0x144 >>2]|0;
@@ -326,12 +330,6 @@ function TimerGetTicksToNextInterrupt(coreid) {
     var delta = 0;
     delta = (h[(coreid<<15) + TTMRp >>2] & 0xFFFFFFF) - (h[TTCRp >>2] & 0xFFFFFFF) |0;
     if ((delta|0) < 0) delta = delta + 0xFFFFFFF | 0;
- /*
-   if (delta > 50000000) {
-        DebugMessage("wait for longer than 1 second " + (delta/20000000) + "for core " + coreid);
-        abort();
-    }
-*/
     return delta|0;
 }
 
@@ -462,16 +460,12 @@ function RaiseInterrupt(line, coreid) {
     var lmask = 0;
     var picp = 0;
     lmask = (1 << line)|0;
-    //DebugMessage("Raise irq " + line + " on core " + coreid);
 
     if ((coreid|0) == -1) { // raise all interrupt lines
         for(i=0; (i|0)<(ncores|0); i=i+1|0) {
-            //if (h[(i<<15) + PICSRp >>2]|lmask) {
-                //DebugMessage("Raise irq " + line + " on core " + i);
-                picp = (i<<15) + PICSRp | 0;
-                h[picp >> 2] = (h[picp >> 2]|0) | lmask;
-                CheckForInterrupt(i);
-            //}
+            picp = (i<<15) + PICSRp | 0;
+            h[picp >> 2] = (h[picp >> 2]|0) | lmask;
+            CheckForInterrupt(i);
         }
     } else {
         picp = (coreid<<15) + PICSRp | 0;
@@ -536,7 +530,6 @@ function SetSPR(idx, x) {
         // pic
         switch (address|0) {
         case 0:
-            //DebugMessage("PICMR of coreid " + coreid + " = " + hex8(x));
             h[corep + PICMRp >>2] = x | 0x3; // the first two interrupts are non maskable
             // check immediately for interrupt
             if (SR_IEE) {
@@ -643,10 +636,11 @@ function Exception(excepttype, addr) {
     var except_vector = 0;
     except_vector = excepttype | (SR_EPH ? 0xf0000000 : 0x0);
 
+    dozebitfield = dozebitfield & (~(1 << coreid));
+
     SetSPR(SPR_EEAR_BASE, addr);
     SetSPR(SPR_ESR_BASE, GetFlags()|0);
 
-    h[EAp >> 2] = -1;
     SR_OVE = 0;
     SR_SM = 1;
     SR_IEE = 0;
@@ -707,6 +701,8 @@ function Exception(excepttype, addr) {
     }
     delayedins = 0;
     SR_IME = 0;
+    h[corep + EAp >> 2] = -1;
+    snoopbitfield = snoopbitfield & (~(1<<coreid));
 }
 
 
@@ -960,7 +956,6 @@ function Step(steps, clockspeed) {
     var dsteps = 0; // small counter
 
 // -----------------------------------------------------
-
     for(;;) {
 
         if ((ppc|0) == (fence|0)) {
@@ -970,13 +965,13 @@ function Step(steps, clockspeed) {
                 delayedins = 0;
             }
 
-            dsteps = dsteps + ((ppc - ppcorigin) >> 2)|0;
+            dsteps = dsteps - ((ppc - ppcorigin) >> 2)|0;
 
         // do this not so often
-        if ((dsteps|0) >= 64)
+        if ((dsteps|0) <= 0)
         if (!(delayedins_at_page_boundary|0)) { // for now. Not sure if we need this check
-
-            dsteps = dsteps - 64|0;
+            //DebugMessage(dsteps);
+            dsteps = dsteps + 64|0;
             steps = steps - 64|0;
             if ((steps|0) < 0) return 0x0; // return to main loop
 
@@ -990,23 +985,25 @@ function Step(steps, clockspeed) {
             }
 
             // the timer is always enabled on smp systems
-            h[TTCRp >> 2] = ((h[TTCRp >> 2]|0) + clockspeed|0); 
+            h[TTCRp >> 2] = ((h[TTCRp >> 2]|0) + clockspeed|0);
         }
-            // check if pending and check if interrupt must be triggered
-            if (h[corep + TTMRp >>2] & (1 << 28)) {
-                if (SR_TEE) {
+            // check for any interrupts
+            // SR_TEE is set or cleared at the same time as SR_IEE in Linux, so skip this check
+            if (SR_IEE|0) {
+                if (h[corep + raise_interruptp >> 2]|0) {
+                    h[corep + raise_interruptp >> 2] = 0;
+                    Exception(EXCEPT_INT, h[corep + group0p + (SPR_EEAR_BASE<<2) >> 2]|0);
+                    // treat exception directly here
+                    pc = nextpc;
+                } else
+                if (h[corep + TTMRp >> 2] & (1 << 28)) {
                     Exception(EXCEPT_TICK, h[corep + group0p + (SPR_EEAR_BASE<<2) >> 2]|0);
                     // treat exception directly here
                     pc = nextpc;
                 }
-            } else
-            if (SR_IEE|0)
-            if (h[corep + raise_interruptp >>2]|0) {
-                h[corep + raise_interruptp >>2] = 0;
-                Exception(EXCEPT_INT, h[corep + group0p + (SPR_EEAR_BASE<<2)>>2]|0);
-                pc = nextpc;
             }
- //       }
+
+ //     }
 
         // Get instruction pointer
         if ((instlbcheck ^ pc) & 0xFFFFE000) // short check if it is still the correct page
@@ -1060,11 +1057,14 @@ function Step(steps, clockspeed) {
 
            ChangeCore();
            continue;
-        }
+
+        } // end of fence, go on with fastpath
+
         ins = h[ppc >> 2]|0;
         ppc = ppc + 4|0;
 
 // --------------------------------------------
+
         switch ((ins >> 26)&0x3F) {
         case 0x0:
             // j
@@ -1193,7 +1193,8 @@ function Step(steps, clockspeed) {
                 read32tlblookup = ((paddr^vaddr) >> 13) << 13;
             }
             paddr = read32tlblookup ^ vaddr;
-            h[EAp >>2] = paddr;
+            snoopbitfield = snoopbitfield | (1<<coreid);
+            h[corep + EAp >>2] = paddr;
             r[corep + ((ins >> 19) & 0x7C)>>2] = (paddr|0)>0?h[ramp+paddr >> 2]|0:ReadMemory32(paddr|0)|0;
             break;
 
@@ -1262,12 +1263,6 @@ function Step(steps, clockspeed) {
                 read16utlblookup = ((paddr^vaddr) >> 13) << 13;
             }
             paddr = read16utlblookup ^ vaddr;
-/*
-            paddr = DTLBLookup(vaddr, 0)|0;
-            if ((paddr|0) == -1) {
-                break;
-            }
-*/
             if ((paddr|0) >= 0) {
                 r[corep + ((ins >> 19) & 0x7C)>>2] = w[ramp + (paddr ^ 2) >> 1];
             } else {
@@ -1287,12 +1282,6 @@ function Step(steps, clockspeed) {
                 read16stlblookup = ((paddr^vaddr) >> 13) << 13;
             }
             paddr = read16stlblookup ^ vaddr;
-/*
-            paddr = DTLBLookup(vaddr, 0)|0;
-            if ((paddr|0) == -1) {
-                break;
-            }
-*/
             if ((paddr|0) >= 0) {
                 r[corep + ((ins >> 19) & 0x7C)>>2] =  (w[ramp + (paddr ^ 2) >> 1] << 16) >> 16;
             } else {
@@ -1506,8 +1495,16 @@ function Step(steps, clockspeed) {
                 write32tlblookup = ((paddr^vaddr) >> 13) << 13;
             }
             paddr = write32tlblookup ^ vaddr;
-            SR_F = ((paddr|0) == (h[EAp >>2]|0))?(1|0):(0|0);
-            h[EAp >>2] = -1;
+            SR_F = ((paddr|0) == (h[corep + EAp >>2]|0))?(1|0):(0|0);
+            h[corep + EAp >>2] = -1;
+            snoopbitfield = snoopbitfield & (~(1<<coreid));
+            if (snoopbitfield)
+            for(i=0; (i|0)<(ncores|0); i = i + 1|0) {
+                if ((h[(i<<15) + EAp >>2]|0) == (paddr|0)) {
+                    h[(i<<15) + EAp >>2] = -1;
+                    snoopbitfield = snoopbitfield & (~(1<<i));
+                }
+            }
             if ((SR_F|0) == 0) {
                 break;
             }
@@ -1531,6 +1528,13 @@ function Step(steps, clockspeed) {
                 write32tlblookup = ((paddr^vaddr) >> 13) << 13;
             }
             paddr = write32tlblookup ^ vaddr;
+            if (snoopbitfield)
+            for(i=0; (i|0)<(ncores|0); i = i + 1|0) {
+                if ((h[(i<<15) + EAp >>2]|0) == (paddr|0)) {
+                    h[(i<<15) + EAp >>2] = -1;
+                    snoopbitfield = snoopbitfield & (~(1<<i));
+                }
+            }
             if ((paddr|0) > 0) {
                 h[ramp + paddr >> 2] = r[corep + ((ins >> 9) & 0x7C)>>2]|0;
             } else {
@@ -1551,6 +1555,13 @@ function Step(steps, clockspeed) {
                 write8tlblookup = ((paddr^vaddr) >> 13) << 13;
             }
             paddr = write8tlblookup ^ vaddr;
+            if (snoopbitfield)
+            for(i=0; (i|0)<(ncores|0); i = i + 1|0) {
+                if ((h[(i<<15) + EAp >>2]|0) == (paddr&(~3))) {
+                    h[(i<<15) + EAp >>2] = -1;
+                    snoopbitfield = snoopbitfield & (~(1<<i));
+                }
+            }
             if ((paddr|0) > 0) {
                 // consider that the data is saved in little endian
                 b[ramp + (paddr ^ 3)|0] = r[corep + ((ins >> 9) & 0x7C)>>2]|0;
@@ -1572,6 +1583,13 @@ function Step(steps, clockspeed) {
                 write16tlblookup = ((paddr^vaddr) >> 13) << 13;
             }
             paddr = write16tlblookup ^ vaddr;
+            if (snoopbitfield)
+            for(i=0; (i|0)<(ncores|0); i = i + 1|0) {
+                if ((h[(i<<15) + EAp >>2]|0) == (paddr&(~3))) {
+                    h[(i<<15) + EAp >>2] = -1;
+                    snoopbitfield = snoopbitfield & (~(1<<i));
+                }
+            }
             if ((paddr|0) >= 0) {
                 w[ramp + (paddr ^ 2) >> 1] = r[corep + ((ins >> 9) & 0x7C)>>2];
             } else {
