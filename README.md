@@ -10,7 +10,7 @@ More information can be found on the [Wiki][project wiki] pages.
 
 * Main [demo][project demo] page
 * [Edit, compile and run](http://s-macke.github.io/jor1k/compile.html) C code in your browser
-* Symmetric multiprocessing with  [2 cores](http://s-macke.github.io/jor1k/index.html?cpu=smp&n=2), [4 cores](http://s-macke.github.io/jor1k/index.html?cpu=smp&n=4), [8 cores](http://s-macke.github.io/jor1k/index.html?cpu=smp&n=8) (unstable with inreasing cores)
+* Symmetric multiprocessing with  [2 cores](http://s-macke.github.io/jor1k/index.html?cpu=smp&n=2), [4 cores](http://s-macke.github.io/jor1k/index.html?cpu=smp&n=4), [8 cores](http://s-macke.github.io/jor1k/index.html?cpu=smp&n=8), [16 cores](http://s-macke.github.io/jor1k/index.html?cpu=smp&n=16) (unstable with inreasing cores)
 
 
 ### Project Links
