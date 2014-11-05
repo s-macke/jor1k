@@ -16,6 +16,7 @@ var ENOENT = 2;      /* No such file or directory */
 var EINVAL = 22;     /* Invalid argument */
 var ENOTSUPP = 524;  /* Operation is not supported */
 var ENOTEMPTY = 39;  /* Directory not empty */
+var EPROTO    = 71   /* Protocol error */
 
 var P9_SETATTR_MODE = 0x00000001;
 var P9_SETATTR_UID = 0x00000002;
@@ -42,6 +43,9 @@ var P9_STAT_MODE_SETUID = 0x00080000;
 var P9_STAT_MODE_SETGID = 0x00040000;
 var P9_STAT_MODE_SETVTX = 0x00010000;
 
+var FID_NONE = -1;
+var FID_INODE = 1;
+var FID_XATTR = 2;
 
 // small 9p device
 function Virtio9p(ramdev, filesystem) {
@@ -56,12 +60,12 @@ function Virtio9p(ramdev, filesystem) {
     this.msize = 8192; // maximum message size
     this.replybuffer = new Uint8Array(this.msize*2); // Twice the msize to stay on the safe site
     this.replybuffersize = 0;
-    
-    this.fid2inode = [];
+    this.Reset();
 }
 
 Virtio9p.prototype.Reset = function() {
     this.fid2inode = [];
+    this.fidtype = [];
 }
 
 Virtio9p.prototype.BuildReply = function(id, tag, payloadsize) {
@@ -232,6 +236,7 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             //DebugMessage("[create] fid=" + fid + ", name=" + name + ", flags=" + flags + ", mode=" + mode + ", gid=" + gid); 
             var idx = this.fs.CreateFile(name, this.fid2inode[fid]);
             this.fid2inode[fid] = idx;
+            this.fidtype[fid] = FID_INODE;
             var inode = this.fs.GetInode(idx);
             inode.uid = gid;
             inode.gid = gid;
@@ -354,11 +359,16 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             var count = req[2];
             //if (id == 40) DebugMessage("[treaddir]: fid=" + fid + " offset=" + offset + " count=" + count);
             //if (id == 116) DebugMessage("[read]: fid=" + fid + " offset=" + offset + " count=" + count);
-            
-            var inode = this.fs.GetInode(this.fid2inode[fid]);
-            if (inode.size < offset+count) count = inode.size - offset;
-            for(var i=0; i<count; i++)
-                this.replybuffer[7+4+i] = inode.data[offset+i];
+            if (this.fidtype[fid] == FID_XATTR) {
+                // TODO: find the correct binary format of the ACLs
+                for(var i=0; i<count; i++)
+                    this.replybuffer[7+4+i] = 0;
+            } else {
+                var inode = this.fs.GetInode(this.fid2inode[fid]);
+                if (inode.size < offset+count) count = inode.size - offset;
+                for(var i=0; i<count; i++)
+                    this.replybuffer[7+4+i] = inode.data[offset+i];
+            }
             Marshall(["w"], [count], this.replybuffer, 7);
             this.BuildReply(id, tag, 4 + count);
             this.SendReply(index);
@@ -430,6 +440,7 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             var fid = req[0];
             //DebugMessage("[attach]: fid=" + fid + " afid=" + hex8(req[1]) + " uname=" + req[2] + " aname=" + req[3]);
             this.fid2inode[fid] = 0;            
+            this.fidtype[fid] = FID_INODE;
             var inode = this.fs.GetInode(this.fid2inode[fid]);
             Marshall(["Q"], [inode.qid], this.replybuffer, 7);
             this.BuildReply(id, tag, 13);
@@ -479,6 +490,7 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
                 nwidx++;
                 //DebugMessage(this.fid2inode[nwfid]);
                 this.fid2inode[nwfid] = idx;
+                this.fidtype[nwfid] = FID_INODE;
             }
             Marshall(["h"], [nwidx], this.replybuffer, 7);
             this.BuildReply(id, tag, offset-7);
@@ -490,9 +502,28 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             //DebugMessage("[clunk]: fid=" + req[0]);
             this.fs.CloseInode(this.fid2inode[req[0]]);
             this.fid2inode[req[0]] = -1;
+            this.fidtype[req[0]] = FID_NONE;
             this.BuildReply(id, tag, 0);
             this.SendReply(index);
             break;
+
+        case 30: // xattrwalk
+            var req = Unmarshall2(["w", "w", "s"], GetByte);
+            var fid = req[0];
+            var newfid = req[1];
+            var name = req[2];
+            //DebugMessage("[xattrwalk]: fid=" + req[0] + " newfid=" + req[1] + " name=" + req[2]);
+            this.fid2inode[newfid] = this.fid2inode[fid];
+            this.fidtype[newfid] = FID_NONE;
+            var length = 0;
+            if (name == "security.capability") { // this seems to be the minimum requirement
+                length = 0;
+                this.fidtype[newfid] = FID_XATTR;
+            }
+            Marshall(["d"], [length], this.replybuffer, 7);
+            this.BuildReply(id, tag, 8);
+            this.SendReply(index);
+            break; 
 
         default:
             DebugMessage("Error in Virtio9p: Unknown id " + id + " received");
