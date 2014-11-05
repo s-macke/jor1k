@@ -138,7 +138,7 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             );
             break;
 
-        case 70: // link
+        case 70: // link (just copying)
             var req = Unmarshall2(["w", "w", "s"], GetByte);
             var dfid = req[0];
             var fid = req[1];
@@ -151,6 +151,9 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             inode.size = inodetarget.size;
             inode.symlink = inodetarget.symlink;
             inode.data = new Uint8Array(inode.size);
+            for(var i=0; i<inode.size; i++) {
+                inode.data[i] = inodetarget.data[i];
+            }
             inode.name = name;
             inode.parentid = this.fid2inode[dfid];
             this.fs.PushInode(inode);
@@ -252,6 +255,7 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             this.BuildReply(id, tag, 1);
             this.SendReply(index);
             break;
+
         /*
         case 54: // getlock
             break;        
@@ -311,8 +315,8 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
                 "d", "d"] // mtime
             , GetByte);
             var fid = req[0];
-            //DebugMessage("[setattr]: fid=" + fid + " request mask=" + req[1]);
             var inode = this.fs.GetInode(this.fid2inode[fid]);
+            //DebugMessage("[setattr]: fid=" + fid + " request mask=" + req[1] + " name=" +inode.name);
             if (req[1] & P9_SETATTR_MODE) {
                 inode.mode = req[2];
             }
@@ -359,12 +363,12 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             var count = req[2];
             //if (id == 40) DebugMessage("[treaddir]: fid=" + fid + " offset=" + offset + " count=" + count);
             //if (id == 116) DebugMessage("[read]: fid=" + fid + " offset=" + offset + " count=" + count);
+            var inode = this.fs.GetInode(this.fid2inode[fid]);
             if (this.fidtype[fid] == FID_XATTR) {
-                // TODO: find the correct binary format of the ACLs
+                if (inode.caps.length < offset+count) count = inode.caps.length - offset;
                 for(var i=0; i<count; i++)
-                    this.replybuffer[7+4+i] = 0;
+                    this.replybuffer[7+4+i] = inode.caps[offset+i];
             } else {
-                var inode = this.fs.GetInode(this.fid2inode[fid]);
                 if (inode.size < offset+count) count = inode.size - offset;
                 for(var i=0; i<count; i++)
                     this.replybuffer[7+4+i] = inode.data[offset+i];
@@ -516,8 +520,8 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             this.fid2inode[newfid] = this.fid2inode[fid];
             this.fidtype[newfid] = FID_NONE;
             var length = 0;
-            if (name == "security.capability") { // this seems to be the minimum requirement
-                length = 0;
+            if (name == "security.capability") {
+                length = this.fs.PrepareCAPs(this.fid2inode[fid]);
                 this.fidtype[newfid] = FID_XATTR;
             }
             Marshall(["d"], [length], this.replybuffer, 7);

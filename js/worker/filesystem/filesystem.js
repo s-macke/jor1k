@@ -776,4 +776,35 @@ FS.prototype.FillDirectory = function(dirid) {
 
 // -----------------------------------------------------
 
+// only support for security.capabilities
+// should return a  "struct vfs_cap_data" defined in
+// linux/capability for format
+// check also:
+//   sys/capability.h
+//   http://lxr.free-electrons.com/source/security/commoncap.c#L376
+//   http://man7.org/linux/man-pages/man7/capabilities.7.html
+//   http://man7.org/linux/man-pages/man8/getcap.8.html
+//   http://man7.org/linux/man-pages/man3/libcap.3.html
+FS.prototype.PrepareCAPs = function(id) {
+    var inode = this.GetInode(id);
+    if (inode.caps) return inode.caps.length;
+    inode.caps = new Uint8Array(12);
+    // format is little endian
+    // magic_etc (revision=0x01: 12 bytes)
+    inode.caps[0]  = 0x00;
+    inode.caps[1]  = 0x00;
+    inode.caps[2]  = 0x00;
+    inode.caps[3]  = 0x01;
+    // permitted (full capabilities)
+    inode.caps[4]  = 0xFF;
+    inode.caps[5]  = 0xFF;
+    inode.caps[6]  = 0xFF;
+    inode.caps[7]  = 0xFF;
+    // inheritable (full capabilities
+    inode.caps[8]  = 0xFF;
+    inode.caps[9]  = 0xFF;
+    inode.caps[10] = 0xFF;
+    inode.caps[11] = 0xFF;
 
+    return inode.caps.length;
+}
