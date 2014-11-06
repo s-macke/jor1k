@@ -504,9 +504,11 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
         case 120: // clunk
             var req = Unmarshall2(["w"], GetByte);
             //DebugMessage("[clunk]: fid=" + req[0]);
-            this.fs.CloseInode(this.fid2inode[req[0]]);
-            this.fid2inode[req[0]] = -1;
-            this.fidtype[req[0]] = FID_NONE;
+            if (this.fid2inode[req[0]] >=  0) {
+                this.fs.CloseInode(this.fid2inode[req[0]]);
+                this.fid2inode[req[0]] = -1;
+                this.fidtype[req[0]] = FID_NONE;
+            }
             this.BuildReply(id, tag, 0);
             this.SendReply(index);
             break;

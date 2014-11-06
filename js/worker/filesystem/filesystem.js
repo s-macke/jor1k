@@ -28,6 +28,7 @@ var STATUS_OK = 0x0;
 var STATUS_OPEN = 0x1;
 var STATUS_ON_SERVER = 0x2;
 var STATUS_LOADING = 0x3;
+var STATUS_UNLINKED = 0x4;
 
 
 function FS() {
@@ -482,9 +483,14 @@ FS.prototype.OpenInode = function(id, mode) {
 }
 
 FS.prototype.CloseInode = function(id) {
-    if (id < 0) return;
     //DebugMessage("close: " + this.GetFullPath(id));
-    //this.inodes[id].status = 0;
+    var inode = this.GetInode(id);
+    if (inode.status == STATUS_UNLINKED) {
+        //DebugMessage("Filesystem: Delete unlinked file");
+        inode.status == STATUS_INVALID;
+        inode.data = new Uint8Array(0);
+        inode.size = 0;
+    }
 }
 
 FS.prototype.Rename = function(olddirid, oldname, newdirid, newname) {
@@ -604,14 +610,12 @@ FS.prototype.Unlink = function(idx) {
         }
         this.inodes[id].nextid = inode.nextid;
     }
-
+    // don't delete the content. The file is still accessible
     this.inodes[inode.parentid].updatedir = true;
-    inode.data = new Uint8Array(0);
-    inode.size = 0;
-    inode.status = STATUS_INVALID;
-    //inode.nextid = -1;
-    //inode.firstid = -1;
-    //inode.parentid = -1;
+    inode.status = STATUS_UNLINKED;
+    inode.nextid = -1;
+    inode.firstid = -1;
+    inode.parentid = -1;
     return true;
 }
 
