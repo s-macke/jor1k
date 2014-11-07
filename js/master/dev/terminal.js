@@ -31,12 +31,14 @@ function Terminal(nrows, ncolumns, elemId) {
 
     this.updaterow = new Array(this.nrows);
 
+    this.utf8converter = new UTF8StreamToUnicode();
+
     this.screen = new Array(this.nrows);
     this.color = new Array(this.nrows);
     for (var i = 0; i < this.nrows; i++) {
         this.updaterow[i] = true;
-        this.screen[i] = new Uint8Array(this.ncolumns);
-        this.color[i] = new Uint16Array(this.ncolumns);
+        this.screen[i] = new Uint16Array(this.ncolumns);
+        this.color[i]  = new Uint16Array(this.ncolumns);
 
         for (var j = 0; j < this.ncolumns; j++) {
             this.screen[i][j] = 0x20;
@@ -439,9 +441,9 @@ Terminal.prototype.HandleEscapeSequence = function() {
             this.PrepareUpdateRow(oldcursory);
         }
     }
-
-
 };
+
+
 
 Terminal.prototype.PutChar = function(c) {
     var i = 0;
@@ -534,13 +536,16 @@ Terminal.prototype.PutChar = function(c) {
         this.cursorx = 0;
     }
 
+    c = this.utf8converter.Put(c);
+    if (c == -1) return;
     var cx = this.cursorx;
     var cy = this.cursory;
     this.screen[cy][cx] = c;
-    this.color[cy][cx] = this.currentcolor;
-    this.OnCharReceived(String.fromCharCode(c));
-    //DebugMessage("Write: " + String.fromCharCode(c));
 
+    this.color[cy][cx] = this.currentcolor;
     this.cursorx++;
+    //DebugMessage("Write: " + String.fromCharCode(c));
     this.PrepareUpdateRow(cy);
+
+    this.OnCharReceived(String.fromCharCode(c));
 };

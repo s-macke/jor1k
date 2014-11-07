@@ -13,6 +13,7 @@ function TerminalInput(SendChars) {
     this.enabled = true;
 }
 
+
 TerminalInput.prototype.OnKeyPress = function(e) {
     if (!this.enabled) {
         return;
@@ -22,12 +23,11 @@ TerminalInput.prototype.OnKeyPress = function(e) {
     if (key == 0) {
         return false;
     }
-
     // Define that the control key has this effect only if special keys have been pressed A..Z a..z. Otherwise some foreign keyboards will not work
     if ((this.CTRLpressed) && (((key >= 0x41) && (key <= 0x5A)) || ((key >= 0x61) && (key <= 0x7A)))) {
         key &= 0x1F;
     }
-    this.SendChars([key]);
+    this.SendChars(UnicodeToUTF8Stream(key));
     return false;
 };
 
