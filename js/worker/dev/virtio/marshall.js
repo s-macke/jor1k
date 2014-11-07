@@ -39,17 +39,21 @@ function Marshall(typelist, input, struct, offset) {
                 size += 1;
                 break;
             case "s":
-                struct[offset++] = item.length & 0xFF;
-                struct[offset++] = (item.length >> 8) & 0xFF;
+                var lengthoffset = offset;
+                var length = 0;
+                struct[offset++] = 0; // set the length later
+                struct[offset++] = 0;
                 size += 2;
                 for (var j in item) {
-                    var c = item.charCodeAt(j);
-                    if ((c < 32) || (c > 127)) {
-                        DebugMessage("Warning in Marshall: Unusual character detected");
-                    }
-                    struct[offset++] = c;
-                    size += 1;
+                    var utf8 = UnicodeToUTF8Stream(item.charCodeAt(j));
+                    utf8.forEach( function(c) {
+                        struct[offset++] = c;
+                        size += 1;
+                        length++;
+                    });
                 }
+                struct[lengthoffset+0] = length & 0xFF;
+                struct[lengthoffset+1] = (length >> 8) & 0xFF;
                 break;
             case "Q":
                 Marshall(["b", "w", "d"], [item.type, item.version, item.path], struct, offset)
@@ -96,11 +100,10 @@ function Unmarshall(typelist, struct, offset) {
                 var len = struct[offset++];
                 len += struct[offset++] << 8;
                 var str = '';
+                var utf8converter = new UTF8StreamToUnicode();
                 for (var j=0; j < len; j++) {
-                    var c = struct[offset++];
-                    if ((c < 32) || (c > 127)) {
-                        DebugMessage("Warning in Unmarshall: Unusual character detected");
-                    }
+                    var c = utf8converter.Put(struct[offset++])
+                    if (c == -1) continue;
                     str += String.fromCharCode(c);
                 }
                 output.push(str);
@@ -145,11 +148,10 @@ function Unmarshall2(typelist, GetByte) {
                 var len = GetByte();
                 len += GetByte() << 8;
                 var str = '';
+                var utf8converter = new UTF8StreamToUnicode();
                 for (var j=0; j < len; j++) {
-                    var c = GetByte();
-                    if ((c < 32) || (c > 127)) {
-                        DebugMessage("Warning in Unmarshall2: Unusual character detected");
-                    }
+                    var c = utf8converter.Put(GetByte())
+                    if (c == -1) continue;
                     str += String.fromCharCode(c);
                 }
                 output.push(str);
