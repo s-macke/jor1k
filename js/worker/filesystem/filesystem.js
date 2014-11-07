@@ -716,10 +716,7 @@ FS.prototype.Check = function() {
             var c = inode.name.charCodeAt(j);
             if (c < 32) {
                 DebugMessage("Error in filesystem: Unallowed char in filename");
-            } else
-            if (c > 127) {
-                DebugMessage("Error in filesystem: Unallowed char in filename");
-            }
+            } 
         }
     }
 
