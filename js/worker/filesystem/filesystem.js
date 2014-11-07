@@ -5,7 +5,7 @@
 
 "use strict";
 
-
+var S_IRWXUGO = 0x1FF;
 var S_IFMT = 0xF000;
 var S_IFSOCK = 0xC000;
 var S_IFLNK = 0xA000;
@@ -13,6 +13,7 @@ var S_IFREG = 0x8000;
 var S_IFBLK = 0x6000;
 var S_IFDIR = 0x4000;
 var S_IFCHR = 0x2000;
+
 //var S_IFIFO  0010000
 //var S_ISUID  0004000
 //var S_ISGID  0002000
@@ -266,7 +267,7 @@ FS.prototype.OnXMLLoaded = function(fs)
         break;
 
     case "Link":
-        inode.mode |= S_IFLNK;
+        inode.mode = S_IFLNK | S_IRWXUGO;
         inode.symlink = tag.path;
         this.PushInode(inode);
         break;
