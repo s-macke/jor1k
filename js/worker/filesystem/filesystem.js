@@ -733,7 +733,7 @@ FS.prototype.FillDirectory = function(dirid) {
     var size = 0;
     var id = this.inodes[dirid].firstid;
     while(id != -1) {
-        size += 13 + 8 + 1 + 2 + this.inodes[id].name.length;
+        size += 13 + 8 + 1 + 2 + UTF8Length(this.inodes[id].name);
         id = this.inodes[id].nextid;
     }
 
@@ -765,11 +765,10 @@ FS.prototype.FillDirectory = function(dirid) {
         offset += Marshall(
         ["Q", "d", "b", "s"],
         [this.inodes[id].qid,
-        offset+13+8+1+2+this.inodes[id].name.length,
+        offset+13+8+1+2+UTF8Length(this.inodes[id].name),
         this.inodes[id].mode >> 12,
         this.inodes[id].name],
         inode.data, offset);
-        //DebugMessage("Add file " + this.inodes[id].name);
         id = this.inodes[id].nextid;
     }
     inode.updatedir = false;

@@ -49,3 +49,12 @@ function UnicodeToUTF8Stream(key)
         if (key < 0x800) return [0xC0|((key>>6)&0x1F), 0x80|(key&0x3F)];
 }
 
+function UTF8Length(s)
+{
+    var length = 0;
+    for(var i=0; i<s.length; i++) {
+        var c = s.charCodeAt(i);
+        length += c<128?1:2;
+    }
+    return length;
+}
