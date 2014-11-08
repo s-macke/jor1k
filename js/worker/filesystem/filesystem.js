@@ -243,6 +243,7 @@ FS.prototype.OnXMLLoaded = function(fs)
 
     case "Dir":
         inode.mode |= S_IFDIR;
+        inode.updatedir = true;
         parentid = this.inodes.length;
         this.PushInode(inode);
         break;
@@ -400,6 +401,7 @@ FS.prototype.CreateDirectory = function(name, parentid) {
     x.name = name;
     x.parentid = parentid;
     x.mode = 0x01FF | S_IFDIR;
+    x.updatedir = true;
     if (parentid >= 0) {
         x.uid = this.inodes[parentid].uid;
         x.gid = this.inodes[parentid].gid;
