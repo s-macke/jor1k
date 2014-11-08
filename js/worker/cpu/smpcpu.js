@@ -61,9 +61,11 @@ var b = new stdlib.Uint8Array(heap);
 var w = new stdlib.Uint16Array(heap);
 
 var ncores = 4; // the total number of cores
+var ncoresmask = 0xF; // bitfield of actives cores mask
+var activebitfield = 0xF; // 1 bit for each core defines if it is active or not
 
 var coreid = 0; // the currently active core.
-var corep = 0x0; // the pointer to the core related structures
+var corep = 0x0; // the memory pointer to the core related structures
 
 var rp = 0x0; // pointer to registers, not used
 var ramp = 0x100000;
@@ -144,20 +146,22 @@ var boot_dtlb_misshandler_address = 0x0;
 var boot_itlb_misshandler_address = 0x0;
 var current_pgd = 0x0;
 
-var dozebitfield = 0x0;
-
 var snoopbitfield = 0x0; // fot atomic instructions
 
 function Init(_ncores) {
     _ncores = _ncores|0;
     ncores = _ncores|0;
+    if ((ncores|0) == 32) 
+        ncoresmask = 0xFFFFFFFF; 
+    else
+        ncoresmask =  (1 << ncores)-1|0;
     AnalyzeImage();
     Reset();
 }
 
 function Reset() {
     var i = 0;
-    dozebitfield = 0x0;
+    activebitfield = ncoresmask; // all cores are active
     snoopbitfield = 0x0;
 
     for(i=0; (i|0)<(ncores|0); i=i+1|0) {
@@ -195,20 +199,25 @@ function ChangeCore()
     var newcoreid = 0;
     var i = 0;
     if ((ncores|0) == 1) return;
-    //dozebitfield = 0;
 
     newcoreid = coreid|0;
-    if ( (dozebitfield|0) == ( (1 << ncores)-1|0)  ) {   
+    if ((activebitfield|0) == 0) {   
          // All cpu are idle. This should never happen in this function.
          DebugMessage(ERROR_ALL_CORES_IDLE|0);
          abort();
      }
 
+    // check if only one bit is set in bitfield
+    if ((activebitfield & activebitfield-1) == 0) 
+    if (activebitfield & (1<<coreid)) { // ceck if this one bit is the current core
+        return; // nothing changed, so just return back
+    }
+
     // find next core
     do {
         newcoreid = newcoreid + 1 | 0;
         if ((newcoreid|0) >= (ncores|0)) newcoreid = 0;
-    } while((dozebitfield & (1<<newcoreid)))
+    } while(((activebitfield & (1<<newcoreid))) == 0)
 
     if ((newcoreid|0) == (coreid|0)) return; // nothing changed, so just return back
 
@@ -312,7 +321,7 @@ function GetState() {
 
 function TimerSetInterruptFlag(coreid) {
     coreid = coreid|0;
-    dozebitfield = dozebitfield & (~(1<<coreid));
+    activebitfield = activebitfield | (1<<coreid);
     h[(coreid<<15) + TTMRp >>2] = (h[(coreid<<15) + TTMRp >>2]|0) | (1 << 28);
 }
 
@@ -347,8 +356,21 @@ function GetTimeToNextInterrupt() {
 
 function ProgressTime(delta) {
     delta = delta|0;
+    var i = 0;
     h[TTCRp >>2] = (h[TTCRp >>2]|0) + delta|0;
-    dozebitfield = 0x0; // wake all cores up
+/*
+    // wake up at least one core
+    activebitfield = activebitfield | (1<<coreid);
+    // wake up the cores closest to zero
+    for(i=0; (i|0)<(ncores|0); i = i+1|0) {
+        delta = TimerGetTicksToNextInterrupt(i)|0;
+        if ((delta|0) <= 64) {
+            activebitfield = activebitfield | (1<<i);
+        }
+    }
+*/
+    // wake up all cores
+    activebitfield = ncoresmask;
 }
 
 function GetTicks() {
@@ -447,7 +469,7 @@ function CheckForInterrupt(coreid) {
     flags = h[(coreid<<15) + 0x120 >> 2]|0;
     if (flags & (1<<2)) { // check for SR_IEE
         if (h[(coreid<<15) + PICMRp >> 2] & h[(coreid<<15) + PICSRp >>2]) {
-            dozebitfield = dozebitfield & (~(1 << coreid));
+            activebitfield = activebitfield | (1 << coreid);
             h[(coreid<<15) + raise_interruptp >> 2] = 1;
         }
     }
@@ -524,7 +546,7 @@ function SetSPR(idx, x) {
         // ins cache, not supported
         break;
     case 8:
-        dozebitfield = dozebitfield | (1 << coreid);
+        activebitfield = activebitfield & (~(1 << coreid));
         break;
     case 9:
         // pic
@@ -636,7 +658,7 @@ function Exception(excepttype, addr) {
     var except_vector = 0;
     except_vector = excepttype | (SR_EPH ? 0xf0000000 : 0x0);
 
-    dozebitfield = dozebitfield & (~(1 << coreid));
+    activebitfield = activebitfield | (1 << coreid);
 
     SetSPR(SPR_EEAR_BASE, addr);
     SetSPR(SPR_ESR_BASE, GetFlags()|0);
@@ -946,7 +968,9 @@ function Step(steps, clockspeed) {
         rD = 0x0;
     var vaddr = 0x0; // virtual address
     var paddr = 0x0; // physical address
-    
+
+    var changecorecounter = 0;
+
     // to get the instruction
     var setindex = 0x0;
     var tlmbr = 0x0;
@@ -1055,8 +1079,11 @@ function Step(steps, clockspeed) {
                nextpc = ((pc  >> 13) + 1) << 13;
            }
 
-           ChangeCore();
-           continue;
+           changecorecounter = changecorecounter + 1|0;
+           if ((changecorecounter&7) == 0) {
+               ChangeCore();
+               continue;
+           }
 
         } // end of fence, go on with fastpath
 
@@ -1403,11 +1430,9 @@ function Step(steps, clockspeed) {
             imm = (ins & 0x7FF) | ((ins >> 10) & 0xF800);
             //pc = pcbase + ppc|0;
             SetSPR(r[corep + ((ins >> 14) & 0x7C)>>2] | imm, r[corep + ((ins >> 9) & 0x7C)>>2]|0); // can raise an interrupt
-            // dozebitfield = 0; // doze not implemented
 
-            if ( (dozebitfield|0) == ( (1 << ncores)-1|0)  ) { 
-                // all cpus are idle
-                dozebitfield = 0;
+            if ((activebitfield|0) == 0) { // all cpus are idle
+                activebitfield = ncoresmask;
                 // first check if there is a timer interrupt pending
                 //for(i=0; (i|0)<(ncores|0); i = i+1|0) {
                     if ((h[(coreid<<15) + TTMRp >>2] & (1 << 28))) break;
