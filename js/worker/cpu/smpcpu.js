@@ -1080,10 +1080,10 @@ function Step(steps, clockspeed) {
            }
 
            changecorecounter = changecorecounter + 1|0;
-           if ((changecorecounter&7) == 0) {
+           //if ((changecorecounter) == 0) {
                ChangeCore();
                continue;
-           }
+           //}
 
         } // end of fence, go on with fastpath
 
