@@ -119,7 +119,7 @@ var PICMRp = 0x108; // interrupt controller mode register (use nmi)
 var PICSRp = 0x10C; // interrupt controller set register
 var raise_interruptp = 0x110;
 
-var EAp = 0x114; // hidden register for atomic lwa and swa operation (linked address)
+var linkedaddrp = 0x114; // hidden register for atomic lwa and swa operation (linked address)
 
 
 // flags
@@ -321,7 +321,7 @@ function GetState() {
 
 function TimerSetInterruptFlag(coreid) {
     coreid = coreid|0;
-    activebitfield = activebitfield | (1<<coreid);
+    activebitfield = activebitfield | (1 << coreid);
     h[(coreid<<15) + TTMRp >>2] = (h[(coreid<<15) + TTMRp >>2]|0) | (1 << 28);
 }
 
@@ -723,7 +723,7 @@ function Exception(excepttype, addr) {
     }
     delayedins = 0;
     SR_IME = 0;
-    h[corep + EAp >> 2] = -1;
+    h[corep + linkedaddrp >> 2] = -1;
     snoopbitfield = snoopbitfield & (~(1<<coreid));
 }
 
@@ -982,6 +982,7 @@ function Step(steps, clockspeed) {
 // -----------------------------------------------------
     for(;;) {
 
+        // --------- START FENCE ---------
         if ((ppc|0) == (fence|0)) {
             pc = nextpc;
 
@@ -991,78 +992,79 @@ function Step(steps, clockspeed) {
 
             dsteps = dsteps - ((ppc - ppcorigin) >> 2)|0;
 
-        // do this not so often
-        if ((dsteps|0) <= 0)
-        if (!(delayedins_at_page_boundary|0)) { // for now. Not sure if we need this check
-            //DebugMessage(dsteps);
-            dsteps = dsteps + 64|0;
-            steps = steps - 64|0;
-            if ((steps|0) < 0) return 0x0; // return to main loop
+            // do this not so often
+            if ((dsteps|0) <= 0)
+            if (!(delayedins_at_page_boundary|0)) { // for now. Not sure if we need this check
+                dsteps = dsteps + 64|0;
+                steps = steps - 64|0;
 
-            // ---------- TICK ----------
-            for(i=0; (i|0)<(ncores|0); i = i + 1|0) {
-                if (!(TimerIsRunning(i)|0)) continue;
-                delta = TimerGetTicksToNextInterrupt(i)|0;
-                if ((delta|0) < (clockspeed|0)) {
-                    TimerSetInterruptFlag(i);
+                // --------- START TICK ---------
+                for(i=0; (i|0)<(ncores|0); i = i + 1|0) {
+                    if (!(TimerIsRunning(i)|0)) continue;
+                    delta = TimerGetTicksToNextInterrupt(i)|0;
+                    if ((delta|0) < (clockspeed|0)) {
+                        TimerSetInterruptFlag(i);
+                    }
                 }
+
+                // the timer is always enabled on smp systems
+                h[TTCRp >> 2] = ((h[TTCRp >> 2]|0) + clockspeed|0);
+                // ---------- END TICK ----------
+
+                if ((steps|0) < 0) return 0x0; // return to main loop
             }
 
-            // the timer is always enabled on smp systems
-            h[TTCRp >> 2] = ((h[TTCRp >> 2]|0) + clockspeed|0);
-        }
             // check for any interrupts
             // SR_TEE is set or cleared at the same time as SR_IEE in Linux, so skip this check
             if (SR_IEE|0) {
+                if (h[corep + TTMRp >> 2] & (1 << 28)) {
+                    Exception(EXCEPT_TICK, h[corep + group0p + (SPR_EEAR_BASE<<2) >> 2]|0);
+                    // treat exception directly here
+                    pc = nextpc;
+                } else
                 if (h[corep + raise_interruptp >> 2]|0) {
                     h[corep + raise_interruptp >> 2] = 0;
                     Exception(EXCEPT_INT, h[corep + group0p + (SPR_EEAR_BASE<<2) >> 2]|0);
                     // treat exception directly here
                     pc = nextpc;
-                } else
-                if (h[corep + TTMRp >> 2] & (1 << 28)) {
-                    Exception(EXCEPT_TICK, h[corep + group0p + (SPR_EEAR_BASE<<2) >> 2]|0);
-                    // treat exception directly here
-                    pc = nextpc;
                 }
             }
-
  //     }
 
-        // Get instruction pointer
-        if ((instlbcheck ^ pc) & 0xFFFFE000) // short check if it is still the correct page
-        {
-            instlbcheck = pc; // save the new page, lower 11 bits are ignored
-            if (!SR_IME) {
-                instlblookup = 0x0;
-            } else {
-                setindex = (pc >> 13) & 63; // check this values
-                tlmbr = h[corep + group2p + ((0x200 | setindex) << 2) >> 2]|0;
-                // test if tlmbr is valid
-                if ((tlmbr & 1) == 0) {
-                    if (ITLBRefill(pc, 64)|0) {
-                        tlmbr = h[corep + group2p + ((0x200 | setindex)<<2) >> 2]|0; // reload the new value
-                    } else {
-                        // just make sure he doesn't count this 'continue' as steps
-                        ppcorigin = ppc;
-                        delayedins_at_page_boundary = 0;
-                        continue;
+            // Get instruction pointer
+            if ((instlbcheck ^ pc) & 0xFFFFE000) // short check if it is still the correct page
+            {
+                instlbcheck = pc; // save the new page, lower 11 bits are ignored
+                if (!SR_IME) {
+                    instlblookup = 0x0;
+                } else {
+                    setindex = (pc >> 13) & 63; // check this values
+                    tlmbr = h[corep + group2p + ((0x200 | setindex) << 2) >> 2]|0;
+                    // test if tlmbr is valid
+                    if ((tlmbr & 1) == 0) {
+                        if (ITLBRefill(pc, 64)|0) {
+                            tlmbr = h[corep + group2p + ((0x200 | setindex)<<2) >> 2]|0; // reload the new value
+                        } else {
+                            // just make sure he doesn't count this 'continue' as steps
+                            ppcorigin = ppc;
+                            delayedins_at_page_boundary = 0;
+                            continue;
+                        }
                     }
-                }
-                if ((tlmbr >> 19) != (pc >> 19)) {
-                    if (ITLBRefill(pc, 64)|0) {
-                        tlmbr = h[corep + group2p + ((0x200 | setindex)<<2) >> 2]|0; // reload the new value
-                    } else {
-                        // just make sure he doesn't count this 'continue' as steps
-                        ppcorigin = ppc;
-                        delayedins_at_page_boundary = 0;
-                        continue;
+                    if ((tlmbr >> 19) != (pc >> 19)) {
+                        if (ITLBRefill(pc, 64)|0) {
+                            tlmbr = h[corep + group2p + ((0x200 | setindex)<<2) >> 2]|0; // reload the new value
+                        } else {
+                            // just make sure he doesn't count this 'continue' as steps
+                            ppcorigin = ppc;
+                            delayedins_at_page_boundary = 0;
+                            continue;
+                        }
                     }
+                    tlbtr = h[corep + group2p + ((0x280 | setindex) << 2) >> 2]|0;
+                    instlblookup = ((tlbtr ^ tlmbr) >> 13) << 13;
                 }
-                tlbtr = h[corep + group2p + ((0x280 | setindex) << 2) >> 2]|0;
-                instlblookup = ((tlbtr ^ tlmbr) >> 13) << 13;
             }
-        }
 
             // set pc and set the correcponding physical pc pointer
             //pc = pc;
@@ -1080,12 +1082,13 @@ function Step(steps, clockspeed) {
            }
 
            changecorecounter = changecorecounter + 1|0;
-           //if ((changecorecounter) == 0) {
+           if ((changecorecounter&7) == 0) {
                ChangeCore();
                continue;
-           //}
+           }
 
-        } // end of fence, go on with fastpath
+        } 
+        // ---------- END FENCE ----------
 
         ins = h[ppc >> 2]|0;
         ppc = ppc + 4|0;
@@ -1221,7 +1224,7 @@ function Step(steps, clockspeed) {
             }
             paddr = read32tlblookup ^ vaddr;
             snoopbitfield = snoopbitfield | (1<<coreid);
-            h[corep + EAp >>2] = paddr;
+            h[corep + linkedaddrp >>2] = paddr;
             r[corep + ((ins >> 19) & 0x7C)>>2] = (paddr|0)>0?h[ramp+paddr >> 2]|0:ReadMemory32(paddr|0)|0;
             break;
 
@@ -1438,6 +1441,9 @@ function Step(steps, clockspeed) {
                     if ((h[(coreid<<15) + TTMRp >>2] & (1 << 28))) break;
                 //}
                 return steps|0;
+            } else
+            if ((activebitfield & (1<<coreid)) == 0) {  // check if this cpu gone idle and change the core
+                ChangeCore();
             }
             break;
 
@@ -1520,13 +1526,13 @@ function Step(steps, clockspeed) {
                 write32tlblookup = ((paddr^vaddr) >> 13) << 13;
             }
             paddr = write32tlblookup ^ vaddr;
-            SR_F = ((paddr|0) == (h[corep + EAp >>2]|0))?(1|0):(0|0);
-            h[corep + EAp >>2] = -1;
+            SR_F = ((paddr|0) == (h[corep + linkedaddrp >>2]|0))?(1|0):(0|0);
+            h[corep + linkedaddrp >>2] = -1;
             snoopbitfield = snoopbitfield & (~(1<<coreid));
             if (snoopbitfield)
             for(i=0; (i|0)<(ncores|0); i = i + 1|0) {
-                if ((h[(i<<15) + EAp >>2]|0) == (paddr|0)) {
-                    h[(i<<15) + EAp >>2] = -1;
+                if ((h[(i<<15) + linkedaddrp >>2]|0) == (paddr|0)) {
+                    h[(i<<15) + linkedaddrp >>2] = -1;
                     snoopbitfield = snoopbitfield & (~(1<<i));
                 }
             }
@@ -1555,8 +1561,8 @@ function Step(steps, clockspeed) {
             paddr = write32tlblookup ^ vaddr;
             if (snoopbitfield)
             for(i=0; (i|0)<(ncores|0); i = i + 1|0) {
-                if ((h[(i<<15) + EAp >>2]|0) == (paddr|0)) {
-                    h[(i<<15) + EAp >>2] = -1;
+                if ((h[(i<<15) + linkedaddrp >>2]|0) == (paddr|0)) {
+                    h[(i<<15) + linkedaddrp >>2] = -1;
                     snoopbitfield = snoopbitfield & (~(1<<i));
                 }
             }
@@ -1582,8 +1588,8 @@ function Step(steps, clockspeed) {
             paddr = write8tlblookup ^ vaddr;
             if (snoopbitfield)
             for(i=0; (i|0)<(ncores|0); i = i + 1|0) {
-                if ((h[(i<<15) + EAp >>2]|0) == (paddr&(~3))) {
-                    h[(i<<15) + EAp >>2] = -1;
+                if ((h[(i<<15) + linkedaddrp >>2]|0) == (paddr&(~3))) {
+                    h[(i<<15) + linkedaddrp >>2] = -1;
                     snoopbitfield = snoopbitfield & (~(1<<i));
                 }
             }
@@ -1610,8 +1616,8 @@ function Step(steps, clockspeed) {
             paddr = write16tlblookup ^ vaddr;
             if (snoopbitfield)
             for(i=0; (i|0)<(ncores|0); i = i + 1|0) {
-                if ((h[(i<<15) + EAp >>2]|0) == (paddr&(~3))) {
-                    h[(i<<15) + EAp >>2] = -1;
+                if ((h[(i<<15) + linkedaddrp >>2]|0) == (paddr&(~3))) {
+                    h[(i<<15) + linkedaddrp >>2] = -1;
                     snoopbitfield = snoopbitfield & (~(1<<i));
                 }
             }
