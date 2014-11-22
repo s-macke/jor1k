@@ -344,9 +344,9 @@ RecompileCPU.prototype.Gen_lstore = function(ins) {
                 break;
         }
     }
-
     return s;    
 }
+
 
 RecompileCPU.prototype.Gen_lload = function(ins) {
     var imm = (ins << 16) >> 16;
@@ -364,7 +364,6 @@ RecompileCPU.prototype.Gen_lload = function(ins) {
 //    s += "r[33]=DTLBLookup(r[32]|0, 0)|0;"
 //    s += "if((r[33]|0)==-1)return 0|0;"
     s += "if((r[33]|0)==-1){CorrectDTLBException(0x" + (this.pc>>>2).toString(16) + ",delayedins|0);return 0|0;}"
-
 
     if (this.supervisor) {
 
@@ -425,7 +424,11 @@ RecompileCPU.prototype.Gen_lload = function(ins) {
     return s;
 }
 
-function CanFail(ins)
+// 1 = jump or branch
+// 2 = load
+// 3 = store
+// 4 = other
+RecompileCPU.prototype.GetInstructionType = function(ins)
 {
     ins = ins | 0;
     switch ((ins >> 26)&0x3F) {
@@ -455,12 +458,134 @@ function CanFail(ins)
     return 0;
 }
 
+
+RecompileCPU.prototype.RecompileInstruction = function(ins)
+{
+    ins = ins | 0;
+    var rA = 0x0;
+    var rB = 0x0;
+    var imm = 0x0;
+
+    if (((ins >> 26)&0x3F) == 0x7) { // retrieve overwritten opcode
+        ins = this.fnsshort[ins&0xFFFFFF].ins|0;
+    }
+
+    var s = "";
+    switch ((ins >> 26)&0x3F) {
+        case 0x0: // l.j
+            imm = this.pc + ((ins << 6) >> 4);
+            s += "jump=0x" + (imm>>>0).toString(16) + ";";
+            s += "delayedins=1;";
+            break;
+
+        case 0x1: // l.jal
+            imm = this.pc + ((ins << 6) >> 4)|0;
+            s += "jump=0x" + (imm>>>0).toString(16) + ";";
+            s += "r[9]=0x" + (this.pc+8>>>0).toString(16)  + ";";
+            s += "delayedins=1;";
+            break;
+
+        case 0x3: // l.bnf
+        case 0x4: // l.bf
+                s = this.Gen_lbf(ins);
+                break;
+
+        case 0x5: // l.nop
+                break;
+
+        case 0x11: // l.jr
+                rA = (ins >> 11) & 0x1F;
+                s += "jump=r[" + rA + "]|0;";
+                s += "delayedins=1;";
+                break;
+
+        case 0x12: // l.jalr
+                rA = (ins >> 11) & 0x1F;
+                s += "jump=r[" + rA + "]|0;";
+                s += "r[9]=0x" + (this.pc+8>>>0).toString(16)  + ";";
+                s += "delayedins=1;";
+                break;
+
+        case 0x1B: // l.lwa
+        case 0x21: // l.lwz
+        case 0x23: // l.lbz
+        case 0x24: // l.lbs
+        case 0x25: // l.lhz
+        case 0x26: // l.lhs
+                s = this.Gen_lload(ins);
+                break;
+
+        case 0x6: // l.movhi
+                s = this.Gen_lmovhi(ins);
+                break;
+
+        case 0x27: // l.addi
+                s = this.Gen_laddi(ins);
+                break;
+
+        case 0x29: // l.andi
+                s = this.Gen_landi(ins);
+                break;
+        case 0x2A: // l.ori
+                s = this.Gen_lori(ins);
+                break;
+
+        case 0x2B: // l.xori
+                s = this.Gen_lxori(ins);
+                break;
+
+        case 0x2E:
+                s = this.Gen_shifti(ins);
+                break;
+
+        case 0x2F: // l.sf..i
+                s = this.Gen_lsfi(ins);
+                break;
+
+        case 0x2D: // l.mfspr
+                rA = (ins >> 21) & 0x1F;
+                rB = (ins >> 16) & 0x1F;
+                s += "r[" + rA + "]=this.GetSPR(r[" + rB + "]|" + (ins&0xFFFF) + ");";
+                break;
+
+        case 0x30: // l.mtspr
+                imm = (ins & 0x7FF) | ((ins >> 10) & 0xF800);
+                rA = (ins >> 16) & 0x1F;
+                rB = (ins >> 11) & 0x1F;
+                s += "this.SetSPR(r[" + rA + "]|" + imm + ",r[" + rB + "]);";
+                break;
+
+        case 0x33: // l.swa
+        case 0x35: // l.sw
+        case 0x36: // l.sb
+        case 0x37: // l.sh
+                s = this.Gen_lstore(ins);
+                break;
+
+        case 0x38: // three operand commands
+                s = this.Gen_3OPs(ins);
+                break;
+
+        case 0x39: // l.sf..
+                s = this.Gen_lsf(ins);
+                break;
+
+        default:
+            DebugMessage("Error in dynamic CPU: Instruction with id " +
+                hex8(((ins >> 26)&0x3F)) + " not found");
+            this.error = true;
+            break;
+    }
+
+    return s;
+}
+
 RecompileCPU.prototype.Recompile = function(pcbase, ppc, supervisor) {
     ppc = ppc | 0;
     pcbase = pcbase | 0;
     this.pc = pcbase;
     this.supervisor = supervisor;
-    var ppcbase = ppc;
+    var ppcbase = ppc | 0;
 
     var page = ppc >> 13;
     var pageoffset = ppc & 8191;
@@ -469,7 +594,7 @@ RecompileCPU.prototype.Recompile = function(pcbase, ppc, supervisor) {
         //this.fns[page] = [];
     }
     	
-    DebugMessage("Recompile pcbase="+hex8(pcbase) + " ppc=" + hex8(ppc));
+    DebugMessage("Recompile at pc="+hex8(pcbase) + " ppc=" + hex8(ppcbase));
 
     var ins = 0x0;
     var i = 0;
@@ -477,14 +602,8 @@ RecompileCPU.prototype.Recompile = function(pcbase, ppc, supervisor) {
     var s = "";
     this.error = false;
 
-    var rA = 0x0;
-    var rB = 0x0;
-    var rC = 0x0;
-    var imm = 0x0;
-    var delayedins = false;
-
+    var jump = ((ppc >> 13) + 1) << 13; // next page
     var fence = ((ppc >> 13) + 1) << 13; // next page
-    var jump =  ((pcbase >> 13) + 1) << 13;
     this.n = 0;
 
     var firstins = true;
@@ -515,8 +634,7 @@ RecompileCPU.prototype.Recompile = function(pcbase, ppc, supervisor) {
 
 //          var fn = Function(codestr).bind(this.cpu);
 
-            var fn = Function("stdlib", "foreign", "heap",
-                "\"use asm\";\n" + 
+            var finalcode = /*   "\"use asm\";\n" + */
                 "var r = new stdlib.Int32Array(heap);\n" +
                 "var int32mem = new stdlib.Int32Array(heap);\n"+
                 "var DTLBLookup = foreign.DTLBLookup;\n" +
@@ -524,9 +642,16 @@ RecompileCPU.prototype.Recompile = function(pcbase, ppc, supervisor) {
                 "var nextpc = 0x0;\n" +
                 "var delayedins = 0;\n" +
                 "var SR_F = 0;\n" +
-                "function Execute(){" + codestr + "}\n" +
+                "function Execute(){\n" + codestr + "}\n" +
                 "function GetNextPC(){return nextpc|0;}\n" +
                 "return {Execute: Execute, GetNextPC: GetNextPC};"
+
+
+            var fn = Function(
+                   "stdlib", 
+                   "foreign", 
+                   "heap", 
+                   finalcode
                 )(stdlib, foreign, this.ram.heap);
 
             var f = {
@@ -545,138 +670,23 @@ RecompileCPU.prototype.Recompile = function(pcbase, ppc, supervisor) {
 
             this.pagestatus[page] = PAGE_STATUS_OK;
             DebugMessage("Generated code with " + this.n + " instructions");
-            DebugMessage(codestr);
+            DebugMessage(finalcode);
 
             return true;
         } // end of fence
 
         ins = this.m[ppc >> 2];
+        var instype = this.GetInstructionType(ins);
 
-        if ((firstins) && (CanFail(ins))) {
+        if ((firstins) && (instype)) {
             this.error = true;
         }
 
-        if (((ins >> 26)&0x3F) == 0x7) { // retrieve overwritten opcode
-            ins = this.fnsshort[ins&0xFFFFFF].ins|0;
-        }
+        var s = this.RecompileInstruction(ins);
 
-        s = "";
-        switch ((ins >> 26)&0x3F) {
-            case 0x0: // l.j
-                imm = this.pc + ((ins << 6) >> 4);
-                s += "jump=0x" + (imm>>>0).toString(16) + ";";
-                s += "this.delayedins=true;";
-                delayedins = true;
-                fence = ppc + 8;
-                break;
-
-            case 0x1: // l.jal
-                imm = this.pc + ((ins << 6) >> 4)|0;
-                s += "jump=0x" + (imm>>>0).toString(16) + ";";
-                s += "r[9]=0x" + (this.pc+8>>>0).toString(16)  + ";";
-                s += "this.delayedins=true;";
-                delayedins = true;
-                fence = ppc + 8;
-                break;
-
-            case 0x3: // l.bnf
-            case 0x4: // l.bf
-                s = this.Gen_lbf(ins);
-                delayedins = true;
-                fence = ppc + 8;
-                break;
-
-            case 0x5: // l.nop
-                break;
-
-            case 0x11: // l.jr
-                rA = (ins >> 11) & 0x1F;
-                s += "jump=r[" + rA + "]|0;";
-                s += "this.delayedins=true;";
-                fence = ppc + 8;
-                delayedins = true;
-                break;
-
-            case 0x12: // l.jalr
-                rA = (ins >> 11) & 0x1F;
-                s += "jump=r[" + rA + "]|0;";
-                s += "r[9]=0x" + (this.pc+8>>>0).toString(16)  + ";";
-                s += "this.delayedins=true;";
-                fence = ppc + 8;
-                delayedins = true;
-                break;
-
-            case 0x1B: // l.lwa
-            case 0x21: // l.lwz
-            case 0x23: // l.lbz
-            case 0x24: // l.lbs
-            case 0x25: // l.lhz
-            case 0x26: // l.lhs
-                s = this.Gen_lload(ins);
-                break;
-
-            case 0x6: // l.movhi
-                s = this.Gen_lmovhi(ins);
-                break;
-
-            case 0x27: // l.addi
-                s = this.Gen_laddi(ins);
-                break;
-
-            case 0x29: // l.andi
-                s = this.Gen_landi(ins);
-                break;
-
-            case 0x2A: // l.ori
-                s = this.Gen_lori(ins);
-                break;
-
-            case 0x2B: // l.xori
-                s = this.Gen_lxori(ins);
-                break;
-
-            case 0x2E:
-                s = this.Gen_shifti(ins);
-                break;
-
-            case 0x2F: // l.sf..i
-                s = this.Gen_lsfi(ins);
-                break;
-
-            case 0x2D: // l.mfspr
-                rA = (ins >> 21) & 0x1F;
-                rB = (ins >> 16) & 0x1F;
-                s += "r[" + rA + "]=this.GetSPR(r[" + rB + "]|" + (ins&0xFFFF) + ");";
-                break;
-
-            case 0x30: // l.mtspr
-                imm = (ins & 0x7FF) | ((ins >> 10) & 0xF800);
-                rA = (ins >> 16) & 0x1F;
-                rB = (ins >> 11) & 0x1F;
-                s += "this.SetSPR(r[" + rA + "]|" + imm + ",r[" + rB + "]);";
-                break;
-
-            case 0x33: // l.swa
-            case 0x35: // l.sw
-            case 0x36: // l.sb
-            case 0x37: // l.sh
-                s = this.Gen_lstore(ins);
-                break;
-
-            case 0x38: // three operand commands
-                s = this.Gen_3OPs(ins);
-                break;
-
-            case 0x39: // l.sf..
-                s = this.Gen_lsf(ins);
-                break;
-
-            default:
-                DebugMessage("Error in dynamic CPU: Instruction with id " +
-                    hex8(((ins >> 26)&0x3F)) + " not found");
-                this.error = true;
-                break;
-          
+        if (instype == 1) { // jump or branch
+            // the end of the block is near
+            fence = ppc + 8 | 0;
         }
 
         codestr += s + "\n";
@@ -687,8 +697,21 @@ RecompileCPU.prototype.Recompile = function(pcbase, ppc, supervisor) {
         if (this.error) break;
     } // for loop
 
-//    DebugMessage("Error detected, code so far:");
+//    DebugMessage("Error in the recompilation process: code so far:");
 //    DebugMessage(codestr);
 
     return false;
+}
+
+
+RecompileCPU.prototype.RecompileFunction = function(pcbase, ppc, supervisor) {
+    ppc = ppc | 0;
+    pcbase = pcbase | 0;
+    this.pc = pcbase;
+    this.supervisor = supervisor;
+    var ppcbase = ppc;
+
+
+
+
 }
