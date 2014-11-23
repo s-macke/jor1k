@@ -27,16 +27,18 @@ function Terminal(nrows, ncolumns, elemId) {
     this.currentcolor = 0x7;
     this.pauseblink = false;
     this.OnCharReceived = function (){};
-    this.framerequested = false;
 
-    this.updaterow = new Array(this.nrows);
+    this.framerequested = false;
+    this.timeout = 30; // the time in ms when the next frame is drawn
+
+    this.updaterow = new Uint8Array(this.nrows);
 
     this.utf8converter = new UTF8StreamToUnicode();
 
     this.screen = new Array(this.nrows);
     this.color = new Array(this.nrows);
     for (var i = 0; i < this.nrows; i++) {
-        this.updaterow[i] = true;
+        this.updaterow[i] = 1;
         this.screen[i] = new Uint16Array(this.ncolumns);
         this.color[i]  = new Uint16Array(this.ncolumns);
 
@@ -82,9 +84,9 @@ Terminal.prototype.DeleteArea = function(row, column, row2, column2) {
 };
 
 Terminal.prototype.UpdateChar = function(row, column) {
-    var x = column*8;
-    var y = row*16;
-    var ccolor = this.color[row][column];
+    var x = column<<3;
+    var y = row<<4;
+    var ccolor = this.color[row][column]|0;
     var line = String.fromCharCode(this.screen[row][column]);
 
     if (this.cursorvisible)
@@ -106,42 +108,58 @@ Terminal.prototype.UpdateRow = function(row) {
 };
 
 Terminal.prototype.UpdateScreen = function() {
+    var nupdated = 0;
     for (var i = 0; i < this.nrows; i++) {
-        if (this.updaterow[i]) this.UpdateRow(i);
-        this.updaterow[i] = false;
+        if (!this.updaterow[i]) continue;
+        this.UpdateRow(i);
+        nupdated++;
+        this.updaterow[i] = 0;
     }
     this.framerequested = false;
+    if (nupdated >= (this.nrows-1)) {
+        this.timeout = 100;
+    } else {
+        this.timeout = 30;
+    }
 }
 
 Terminal.prototype.PrepareUpdateRow = function(row) {
-    this.updaterow[row] = true;
+    this.updaterow[row] = 1;
     if (this.framerequested) return;
-    window.requestAnimationFrame(this.UpdateScreen.bind(this));
+    //window.requestAnimationFrame(this.UpdateScreen.bind(this));
+    window.setTimeout(this.UpdateScreen.bind(this), this.timeout);
     this.framerequested = true;
 }
 
 Terminal.prototype.ScrollDown = function(draw) {
+    var tempscreen = this.screen[this.scrollbottom];
+    var tempcolor = this.color[this.scrollbottom];
+
     for (var i = this.scrollbottom-1; i >= this.scrolltop; i--) {
         if (i == this.nrows-1) continue;
-        for (var j = 0; j < this.ncolumns; j++) {
-            this.screen[i + 1][j] = this.screen[i][j];
-            this.color[i + 1][j] = this.color[i][j];
-        }
+        this.screen[i + 1] = this.screen[i];
+        this.color[i + 1] = this.color[i];
         if (draw) this.PrepareUpdateRow(i+1);
     }
+    this.screen[this.scrolltop] = tempscreen;
+    this.color[this.scrolltop] = tempcolor;
     this.DeleteRow(this.scrolltop);
     if (draw) this.PrepareUpdateRow(this.scrolltop);
 }
 
 Terminal.prototype.ScrollUp = function(draw) {
+    var tempscreen = this.screen[this.scrolltop];
+    var tempcolor = this.color[this.scrolltop];
+
     for (var i = this.scrolltop+1; i <= this.scrollbottom; i++) {
         if (i == 0) continue;
-        for (var j = 0; j < this.ncolumns; j++) {
-            this.screen[i - 1][j] = this.screen[i][j];
-            this.color[i - 1][j] = this.color[i][j];
-        }
+        this.screen[i - 1] = this.screen[i];
+        this.color[i - 1] = this.color[i];
         if (draw) this.PrepareUpdateRow(i-1);
     }
+
+    this.screen[this.scrollbottom] = tempscreen;
+    this.color[this.scrollbottom] = tempcolor;
     this.DeleteRow(this.scrollbottom);
     if (draw) this.PrepareUpdateRow(this.scrollbottom);
 };
