@@ -12,6 +12,7 @@ showmenu \
 "Programming Languages" \
 "Network Tools & Web Browsers" \
 "Symmetric multiprocessing" \
+"Compile Stuff" \
 "Start X Server (glxgears, xterm, ...)" \
 "Start wayland/weston" \
 "Quit"
@@ -36,13 +37,15 @@ case $? in
 	8)
 		SMP ;;
 	9)
+		Compile ;;
+	10)
 		echo "Loading files from server. This may take a while."
 		startx
 		exit ;;
-	10)
+	11)
 		echo "Loading files from server. This may take a while."
 		su -c startweston ;;
-	11)
+	12)
 		exit ;;
 esac
 
@@ -337,6 +340,64 @@ case $? in
 		Main ;;
 esac
 	SMP
+}
+
+Compile () {
+
+showmenu \
+"Compile Stuff" \
+"Compile and start Frotz" \
+"Compile and start LUA" \
+"Compile and start cmatrix" \
+"Compile and start bc" \
+"Back"
+
+case $? in
+	0 )	Main
+		;;
+	1 )
+		mkdir -p /tmp/compile
+		cd /tmp/compile
+		tar -xvzf /var/compilepackages/frotz*
+		cd frotz*
+		make
+		./frotz /usr/share/frotz/905.z5
+		;;
+
+	2 )
+		mkdir -p /tmp/compile
+		cd /tmp/compile
+		tar -xvzf /var/compilepackages/lua*
+		cd lua*
+		make ansi
+		./src/lua
+		;;
+
+	3 )
+		mkdir -p /tmp/compile
+		cd /tmp/compile
+		tar -xvzf /var/compilepackages/cmatrix*
+		cd cmatrix*
+		./configure
+		make
+		./cmatrix
+		;;
+	4 )
+		mkdir -p /tmp/compile
+		cd /tmp/compile
+		tar -xvjf /var/compilepackages/bc*
+		cd bc*
+		./configure
+		make
+		./bc
+		;;
+
+	5 )
+		Main
+		;;
+
+esac
+	Compile
 }
 
 
