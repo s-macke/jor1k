@@ -11,9 +11,9 @@ showmenu \
 "Benchmarks" \
 "Programming Languages" \
 "Network Tools & Web Browsers" \
-"Start X Server (glxgears, xterm, ...)" \
 "Symmetric multiprocessing" \
-"Start wayland/weston (currently not working, use an old version of jor1k)" \
+"Start X Server (glxgears, xterm, ...)" \
+"Start wayland/weston" \
 "Quit"
 
 case $? in
@@ -34,14 +34,14 @@ case $? in
 	7)
 		Network ;;
 	8)
+		SMP ;;
+	9)
 		echo "Loading files from server. This may take a while."
 		startx
 		exit ;;
-	9)
-		SMP ;;
 	10)
 		echo "Loading files from server. This may take a while."
-		startweston ;;
+		su -c startweston ;;
 	11)
 		exit ;;
 esac
@@ -245,6 +245,7 @@ case $? in
 		echo '}' >> hello.c
 		cat hello.c
 		echo compile hello.c.
+		echo "Loading gcc from server. This may take a while."
 		gcc -o hello hello.c
 		echo run hello
 		./hello
