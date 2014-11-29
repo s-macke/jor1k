@@ -24,7 +24,8 @@ function UTF8StreamToUnicode() {
                 if ((this.stream[0]&0xE0) == 0xC0)
                 if ((this.stream[1]&0xC0) == 0x80) {
                     this.ofs = 0;
-                    return ((this.stream[0]&0x1F)<<6) | (this.stream[1]&0x3F);
+                    return ((this.stream[0]&0x1F)<<6) | 
+                        ((this.stream[1]&0x3F)<<0);
                 }
                 break;
 
@@ -33,7 +34,9 @@ function UTF8StreamToUnicode() {
                 if ((this.stream[1]&0xC0) == 0x80)
                 if ((this.stream[2]&0xC0) == 0x80) {
                     this.ofs = 0;
-                    return (this.stream[0] << 12) + (this.stream[1] << 6) + this.stream[2] - 0xE2080;
+                    return ((this.stream[0]&0xF ) << 12) | 
+                        ((this.stream[1]&0x3F) << 6)  | 
+                        ((this.stream[2]&0x3F) << 0);
                 }
                 break;
 
@@ -43,7 +46,10 @@ function UTF8StreamToUnicode() {
                 if ((this.stream[2]&0xC0) == 0x80)
                 if ((this.stream[3]&0xC0) == 0x80) {
                     this.ofs = 0;
-                    return (this.stream[0] << 18) + (this.stream[1] << 12) + (this.stream[2] << 6) + this.stream[3] - 0x3C82080;
+                    return ((this.stream[0]&0x7 ) << 18) | 
+                        ((this.stream[1]&0x3F) << 12) | 
+                        ((this.stream[2]&0x3F) << 6)  |
+                        ((this.stream[3]&0x3F) << 0);
                 }
                 this.ofs = 0;
                 return -1; //obviously illegal character, so reset
@@ -56,10 +62,10 @@ function UTF8StreamToUnicode() {
         }
         return -1;
     }
+
 }
 
-function UnicodeToUTF8Stream(key)
-{
+function UnicodeToUTF8Stream(key) {
     key = key|0;
     if (key < 0x80) {
         return [key];
