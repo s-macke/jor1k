@@ -203,6 +203,11 @@ Terminal.prototype.ChangeCursor = function(Numbers) {
 };
 
 Terminal.prototype.ChangeColor = function(Numbers) {
+    if (Numbers.length == 0) { // reset
+        this.currentcolor = 0x7;
+        return;
+    }
+
     for (var i = 0; i < Numbers.length; i++) {
         switch (Number(Numbers[i])) {
         case 30: case 31: case 32: case 33: case 34: case 35: case 36: case 37:
