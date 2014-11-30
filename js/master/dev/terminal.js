@@ -8,7 +8,9 @@ var Colors = new Array(
     "#000000", "#BB0000", "#00BB00", "#BBBB00",
     "#0000BB", "#BB00BB", "#00BBBB", "#BBBBBB",
     "#555555", "#FF5555", "#55FF55", "#FFFF55",
-    "#5555FF", "#FF55FF", "#55FFFF", "#55FFFF");
+    "#5555FF", "#FF55FF", "#55FFFF", "#55FFFF",
+    "#707070", "#FFFFFF"
+);
 
 // constructor
 function Terminal(nrows, ncolumns, elemId) {
@@ -220,8 +222,15 @@ Terminal.prototype.ChangeColor = function(Numbers) {
             this.currentcolor = 0x7; // reset
             break;
         case 1:
-            this.currentcolor |= 10; // brighter foreground colors
+            this.currentcolor = (this.currentcolor & 0xFF00) | 17; // brighter foreground colors
             break;
+        case 2:
+            this.currentcolor = (this.currentcolor & 0xFF00) | 16; // dimmed foreground colors
+            break;
+        case 5: // extended colors
+             i++;
+             var c = Number(Numbers[i]);
+             break;
         case 7:
             this.currentcolor = ((this.currentcolor & 0xF) << 8) | ((this.currentcolor >> 8)) & 0xF; // change foreground and background, no brighter colors
             break;
