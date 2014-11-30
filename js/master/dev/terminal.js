@@ -5,12 +5,17 @@
 "use strict";
 
 var Colors = new Array(
+    // standard colors
     "#000000", "#BB0000", "#00BB00", "#BBBB00",
     "#0000BB", "#BB00BB", "#00BBBB", "#BBBBBB",
+    // brighter colors
     "#555555", "#FF5555", "#55FF55", "#FFFF55",
-    "#5555FF", "#FF55FF", "#55FFFF", "#55FFFF",
-    "#707070", "#FFFFFF"
+    "#5555FF", "#FF55FF", "#55FFFF", "#FFFFFF",
+    // dimmed colors
+    "#000000", "#660000", "#006600", "#666600",
+    "#000066", "#660066", "#006666", "#666666"
 );
+
 
 // constructor
 function Terminal(nrows, ncolumns, elemId) {
@@ -213,32 +218,35 @@ Terminal.prototype.ChangeColor = function(Numbers) {
     for (var i = 0; i < Numbers.length; i++) {
         switch (Number(Numbers[i])) {
         case 30: case 31: case 32: case 33: case 34: case 35: case 36: case 37:
-            this.currentcolor = this.currentcolor & (~0x7) | (Numbers[i] - 30) & 0x7;
+            this.currentcolor = this.currentcolor & (0xFF00) | (Numbers[i] - 30) & 0x7;
             break;
         case 40: case 41: case 42: case 43: case 44: case 45: case 46: case 47:
-            this.currentcolor = this.currentcolor & (0xFF) | (((Numbers[i] - 40) & 0x7) << 8);
+            this.currentcolor = this.currentcolor & (0x00FF) | (((Numbers[i] - 40) & 0x7) << 8);
             break;
         case 0:
             this.currentcolor = 0x7; // reset
             break;
-        case 1:
-            this.currentcolor = (this.currentcolor & 0xFF00) | 17; // brighter foreground colors
+        case 1: // brighter foreground color
+            this.currentcolor = this.currentcolor | 0x8;
             break;
-        case 2:
-            this.currentcolor = (this.currentcolor & 0xFF00) | 16; // dimmed foreground colors
+        case 2: // dimmed foreground color
+            this.currentcolor = this.currentcolor | 0x10;
             break;
-        case 5: // extended colors
+        case 4: // underline ignored
+            break;
+        case 5: // extended colors or blink ignored
              i++;
-             var c = Number(Numbers[i]);
              break;
-        case 7:
-            this.currentcolor = ((this.currentcolor & 0xF) << 8) | ((this.currentcolor >> 8)) & 0xF; // change foreground and background, no brighter colors
+        case 7: // inverted
+            this.currentcolor = ((this.currentcolor & 0xFF) << 8) | ((this.currentcolor >> 8)) & 0xFF; 
+            break;
+        case 8: // hidden ignored
             break;
         case 39:
-            this.currentcolor = this.currentcolor & (~0x7) | 0x7; // set standard foreground color
+            this.currentcolor = this.currentcolor & (0xFF00) | 0x7; // set standard foreground color
             break;
         case 49:
-            this.currentcolor = this.currentcolor & 0xFF; // set standard background color
+            this.currentcolor = this.currentcolor & 0x00FF; // set standard background color
             break;
         case 10:
             // reset mapping ?
