@@ -283,6 +283,7 @@ showmenu \
 "lynx      - Text Web Browser. Start page is google.com" \
 "links     - Text Web Browser. Start page is google.com" \
 "telnet    - Watch an ASCII version of Star Wars over a telnet connection" \
+"git       - git clone 2048.c, compile and start" \
 "ssh       - Secure Shell" \
 "nmap      - Free Security Scanner For Network Exploration & Security Audits" \
 "sshd      - start a sshd server" \
@@ -305,14 +306,21 @@ case $? in
 		telnet towel.blinkenlights.nl
 		;;
 	5 )
+		cd ~
+		git clone git://github.com/mevdschee/2048.c.git
+		cd 2048.c
+		make CC=gcc
+		./2048
+		;;
+	6 )
 		echo "Please use 'ssh' from the command line"
 		exit
 		;;
-	6 )
+	7 )
 		echo "Please use 'nmap' from the command line"
 		exit
 		;;
-	7 )
+	8 )
 		/usr/sbin/sshd
 		;;
 	8 )
