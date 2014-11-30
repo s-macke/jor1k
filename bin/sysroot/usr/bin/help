@@ -164,6 +164,8 @@ showmenu \
 "worm     - worms run all over your screen (uses color)" \
 "xmas     - Xmas greeting card" \
 "nano     - Text editor (CTRL+X to exit)" \
+"aafire   - ASCII fire" \
+"bb       - Best Terminal demo out there" \
 "Back"
 
 case $? in
@@ -192,6 +194,10 @@ case $? in
 	11 )
 		nano ;;
 	12 )
+		aafire ;;
+	13 )
+		bb ;;
+	14 )
 		Main ;;
 esac
 	TDemos
