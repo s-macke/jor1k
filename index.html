@@ -47,7 +47,7 @@
                     <img src="images/tar.png" width="20px" height="20px"  onclick='jor1kgui.TAR("home/user")' title="Download of home folder" />
                     <img src="images/sync.png" width="20px" height="20px"  onclick='jor1kgui.Sync("home/user")' title="Sync with server" />
                     <img src="images/fullscreen.png" width="20px" height="20px"  onclick='Fullscreen()' title="Windowed fullscreen of framebuffer" />
-                    <input type=text size="4" value="keybd" id="clipboard">
+                    <textarea style="height: 20px;" type=text cols="5" rows="1" id="clipboard">clipb</textarea>
                     </span>
                     <span id="stats" style="float: right"></span>
                     </td></tr>
@@ -249,6 +249,11 @@ function Start() {
   ga('create', 'UA-44129312-1', 'auto');
   ga('send', 'pageview');
 </script>
+
+
+<div id="console">
+	
+</div>
 
     </body>
 </html>

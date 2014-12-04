@@ -6,6 +6,8 @@
 
 function DebugMessage(message) {
     console.log(message);
+    //var myconsole = document.getElementById("console");
+    //myconsole.innerHTML += message + "<br>";
 }
 
 function jor1kGUI(parameters)
@@ -15,7 +17,7 @@ function jor1kGUI(parameters)
     this.worker = new Worker('js/worker/worker.js');
     this.worker.onmessage = this.OnMessage.bind(this);   
     this.worker.onerror = function(e) {
-        console.log("Error at " + e.filename + ":" + e.lineno + ": " + e.message);
+        DebugMessage("Error at " + e.filename + ":" + e.lineno + ": " + e.message);
         this.stop = true;
     }
 
@@ -34,6 +36,23 @@ function jor1kGUI(parameters)
         this.framebuffer.fbcanvas.style.border = "2px solid #000000";
     }.bind(this);
 
+   this.clipboard.onpaste = function(event) {
+       this.clipboard.value = "";
+       setTimeout(this.SendClipboard.bind(this), 4);    
+   }.bind(this);
+
+   this.SendClipboard = function() {
+       var chars = [];
+       var v = this.clipboard.value;
+
+       for(var i=0; i<v.length; i++) {
+           chars.push(v.charCodeAt(i));
+       }
+
+       this.SendChars(chars);
+       this.clipboard.value = "";
+   }.bind(this);
+
     this.IgnoreKeys = function() {
       return (
           (this.lastMouseDownTarget != this.terminalcanvas) &&
@@ -50,6 +69,8 @@ function jor1kGUI(parameters)
       document.addEventListener('mousedown', recordTarget, false);
     else
       Window.onmousedown = recordTarget; // IE 10 support (untested)
+
+
 
     document.onkeypress = function(event) {
         if(this.IgnoreKeys()) return true;
@@ -152,7 +173,7 @@ jor1kGUI.prototype.UploadExternalFile = function(f) {
 
 jor1kGUI.prototype.OnMessage = function(e) {
     // print debug messages even if emulator is stopped
-    if (e.data.command == "Debug") console.log(e.data.data);
+    if (e.data.command == "Debug") DebugMessage(e.data.data);
 
     if (this.stop) return;
     switch(e.data.command)
@@ -190,7 +211,7 @@ jor1kGUI.prototype.OnMessage = function(e) {
             break;
 
         case "Stop":
-            console.log("Received stop signal");
+            DebugMessage("Received stop signal");
             this.stop = true;
             break;
 
