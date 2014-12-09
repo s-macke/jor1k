@@ -122,18 +122,11 @@
             
         </div>
 
-    <script src="http://danml.com/js/download.js"></script>
+    <script src="jor1k-master-min.js"></script> 
 
-    <script src="js/master/utils.js"></script>
-    <script src="js/lib/utf8.js"></script>
-    <script src="js/master/dev/terminal.js"></script>
-    <script src="js/master/dev/terminal-input.js"></script>
-    <script src="js/master/dev/ethernet.js"></script>
-    <script src="js/master/dev/sound.js"></script>
-    <script src="js/master/dev/framebuffer.js"></script>
-    <script src="js/master/master.js"></script>
-    
 <script>
+var Jor1k = require("Jor1k");
+
 
 function Fullscreen()
 {
@@ -180,7 +173,7 @@ function Start() {
     jor1kparameters = {
         system: {
             kernelURL: "bin/vmlinux.bin.bz2", // kernel image
-            memorysize: 32, // in MB, must be a power of two
+            memorysize: 64, // in MB, must be a power of two
             cpu: "asm", // short name for the cpu to use
             ncores: 1,
         },
@@ -236,7 +229,7 @@ function Start() {
 
     // --------------------------------------------------------
 
-    jor1kgui = new jor1kGUI(jor1kparameters);
+    jor1kgui = new Jor1k(jor1kparameters);
 
 }
 </script>

@@ -1100,3 +1100,5 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
     return 0;
 };
 
+
+module.exports = SafeCPU;

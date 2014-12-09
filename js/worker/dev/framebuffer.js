@@ -2,15 +2,20 @@
 // ---------------- Framebuffer --------------------
 // -------------------------------------------------
 
+"use strict";
+
+var utils = require('../utils.js');
+
 // constructor
-function FBDev(ram) {
+function FBDev(message, ram) {
+    this.message = message;
     this.ram = ram;
     this.width = 640;
     this.height = 400;
     this.addr = 16000000;
     this.n = (this.width * this.height)>>1;
     this.buffer = new Int32Array(this.n);
-    RegisterMessage("GetFB", this.OnGetFB.bind(this) );
+    message.Register("GetFB", this.OnGetFB.bind(this) );
     //this.buffer = new Uint8Array(0);
 }
 
@@ -26,7 +31,7 @@ FBDev.prototype.WriteReg32 = function (addr, value) {
 
     switch (addr) {
     case 0x14: 
-        this.addr = Swap32(value);
+        this.addr = utils.Swap32(value);
         //this.buffer = new Uint8Array(this.ram.mem, this.addr, this.n);
         break;
     default:
@@ -35,7 +40,7 @@ FBDev.prototype.WriteReg32 = function (addr, value) {
 };
 
 FBDev.prototype.OnGetFB = function() {
-    SendToMaster("GetFB", this.GetBuffer() );
+    this.message.Send("GetFB", this.GetBuffer() );
 }
 
 FBDev.prototype.GetBuffer = function () {
@@ -50,3 +55,4 @@ FBDev.prototype.GetBuffer = function () {
     return this.buffer;
 }
 
+module.exports = FBDev;

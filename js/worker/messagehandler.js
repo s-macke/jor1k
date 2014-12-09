@@ -18,6 +18,13 @@ function DebugMessage(message) {
     SendToMaster("Debug", message);
 }
 
+function Abort() {
+    DebugMessage("Abort execution.");
+    SendToMaster("Stop", {});
+    throw new Error('Kill worker');
+}
+
+
 var messagemap = new Object();
 function RegisterMessage(message, OnReceive) {
     messagemap[message] = OnReceive;
@@ -29,3 +36,9 @@ onmessage = function(e) {
             return;
     }
 }
+
+module.exports.Register = RegisterMessage;
+module.exports.Debug = DebugMessage;
+module.exports.Abort = Abort;
+module.exports.Send = SendToMaster;
+ 

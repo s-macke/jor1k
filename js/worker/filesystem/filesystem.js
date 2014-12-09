@@ -5,6 +5,13 @@
 
 "use strict";
 
+var TAR = require('./tar.js');
+var utils = require('../utils.js');
+var bzip2 = require('../bzip2.js');
+var marshall = require('../dev/virtio/marshall.js');
+var UTF8 = require('../../lib/utf8.js');
+
+
 var S_IRWXUGO = 0x1FF;
 var S_IFMT = 0xF000;
 var S_IFSOCK = 0xC000;
@@ -32,7 +39,8 @@ var STATUS_LOADING = 0x3;
 var STATUS_UNLINKED = 0x4;
 
 
-function FS() {
+function FS(message) {
+    this.message = message;
     this.inodes = [];
     this.events = [];
 
@@ -40,19 +48,19 @@ function FS() {
     this.filesinloadingqueue = 0;
     this.OnLoaded = function() {};
 
-    this.tar = new TAR(this);
+    this.tar = new TAR(message, this);
     this.userinfo = [];
 
-    RegisterMessage("LoadFilesystem", this.LoadFilesystem.bind(this) );
-    RegisterMessage("MergeFile", this.MergeFile.bind(this) );
-    RegisterMessage("tar",
+    message.Register("LoadFilesystem", this.LoadFilesystem.bind(this) );
+    message.Register("MergeFile", this.MergeFile.bind(this) );
+    message.Register("tar",
         function(data) {
-            SendToMaster("tar", this.tar.Pack(data));
+            message.Send("tar", this.tar.Pack(data));
         }.bind(this)
     );
-    RegisterMessage("sync",
+    message.Register("sync",
         function(data) {
-            SendToMaster("sync", this.tar.Pack(data));
+            message.Send("sync", this.tar.Pack(data));
         }.bind(this)
     );
 
@@ -92,7 +100,7 @@ FS.prototype.HandleEvent = function(id) {
         this.OnLoaded();
         this.OnLoaded = function() {}
     }
-    //DebugMessage("number of events: " + this.events.length);
+    //message.Debug("number of events: " + this.events.length);
     for(var i = this.events.length - 1; i >= 0; i--) {
         if (this.events[i].id != id) continue;
         this.events[i].OnEvent();
@@ -105,21 +113,24 @@ FS.prototype.HandleEvent = function(id) {
 FS.prototype.LoadImage = function(url)
 {
     if (!url) return;
-    //DebugMessage("Load Image " + url);
+    //this.message.Debug("Load Image " + url);
 /*
     if (typeof Worker !== 'undefined') {
         LoadBZIP2Resource(url, 
             function(m){ for(var i=0; i<m.size; i++) this.tar.Unpack(m.data[i]); }.bind(this), 
-            function(e){DebugMessage("Error: Could not load " + url + ". Skipping.");});
+            function(e){this.message.Debug("Error: Could not load " + url + ". Skipping.");});
         return;
     }
 */
-    LoadBinaryResource(url,
+    utils.LoadBinaryResource(url,
     function(buffer){
         var buffer8 = new Uint8Array(buffer);
         bzip2.simple(buffer8, this.tar.Unpack.bind(this.tar));
     }.bind(this),
-    function(error){DebugMessage("Error: Could not load " + url + ". Skipping.");});
+    function(error){
+        this.message.Debug("Error: Could not load " + url + ". Skipping.");
+    }.bind(this)
+    );
 }
 // -----------------------------------------------------
 
@@ -154,7 +165,7 @@ function ReadVariable(buffer, offset) {
     }
     offset = i+1;
     variable.offset = offset;
-    //DebugMessage("read " + variable.name + "=" + variable.value);
+    //this.message.Debug("read " + variable.name + "=" + variable.value);
     return variable;
 }
 
@@ -207,15 +218,15 @@ FS.prototype.CheckEarlyload = function(path)
 
 FS.prototype.LoadFSXML = function(urls)
 {
-    DebugMessage("Load filesystem information from " + urls);
-    LoadXMLResource("../../" + urls, this.OnXMLLoaded.bind(this), function(error){throw error;});
+    this.message.Debug("Load filesystem information from " + urls);
+    utils.LoadXMLResource(urls, this.OnXMLLoaded.bind(this), function(error){throw error;});
 }
 
 FS.prototype.OnXMLLoaded = function(fs)
 {
     // At this point I realized, that the dom is not available in worker threads and that I cannot get the xml information directly.
     // So let's analyze ourself
-    var sysrootdir = "../../";
+    var sysrootdir = "";
 
     var parentid = 0;
     for(var i=0; i<fs.length; i++)
@@ -238,7 +249,7 @@ FS.prototype.OnXMLLoaded = function(fs)
 
     switch(tag.type) {
     case "FS":
-        sysrootdir = "../../" + tag.src + "/";
+        sysrootdir = "" + tag.src + "/";
         break;
 
     case "Dir":
@@ -261,7 +272,7 @@ FS.prototype.OnXMLLoaded = function(fs)
         this.PushInode(inode);
         var url = sysrootdir + (tag.src.length==0?this.GetFullPath(idx):tag.src);
         inode.url = url;
-        //DebugMessage("Load id=" + (idx) + " " + url);
+        //this.message.Debug("Load id=" + (idx) + " " + url);
         if (tag.load || this.CheckEarlyload(this.GetFullPath(idx)) ) {
             this.LoadFile(idx);
         }
@@ -274,7 +285,7 @@ FS.prototype.OnXMLLoaded = function(fs)
         break;
         }
     }
-    DebugMessage("processed " + this.inodes.length + " inodes");
+    this.message.Debug("processed " + this.inodes.length + " inodes");
     this.Check();
 }
 
@@ -317,7 +328,7 @@ FS.prototype.LoadFile = function(idx) {
 
     if (inode.compressed) {
         inode.data = new Uint8Array(inode.size);
-        LoadBinaryResource(inode.url + ".bz2",
+        utils.LoadBinaryResource(inode.url + ".bz2",
         function(buffer){
             var buffer8 = new Uint8Array(buffer);
             var ofs = 0;
@@ -331,7 +342,7 @@ FS.prototype.LoadFile = function(idx) {
         return;
     }
 
-    LoadBinaryResource(inode.url, 
+    utils.LoadBinaryResource(inode.url, 
         function(buffer){
             inode.data = new Uint8Array(buffer);
             inode.size = this.inodes[idx].data.length; // correct size if the previous was wrong. 
@@ -362,8 +373,8 @@ FS.prototype.PushInode = function(inode) {
         }
     }
 
-    DebugMessage("Error in Filesystem: Pushed inode with name = "+ inode.name + " has no parent");
-    abort();
+    this.message.Debug("Error in Filesystem: Pushed inode with name = "+ inode.name + " has no parent");
+    this.message.Abort();
 
 }
 
@@ -477,7 +488,7 @@ FS.prototype.OpenInode = function(id, mode) {
         case S_IFCHR: type = "Character Device"; break;
     }
     */
-    //DebugMessage("open:" + this.GetFullPath(id) +  " type: " + type + " status:" + inode.status);
+    //this.message.Debug("open:" + this.GetFullPath(id) +  " type: " + type + " status:" + inode.status);
     if (inode.status == STATUS_ON_SERVER) {
         this.LoadFile(id);
         return false;
@@ -486,10 +497,10 @@ FS.prototype.OpenInode = function(id, mode) {
 }
 
 FS.prototype.CloseInode = function(id) {
-    //DebugMessage("close: " + this.GetFullPath(id));
+    //this.message.Debug("close: " + this.GetFullPath(id));
     var inode = this.GetInode(id);
     if (inode.status == STATUS_UNLINKED) {
-        //DebugMessage("Filesystem: Delete unlinked file");
+        //this.message.Debug("Filesystem: Delete unlinked file");
         inode.status == STATUS_INVALID;
         inode.data = new Uint8Array(0);
         inode.size = 0;
@@ -497,7 +508,7 @@ FS.prototype.CloseInode = function(id) {
 }
 
 FS.prototype.Rename = function(olddirid, oldname, newdirid, newname) {
-    // DebugMessage("Rename " + oldname + " to " + newname);
+    // this.message.Debug("Rename " + oldname + " to " + newname);
     if ((olddirid == newdirid) && (oldname == newname)) {
         return true;
     }
@@ -519,8 +530,8 @@ FS.prototype.Rename = function(olddirid, oldname, newdirid, newname) {
     } else {
         var id = this.FindPreviousID(idx);
         if (id == -1) {
-            DebugMessage("Error in Filesystem: Cannot find previous id of inode");
-            abort();
+            this.message.Debug("Error in Filesystem: Cannot find previous id of inode");
+            this.message.Abort();
         }
         this.inodes[id].nextid = inode.nextid;
     }
@@ -555,7 +566,7 @@ FS.prototype.Search = function(parentid, name) {
     var id = this.inodes[parentid].firstid;
     while(id != -1) {
         if (this.inodes[id].parentid != parentid) { // consistency check
-            DebugMessage("Error in Filesystem: Found inode with wrong parent id");
+            this.message.Debug("Error in Filesystem: Found inode with wrong parent id");
         }
         if (this.inodes[id].name == name) return id;
         id = this.inodes[id].nextid;
@@ -595,7 +606,7 @@ FS.prototype.FindPreviousID = function(idx) {
 FS.prototype.Unlink = function(idx) {
     if (idx == 0) return false; // root node cannot be deleted
     var inode = this.GetInode(idx);
-    //DebugMessage("Unlink " + inode.name);
+    //this.message.Debug("Unlink " + inode.name);
 
     // check if directory is not empty
     if ((inode.mode&S_IFMT) == S_IFDIR) {
@@ -608,8 +619,8 @@ FS.prototype.Unlink = function(idx) {
     } else {
         var id = this.FindPreviousID(idx);
         if (id == -1) {
-            DebugMessage("Error in Filesystem: Cannot find previous id of inode");
-            abort();
+            this.message.Debug("Error in Filesystem: Cannot find previous id of inode");
+            this.message.Abort();
         }
         this.inodes[id].nextid = inode.nextid;
     }
@@ -625,12 +636,12 @@ FS.prototype.Unlink = function(idx) {
 FS.prototype.GetInode = function(idx)
 {
     if (isNaN(idx)) {
-        DebugMessage("Error in filesystem: id is not a number ");
+        this.message.Debug("Error in filesystem: id is not a number ");
         return 0;
     }
 
     if ((idx < 0) || (idx > this.inodes.length)) {
-        DebugMessage("Error in filesystem: Attempt to get inode with id " + idx);
+        this.message.Debug("Error in filesystem: Attempt to get inode with id " + idx);
         return 0;
     }
     return this.inodes[idx];
@@ -640,7 +651,7 @@ FS.prototype.ChangeSize = function(idx, newsize)
 {
     var inode = this.GetInode(idx);
     var temp = inode.data;
-    //DebugMessage("change size to: " + newsize);
+    //this.message.Debug("change size to: " + newsize);
     if (newsize == inode.size) return;
     inode.data = new Uint8Array(newsize);
     inode.size = newsize;
@@ -685,7 +696,7 @@ FS.prototype.GetRecursiveList = function(dirid, list) {
 }
 
 FS.prototype.MergeFile = function(file) {
-    DebugMessage("Merge path:" + file.name);
+    this.message.Debug("Merge path:" + file.name);
     var ids = this.SearchPath(file.name);
     if (ids.parentid == -1) return; // not even the path seems to exist
     if (ids.id == -1) {
@@ -701,23 +712,23 @@ FS.prototype.Check = function() {
     {
         if (this.inodes[i].status == STATUS_INVALID) continue;
         if (this.inodes[i].nextid == i) {
-            DebugMessage("Error in filesystem: file points to itself");
-            abort();
+            this.message.Debug("Error in filesystem: file points to itself");
+            this.message.Abort();
         }
 
         var inode = this.GetInode(i);
         if (inode.parentid < 0) {
-            DebugMessage("Error in filesystem: negative parent id " + i);
+            this.message.Debug("Error in filesystem: negative parent id " + i);
         }
         var n = inode.name.length;
         if (n == 0) {
-            DebugMessage("Error in filesystem: inode with no name and id " + i);
+            this.message.Debug("Error in filesystem: inode with no name and id " + i);
         }
 
         for (var j in inode.name) {
             var c = inode.name.charCodeAt(j);
             if (c < 32) {
-                DebugMessage("Error in filesystem: Unallowed char in filename");
+                this.message.Debug("Error in filesystem: Unallowed char in filename");
             } 
         }
     }
@@ -735,18 +746,18 @@ FS.prototype.FillDirectory = function(dirid) {
     var size = 0;
     var id = this.inodes[dirid].firstid;
     while(id != -1) {
-        size += 13 + 8 + 1 + 2 + UTF8Length(this.inodes[id].name);
+        size += 13 + 8 + 1 + 2 + UTF8.UTF8Length(this.inodes[id].name);
         id = this.inodes[id].nextid;
     }
 
     size += 13 + 8 + 1 + 2 + 1; // "." entry
     size += 13 + 8 + 1 + 2 + 2; // ".." entry
-    //DebugMessage("size of dir entry: " + size);
+    //this.message.Debug("size of dir entry: " + size);
     inode.data = new Uint8Array(size);
     inode.size = size;
 
     var offset = 0x0;
-    offset += Marshall(
+    offset += marshall.Marshall(
         ["Q", "d", "b", "s"],
         [this.inodes[dirid].qid, 
         offset+13+8+1+2+1, 
@@ -754,7 +765,7 @@ FS.prototype.FillDirectory = function(dirid) {
         "."],
         inode.data, offset);
 
-    offset += Marshall(
+    offset += marshall.Marshall(
         ["Q", "d", "b", "s"],
         [this.inodes[parentid].qid,
         offset+13+8+1+2+2, 
@@ -764,10 +775,10 @@ FS.prototype.FillDirectory = function(dirid) {
 
     var id = this.inodes[dirid].firstid;
     while(id != -1) {
-        offset += Marshall(
+        offset += marshall.Marshall(
         ["Q", "d", "b", "s"],
         [this.inodes[id].qid,
-        offset+13+8+1+2+UTF8Length(this.inodes[id].name),
+        offset+13+8+1+2+UTF8.UTF8Length(this.inodes[id].name),
         this.inodes[id].mode >> 12,
         this.inodes[id].name],
         inode.data, offset);
@@ -811,3 +822,6 @@ FS.prototype.PrepareCAPs = function(id) {
 
     return inode.caps.length;
 }
+
+
+module.exports = FS;

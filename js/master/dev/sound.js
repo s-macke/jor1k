@@ -76,3 +76,5 @@ LoopSoundBuffer.prototype.AddBuffer = function(addbuffer)
         this.bufferpos++;
     }
 }
+
+module.exports = LoopSoundBuffer;

@@ -2,13 +2,7 @@
 // ------------------ Utils ------------------------
 // -------------------------------------------------
 
-
-function abort() {
-    DebugMessage("Abort execution.");
-    SendToMaster("Stop");
-    sys.PrintState();
-    throw new Error('Kill worker');
-}
+var message = require('./messagehandler');
 
 function GetMilliseconds() {
     return (new Date()).getTime();
@@ -176,3 +170,14 @@ function LoadBZIP2Resource(url, OnSuccess, OnError)
     worker.postMessage(url);    
 }
 */
+
+
+module.exports.GetMilliseconds = GetMilliseconds;
+module.exports.Swap32 = Swap32;
+module.exports.Swap16 = Swap16;
+module.exports.int32 = int32;
+module.exports.uint32 = uint32;
+module.exports.hex8 = hex8;
+module.exports.LoadBinaryResource = LoadBinaryResource;
+module.exports.LoadXMLResource = LoadXMLResource;
+

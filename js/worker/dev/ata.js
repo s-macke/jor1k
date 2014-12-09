@@ -2,6 +2,10 @@
 // --------------------- ATA -----------------------
 // -------------------------------------------------
 
+"use strict";
+
+var utils = require('../utils.js');
+
 // ata-generic implementation (according to Linux)
 // simulation of a hard disk loaded on demand from the webserver in small chunks.
 // specification
@@ -51,7 +55,8 @@ var ATA_SR_IDX  = 0x02;  //                (obsolete)
 var ATA_SR_ERR  = 0x01;  // Error
 
 // constructor
-function ATADev(intdev) {
+function ATADev(message, intdev) {
+    this.message = message;
     this.intdev = intdev;
     var buffer = new ArrayBuffer(512);
     this.identifybuffer = new Uint16Array(buffer);
@@ -154,42 +159,42 @@ ATADev.prototype.ReadReg8 = function(addr) {
     switch(addr)
     {
         case ATA_REG_ERR:
-            //DebugMessage("ATADev: read error register");
+            //this.message.Debug("ATADev: read error register");
             return this.ER;
 
         case ATA_REG_NSECT:
-            //DebugMessage("ATADev: read sector count register");
+            //this.message.Debug("ATADev: read sector count register");
             return this.SNR;
 
         case ATA_REG_LBAL:
-            //DebugMessage("ATADev: read sector number register");
+            //this.message.Debug("ATADev: read sector number register");
             return this.SCR;
 
         case ATA_REG_LBAM:
-            //DebugMessage("ATADev: read cylinder low register");
+            //this.message.Debug("ATADev: read cylinder low register");
             return this.lcyl;
         
         case ATA_REG_LBAH:
-            //DebugMessage("ATADev: read cylinder high register");
+            //this.message.Debug("ATADev: read cylinder high register");
             return this.hcyl;
 
         case ATA_REG_DEVICE:
-            //DebugMessage("ATADev: read drive/head register");
+            //this.message.Debug("ATADev: read drive/head register");
             return this.DR;
 
         case ATA_REG_STATUS:
-            //DebugMessage("ATADev: read status register");			
+            //this.message.Debug("ATADev: read status register");			
             this.intdev.ClearInterrupt(15);
             return this.SR;
 
         case 0x100: // device control register, but read as status register
-            //DebugMessage("ATADev: read alternate status register")
+            //this.message.Debug("ATADev: read alternate status register")
             return this.SR;
             break;
 
         default:
-            DebugMessage("ATADev: Error in ReadRegister8: register " + hex8(addr) + " not supported");
-            abort();
+            this.message.Debug("ATADev: Error in ReadRegister8: register " + hex8(addr) + " not supported");
+            this.message.Abort();
             break;
     }    
     return 0x0;
@@ -198,8 +203,8 @@ ATADev.prototype.ReadReg8 = function(addr) {
 ATADev.prototype.GetSector = function()
 {
     if (!(this.DR & 0x40)) {
-        DebugMessage("ATADev: CHS mode not supported");
-        abort();
+        this.message.Debug("ATADev: CHS mode not supported");
+        this.message.Abort();
     }
     return ((this.DR&0x0F) << 24) | (this.hcyl << 16) | (this.lcyl << 8) | this.SCR;
 }
@@ -207,8 +212,8 @@ ATADev.prototype.GetSector = function()
 ATADev.prototype.SetSector = function(sector)
 {
     if (!(this.DR & 0x40)) {
-        DebugMessage("ATADev: CHS mode not supported");
-        abort();
+        this.message.Debug("ATADev: CHS mode not supported");
+        this.message.Abort();
     }
     this.SCR = sector & 0xFF;
     this.lcyl = (sector >> 8) & 0xFF;
@@ -245,7 +250,7 @@ ATADev.prototype.ExecuteCommand = function()
             if (this.SNR == 0) {
                 this.SNR = 256;
             }
-            //DebugMessage("ATADev: Load sector " + hex8(sector) + ". number of sectors " + hex8(this.SNR));
+            //this.message.Debug("ATADev: Load sector " + hex8(sector) + ". number of sectors " + hex8(this.SNR));
             this.readbuffer = this.diskbuffer;
             this.readbufferindex = sector*256;
             this.readbuffermax = this.readbufferindex+256;
@@ -264,7 +269,7 @@ ATADev.prototype.ExecuteCommand = function()
             if (this.SNR == 0) {
                 this.SNR = 256;
             }
-            //DebugMessage("ATADev: Load multiple sector " + hex8(sector) + ". number of sectors " + hex8(this.SNR));
+            //this.message.Debug("ATADev: Load multiple sector " + hex8(sector) + ". number of sectors " + hex8(this.SNR));
             this.readbuffer = this.diskbuffer;
             this.readbufferindex = sector*256;
             this.readbuffermax = this.readbufferindex + 256*this.SNR;
@@ -279,8 +284,8 @@ ATADev.prototype.ExecuteCommand = function()
             break;
 
         default:
-            DebugMessage("ATADev: Command " + hex8(this.CR) + " not supported");
-            abort();
+            this.message.Debug("ATADev: Command " + hex8(this.CR) + " not supported");
+            this.message.Abort();
             break;
     }
 }
@@ -289,20 +294,20 @@ ATADev.prototype.ExecuteCommand = function()
 ATADev.prototype.WriteReg8 = function(addr, x) {
     
     if (addr == ATA_REG_DEVICE) {
-        //DebugMessage("ATADev: Write drive/head register value: " + hex8(x));
+        //this.message.Debug("ATADev: Write drive/head register value: " + hex8(x));
         this.DR = x;
-        //DebugMessage("Head " + (x&0xF));
-        //DebugMessage("Drive No. " + ((x>>4)&1));
-        //DebugMessage("LBA Mode " + ((x>>6)&1));
+        //this.message.Debug("Head " + (x&0xF));
+        //this.message.Debug("Drive No. " + ((x>>4)&1));
+        //this.message.Debug("LBA Mode " + ((x>>6)&1));
         this.driveselected = ((x>>4)&1)?false:true;
         return;
     }
 
     if (addr == 0x100) { //device control register
-        //DebugMessage("ATADev: Write CTL register" + " value: " + hex8(x));
+        //this.message.Debug("ATADev: Write CTL register" + " value: " + hex8(x));
 
         if (!(x&ATA_DCR_RST) && (this.DCR&ATA_DCR_RST)) { // reset done
-            //DebugMessage("ATADev: drive reset done");
+            //this.message.Debug("ATADev: drive reset done");
             this.DR &= 0xF0; // reset head
             this.SR = ATA_SR_DRDY | ATA_SR_DSC;
             this.SCR = 0x1;
@@ -313,7 +318,7 @@ ATADev.prototype.WriteReg8 = function(addr, x) {
             this.CR = 0x0;
         } else
         if ((x&ATA_DCR_RST) && !(this.DCR&ATA_DCR_RST)) { // reset
-            //DebugMessage("ATADev: drive reset");
+            //this.message.Debug("ATADev: drive reset");
             this.ER = 0x1; // set diagnostics message
             this.SR = ATA_SR_BSY | ATA_SR_DSC;
         }
@@ -329,51 +334,51 @@ ATADev.prototype.WriteReg8 = function(addr, x) {
     switch(addr)
     {
         case ATA_REG_FEATURE:
-            //DebugMessage("ATADev: Write feature register value: " + hex8(x));
+            //this.message.Debug("ATADev: Write feature register value: " + hex8(x));
             this.FR = x;
             break;
 
         case ATA_REG_NSECT:
-            //DebugMessage("ATADev: Write sector count register value: " + hex8(x));
+            //this.message.Debug("ATADev: Write sector count register value: " + hex8(x));
             this.SNR = x;
             break;
 
         case ATA_REG_LBAL:
-            //DebugMessage("ATADev: Write sector number register value: " + hex8(x));
+            //this.message.Debug("ATADev: Write sector number register value: " + hex8(x));
             this.SCR = x;
             break;
 
         case ATA_REG_LBAM:
-            //DebugMessage("ATADev: Write cylinder low register value: " + hex8(x));
+            //this.message.Debug("ATADev: Write cylinder low register value: " + hex8(x));
             this.lcyl = x;
             break;
 
         case ATA_REG_LBAH:
-            //DebugMessage("ATADev: Write cylinder high number register value: " + hex8(x));
+            //this.message.Debug("ATADev: Write cylinder high number register value: " + hex8(x));
             this.hcyl = x;
             break;
 
         case ATA_REG_CMD:
-            //DebugMessage("ATADev: Write Command register " + hex8(x));
+            //this.message.Debug("ATADev: Write Command register " + hex8(x));
             this.CR = x;
             this.ExecuteCommand();
             break;
 
         default:
-            DebugMessage("ATADev: Error in WriteRegister8: register " + hex8(addr) + " not supported (value: " + hex8(x) + ")");
-            abort();    
+            this.message.Debug("ATADev: Error in WriteRegister8: register " + hex8(addr) + " not supported (value: " + hex8(x) + ")");
+            this.message.Abort();    
             break;
     }
 };
 
 ATADev.prototype.ReadReg16 = function(addr) {
     if (addr != 0) { // data register
-        DebugMessage("ATADev: Error in ReadRegister16: register " + hex8(addr) + " not supported");
-        abort();
+        this.message.Debug("ATADev: Error in ReadRegister16: register " + hex8(addr) + " not supported");
+        this.message.Abort();
     }
 
-    var val = Swap16(this.readbuffer[this.readbufferindex]);
-    //DebugMessage("ATADev: read data register");
+    var val = utils.Swap16(this.readbuffer[this.readbufferindex]);
+    //this.message.Debug("ATADev: read data register");
     this.readbufferindex++;
     if (this.readbufferindex >= this.readbuffermax) {
         this.SR = ATA_SR_DRDY | ATA_SR_DSC; // maybe no DSC for identify command but it works
@@ -394,11 +399,11 @@ ATADev.prototype.ReadReg16 = function(addr) {
 
 ATADev.prototype.WriteReg16 = function(addr, x) {
     if (addr != 0) { // data register
-        DebugMessage("ATADev: Error in WriteRegister16: register " + hex8(addr) + " not supported");
-        abort();
+        this.message.Debug("ATADev: Error in WriteRegister16: register " + hex8(addr) + " not supported");
+        this.message.Abort();
     }
-    this.readbuffer[this.readbufferindex] = Swap16(x);
-    //DebugMessage("ATADev: write data register");
+    this.readbuffer[this.readbufferindex] = utils.Swap16(x);
+    //this.message.Debug("ATADev: write data register");
     this.readbufferindex++;
     if (this.readbufferindex >= this.readbuffermax) {
         this.SR = ATA_SR_DRDY | ATA_SR_DSC;
@@ -415,12 +420,14 @@ ATADev.prototype.WriteReg16 = function(addr, x) {
 };
 
 ATADev.prototype.ReadReg32 = function(addr) {
-    DebugMessage("ATADev: Error in ReadRegister32: register " + hex8(addr) + " not supported");
-    abort();
+    this.message.Debug("ATADev: Error in ReadRegister32: register " + hex8(addr) + " not supported");
+    this.mesage.Abort();
 };
 
 ATADev.prototype.WriteReg32 = function(addr, x) {
-    DebugMessage("ATADev: Error in WriteRegister32: register " + hex8(addr) + " not supported");
-    abort()
+    this.message.Debug("ATADev: Error in WriteRegister32: register " + hex8(addr) + " not supported");
+    this.message.Abort()
 };
 
+
+module.exports = ATADev;

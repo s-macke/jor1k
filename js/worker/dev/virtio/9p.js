@@ -6,10 +6,14 @@
 
 "use strict";
 
+var marshall = require('./marshall.js');
+
 // TODO
 // flush
 // lock?
 // correct hard links
+
+var S_IFDIR = 0x4000;
 
 var EPERM = 1;       /* Operation not permitted */
 var ENOENT = 2;      /* No such file or directory */
@@ -48,7 +52,8 @@ var FID_INODE = 1;
 var FID_XATTR = 2;
 
 // small 9p device
-function Virtio9p(ramdev, filesystem) {
+function Virtio9p(message, ramdev, filesystem) {
+    this.message = message;
     this.fs = filesystem;
     this.SendReply = function() {};
     this.deviceid = 0x9; // 9p filesystem
@@ -69,9 +74,9 @@ Virtio9p.prototype.Reset = function() {
 }
 
 Virtio9p.prototype.BuildReply = function(id, tag, payloadsize) {
-    Marshall(["w", "b", "h"], [payloadsize+7, id+1, tag], this.replybuffer, 0);
+    marshall.Marshall(["w", "b", "h"], [payloadsize+7, id+1, tag], this.replybuffer, 0);
     if ((payloadsize+7) >= this.replybuffer.length) {
-        DebugMessage("Error in 9p: payloadsize exceeds maximum length");
+        this.message.Debug("Error in 9p: payloadsize exceeds maximum length");
     }
     //for(var i=0; i<payload.length; i++)
     //    this.replybuffer[7+i] = payload[i];
@@ -80,17 +85,17 @@ Virtio9p.prototype.BuildReply = function(id, tag, payloadsize) {
 }
 
 Virtio9p.prototype.SendError = function (tag, errormsg, errorcode) {
-    //var size = Marshall(["s", "w"], [errormsg, errorcode], this.replybuffer, 7);
-    var size = Marshall(["w"], [errorcode], this.replybuffer, 7);
+    //var size = marshall.Marshall(["s", "w"], [errormsg, errorcode], this.replybuffer, 7);
+    var size = marshall.Marshall(["w"], [errorcode], this.replybuffer, 7);
     this.BuildReply(6, tag, size);
 }
 
 Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
-    var header = Unmarshall2(["w", "b", "h"], GetByte);
+    var header = marshall.Unmarshall2(["w", "b", "h"], GetByte);
     var size = header[0];
     var id = header[1];
     var tag = header[2];
-    //DebugMessage("size:" + size + " id:" + id + " tag:" + tag);
+    //this.message.Debug("size:" + size + " id:" + id + " tag:" + tag);
 
     switch(id)
     {
@@ -107,31 +112,31 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             req[7] = 0; // file system id?
             req[8] = 256; // maximum length of filenames
 
-            var size = Marshall(["w", "w", "d", "d", "d", "d", "d", "d", "w"], req, this.replybuffer, 7);
+            var size = marshall.Marshall(["w", "w", "d", "d", "d", "d", "d", "d", "w"], req, this.replybuffer, 7);
             this.BuildReply(id, tag, size);
             this.SendReply(index);
             break;
 
         case 112: // topen
         case 12: // tlopen
-            var req = Unmarshall2(["w", "w"], GetByte);
+            var req = marshall.Unmarshall2(["w", "w"], GetByte);
             var fid = req[0];
             var mode = req[1];
-            //DebugMessage("[open] fid=" + fid + ", mode=" + mode);
+            //this.message.Debug("[open] fid=" + fid + ", mode=" + mode);
             var inode = this.fs.GetInode(this.fid2inode[fid]);
             req[0] = inode.qid;
             req[1] = this.msize - 24;
-            Marshall(["Q", "w"], req, this.replybuffer, 7);
+            marshall.Marshall(["Q", "w"], req, this.replybuffer, 7);
             this.BuildReply(id, tag, 13+4);
-            //DebugMessage("file open " + inode.name);
+            //this.message.Debug("file open " + inode.name);
             //if (inode.status == STATUS_LOADING) return;
             var ret = this.fs.OpenInode(this.fid2inode[fid], mode);
             this.fs.AddEvent(this.fid2inode[fid], 
                 function() {
-                    //DebugMessage("file opened " + inode.name + " tag:"+tag);
+                    //this.message.Debug("file opened " + inode.name + " tag:"+tag);
                     req[0] = inode.qid;
                     req[1] = this.msize - 24;
-                    Marshall(["Q", "w"], req, this.replybuffer, 7);
+                    marshall.Marshall(["Q", "w"], req, this.replybuffer, 7);
                     this.BuildReply(id, tag, 13+4);
                     this.SendReply(index);
                 }.bind(this)
@@ -139,11 +144,11 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             break;
 
         case 70: // link (just copying)
-            var req = Unmarshall2(["w", "w", "s"], GetByte);
+            var req = marshall.Unmarshall2(["w", "w", "s"], GetByte);
             var dfid = req[0];
             var fid = req[1];
             var name = req[2];
-            //DebugMessage("[link] dfid=" + dfid + ", name=" + name);
+            //this.message.Debug("[link] dfid=" + dfid + ", name=" + name);
             var inode = this.fs.CreateInode();
             var inodetarget = this.fs.GetInode(this.fid2inode[fid]);
             //inode = inodetarget;
@@ -166,77 +171,77 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             break;
 
         case 16: // symlink
-            var req = Unmarshall2(["w", "s", "s", "w"], GetByte);
+            var req = marshall.Unmarshall2(["w", "s", "s", "w"], GetByte);
             var fid = req[0];
             var name = req[1];
             var symgt = req[2];
             var gid = req[3];
-            //DebugMessage("[symlink] fid=" + fid + ", name=" + name + ", symgt=" + symgt + ", gid=" + gid); 
+            //this.message.Debug("[symlink] fid=" + fid + ", name=" + name + ", symgt=" + symgt + ", gid=" + gid); 
             var idx = this.fs.CreateSymlink(name, this.fid2inode[fid], symgt);
             var inode = this.fs.GetInode(idx);
             inode.uid = gid;
             inode.gid = gid;
-            Marshall(["Q"], [inode.qid], this.replybuffer, 7);
+            marshall.Marshall(["Q"], [inode.qid], this.replybuffer, 7);
             this.BuildReply(id, tag, 13);
             this.SendReply(index);
             break;
 
         case 18: // mknod
-            var req = Unmarshall2(["w", "s", "w", "w", "w", "w"], GetByte);
+            var req = marshall.Unmarshall2(["w", "s", "w", "w", "w", "w"], GetByte);
             var fid = req[0];
             var name = req[1];
             var mode = req[2];
             var major = req[3];
             var minor = req[4];
             var gid = req[5];
-            //DebugMessage("[mknod] fid=" + fid + ", name=" + name + ", major=" + major + ", minor=" + minor+ "");
+            //this.message.Debug("[mknod] fid=" + fid + ", name=" + name + ", major=" + major + ", minor=" + minor+ "");
             var idx = this.fs.CreateNode(name, this.fid2inode[fid], major, minor);
             var inode = this.fs.GetInode(idx);
             inode.mode = mode;
             inode.uid = gid;
             inode.gid = gid;
-            Marshall(["Q"], [inode.qid], this.replybuffer, 7);
+            marshall.Marshall(["Q"], [inode.qid], this.replybuffer, 7);
             this.BuildReply(id, tag, 13);
             this.SendReply(index);
             break;
 
 
         case 22: // TREADLINK
-            var req = Unmarshall2(["w"], GetByte);
+            var req = marshall.Unmarshall2(["w"], GetByte);
             var fid = req[0];
-            //DebugMessage("[readlink] fid=" + fid);
+            //this.message.Debug("[readlink] fid=" + fid);
             var inode = this.fs.GetInode(this.fid2inode[fid]);
-            var size = Marshall(["s"], [inode.symlink], this.replybuffer, 7);
+            var size = marshall.Marshall(["s"], [inode.symlink], this.replybuffer, 7);
             this.BuildReply(id, tag, size);
             this.SendReply(index);
             break;
 
 
         case 72: // tmkdir
-            var req = Unmarshall2(["w", "s", "w", "w"], GetByte);
+            var req = marshall.Unmarshall2(["w", "s", "w", "w"], GetByte);
             var fid = req[0];
             var name = req[1];
             var mode = req[2];
             var gid = req[3];
-            //DebugMessage("[mkdir] fid=" + fid + ", name=" + name + ", mode=" + mode + ", gid=" + gid); 
+            //this.message.Debug("[mkdir] fid=" + fid + ", name=" + name + ", mode=" + mode + ", gid=" + gid); 
             var idx = this.fs.CreateDirectory(name, this.fid2inode[fid]);
             var inode = this.fs.GetInode(idx);
             inode.mode = mode | S_IFDIR;
             inode.uid = gid;
             inode.gid = gid;
-            Marshall(["Q"], [inode.qid], this.replybuffer, 7);
+            marshall.Marshall(["Q"], [inode.qid], this.replybuffer, 7);
             this.BuildReply(id, tag, 13);
             this.SendReply(index);
             break;
 
         case 14: // tlcreate
-            var req = Unmarshall2(["w", "s", "w", "w", "w"], GetByte);
+            var req = marshall.Unmarshall2(["w", "s", "w", "w", "w"], GetByte);
             var fid = req[0];
             var name = req[1];
             var flags = req[2];
             var mode = req[3];
             var gid = req[4];
-            //DebugMessage("[create] fid=" + fid + ", name=" + name + ", flags=" + flags + ", mode=" + mode + ", gid=" + gid); 
+            //this.message.Debug("[create] fid=" + fid + ", name=" + name + ", flags=" + flags + ", mode=" + mode + ", gid=" + gid); 
             var idx = this.fs.CreateFile(name, this.fid2inode[fid]);
             this.fid2inode[fid] = idx;
             this.fidtype[fid] = FID_INODE;
@@ -244,14 +249,14 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             inode.uid = gid;
             inode.gid = gid;
             inode.mode = mode;
-            Marshall(["Q", "w"], [inode.qid, this.msize - 24], this.replybuffer, 7);
+            marshall.Marshall(["Q", "w"], [inode.qid, this.msize - 24], this.replybuffer, 7);
             this.BuildReply(id, tag, 13+4);
             this.SendReply(index);
             break;
 
         case 52: // lock always suceed
-            // DebugMessage("lock file\n");
-            Marshall(["w"], [0], this.replybuffer, 7);
+            //this.message.Debug("lock file\n");
+            marshall.Marshall(["w"], [0], this.replybuffer, 7);
             this.BuildReply(id, tag, 1);
             this.SendReply(index);
             break;
@@ -262,10 +267,10 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
         */
 
         case 24: // getattr
-            var req = Unmarshall2(["w", "d"], GetByte);
+            var req = marshall.Unmarshall2(["w", "d"], GetByte);
             var fid = req[0];
             var inode = this.fs.GetInode(this.fid2inode[fid]);
-            //DebugMessage("[getattr]: fid=" + fid + " name=" + inode.name + " request mask=" + req[1]);
+            //this.message.Debug("[getattr]: fid=" + fid + " name=" + inode.name + " request mask=" + req[1]);
             req[0] |= 0x1000; // P9_STATS_GEN
 
             req[0] = req[1]; // request mask
@@ -290,7 +295,7 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             req[17] = 0x0; 
             req[18] = 0x0; // st_gen
             req[19] = 0x0; // data_version
-            Marshall([
+            marshall.Marshall([
             "d", "Q", 
             "w",  
             "w", "w", 
@@ -307,7 +312,7 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             break;
 
         case 26: // setattr
-            var req = Unmarshall2(["w", "w", 
+            var req = marshall.Unmarshall2(["w", "w", 
                 "w", // mode 
                 "w", "w", // uid, gid
                 "d", // size
@@ -316,7 +321,7 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             , GetByte);
             var fid = req[0];
             var inode = this.fs.GetInode(this.fid2inode[fid]);
-            //DebugMessage("[setattr]: fid=" + fid + " request mask=" + req[1] + " name=" +inode.name);
+            //this.message.Debug("[setattr]: fid=" + fid + " request mask=" + req[1] + " name=" +inode.name);
             if (req[1] & P9_SETATTR_MODE) {
                 inode.mode = req[2];
             }
@@ -349,7 +354,7 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             break;
 
         case 50: // fsync
-            var req = Unmarshall2(["w", "d"], GetByte);
+            var req = marshall.Unmarshall2(["w", "d"], GetByte);
             var fid = req[0];
             this.BuildReply(id, tag, 0);
             this.SendReply(index);
@@ -357,12 +362,12 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
 
         case 40: // TREADDIR
         case 116: // read
-            var req = Unmarshall2(["w", "d", "w"], GetByte);
+            var req = marshall.Unmarshall2(["w", "d", "w"], GetByte);
             var fid = req[0];
             var offset = req[1];
             var count = req[2];
-            //if (id == 40) DebugMessage("[treaddir]: fid=" + fid + " offset=" + offset + " count=" + count);
-            //if (id == 116) DebugMessage("[read]: fid=" + fid + " offset=" + offset + " count=" + count);
+            //if (id == 40) this.message.Debug("[treaddir]: fid=" + fid + " offset=" + offset + " count=" + count);
+            //if (id == 116) this.message.Debug("[read]: fid=" + fid + " offset=" + offset + " count=" + count);
             var inode = this.fs.GetInode(this.fid2inode[fid]);
             if (this.fidtype[fid] == FID_XATTR) {
                 if (inode.caps.length < offset+count) count = inode.caps.length - offset;
@@ -373,30 +378,30 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
                 for(var i=0; i<count; i++)
                     this.replybuffer[7+4+i] = inode.data[offset+i];
             }
-            Marshall(["w"], [count], this.replybuffer, 7);
+            marshall.Marshall(["w"], [count], this.replybuffer, 7);
             this.BuildReply(id, tag, 4 + count);
             this.SendReply(index);
             break;
 
         case 118: // write
-            var req = Unmarshall2(["w", "d", "w"], GetByte);
+            var req = marshall.Unmarshall2(["w", "d", "w"], GetByte);
             var fid = req[0];
             var offset = req[1];
             var count = req[2];
-            //DebugMessage("[write]: fid=" + fid + " offset=" + offset + " count=" + count);
+            //this.message.Debug("[write]: fid=" + fid + " offset=" + offset + " count=" + count);
             this.fs.Write(this.fid2inode[fid], offset, count, GetByte);
-            Marshall(["w"], [count], this.replybuffer, 7);
+            marshall.Marshall(["w"], [count], this.replybuffer, 7);
             this.BuildReply(id, tag, 4);
             this.SendReply(index);
             break;
 
         case 74: // RENAMEAT
-            var req = Unmarshall2(["w", "s", "w", "s"], GetByte);
+            var req = marshall.Unmarshall2(["w", "s", "w", "s"], GetByte);
             var olddirfid = req[0];
             var oldname = req[1];
             var newdirfid = req[2];
             var newname = req[3];
-            //DebugMessage("[renameat]: oldname=" + oldname + " newname=" + newname);
+            //this.message.Debug("[renameat]: oldname=" + oldname + " newname=" + newname);
             var ret = this.fs.Rename(this.fid2inode[olddirfid], oldname, this.fid2inode[newdirfid], newname);
             if (ret == false) {
                 this.SendError(tag, "No such file or directory", ENOENT);                   
@@ -408,11 +413,11 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             break;
 
         case 76: // TUNLINKAT
-            var req = Unmarshall2(["w", "s", "w"], GetByte);
+            var req = marshall.Unmarshall2(["w", "s", "w"], GetByte);
             var dirfd = req[0];
             var name = req[1];
             var flags = req[2];
-            //DebugMessage("[unlink]: dirfd=" + dirfd + " name=" + name + " flags=" + flags);
+            //this.message.Debug("[unlink]: dirfd=" + dirfd + " name=" + name + " flags=" + flags);
             var id = this.fs.Search(this.fid2inode[dirfd], name);
             if (id == -1) {
                    this.SendError(tag, "No such file or directory", ENOENT);
@@ -430,46 +435,46 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             break;
 
         case 100: // version
-            var version = Unmarshall2(["w", "s"], GetByte);
-            //DebugMessage("[version]: msize=" + version[0] + " version=" + version[1]);
+            var version = marshall.Unmarshall2(["w", "s"], GetByte);
+            //this.message.Debug("[version]: msize=" + version[0] + " version=" + version[1]);
             this.msize = version[0];
-            var size = Marshall(["w", "s"], [this.msize, this.VERSION], this.replybuffer, 7);
+            var size = marshall.Marshall(["w", "s"], [this.msize, this.VERSION], this.replybuffer, 7);
             this.BuildReply(id, tag, size);
             this.SendReply(index);
             break;
 
         case 104: // attach
             // return root directorie's QID
-            var req = Unmarshall2(["w", "w", "s", "s"], GetByte);
+            var req = marshall.Unmarshall2(["w", "w", "s", "s"], GetByte);
             var fid = req[0];
-            //DebugMessage("[attach]: fid=" + fid + " afid=" + hex8(req[1]) + " uname=" + req[2] + " aname=" + req[3]);
+            //this.message.Debug("[attach]: fid=" + fid + " afid=" + hex8(req[1]) + " uname=" + req[2] + " aname=" + req[3]);
             this.fid2inode[fid] = 0;            
             this.fidtype[fid] = FID_INODE;
             var inode = this.fs.GetInode(this.fid2inode[fid]);
-            Marshall(["Q"], [inode.qid], this.replybuffer, 7);
+            marshall.Marshall(["Q"], [inode.qid], this.replybuffer, 7);
             this.BuildReply(id, tag, 13);
             this.SendReply(index);
             break;
 
         case 108: // tflush
-            var req = Unmarshall2(["h"], GetByte);
+            var req = marshall.Unmarshall2(["h"], GetByte);
             var oldtag = req[0];
-            DebugMessage("[flush] " + tag);
-            //Marshall(["Q"], [inode.qid], this.replybuffer, 7);
+            this.message.Debug("[flush] " + tag);
+            //marshall.Marshall(["Q"], [inode.qid], this.replybuffer, 7);
             this.BuildReply(id, tag, 0);
             this.SendReply(index);
             break;
 
 
         case 110: // walk
-            var req = Unmarshall2(["w", "w", "h"], GetByte);
+            var req = marshall.Unmarshall2(["w", "w", "h"], GetByte);
             var fid = req[0];
             var nwfid = req[1];
             var nwname = req[2];
-            //DebugMessage("[walk]: fid=" + req[0] + " nwfid=" + req[1] + " nwname=" + nwname);
+            //this.message.Debug("[walk]: fid=" + req[0] + " nwfid=" + req[1] + " nwname=" + nwname);
             if (nwname == 0) {
                 this.fid2inode[nwfid] = this.fid2inode[fid];
-                Marshall(["h"], [0], this.replybuffer, 7);
+                marshall.Marshall(["h"], [0], this.replybuffer, 7);
                 this.BuildReply(id, tag, 2);
                 this.SendReply(index);
                 break;
@@ -478,32 +483,32 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             for(var i=0; i<nwname; i++) {
                 wnames.push("s");
             }
-            var walk = Unmarshall2(wnames, GetByte);                        
+            var walk = marshall.Unmarshall2(wnames, GetByte);                        
             var idx = this.fid2inode[fid];
             var offset = 7+2;
             var nwidx = 0;
-            //DebugMessage("walk in dir " + this.fs.inodes[idx].name  + " to :" + walk.toString());
+            //this.message.Debug("walk in dir " + this.fs.inodes[idx].name  + " to :" + walk.toString());
             for(var i=0; i<nwname; i++) {
                 idx = this.fs.Search(idx, walk[i]);
                 
                 if (idx == -1) {
-                   //DebugMessage("Could not find :" + walk[i]);
+                   //this.message.Debug("Could not find :" + walk[i]);
                    break;
                 }
-                offset += Marshall(["Q"], [this.fs.inodes[idx].qid], this.replybuffer, offset);
+                offset += marshall.Marshall(["Q"], [this.fs.inodes[idx].qid], this.replybuffer, offset);
                 nwidx++;
-                //DebugMessage(this.fid2inode[nwfid]);
+                //this.message.Debug(this.fid2inode[nwfid]);
                 this.fid2inode[nwfid] = idx;
                 this.fidtype[nwfid] = FID_INODE;
             }
-            Marshall(["h"], [nwidx], this.replybuffer, 7);
+            marshall.Marshall(["h"], [nwidx], this.replybuffer, 7);
             this.BuildReply(id, tag, offset-7);
             this.SendReply(index);
             break;
 
         case 120: // clunk
-            var req = Unmarshall2(["w"], GetByte);
-            //DebugMessage("[clunk]: fid=" + req[0]);
+            var req = marshall.Unmarshall2(["w"], GetByte);
+            //this.message.Debug("[clunk]: fid=" + req[0]);
             if (this.fid2inode[req[0]] >=  0) {
                 this.fs.CloseInode(this.fid2inode[req[0]]);
                 this.fid2inode[req[0]] = -1;
@@ -514,11 +519,11 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             break;
 
         case 30: // xattrwalk
-            var req = Unmarshall2(["w", "w", "s"], GetByte);
+            var req = marshall.Unmarshall2(["w", "w", "s"], GetByte);
             var fid = req[0];
             var newfid = req[1];
             var name = req[2];
-            //DebugMessage("[xattrwalk]: fid=" + req[0] + " newfid=" + req[1] + " name=" + req[2]);
+            //this.message.Debug("[xattrwalk]: fid=" + req[0] + " newfid=" + req[1] + " name=" + req[2]);
             this.fid2inode[newfid] = this.fid2inode[fid];
             this.fidtype[newfid] = FID_NONE;
             var length = 0;
@@ -526,14 +531,14 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
                 length = this.fs.PrepareCAPs(this.fid2inode[fid]);
                 this.fidtype[newfid] = FID_XATTR;
             }
-            Marshall(["d"], [length], this.replybuffer, 7);
+            marshall.Marshall(["d"], [length], this.replybuffer, 7);
             this.BuildReply(id, tag, 8);
             this.SendReply(index);
             break; 
 
         default:
-            DebugMessage("Error in Virtio9p: Unknown id " + id + " received");
-            abort();
+            this.message.Debug("Error in Virtio9p: Unknown id " + id + " received");
+            this.message.Abort();
             //this.SendError(tag, "Operation i not supported",  ENOTSUPP);
             //this.SendReply(index);
             break;
@@ -543,3 +548,5 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
     //this.fs.Check();
 }
 
+
+module.exports = Virtio9p;

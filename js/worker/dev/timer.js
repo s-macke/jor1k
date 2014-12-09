@@ -6,7 +6,8 @@
 
 "use strict";
 
-function TimerDev() {
+function TimerDev(message) {
+    this.message = message;
     this.Reset();
 }
 
@@ -15,10 +16,12 @@ TimerDev.prototype.Reset = function() {
 }
 
 TimerDev.prototype.ReadReg32 = function (addr) {
-    //DebugMessage("Timer: Read reg " + addr);
+    //this.message.Debug("Timer: Read reg " + addr);
     return this.sync;    
 }
 
 TimerDev.prototype.WriteReg32 = function (addr, value) {
-    DebugMessage("Error in Timer: Write reg " + addr + " : " + value);
+    this.message.Debug("Error in Timer: Write reg " + addr + " : " + value);
 }
+
+module.exports = TimerDev;

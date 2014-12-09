@@ -289,10 +289,10 @@ var kc2kc =
 
 
 
-function KeyboardDev(intdev) {
+function KeyboardDev(message, intdev) {
     this.intdev = intdev;
-    RegisterMessage("keydown", this.OnKeyDown.bind(this) );
-    RegisterMessage("keyup", this.OnKeyUp.bind(this) );
+    message.Register("keydown", this.OnKeyDown.bind(this) );
+    message.Register("keyup", this.OnKeyUp.bind(this) );
     this.Reset();
 }
 
@@ -302,7 +302,6 @@ KeyboardDev.prototype.Reset = function() {
 }
 
 KeyboardDev.prototype.OnKeyDown = function(event) {
-    //DebugMessage(event.keyCode);
     this.key = kc2kc[event.keyCode] | 0x0;
     if (this.key == 0) return;
     this.fifo.push(this.key);
@@ -322,3 +321,5 @@ KeyboardDev.prototype.ReadReg8 = function (addr) {
     if (this.fifo.length == 0) this.intdev.ClearInterrupt(0x5);
     return key;
 }
+
+module.exports = KeyboardDev;

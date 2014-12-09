@@ -6,6 +6,10 @@
 // http://www2.gar.no/glinkj/help/cmds/ansm.htm
 // http://www.comptechdoc.org/os/linux/howlinuxworks/linux_hlkeycodes.html
 
+"use strict";
+
+var UTF8 = require('../../lib/utf8.js');
+
 function TerminalInput(SendChars) {
     this.CTRLpressed = false;
     this.ALTpressed = false;
@@ -27,7 +31,7 @@ TerminalInput.prototype.OnKeyPress = function(e) {
     if ((this.CTRLpressed) && (((key >= 0x41) && (key <= 0x5A)) || ((key >= 0x61) && (key <= 0x7A)))) {
         key &= 0x1F;
     }
-    this.SendChars(UnicodeToUTF8Stream(key));
+    this.SendChars(UTF8.UnicodeToUTF8Stream(key));
     return false;
 };
 
@@ -182,3 +186,6 @@ TerminalInput.prototype.OnKeyDown = function(e) {
     
     return;
 };
+
+
+module.exports = TerminalInput;

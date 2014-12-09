@@ -377,3 +377,5 @@ bzip2.decompress = function(bits, stream, buf, bufsize) {
     if ((crc|0) != (crcblock|0)) throw "Error in bzip2: crc32 do not match";
     return false;
 }
+
+module.exports = bzip2;

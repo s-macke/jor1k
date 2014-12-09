@@ -26,12 +26,13 @@ LPC32XX_TSC_ADCCON_AUTO_EN = (1 << 0); // automatic ts event capture
 LPC32XX_TSC_STAT_FIFO_EMPTY = (1 << 7); // fifo is empty; 
 LPC32XX_TSC_FIFO_TS_P_LEVEL = (1 << 31) // touched
 
-function TouchscreenDev(intdev) {
+function TouchscreenDev(message, intdev) {
+    this.message = message;
     this.intdev = intdev;
     this.Reset();
-    RegisterMessage("tsmousedown", this.onmousedown.bind(this) );
-    RegisterMessage("tsmouseup", this.onmouseup.bind(this) );
-    RegisterMessage("tsmousemove", this.onmousemove.bind(this) );
+    message.Register("tsmousedown", this.onmousedown.bind(this) );
+    message.Register("tsmouseup", this.onmouseup.bind(this) );
+    message.Register("tsmousemove", this.onmousemove.bind(this) );
 }
 
 TouchscreenDev.prototype.Reset = function() {
@@ -102,7 +103,7 @@ TouchscreenDev.prototype.ReadReg32 = function (addr) {
             return this.fifo;
             break;
     }
-    // DebugMessage("Touchscreen ReadReg32: " + hex8(addr));
+    // this.message.Debug("Touchscreen ReadReg32: " + hex8(addr));
     return 0x0;
 }
 
@@ -130,6 +131,8 @@ TouchscreenDev.prototype.WriteReg32 = function (addr, value) {
         break;
 
     }
-    // DebugMessage("Touchscreen WriteReg32: " + hex8(addr) + ": " + hex8(value));
+    // this.message.Debug("Touchscreen WriteReg32: " + hex8(addr) + ": " + hex8(value));
     return;
 }
+
+module.exports = TouchscreenDev;

@@ -4,6 +4,8 @@
 
 "use strict";
 
+var UTF8 = require('../../lib/utf8.js');
+
 var Colors = new Array(
     // standard colors
     "#000000", "#BB0000", "#00BB00", "#BBBB00",
@@ -40,7 +42,7 @@ function Terminal(nrows, ncolumns, elemId) {
 
     this.updaterow = new Uint8Array(this.nrows);
 
-    this.utf8converter = new UTF8StreamToUnicode();
+    this.utf8converter = new UTF8.UTF8StreamToUnicode();
 
     this.screen = new Array(this.nrows);
     this.color = new Array(this.nrows);
@@ -255,7 +257,7 @@ Terminal.prototype.ChangeColor = function(Numbers) {
             // reset mapping ?
             break;
         default:
-            DebugMessage("Color " + Numbers[i] + " not found");
+            console.log("Color " + Numbers[i] + " not found");
             break;
         }
     }
@@ -264,7 +266,7 @@ Terminal.prototype.ChangeColor = function(Numbers) {
 };
 
 Terminal.prototype.HandleEscapeSequence = function() {
-    //DebugMessage("Escape sequence:'" + this.escapestring+"'");
+    //console.log("Escape sequence:'" + this.escapestring+"'");
     var i = 0;
     if (this.escapestring == "[J") {
         this.DeleteArea(this.cursory, this.cursorx, this.cursory, this.ncolumns - 1);
@@ -279,7 +281,7 @@ Terminal.prototype.HandleEscapeSequence = function() {
     var s = this.escapestring;
 
     if (s.charAt(0) != "[") {
-        DebugMessage("Escape sequence unknown:'" + this.escapestring + "'");
+        console.log("Escape sequence unknown:'" + this.escapestring + "'");
         return; // the short escape sequences must be handled earlier
     }
 
@@ -312,7 +314,7 @@ Terminal.prototype.HandleEscapeSequence = function() {
                     case '?7': // reset auto-wrap mode 
                     break;
                     default:
-                        DebugMessage("Term Parameter " + this.escapestring + " unknown");
+                        console.log("Term Parameter " + this.escapestring + " unknown");
                     break;
                 }
             }
@@ -328,7 +330,7 @@ Terminal.prototype.HandleEscapeSequence = function() {
                     case '?7': // Set auto-wrap mode 
                     break;
                     default:
-                        DebugMessage("Term Parameter " + this.escapestring + " unknown");
+                        console.log("Term Parameter " + this.escapestring + " unknown");
                     break;
                 }
             }
@@ -338,7 +340,7 @@ Terminal.prototype.HandleEscapeSequence = function() {
             for(var i=0; i<numbers.length; i++) {
                 switch(numbers[i]) {
                     default:
-                        DebugMessage("Term Parameter " + this.escapestring + " unknown");
+                        console.log("Term Parameter " + this.escapestring + " unknown");
                     break;
                 }
             }
@@ -479,7 +481,7 @@ Terminal.prototype.HandleEscapeSequence = function() {
             break;    
 
         default:
-            DebugMessage("Escape sequence unknown:'" + this.escapestring + "'");
+            console.log("Escape sequence unknown:'" + this.escapestring + "'");
         break;
     }
 
@@ -495,7 +497,7 @@ Terminal.prototype.HandleEscapeSequence = function() {
 
 Terminal.prototype.PutChar = function(c) {
     var i = 0;
-    //DebugMessage("Char:" + c + " " +  String.fromCharCode(c));
+    //console.log("Char:" + c + " " +  String.fromCharCode(c));
     // escape sequence (CS)
     if (this.escapetype == 2) {
         this.escapestring += String.fromCharCode(c);
@@ -530,13 +532,13 @@ Terminal.prototype.PutChar = function(c) {
         // line feed
         this.LineFeed();
         this.OnCharReceived("\n");
-        //DebugMessage("LineFeed");
+        //console.log("LineFeed");
         return;
     case 0xD:
         // carriage return
         this.cursorx = 0;
         this.PrepareUpdateRow(this.cursory);
-        //DebugMessage("Carriage Return");
+        //console.log("Carriage Return");
         return;
     case 0x7:
         // beep
@@ -548,11 +550,11 @@ Terminal.prototype.PutChar = function(c) {
             this.cursorx = 0;
         }
         this.PrepareUpdateRow(this.cursory);
-        //DebugMessage("backspace");
+        //console.log("backspace");
         return;
     case 0x9:
         // horizontal tab
-        //DebugMessage("tab");
+        //console.log("tab");
         var spaces = 8 - (this.cursorx&7);
         do
         {
@@ -575,7 +577,7 @@ Terminal.prototype.PutChar = function(c) {
     case 0x14:  case 0x15:  case 0x16:  case 0x17:
     case 0x18:  case 0x19:  case 0x1A:  case 0x1B:
     case 0x1C:  case 0x1D:  case 0x1E:  case 0x1F:
-        DebugMessage("unknown character " + c); //hex8 not defined
+        console.log("unknown character " + c); //hex8 not defined
         return;
     }
 
@@ -592,8 +594,10 @@ Terminal.prototype.PutChar = function(c) {
 
     this.color[cy][cx] = this.currentcolor;
     this.cursorx++;
-    //DebugMessage("Write: " + String.fromCharCode(c));
+    //console.log("Write: " + String.fromCharCode(c));
     this.PrepareUpdateRow(cy);
 
     this.OnCharReceived(String.fromCharCode(c));
 };
+
+module.exports = Terminal;

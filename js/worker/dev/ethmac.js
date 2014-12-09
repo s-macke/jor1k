@@ -61,9 +61,9 @@ var MII_NCONFIG =        0x1c;        /* Network interface config    */
 //TODO: Huge frames
 //TODO: IAM mode
 //TODO: MODER.BRO
-function EthDev(ram, intdev, mac) {
+function EthDev(message, ram, intdev, mac) {
     "use strict";
-
+    this.message = message;
     this.ram = ram;
     this.intdev = intdev;
     this.TransmitCallback = function(data){}; // Should call handler to send data asynchronously.
@@ -569,7 +569,7 @@ function EthDev(ram, intdev, mac) {
                     addr <= ETHMAC_ADDR_BD_END) {
                     ret = this.BD[(addr-ETHMAC_ADDR_BD_START)>>>2];
                 } else {
-                    DebugMessage("Attempt to access ethmac register beyond 0x800");
+                    this.message.Debug("Attempt to access ethmac register beyond 0x800");
                 }
         }
         return ret;
@@ -591,7 +591,7 @@ function EthDev(ram, intdev, mac) {
                 if (fiad != phy_addr) {
                     this.MIIRX_DATA = 0xFFFF;
                 } else {
-                    // DebugMessage("MIICOMMAND read" + " " + hex8(rgad));
+                    // this.message.Debug("MIICOMMAND read" + " " + hex8(rgad));
                     this.MIIRX_DATA = this.MIIregs[rgad];
                 }
                 break;
@@ -599,13 +599,13 @@ function EthDev(ram, intdev, mac) {
             case 4: // write status
                 if (fiad != phy_addr) {
                 } else {
-                    // DebugMessage("MIICOMMAND write" + " " + hex8(rgad) + " " + hex8(this.MIITX_DATA));
+                    // this.message.Debug("MIICOMMAND write" + " " + hex8(rgad) + " " + hex8(this.MIITX_DATA));
                     //this.MIIregs[rgad] = this.MIITX_DATA & 0xFFFF;
                 }
                 break;
 
             default:
-                DebugMessage("Error in ethmac: Unknown mii command detected");
+                this.message.Debug("Error in ethmac: Unknown mii command detected");
                 break;
         }
 
@@ -614,7 +614,7 @@ function EthDev(ram, intdev, mac) {
 
 
     this.WriteReg32 = function (addr, val) {
-        // DebugMessage("write ethmac " + hex8(addr));
+        // this.message.Debug("write ethmac " + hex8(addr));
         switch (addr) {
             case ETHMAC_ADDR_MODER:
                 this.MODER = val;
@@ -739,12 +739,14 @@ function EthDev(ram, intdev, mac) {
                         }
                     }
                 } else {
-                    DebugMessage("Attempt to access ethmac register beyond 0x800");
+                    this.message.Debug("Attempt to access ethmac register beyond 0x800");
                 }
         }
     };
 
     this.Reset();
-    RegisterMessage("ethmac", this.Receive.bind(this) );
+    this.message.Register("ethmac", this.Receive.bind(this) );
 
 }
+
+module.exports = EthDev;

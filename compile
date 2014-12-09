@@ -1,0 +1,3 @@
+browserify -r ./js/master/master.js:Jor1k -o jor1k-master-min.js
+browserify js/worker/worker.js -o jor1k-worker-min.js
+

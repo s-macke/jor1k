@@ -56,3 +56,5 @@ Ethernet.prototype.Close = function() {
     this.socket.close();
 }
 
+
+module.exports = Ethernet;

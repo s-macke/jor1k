@@ -87,20 +87,12 @@ Theme<select onchange='editor.setTheme("ace/theme/"+this.options[this.selectedIn
        <ul>Lawrence and UIUC students are building a more complete learning environment to playfully learn C and system programming at <a href='http://angrave.github.io/sys'>angrave.github.io/sys</a>.</ul>
        <br>
         </div>
-        
-    <script src="http://danml.com/js/download.js"></script>
-    <script src="js/master/dev/utils.js"></script>
-    <script src="js/lib/utf8.js"></script>
-    <script src="js/master/dev/terminal.js"></script>
-    <script src="js/master/dev/terminal-input.js"></script>
-    <script src="js/master/dev/ethernet.js"></script>
-    <script src="js/master/dev/sound.js"></script>
-    <script src="js/master/dev/framebuffer.js"></script>
-    <script src="js/master/master.js"></script>
-   <script src="js/lib/ace-editor-src-min-noconflict/ace.js" type="text/javascript" charset="utf-8"></script>
+
+<script src="js/lib/ace-editor-src-min-noconflict/ace.js" type="text/javascript" charset="utf-8"></script>
+<script src="jor1k-master-min.js"></script>
 
 <script>
-
+var Jor1k = require("Jor1k");
 
 function OnUploadFiles(files)
 {
@@ -147,6 +139,7 @@ function Start() {
         termid: "tty",   // canvas id for the terminal
         fbid: "fb",     // canvas id for the framebuffer
         statsid: "stats",  // object id for the statistics test
+        clipboard: "",
         relayURL: "", // relay url for the network
         userid: userid, // unique user id string. Empty, choosen randomly, from a url, or from a cookie.
         syncURL: "http://jor1k.com/sync/upload.php", // url to sync a certain folder
@@ -188,7 +181,7 @@ function Start() {
 
     // --------------------------------------------------------
 
-    jor1kgui = new jor1kGUI(jor1kparameters);
+    jor1kgui = new Jor1k(jor1kparameters);
     jor1kgui.term.OnCharReceived = terminalPutCharListener;
 }
 

@@ -79,3 +79,6 @@ Framebuffer.prototype.Update = function(buffer) {
     //data.set(buffer);
     this.fbctx.putImageData(this.fbimageData, 0, 0); // at coords 0,0
 }
+
+
+module.exports = Framebuffer;

@@ -3,6 +3,8 @@
 // -------------------------------------------------
 // helper functions for virtio and 9p.
 
+var UTF8 = require('../../../lib/utf8.js');
+
 
 // Inserts data from an array to a byte aligned struct in memory
 function Marshall(typelist, input, struct, offset) {
@@ -45,7 +47,7 @@ function Marshall(typelist, input, struct, offset) {
                 struct[offset++] = 0;
                 size += 2;
                 for (var j in item) {
-                    var utf8 = UnicodeToUTF8Stream(item.charCodeAt(j));
+                    var utf8 = UTF8.UnicodeToUTF8Stream(item.charCodeAt(j));
                     utf8.forEach( function(c) {
                         struct[offset++] = c;
                         size += 1;
@@ -100,7 +102,7 @@ function Unmarshall(typelist, struct, offset) {
                 var len = struct[offset++];
                 len += struct[offset++] << 8;
                 var str = '';
-                var utf8converter = new UTF8StreamToUnicode();
+                var utf8converter = new UTF8.UTF8StreamToUnicode();
                 for (var j=0; j < len; j++) {
                     var c = utf8converter.Put(struct[offset++])
                     if (c == -1) continue;
@@ -148,7 +150,7 @@ function Unmarshall2(typelist, GetByte) {
                 var len = GetByte();
                 len += GetByte() << 8;
                 var str = '';
-                var utf8converter = new UTF8StreamToUnicode();
+                var utf8converter = new UTF8.UTF8StreamToUnicode();
                 for (var j=0; j < len; j++) {
                     var c = utf8converter.Put(GetByte())
                     if (c == -1) continue;
@@ -164,3 +166,7 @@ function Unmarshall2(typelist, GetByte) {
     return output;
 };
 
+
+module.exports.Marshall = Marshall;
+module.exports.Unmarshall = Unmarshall;
+module.exports.Unmarshall2 = Unmarshall2;

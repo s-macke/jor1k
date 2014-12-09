@@ -3,6 +3,44 @@
 // -------------------------------------------------
 
 "use strict";
+// common
+var message = require('./messagehandler.js'); // global variable
+var utils = require('./utils.js');
+var RAM = require('./ram.js');
+var bzip2 = require('./bzip2.js');
+
+// CPUs
+var FastCPU = require('./cpu/fastcpu.js');
+var SafeCPU = require('./cpu/safecpu.js');
+var SMPCPU = require('./cpu/smpcpu.js');
+
+// Devices
+var UARTDev = require('./dev/uart.js');
+var IRQDev = require('./dev/irq.js');
+var TimerDev = require('./dev/timer.js');
+var FBDev = require('./dev/framebuffer.js');
+var EthDev = require('./dev/ethmac.js');
+var ATADev = require('./dev/ata.js');
+var RTCDev = require('./dev/rtc.js');
+var TouchscreenDev = require('./dev/touchscreen.js');
+var KeyboardDev = require('./dev/keyboard.js');
+var SoundDev = require('./dev/sound.js');
+var VirtIODev = require('./dev/virtio.js');
+var Virtio9p = require('./dev/virtio/9p.js');
+
+
+//require('./dev/virtio/marshall.js');
+
+
+/*
+require('./system.js');
+require('../lib/utf8.js');
+require('./filesystem/tar.js');
+*/
+
+var FS = require('./filesystem/filesystem.js');
+
+
 
 /* 
     Heap Layout
@@ -36,14 +74,14 @@ var SYSTEM_HALT = 0x3; // Idle
 
 function System() {
     // the Init function is called by the master thread.
-    RegisterMessage("LoadAndStart", this.LoadImageAndStart.bind(this) );
-    RegisterMessage("execute", this.MainLoop.bind(this)	);
-    RegisterMessage("Init", this.Init.bind(this) );
-    RegisterMessage("Reset", this.Reset.bind(this) );
-    RegisterMessage("ChangeCore", this.ChangeCPU.bind(this) );
+    message.Register("LoadAndStart", this.LoadImageAndStart.bind(this) );
+    message.Register("execute", this.MainLoop.bind(this)	);
+    message.Register("Init", this.Init.bind(this) );
+    message.Register("Reset", this.Reset.bind(this) );
+    message.Register("ChangeCore", this.ChangeCPU.bind(this) );
 
-    RegisterMessage("GetIPS", function(data) {
-            SendToMaster("GetIPS", this.ips);
+    message.Register("GetIPS", function(data) {
+            message.Send("GetIPS", this.ips);
             this.ips=0;
         }.bind(this)
     );
@@ -61,7 +99,7 @@ System.prototype.CreateCPU = function(cpuname) {
         this.cpu = this.smpcpu;
         this.cpu.Init(this.ncores);
     } else {
-        DebugMessage("Error: CPU name unknown");
+        message.Debug("Error: CPU name unknown");
         return;
     }
     this.currentcpuname = cpuname;
@@ -152,8 +190,7 @@ System.prototype.Init = function(system) {
     var ramoffset = 0x100000;
     this.heap = new ArrayBuffer(this.memorysize*0x100000); 
     this.memorysize--; // - the lower 1 MB are used for the cpu cores
-    this.ram = new RAM(this.heap, ramoffset);
-
+    this.ram = new RAM(message, this.heap, ramoffset);
 
 if (typeof Math.imul == "undefined") {
     Math.imul = function(a, b) {
@@ -178,8 +215,8 @@ if (typeof Math.imul == "undefined") {
     };
     var foreign = 
     {
-        DebugMessage: DebugMessage,
-        abort : abort,
+        DebugMessage: message.Debug,
+        abort : message.Abort,
         imul : Math.imul,
         ReadMemory32 : this.ram.ReadMemory32.bind(this.ram),
         WriteMemory32 : this.ram.WriteMemory32.bind(this.ram),
@@ -196,25 +233,25 @@ if (typeof Math.imul == "undefined") {
 
     this.CreateCPU(system.cpu);
 
-    this.irqdev = new IRQDev(this);
-    this.timerdev = new TimerDev();
-    this.uartdev0 = new UARTDev(0, this, 0x2);
-    this.uartdev1 = new UARTDev(1, this, 0x3);
-    this.ethdev = new EthDev(this.ram, this);
+    this.irqdev = new IRQDev(message, this);
+    this.timerdev = new TimerDev(message);
+    this.uartdev0 = new UARTDev(message, 0, this, 0x2);
+    this.uartdev1 = new UARTDev(message, 1, this, 0x3);
+    this.ethdev = new EthDev(message, this.ram, this);
     this.ethdev.TransmitCallback = function(data){
-        SendToMaster("ethmac", data);
+        message.Send("ethmac", data);
     }
 
-    this.fbdev = new FBDev(this.ram);
-    this.atadev = new ATADev(this);
-    this.tsdev = new TouchscreenDev(this);
-    this.kbddev = new KeyboardDev(this);
-    this.snddev = new SoundDev(this, this.ram);
-    this.rtcdev = new RTCDev(this);
+    this.fbdev = new FBDev(message, this.ram);
+    this.atadev = new ATADev(message, this);
+    this.tsdev = new TouchscreenDev(message, this);
+    this.kbddev = new KeyboardDev(message, this);
+    this.snddev = new SoundDev(message, this, this.ram);
+    this.rtcdev = new RTCDev(message, this);
 
-    this.filesystem = new FS();
-    this.virtio9pdev = new Virtio9p(this.ram, this.filesystem);
-    this.virtiodev = new VirtIODev(this, this.ram, this.virtio9pdev);
+    this.filesystem = new FS(message);
+    this.virtio9pdev = new Virtio9p(message, this.ram, this.filesystem);
+    this.virtiodev = new VirtIODev(message, this, this.ram, this.virtio9pdev);
 
     this.ram.AddDevice(this.atadev,    0x9e000000, 0x1000);
     this.ram.AddDevice(this.uartdev0,  0x90000000, 0x7);
@@ -244,13 +281,13 @@ if (typeof Math.imul == "undefined") {
 }
 
 System.prototype.RaiseInterrupt = function(line) {
-    //DebugMessage("Raise " + line);
+    //message.Debug("Raise " + line);
     this.cpu.RaiseInterrupt(line, -1); // raise all cores
     if (this.status == SYSTEM_HALT)
     {
         this.status = SYSTEM_RUN;
         clearTimeout(this.idletimeouthandle);
-        var delta = (GetMilliseconds() - this.idletime) * this.cyclesperms;
+        var delta = (utils.GetMilliseconds() - this.idletime) * this.cyclesperms;
         if (delta > this.idlemaxwait) delta = this.idlemaxwait;
         this.cpu.ProgressTime(delta);
         this.MainLoop();
@@ -273,17 +310,17 @@ System.prototype.ClearSoftInterrupt = function (line, cpuid) {
 
 System.prototype.PrintState = function() {
     var r = new Uint32Array(this.heap);
-    DebugMessage("Current state of the machine")
-    //DebugMessage("clock: " + hex8(cpu.clock));
-    DebugMessage("PC: " + hex8(this.cpu.pc<<2));
-    DebugMessage("next PC: " + hex8(this.cpu.nextpc<<2));
-    //DebugMessage("ins: " + hex8(cpu.ins));
-    //DebugMessage("main opcode: " + hex8(cpu.ins>>>26));
-    //DebugMessage("sf... opcode: " + hex8((cpu.ins>>>21)&0x1F));
-    //DebugMessage("op38. opcode: " + hex8((cpu.ins>>>0)&0x3CF));
+    message.Debug("Current state of the machine")
+    //message.Debug("clock: " + hex8(cpu.clock));
+    message.Debug("PC: " + hex8(this.cpu.pc<<2));
+    message.Debug("next PC: " + hex8(this.cpu.nextpc<<2));
+    //message.Debug("ins: " + hex8(cpu.ins));
+    //message.Debug("main opcode: " + hex8(cpu.ins>>>26));
+    //message.Debug("sf... opcode: " + hex8((cpu.ins>>>21)&0x1F));
+    //message.Debug("op38. opcode: " + hex8((cpu.ins>>>0)&0x3CF));
 
     for (var i = 0; i < 32; i += 4) {
-        DebugMessage("   r" + (i + 0) + ": " +
+        message.Debug("   r" + (i + 0) + ": " +
             hex8(r[i + 0]) + "   r" + (i + 1) + ": " +
             hex8(r[i + 1]) + "   r" + (i + 2) + ": " +
             hex8(r[i + 2]) + "   r" + (i + 3) + ": " +
@@ -291,40 +328,40 @@ System.prototype.PrintState = function() {
     }
     
     if (this.cpu.delayedins) {
-        DebugMessage("delayed instruction");
+        message.Debug("delayed instruction");
     }
     if (this.cpu.SR_SM) {
-        DebugMessage("Supervisor mode");
+        message.Debug("Supervisor mode");
     }
     else {
-        DebugMessage("User mode");
+        message.Debug("User mode");
     }
     if (this.cpu.SR_TEE) {
-        DebugMessage("tick timer exception enabled");
+        message.Debug("tick timer exception enabled");
     }
     if (this.cpu.SR_IEE) {
-        DebugMessage("interrupt exception enabled");
+        message.Debug("interrupt exception enabled");
     }
     if (this.cpu.SR_DME) {
-        DebugMessage("data mmu enabled");
+        message.Debug("data mmu enabled");
     }
     if (this.cpu.SR_IME) {
-        DebugMessage("instruction mmu enabled");
+        message.Debug("instruction mmu enabled");
     }
     if (this.cpu.SR_LEE) {
-        DebugMessage("little endian enabled");
+        message.Debug("little endian enabled");
     }
     if (this.cpu.SR_CID) {
-        DebugMessage("context id enabled");
+        message.Debug("context id enabled");
     }
     if (this.cpu.SR_F) {
-        DebugMessage("flag set");
+        message.Debug("flag set");
     }
     if (this.cpu.SR_CY) {
-        DebugMessage("carry set");
+        message.Debug("carry set");
     }
     if (this.cpu.SR_OV) {
-        DebugMessage("overflow set");
+        message.Debug("overflow set");
     }
 }
 
@@ -334,13 +371,13 @@ System.prototype.SendStringToTerminal = function(str)
     for (var i = 0; i < str.length; i++) {
         chars.push(str.charCodeAt(i));
     }
-    SendToMaster("tty0", chars);
+    message.Send("tty0", chars);
 }
 
 System.prototype.LoadImageAndStart = function(url) {
     this.SendStringToTerminal("\r================================================================================");
     this.SendStringToTerminal("\r\nLoading kernel and hard and basic file system from web server. Please wait ...\r\n");
-    LoadBinaryResource("../../" + url, this.OnKernelLoaded.bind(this), function(error){throw error;});
+    utils.LoadBinaryResource(url, this.OnKernelLoaded.bind(this), function(error){throw error;});
 }
 
 System.prototype.PatchKernel = function(length)
@@ -373,18 +410,18 @@ System.prototype.OnKernelLoaded = function(buffer) {
     var length = 0;
     bzip2.simple(buffer8, function(x){this.ram.uint8mem[length++] = x;}.bind(this));
     this.PatchKernel(length);
-    for (var i = 0; i < length >> 2; i++) this.ram.int32mem[i] = Swap32(this.ram.int32mem[i]); // big endian to little endian
-    DebugMessage("Kernel loaded: " + length + " bytes");
+    for (var i = 0; i < length >> 2; i++) this.ram.int32mem[i] = utils.Swap32(this.ram.int32mem[i]); // big endian to little endian
+    message.Debug("Kernel loaded: " + length + " bytes");
     this.SendStringToTerminal("Booting\r\n");
     this.SendStringToTerminal("================================================================================");
     // we can start the boot process already, even if the filesystem is not yet ready
 
     this.cpu.Reset();
     this.cpu.AnalyzeImage();
-    DebugMessage("Starting emulation");
+    message.Debug("Starting emulation");
     this.status = SYSTEM_RUN;
 
-    SendToMaster("execute", 0);
+    message.Send("execute", 0);
 }
 
 // the kernel has sent a halt signal, so stop everything until the next interrupt is raised
@@ -393,11 +430,11 @@ System.prototype.HandleHalt = function() {
     if (delta == -1) return;
         this.idlemaxwait = delta;
         var mswait = Math.floor(delta / this.cyclesperms + 0.5);
-        //DebugMessage("wait " + mswait);
+        //message.Debug("wait " + mswait);
         
         if (mswait <= 1) return;
-        if (mswait > 1000) DebugMessage("Warning: idle for " + mswait + "ms");
-        this.idletime = GetMilliseconds();
+        if (mswait > 1000) message.Debug("Warning: idle for " + mswait + "ms");
+        this.idletime = utils.GetMilliseconds();
         this.status = SYSTEM_HALT;
         this.idletimeouthandle = setTimeout(function() {
                 if (this.status == SYSTEM_HALT) {
@@ -411,7 +448,7 @@ System.prototype.HandleHalt = function() {
 
 System.prototype.MainLoop = function() {
     if (this.status != SYSTEM_RUN) return;
-    SendToMaster("execute", 0);
+    message.Send("execute", 0);
     var stepsleft = this.cpu.Step(this.instructionsperloop, this.timercyclesperinstruction);
     var totalsteps = this.instructionsperloop - stepsleft;
     totalsteps++; // at least one instruction
@@ -425,10 +462,10 @@ System.prototype.MainLoop = function() {
     if (!stepsleft) {
       // recalibrate timer
       if (this.lastlooptime < 1) {
-          this.lastlooptime = GetMilliseconds();
+          this.lastlooptime = utils.GetMilliseconds();
           return; // don't calibrate, because we don't have the data
       }
-      var delta = GetMilliseconds() - this.lastlooptime;
+      var delta = utils.GetMilliseconds() - this.lastlooptime;
       if (delta > 50 && this.internalips > 2000) // we need statistics for calibration
       {
           var ipms = this.internalips / delta; // ipms (per millisecond) of current run
@@ -440,7 +477,7 @@ System.prototype.MainLoop = function() {
           this.timercyclesperinstruction  = this.timercyclesperinstruction<=1?1:this.timercyclesperinstruction;
           this.timercyclesperinstruction  = this.timercyclesperinstruction>=1000?1000:this.timercyclesperinstruction;
           //reset the integration parameters
-          this.lastlooptime = GetMilliseconds();
+          this.lastlooptime = utils.GetMilliseconds();
           this.internalips = 0;
       }
     } else { // stepsleft != 0 indicates CPU idle
@@ -450,3 +487,5 @@ System.prototype.MainLoop = function() {
     
     // go to worker thread idle state that onmessage is executed
 }
+
+module.exports = System;

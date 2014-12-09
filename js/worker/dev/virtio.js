@@ -14,6 +14,9 @@
 
 "use strict";
 
+var utils = require('../utils.js');
+var marshall = require('./virtio/marshall.js');
+
 var VIRTIO_MAGIC_REG = 0x0;
 var VIRTIO_VERSION_REG = 0x4;
 var VIRTIO_DEVICE_REG = 0x8;
@@ -49,7 +52,8 @@ function CopyBufferToMemory(from, to, offset, size) {
         to.WriteMemory8(offset+i, from[i]);
 }
 
-function VirtIODev(intdev, ramdev, device) {
+function VirtIODev(message, intdev, ramdev, device) {
+    this.message = message;
     this.dev = device;
     this.dev.SendReply = this.SendReply.bind(this);
     this.intdev = intdev;
@@ -81,7 +85,6 @@ VirtIODev.prototype.UpdateAddr = function() {
         this.usedaddr = (this.usedaddr & mask) + this.align;
     }
 }
-
 
 VirtIODev.prototype.ReadReg8 = function (addr) {
     return this.dev.configspace[addr-0x100];
@@ -129,11 +132,11 @@ VirtIODev.prototype.ReadReg32 = function (addr) {
             break;
 
         default:
-            DebugMessage("Error in VirtIODev: Attempt to read register " + hex8(addr));
-            abort();
+            this.message.Debug("Error in VirtIODev: Attempt to read register " + hex8(addr));
+            this.message.Abort();
             break;
     }
-    return Swap32(val);
+    return utils.Swap32(val);
 };
 
 VirtIODev.prototype.GetDescriptor = function(index) {
@@ -142,15 +145,15 @@ VirtIODev.prototype.GetDescriptor = function(index) {
     var buffer = new Uint8Array(16);
     CopyMemoryToBuffer(this.ramdev, buffer, addr, 16);
 
-    var desc = Unmarshall(["w", "w", "w", "h", "h"], buffer, 0);
-//    DebugMessage("GetDescriptor: index=" + index + " addr=" + hex8(Swap32(desc[1])) + " len=" + Swap32(desc[2]) + " flags=" + Swap16(desc[3])  + " next=" + Swap16(desc[4]));
+    var desc = marshall.Unmarshall(["w", "w", "w", "h", "h"], buffer, 0);
+//    this.message.Debug("GetDescriptor: index=" + index + " addr=" + hex8(utils.Swap32(desc[1])) + " len=" + utils.Swap32(desc[2]) + " flags=" + utils.Swap16(desc[3])  + " next=" + utils.Swap16(desc[4]));
 
     return {
-        addrhigh: Swap32(desc[0]),
-        addr: Swap32(desc[1]),
-        len: Swap32(desc[2]),
-        flags: Swap16(desc[3]),
-        next: Swap16(desc[4])        
+        addrhigh: utils.Swap32(desc[0]),
+        addr: utils.Swap32(desc[1]),
+        len: utils.Swap32(desc[2]),
+        flags: utils.Swap16(desc[3]),
+        next: utils.Swap16(desc[4])        
     };
 }
 
@@ -159,28 +162,28 @@ VirtIODev.prototype.GetDescriptor = function(index) {
 VirtIODev.prototype.PrintRing = function() {
     var desc = this.GetDescriptor(0);
     for(var i=0; i<10; i++) {
-        DebugMessage("next: " + desc.next + " flags:" + desc.flags + " addr:" + hex8(desc.addr));
+        this.message.Debug("next: " + desc.next + " flags:" + desc.flags + " addr:" + hex8(desc.addr));
         if (desc.flags & 1)
             desc = this.GetDescriptor(desc.next); else
         break;
     }
     var availidx = this.ramdev.ReadMemory16(this.availaddr + 2) & (this.queuenum-1);
-    DebugMessage("avail idx: " + availidx);
-    DebugMessage("avail buffer index: " + this.ramdev.ReadMemory16(this.availaddr + 4 + (availidx-4)*2));
-    DebugMessage("avail buffer index: " + this.ramdev.ReadMemory16(this.availaddr + 4 + (availidx-3)*2));
-    DebugMessage("avail buffer index: " + this.ramdev.ReadMemory16(this.availaddr + 4 + (availidx-2)*2));
-    DebugMessage("avail buffer index: " + this.ramdev.ReadMemory16(this.availaddr + 4 + (availidx-1)*2));
-    //DebugMessage("avail ring: " + this.ramdev.ReadMemory16(availaddr+4 + availidx*2 + -4) );
-    //DebugMessage("avail ring: " + this.ramdev.ReadMemory16(availaddr+4 + availidx*2 + -2) );
-    //DebugMessage("avail ring: " + this.ramdev.ReadMemory16(availaddr+4 + availidx*2 + 0) );
+    this.message.Debug("avail idx: " + availidx);
+    this.message.Debug("avail buffer index: " + this.ramdev.ReadMemory16(this.availaddr + 4 + (availidx-4)*2));
+    this.message.Debug("avail buffer index: " + this.ramdev.ReadMemory16(this.availaddr + 4 + (availidx-3)*2));
+    this.message.Debug("avail buffer index: " + this.ramdev.ReadMemory16(this.availaddr + 4 + (availidx-2)*2));
+    this.message.Debug("avail buffer index: " + this.ramdev.ReadMemory16(this.availaddr + 4 + (availidx-1)*2));
+    //this.message.Debug("avail ring: " + this.ramdev.ReadMemory16(availaddr+4 + availidx*2 + -4) );
+    //this.message.Debug("avail ring: " + this.ramdev.ReadMemory16(availaddr+4 + availidx*2 + -2) );
+    //this.message.Debug("avail ring: " + this.ramdev.ReadMemory16(availaddr+4 + availidx*2 + 0) );
     var usedidx = this.ramdev.ReadMemory16(this.usedaddr + 2) & (this.queuenum-1);
-    DebugMessage("used idx: " + usedidx);
+    this.message.Debug("used idx: " + usedidx);
 }
 
 
 VirtIODev.prototype.ConsumeDescriptor = function(descindex, desclen) {
     var index = this.ramdev.ReadMemory16(this.usedaddr + 2); // get used index
-    //DebugMessage("used index:" + index + " descindex=" + descindex);
+    //this.message.Debug("used index:" + index + " descindex=" + descindex);
     var usedaddr = this.usedaddr + 4 + (index & (this.queuenum-1)) * 8;
     this.ramdev.WriteMemory32(usedaddr+0, descindex);
     this.ramdev.WriteMemory32(usedaddr+4, desclen);
@@ -188,7 +191,7 @@ VirtIODev.prototype.ConsumeDescriptor = function(descindex, desclen) {
 }
 
 VirtIODev.prototype.SendReply = function (index) {
-    //DebugMessage("Send Reply index="+index + " size=" + this.dev.replybuffersize);
+    //this.message.Debug("Send Reply index="+index + " size=" + this.dev.replybuffersize);
     this.ConsumeDescriptor(index, this.dev.replybuffersize);
 
     var desc = this.GetDescriptor(index);
@@ -196,14 +199,14 @@ VirtIODev.prototype.SendReply = function (index) {
         if (desc.flags & 1) { // continuing buffer
             desc = this.GetDescriptor(desc.next);
         } else {
-            DebugMessage("Error in virtiodev: Descriptor is not continuing");
-            abort();
+            this.message.Debug("Error in virtiodev: Descriptor is not continuing");
+            this.message.Abort();
         }
     }
     
     if ((desc.flags & VRING_DESC_F_WRITE) == 0) {
-        DebugMessage("Error in virtiodev: Descriptor is not allowed to write");
-        abort();
+        this.message.Debug("Error in virtiodev: Descriptor is not allowed to write");
+        this.message.Abort();
     }
 
     var offset = 0;
@@ -212,8 +215,8 @@ VirtIODev.prototype.SendReply = function (index) {
             desc = this.GetDescriptor(desc.next);
             offset = 0;            
             if ((desc.flags & VRING_DESC_F_WRITE) == 0) {
-                DebugMessage("Error in virtiodev: Descriptor is not allowed to write");
-                abort();
+                this.message.Debug("Error in virtiodev: Descriptor is not allowed to write");
+                this.message.Abort();
             }
         }
         this.ramdev.WriteMemory8(desc.addr+offset, this.dev.replybuffer[i]);
@@ -227,44 +230,44 @@ VirtIODev.prototype.SendReply = function (index) {
 
 
 VirtIODev.prototype.WriteReg32 = function (addr, val) {
-    val = Swap32(val);
+    val = utils.Swap32(val);
     switch(addr)
     {
         case VIRTIO_GUEST_PAGE_SIZE_REG:
             this.pagesize = val;
             this.UpdateAddr();
-            //DebugMessage("Guest page size : " + hex8(val));
+            //this.message.Debug("Guest page size : " + hex8(val));
             break;
 
         case VIRTIO_STATUS_REG:
-            //DebugMessage("write status reg : " + hex8(val));
+            //this.message.Debug("write status reg : " + hex8(val));
             this.status = val;
             break;
 
         case VIRTIO_HOSTFEATURESSEL_REG:
-            //DebugMessage("write hostfeaturesel reg : " + hex8(val));
+            //this.message.Debug("write hostfeaturesel reg : " + hex8(val));
             break;
 
         case VIRTIO_GUESTFEATURESSEL_REG:
-            //DebugMessage("write guestfeaturesel reg : " + hex8(val));
+            //this.message.Debug("write guestfeaturesel reg : " + hex8(val));
             break;
 
         case VIRTIO_GUESTFEATURES_REG:
-            //DebugMessage("write guestfeatures reg : " + hex8(val));
+            //this.message.Debug("write guestfeatures reg : " + hex8(val));
             break;
 
         case VIRTIO_QUEUESEL_REG:
-            //DebugMessage("write queuesel reg : " + hex8(val));
+            //this.message.Debug("write queuesel reg : " + hex8(val));
             break;
 
         case VIRTIO_QUEUENUM_REG:
             this.queuenum = val;
             this.UpdateAddr();
-            //DebugMessage("write queuenum reg : " + hex8(val));
+            //this.message.Debug("write queuenum reg : " + hex8(val));
             break;
 
         case VIRTIO_QUEUEALIGN_REG:
-            //DebugMessage("write queuealign reg : " + hex8(val));
+            //this.message.Debug("write queuealign reg : " + hex8(val));
             this.align = val;
             this.UpdateAddr();
             break;
@@ -272,21 +275,21 @@ VirtIODev.prototype.WriteReg32 = function (addr, val) {
         case VIRTIO_QUEUEPFN_REG:
             this.queuepfn = val;
             this.UpdateAddr();
-            //DebugMessage("write queuepfn reg : " + hex8(val));
+            //this.message.Debug("write queuepfn reg : " + hex8(val));
             break;
 
         case VIRTIO_QUEUENOTIFY_REG:
-            //DebugMessage("write queuenotify reg : " + hex8(val));
+            //this.message.Debug("write queuenotify reg : " + hex8(val));
             this.UpdateAddr();
             if (val != 0) {
-                DebugMessage("Error in virtiodev: Untested case of queuenotify " + val);
-                abort();
+                this.message.Debug("Error in virtiodev: Untested case of queuenotify " + val);
+                this.message.Abort();
                 return;
             }
             var availidx = (this.ramdev.ReadMemory16(this.availaddr + 2)-1) & (this.queuenum-1);
-            //DebugMessage((this.ramdev.ReadMemory16(this.availaddr + 2)-1));
+            //this.message.Debug((this.ramdev.ReadMemory16(this.availaddr + 2)-1));
             val = this.ramdev.ReadMemory16(this.availaddr + 4 + (availidx)*2);
-            //DebugMessage("write to index : " + hex8(val) + " availidx:" + availidx);
+            //this.message.Debug("write to index : " + hex8(val) + " availidx:" + availidx);
 
             var currentindex = val;
             // build stream function
@@ -299,8 +302,8 @@ VirtIODev.prototype.WriteReg32 = function (addr, val) {
                     if (desc.flags & 1) { // continuing buffer
                         desc = this.GetDescriptor(desc.next);
                     } else {
-                        DebugMessage("Error in virtiodev: Descriptor is not continuing");
-                        abort();
+                        this.message.Debug("Error in virtiodev: Descriptor is not continuing");
+                        this.message.Abort();
                     }
                 }
                 var x = this.ramdev.ReadMemory8(desc.addr + offset);
@@ -312,15 +315,18 @@ VirtIODev.prototype.WriteReg32 = function (addr, val) {
             break;
 
         case VIRTIO_INTERRUPTACK_REG:
-            //DebugMessage("write interruptack reg : " + hex8(val));
+            //this.message.Debug("write interruptack reg : " + hex8(val));
             this.intstatus &= ~val;
             this.intdev.ClearInterrupt(0x6);
             break;
 
         default:
-            DebugMessage("Error in VirtIODev: Attempt to write register " + hex8(addr) + ":" + hex8(val));
-            abort();
+            this.message.Debug("Error in VirtIODev: Attempt to write register " + hex8(addr) + ":" + hex8(val));
+            this.message.Abort();
             break;
     }
 
 };
+
+
+module.exports = VirtIODev;

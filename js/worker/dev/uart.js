@@ -68,12 +68,13 @@ var IER_BIT_DESC = ["RxAvailableI", "TxEmptyI", "BreakI", "MSI"];
 
 
 // constructor
-function UARTDev(id, intdev, intno) {
+function UARTDev(message, id, intdev, intno) {
+    this.message = message;
     this.intno = intno;
     this.intdev = intdev;
     this.id = id;
     //this.verboseuart = true;
-    RegisterMessage("tty" + id, this.ReceiveChar.bind(this) );
+    message.Register("tty" + id, this.ReceiveChar.bind(this) );
     this.Reset();
 }
 
@@ -105,7 +106,7 @@ UARTDev.prototype.Reset = function() {
 
 UARTDev.prototype.Step = function() {
     if(this.txbuf.length != 0) {
-        SendToMaster("tty"+this.id, this.txbuf);
+        this.message.Send("tty"+this.id, this.txbuf);
         this.txbuf = new Array();
     }
 }
@@ -183,7 +184,7 @@ UARTDev.prototype.ReadReg8 = function(addr) {
     case UART_MSR:
         var ret = this.MSR;
         this.MSR &= 0xF0; // reset lowest 4 "delta" bits
-        if (this.verboseuart) DebugMessage("Get UART_MSR " + this.ToBitDescription(ret, MSR_BIT_DESC));
+        if (this.verboseuart) this.message.Debug("Get UART_MSR " + this.ToBitDescription(ret, MSR_BIT_DESC));
         return ret;
         break;
 
@@ -206,13 +207,13 @@ UARTDev.prototype.ReadReg8 = function(addr) {
 
     case UART_LSR:
         // This gets polled many times a second, so logging is commented out
-        // if(this.verboseuart) DebugMessage("Get UART_LSR " + this.ToBitDescription(this.LSR, LSR_BIT_DESC));
+        // if(this.verboseuart) this.message.Debug("Get UART_LSR " + this.ToBitDescription(this.LSR, LSR_BIT_DESC));
         return this.LSR;
         break;
 
     default:
-        DebugMessage("Error in ReadRegister: not supported");
-        abort();
+        this.message.Debug("Error in ReadRegister: not supported");
+        this.message.Abort();
         break;
     }
 };
@@ -242,7 +243,7 @@ UARTDev.prototype.WriteReg8 = function(addr, x) {
         //this.LSR &= ~UART_LSR_TX_EMPTY;
 
         this.txbuf.push(x);
-        //DebugMessage("send " + x);
+        //this.message.Debug("send " + x);
         // the data is sent immediately
         this.LSR |= UART_LSR_TRANSMITTER_EMPTY | UART_LSR_TX_EMPTY; // txbuffer is empty immediately
         this.ThrowInterrupt(UART_IIR_THRI);
@@ -251,13 +252,13 @@ UARTDev.prototype.WriteReg8 = function(addr, x) {
     case UART_IER:
         // 2 = 10b ,5=101b, 7=111b
         this.IER = x & 0x0F; // only the first four bits are valid
-        //if(this.verboseuart) DebugMessage("Set UART_IER " + this.ToBitDescription(x, IER_BIT_DESC));
+        //if(this.verboseuart) this.message.Debug("Set UART_IER " + this.ToBitDescription(x, IER_BIT_DESC));
         // Check immediately if there is a interrupt pending
         this.CheckInterrupt();
         break;
 
     case UART_FCR:
-        if(this.verboseuart) DebugMessage("Set UART_FCR " + this.ToBitDescription(x, FCR_BIT_DESC));
+        if(this.verboseuart) this.message.Debug("Set UART_FCR " + this.ToBitDescription(x, FCR_BIT_DESC));
         this.FCR = x & 0xC9;
         if (this.FCR & 2) {
             this.ClearInterrupt(UART_IIR_CTI);
@@ -269,22 +270,24 @@ UARTDev.prototype.WriteReg8 = function(addr, x) {
         break;
 
     case UART_LCR:
-        if(this.verboseuart)  DebugMessage("Set UART_LCR " + this.ToBitDescription(x, LCR_BIT_DESC));
+        if(this.verboseuart)  this.message.Debug("Set UART_LCR " + this.ToBitDescription(x, LCR_BIT_DESC));
         if ((this.LCR & 3) != 3) {
-            DebugMessage("Warning in UART: Data word length other than 8 bits are not supported");
+            this.message.Debug("Warning in UART: Data word length other than 8 bits are not supported");
         }
         this.LCR = x;
         break;
 
     case UART_MCR:
-        if(this.verboseuart)  DebugMessage("Set UART_MCR " + this.ToBitDescription(x,MCR_BIT_DESC));
+        if(this.verboseuart) this.message.Debug("Set UART_MCR " + this.ToBitDescription(x,MCR_BIT_DESC));
         this.MCR = x;
         break;
 
     default:
-        DebugMessage("Error in WriteRegister: not supported");
-        abort();
+        this.message.Debug("Error in WriteRegister: not supported");
+        this.message.Abort();
         break;
     }
 };
 
+
+module.exports = UARTDev;

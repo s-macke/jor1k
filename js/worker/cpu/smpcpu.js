@@ -1811,3 +1811,6 @@ return {
 };
 
 }
+
+
+module.exports = SMPCPU;

@@ -1,0 +1,1549 @@
+require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
+//download.js v3.1, by dandavis; 2008-2014. [CCBY2] see http://danml.com/download.html for tests/usage
+// v1 landed a FF+Chrome compat way of downloading strings to local un-named files, upgraded to use a hidden frame and optional mime
+// v2 added named files via a[download], msSaveBlob, IE (10+) support, and window.URL support for larger+faster saves than dataURLs
+// v3 added dataURL and Blob Input, bind-toggle arity, and legacy dataURL fallback was improved with force-download mime and base64 support. 3.1 improved safari handling.
+
+// https://github.com/rndme/download
+
+// data can be a string, Blob, File, or dataURL
+function download(data, strFileName, strMimeType) {
+	
+	var self = window, // this script is only for browsers anyway...
+		u = "application/octet-stream", // this default mime also triggers iframe downloads
+		m = strMimeType || u, 
+		x = data,
+		D = document,
+		a = D.createElement("a"),
+		z = function(a){return String(a);},
+		B = (self.Blob || self.MozBlob || self.WebKitBlob || z);
+		B=B.call ? B.bind(self) : Blob ;
+		var fn = strFileName || "download",
+		blob, 
+		fr;
+
+	
+	if(String(this)==="true"){ //reverse arguments, allowing download.bind(true, "text/xml", "export.xml") to act as a callback
+		x=[x, m];
+		m=x[0];
+		x=x[1]; 
+	}
+	
+	
+
+
+	//go ahead and download dataURLs right away
+	if(String(x).match(/^data\:[\w+\-]+\/[\w+\-]+[,;]/)){
+		return navigator.msSaveBlob ?  // IE10 can't do a[download], only Blobs:
+			navigator.msSaveBlob(d2b(x), fn) : 
+			saver(x) ; // everyone else can save dataURLs un-processed
+	}//end if dataURL passed?
+	
+	blob = x instanceof B ? 
+		x : 
+		new B([x], {type: m}) ;
+	
+	
+	function d2b(u) {
+		var p= u.split(/[:;,]/),
+		t= p[1],
+		dec= p[2] == "base64" ? atob : decodeURIComponent,
+		bin= dec(p.pop()),
+		mx= bin.length,
+		i= 0,
+		uia= new Uint8Array(mx);
+
+		for(i;i<mx;++i) uia[i]= bin.charCodeAt(i);
+
+		return new B([uia], {type: t});
+	 }
+	  
+	function saver(url, winMode){
+		
+		if ('download' in a) { //html5 A[download] 			
+			a.href = url;
+			a.setAttribute("download", fn);
+			a.innerHTML = "downloading...";
+			D.body.appendChild(a);
+			setTimeout(function() {
+				a.click();
+				D.body.removeChild(a);
+				if(winMode===true){setTimeout(function(){ self.URL.revokeObjectURL(a.href);}, 250 );}
+			}, 66);
+			return true;
+		}
+
+		if(typeof safari !=="undefined" ){ // handle non-a[download] safari as best we can:
+			url="data:"+url.replace(/^data:([\w\/\-\+]+)/, u);
+			if(!window.open(url)){ // popup blocked, offer direct download: 
+				if(confirm("Displaying New Document\n\nUse Save As... to download, then click back to return to this page.")){ location.href=url; }
+			}
+			return true;
+		}
+		
+		//do iframe dataURL download (old ch+FF):
+		var f = D.createElement("iframe");
+		D.body.appendChild(f);
+		
+		if(!winMode){ // force a mime that will download:
+			url="data:"+url.replace(/^data:([\w\/\-\+]+)/, u);
+		}
+		f.src=url;
+		setTimeout(function(){ D.body.removeChild(f); }, 333);
+		
+	}//end saver 
+		
+
+
+
+	if (navigator.msSaveBlob) { // IE10+ : (has Blob, but not a[download] or URL)
+		return navigator.msSaveBlob(blob, fn);
+	} 	
+	
+	if(self.URL){ // simple fast and modern way using Blob and URL:
+		saver(self.URL.createObjectURL(blob), true);
+	}else{
+		// handle non-Blob()+non-URL browsers:
+		if(typeof blob === "string" || blob.constructor===z ){
+			try{
+				return saver( "data:" +  m   + ";base64,"  +  self.btoa(blob)  ); 
+			}catch(y){
+				return saver( "data:" +  m   + "," + encodeURIComponent(blob)  ); 
+			}
+		}
+		
+		// Blob but not URL:
+		fr=new FileReader();
+		fr.onload=function(e){
+			saver(this.result); 
+		};
+		fr.readAsDataURL(blob);
+	}	
+	return true;
+} /* end download() */
+
+module.exports = download;
+
+},{}],2:[function(require,module,exports){
+// -------------------------------------------------
+// ------------------ UTF8 Helpers -----------------
+// -------------------------------------------------
+// http://en.wikipedia.org/wiki/UTF-8
+"use strict";
+
+function UTF8StreamToUnicode() {
+
+    this.stream = new Uint8Array(5);
+    this.ofs = 0;
+
+    this.Put = function(key) {
+        this.stream[this.ofs] = key;
+        this.ofs++;
+        switch(this.ofs) {
+            case 1:
+                if (this.stream[0] < 0x80) {
+                    this.ofs = 0;
+                    return this.stream[0];
+                }
+                break;
+
+            case 2:
+                if ((this.stream[0]&0xE0) == 0xC0)
+                if ((this.stream[1]&0xC0) == 0x80) {
+                    this.ofs = 0;
+                    return ((this.stream[0]&0x1F)<<6) | 
+                        ((this.stream[1]&0x3F)<<0);
+                }
+                break;
+
+            case 3:
+                if ((this.stream[0]&0xF0) == 0xE0)
+                if ((this.stream[1]&0xC0) == 0x80)
+                if ((this.stream[2]&0xC0) == 0x80) {
+                    this.ofs = 0;
+                    return ((this.stream[0]&0xF ) << 12) | 
+                        ((this.stream[1]&0x3F) << 6)  | 
+                        ((this.stream[2]&0x3F) << 0);
+                }
+                break;
+
+            case 4:
+                if ((this.stream[0]&0xF8) == 0xF0)
+                if ((this.stream[1]&0xC0) == 0x80)
+                if ((this.stream[2]&0xC0) == 0x80)
+                if ((this.stream[3]&0xC0) == 0x80) {
+                    this.ofs = 0;
+                    return ((this.stream[0]&0x7 ) << 18) | 
+                        ((this.stream[1]&0x3F) << 12) | 
+                        ((this.stream[2]&0x3F) << 6)  |
+                        ((this.stream[3]&0x3F) << 0);
+                }
+                this.ofs = 0;
+                return -1; //obviously illegal character, so reset
+                break;
+
+            default:
+                this.ofs = 0;
+                return -1;
+                break;
+        }
+        return -1;
+    }
+
+}
+
+function UnicodeToUTF8Stream(key) {
+    key = key|0;
+    if (key < 0x80) {
+        return [key];
+    } else 
+    if (key <= 0x7FF) {
+        return [
+            (key >> 6) | 0xC0, 
+            (key & 0x3F) | 0x80
+            ];
+    } else 
+    if (key <= 0xFFFF) {
+        return [
+            (key >> 12) | 0xE0,
+            ((key >> 6) & 0x3F) | 0x80,
+            (key & 0x3F) | 0x80
+            ];
+    } else 
+    if (key <= 0x10FFFF) {
+        return [
+            (key >> 18) | 0xF0,
+            ((key >> 12) & 0x3F) | 0x80,
+            ((key >> 6) & 0x3F) | 0x80,
+            (key & 0x3F) | 0x80
+            ];
+    } else {
+        DebugMessage("Error in utf-8 encoding: Invalid key");
+    }
+    return [];
+}
+
+function UTF8Length(s)
+{
+    var length = 0;
+    for(var i=0; i<s.length; i++) {
+        var key = s.charCodeAt(i);
+        if (key < 0x80) {
+            length += 1;
+        } else
+        if (key <= 0x7FF) {
+            length += 2;
+        } else 
+        if (key <= 0xFFFF) {
+            length += 3;
+        } else 
+        if (key <= 0x10FFFF) {
+            length += 4;
+        } else {
+        }
+    }
+    return length;
+}
+
+module.exports.UTF8StreamToUnicode = UTF8StreamToUnicode;
+module.exports.UTF8Length = UTF8Length;
+module.exports.UnicodeToUTF8Stream = UnicodeToUTF8Stream;
+
+},{}],3:[function(require,module,exports){
+// manages the websocket connection for the ethmac peripheral
+
+function Ethernet(relayURL) {
+    this.url = relayURL;
+    this.onmessage = function(e) { };
+    this.OpenSocket();
+}
+
+function EthernetMessageHandler(e) {
+    // if we recv binary data, call the onmessage handler
+    // which was assigned to this Ethernet object
+    if (e.data instanceof ArrayBuffer) {
+        this.onmessage(e);
+    } else
+        // otherwise, this might be a textual "ping" message to keep
+        // the connection alive
+        if (e.data.toString().indexOf('ping:') == 0) {
+        this.socket.send('pong:' + e.data.toString().substring(5));
+    }
+}
+
+function EthernetCloseHandler(e) {
+    // reopen websocket if it closes
+    console.log("Websocket closed. Reopening.");
+    this.OpenSocket();
+}
+
+function EthernetErrorHandler(e) {
+    // just report the error to console, close event
+    // will handle reopening if possible
+    console.error("Websocket error:");
+    console.error(e);
+}
+
+Ethernet.prototype.OpenSocket = function() {
+    if (this.url) {
+        this.socket = new WebSocket(this.url);
+        this.socket.binaryType = 'arraybuffer';
+
+        this.socket.onmessage = EthernetMessageHandler.bind(this);
+        this.socket.onclose = EthernetCloseHandler.bind(this);
+        this.socket.onerror = EthernetErrorHandler.bind(this);
+    } else {
+        this.socket = {
+            send : function(){}
+        };
+    }
+}
+
+Ethernet.prototype.SendFrame = function(data) {
+    this.socket.send(data);
+}
+
+Ethernet.prototype.Close = function() {
+    this.socket.onclose = undefined;
+    this.socket.close();
+}
+
+
+module.exports = Ethernet;
+
+},{}],4:[function(require,module,exports){
+"use strict";
+
+function Framebuffer(fbid, fps, SendToWorker) {
+    this.fbid = fbid;
+    this.SendToWorker = SendToWorker;
+
+    this.Init(fbid);
+    this.SetFPS(fps);
+}
+
+
+// Init Framebuffer if it exists
+Framebuffer.prototype.Init = function(fbid) {
+    this.fbcanvas = document.getElementById(fbid);
+    if(!this.fbcanvas) return;
+
+    this.fbctx = this.fbcanvas.getContext("2d");
+    this.fbctx.fillStyle = "rgba(0, 0, 0, 255)";
+    this.fbctx.fillRect ( 0, 0 , this.fbcanvas.width, this.fbcanvas.height );
+
+    this.fbimageData = this.fbctx.createImageData(this.fbcanvas.width, this.fbcanvas.height);
+
+    this.fbcanvas.onmousedown = function(event) {
+        this.fbcanvas.style.border = "2px solid #FF0000";
+        var rect = this.fbcanvas.getBoundingClientRect();
+        var x = (event.clientX - rect.left)*640/rect.width;
+        var y = (event.clientY - rect.top)*400/rect.height;
+        this.SendToWorker("tsmousedown", {x:x, y:y});
+    }.bind(this);
+
+    this.fbcanvas.onmouseup = function(event) {
+        var rect = this.fbcanvas.getBoundingClientRect();
+        var x = (event.clientX - rect.left)*640/rect.width;
+        var y = (event.clientY - rect.top)*400/rect.height;
+        this.SendToWorker("tsmouseup", {x:x, y:y});
+    }.bind(this);
+
+    this.fbcanvas.onmousemove = function(event) {
+        var rect = this.fbcanvas.getBoundingClientRect();
+        var x = (event.clientX - rect.left)*640/rect.width;
+        var y = (event.clientY - rect.top)*400/rect.height;
+        this.SendToWorker("tsmousemove", {x:x, y:y});
+    }.bind(this);
+}
+
+
+// receive interval of the contents of the framebuffer
+Framebuffer.prototype.SetFPS = function(fps) {
+    this.fps = fps;
+    if(!this.fbcanvas) return;
+    if (this.fbinterval) {
+        window.clearInterval(this.fbinterval);
+    }
+    if (fps != 0) {
+        this.fbinterval = window.setInterval(function(){this.SendToWorker("GetFB", 0)}.bind(this), 1000/this.fps);
+    }
+}
+
+
+Framebuffer.prototype.Update = function(buffer) {
+    if(!this.fbcanvas) return;
+    //if(this.userpaused) return;
+    var i=0, n = buffer.length;
+    var data = this.fbimageData.data;
+
+    var offset = 0x0;
+    for (i = 0; i < n; i++) {
+        var x = buffer[i];
+        data[offset++] = (x >> 24) & 0xF8;
+        data[offset++] = (x >> 19) & 0xFC;
+        data[offset++] = (x >> 13) & 0xF8;
+        data[offset++] = 0xFF;
+        data[offset++] = (x >> 8) & 0xF8;
+        data[offset++] = (x >> 3) & 0xFC;
+        data[offset++] = (x << 3) & 0xF8;
+        data[offset++] = 0xFF;
+    }
+
+    //data.set(buffer);
+    this.fbctx.putImageData(this.fbimageData, 0, 0); // at coords 0,0
+}
+
+
+module.exports = Framebuffer;
+
+},{}],5:[function(require,module,exports){
+// Provides a loop sound buffer.
+
+"use strict";
+
+function LoopSoundBuffer(samplerate) {
+    this.periods = 6;
+
+    this.initialized = false;
+    this.source = new Array(this.periods);
+    this.soundbuffer = new Array(this.periods);
+    this.period = 0;
+    this.bufferpos = 0;
+
+    if (typeof AudioContext == "undefined") return;
+
+    this.context = new AudioContext();
+    this.SetRate(samplerate);
+    this.initialized = true;
+    this.PlayBuffer(0);
+    this.PlayBuffer(1);
+    this.period = 2;
+}
+
+LoopSoundBuffer.prototype.SetRate = function(rate) {
+    if (this.samplerate == rate) return;
+    this.samplerate = rate;
+    this.sampleslen = rate;
+    this.periodsize = Math.floor(this.sampleslen/4);
+    this.sampleslen = this.periodsize*this.periods;
+    this.buffer = new Float32Array(this.sampleslen);
+
+    for(var i=0; i<this.periods; i++) {
+        this.soundbuffer[i] = this.context.createBuffer(1, this.periodsize, this.samplerate);
+    }
+}
+
+LoopSoundBuffer.prototype.OnEnded = function()
+{
+        this.PlayBuffer(this.period);
+        this.period++;
+}
+
+LoopSoundBuffer.prototype.PlayBuffer = function(period)
+{
+        var idx = period % this.periods;
+        var buffer = this.soundbuffer[idx].getChannelData(0);
+        var offset = idx * this.periodsize;
+        for(var i=0; i<this.periodsize; i++) {
+            buffer[i] = this.buffer[i + offset];
+            this.buffer[i+offset] = 0;
+        }
+        var source = this.context.createBufferSource(); // creates a sound source
+        source.buffer = this.soundbuffer[idx];
+        source.connect(this.context.destination);
+        source.onended = this.OnEnded.bind(this);
+        source.start(period*(this.periodsize)/this.samplerate);
+
+        // save the source. Otherwise the garbage collector might take them and the function OnEnded is not executed
+        this.source[idx] = source;
+}
+
+LoopSoundBuffer.prototype.AddBuffer = function(addbuffer)
+{
+    var currentperiod = (this.bufferpos / this.periodsize);
+    if ((currentperiod) < (this.period+2)) {
+        this.bufferpos = this.periodsize*(this.period+3);
+        //console.log("Warning: Sound buffer underrun, resetting");
+    }
+    if (currentperiod > (this.period+4)) {
+        this.bufferpos = this.periodsize*(this.period+3);
+        //console.log("Warning: Sound buffer overrun, resetting");
+    }
+
+    for(var i=0; i<addbuffer.length; i++) {
+        this.buffer[this.bufferpos%this.sampleslen] = addbuffer[i]/128.;
+        this.bufferpos++;
+    }
+}
+
+module.exports = LoopSoundBuffer;
+
+},{}],6:[function(require,module,exports){
+// -------------------------------------------------
+// -------------- Terminal Input -------------------
+// -------------------------------------------------
+
+// for the special keys look at
+// http://www2.gar.no/glinkj/help/cmds/ansm.htm
+// http://www.comptechdoc.org/os/linux/howlinuxworks/linux_hlkeycodes.html
+
+"use strict";
+
+var UTF8 = require('../../lib/utf8.js');
+
+function TerminalInput(SendChars) {
+    this.CTRLpressed = false;
+    this.ALTpressed = false;
+    this.SendChars = SendChars;
+    this.enabled = true;
+}
+
+
+TerminalInput.prototype.OnKeyPress = function(e) {
+    if (!this.enabled) {
+        return;
+    }
+    var key = 0;
+    key = e.charCode;
+    if (key == 0) {
+        return false;
+    }
+    // Define that the control key has this effect only if special keys have been pressed A..Z a..z. Otherwise some foreign keyboards will not work
+    if ((this.CTRLpressed) && (((key >= 0x41) && (key <= 0x5A)) || ((key >= 0x61) && (key <= 0x7A)))) {
+        key &= 0x1F;
+    }
+    this.SendChars(UTF8.UnicodeToUTF8Stream(key));
+    return false;
+};
+
+TerminalInput.prototype.OnKeyUp = function(e) {
+    if (!this.enabled) {
+        return;
+    }
+    var keycode = e.keyCode;
+    var unicode = e.charCode;
+    if (keycode == 17) {
+        this.CTRLpressed = false;
+    } else
+    if (keycode == 18) {
+        this.ALTpressed = false;
+    }
+    return false;
+};
+
+TerminalInput.prototype.OnKeyDown = function(e) {
+    if (!this.enabled) {
+        return;
+    }
+    var keycode = e.keyCode;
+    var unicode = e.charCode;
+ 
+    // CTRL + x key handling for chrome 
+    if ((this.CTRLpressed) && (!this.ALTpressed) && (keycode >= 65) && (keycode <= 90)) {
+        this.SendChars([(keycode-32) & 0x1F]);
+        e.preventDefault();
+        return false;
+    }
+    // TODO tab?
+    switch (keycode) {
+    case 8:
+        // del
+        this.SendChars([0x7F]);
+        e.preventDefault();
+        return false;
+        break;
+    case 9: 
+        //tab
+        break;
+    case 16:
+        // shift
+        return;
+        break;
+    case 38:
+        // up
+        this.SendChars([0x1B, 0x5B, 0x41]);
+        e.preventDefault();
+        return false;
+        break;
+    case 37:
+        // left
+        this.SendChars([0x1B, 0x5B, 0x44]);
+        e.preventDefault();
+        return false;
+        break;
+    case 39:
+        // right
+        this.SendChars([0x1B, 0x5B, 0x43]);
+        e.preventDefault();
+        return false;
+        break;
+    case 40:
+        // down
+        this.SendChars([0x1B, 0x5B, 0x42]);
+        e.preventDefault();
+        return false;
+        break;
+    case 112:
+    case 113:
+    case 114:
+    case 115:
+    case 116:
+        // F1 - F5
+        this.SendChars([0x1B, 0x5B, 0x5B, keycode-112+0x41]);
+        e.preventDefault();
+        return false;
+        break;
+    case 117:
+    case 118:
+    case 119:
+        // F6 - F8
+        this.SendChars([0x1B, 0x5B, 0x31, keycode-117+0x37, 0x7E]);
+        e.preventDefault();
+        return false;
+        break;
+    case 120:
+    case 121:
+        // F9 - F10
+        this.SendChars([0x1B, 0x5B, 0x32, keycode-120+0x30, 0x7E]);
+        e.preventDefault();
+        return false;
+        break;
+
+    case 36:
+        // pos1
+        this.SendChars([0x1b, 0x5b, 0x48]);
+        e.preventDefault();
+        return false;
+        break;
+    case 35:
+        // end
+        this.SendChars([0x1b, 0x5b, 0x46]);
+        e.preventDefault();
+        return false;
+        break;
+    case 33:
+        // Page up
+        this.SendChars([0x1b, 0x5b, 0x35, 0x7e]);
+        e.preventDefault();
+        return false;
+        break;
+    case 34:
+        // Page down
+        this.SendChars([0x1b, 0x5b, 0x36, 0x7e]);
+        e.preventDefault();
+        return false;
+        break;
+    case 45:
+        // ins
+        this.SendChars([0x1b, 0x5b, 0x32, 0x7e]);
+        e.preventDefault();
+        return false;
+        break;
+    case 46:
+        // del
+        this.SendChars([0x1b, 0x5b, 0x33, 0x7e]);
+        e.preventDefault();
+        return false;
+        break;
+    case 17:
+        // CTRL
+        this.CTRLpressed = true;
+        //e.preventDefault();
+        //return false;
+        return;
+        break;
+    case 18:
+        // Alt
+        this.ALTpressed = true;
+        return;
+        break;
+    }
+
+    if ((keycode != 0) && (keycode <= 0x1F)) {
+        this.SendChars([keycode]);
+        e.preventDefault();
+        return false;
+    }
+    
+    return;
+};
+
+
+module.exports = TerminalInput;
+
+},{"../../lib/utf8.js":2}],7:[function(require,module,exports){
+// -------------------------------------------------
+// --------------- Terminal Emulator ---------------
+// -------------------------------------------------
+
+"use strict";
+
+var UTF8 = require('../../lib/utf8.js');
+
+var Colors = new Array(
+    // standard colors
+    "#000000", "#BB0000", "#00BB00", "#BBBB00",
+    "#0000BB", "#BB00BB", "#00BBBB", "#BBBBBB",
+    // brighter colors
+    "#555555", "#FF5555", "#55FF55", "#FFFF55",
+    "#5555FF", "#FF55FF", "#55FFFF", "#FFFFFF",
+    // dimmed colors
+    "#000000", "#770000", "#007700", "#777700",
+    "#000077", "#770077", "#007777", "#777777"
+);
+
+
+// constructor
+function Terminal(nrows, ncolumns, elemId) {
+    this.nrows = nrows;
+    this.ncolumns = ncolumns;
+    this.canvas = document.getElementById(elemId);
+    this.context = this.canvas.getContext("2d");
+    this.context.font = "13px courier,fixed,swiss,monospace,sans-serif";
+    this.cursorvisible = false;
+    this.escapetype = 0;
+    this.escapestring = "";
+    this.cursorx = 0;
+    this.cursory = 0;
+    this.scrolltop = 0;
+    this.scrollbottom = this.nrows-1;
+    this.currentcolor = 0x7;
+    this.pauseblink = false;
+    this.OnCharReceived = function (){};
+
+    this.framerequested = false;
+    this.timeout = 30; // the time in ms when the next frame is drawn
+
+    this.updaterow = new Uint8Array(this.nrows);
+
+    this.utf8converter = new UTF8.UTF8StreamToUnicode();
+
+    this.screen = new Array(this.nrows);
+    this.color = new Array(this.nrows);
+    for (var i = 0; i < this.nrows; i++) {
+        this.updaterow[i] = 1;
+        this.screen[i] = new Uint16Array(this.ncolumns);
+        this.color[i]  = new Uint16Array(this.ncolumns);
+
+        for (var j = 0; j < this.ncolumns; j++) {
+            this.screen[i][j] = 0x20;
+            this.color[i][j] = this.currentcolor;
+        }
+    }
+    this.UpdateScreen();
+    this.Blink();
+}
+
+// Stop blinking cursor when the VM is paused
+Terminal.prototype.PauseBlink = function(pause) {
+    pause = !! pause;
+    this.pauseblink = pause;
+    this.cursorvisible = ! pause;
+    this.PrepareUpdateRow(this.cursory, this.cursorx);
+}
+
+Terminal.prototype.Blink = function() {
+    this.cursorvisible = !this.cursorvisible;
+    if(!this.pauseblink) this.PrepareUpdateRow(this.cursory, this.cursorx);
+    window.setTimeout(this.Blink.bind(this), 500); // update every half second
+};
+
+Terminal.prototype.DeleteRow = function(row) {
+    for (var j = 0; j < this.ncolumns; j++) {
+        this.screen[row][j] = 0x20;
+        this.color[row][j] = this.currentcolor;
+    }
+    this.PrepareUpdateRow(row);
+};
+
+Terminal.prototype.DeleteArea = function(row, column, row2, column2) {
+    for (var i = row; i <= row2; i++) {
+        for (var j = column; j <= column2; j++) {
+            this.screen[i][j] = 0x20;
+            this.color[i][j] = this.currentcolor;
+        }
+        this.PrepareUpdateRow(i);
+    }
+};
+
+Terminal.prototype.UpdateChar = function(row, column) {
+    var x = column<<3;
+    var y = row<<4;
+    var ccolor = this.color[row][column]|0;
+    var line = String.fromCharCode(this.screen[row][column]);
+
+    if (this.cursorvisible)
+    if (row == this.cursory)
+    if (column == this.cursorx) {
+       ccolor |= 0x600;
+    }
+
+    this.context.fillStyle = Colors[(ccolor >>> 8) & 0x1F]; 
+    this.context.fillRect(x, y, 8, 16);
+    this.context.fillStyle = Colors[ccolor & 0x1F];
+    this.context.fillText(line, x, y+12);
+}
+
+Terminal.prototype.UpdateRow = function(row) {
+    for (var i = 0; i < this.ncolumns; i++) {
+        this.UpdateChar(row, i);
+    }
+};
+
+Terminal.prototype.UpdateScreen = function() {
+    var nupdated = 0;
+    for (var i = 0; i < this.nrows; i++) {
+        if (!this.updaterow[i]) continue;
+        this.UpdateRow(i);
+        nupdated++;
+        this.updaterow[i] = 0;
+    }
+    this.framerequested = false;
+    if (nupdated >= (this.nrows-1)) {
+        this.timeout = 100;
+    } else {
+        this.timeout = 30;
+    }
+}
+
+Terminal.prototype.PrepareUpdateRow = function(row) {
+    this.updaterow[row] = 1;
+    if (this.framerequested) return;
+    if (this.timeout <= 30) {
+        window.requestAnimationFrame(this.UpdateScreen.bind(this));
+    } else {
+        window.setTimeout(this.UpdateScreen.bind(this), this.timeout);
+    }
+    this.framerequested = true;
+}
+
+Terminal.prototype.ScrollDown = function(draw) {
+    var tempscreen = this.screen[this.scrollbottom];
+    var tempcolor = this.color[this.scrollbottom];
+
+    for (var i = this.scrollbottom-1; i >= this.scrolltop; i--) {
+        if (i == this.nrows-1) continue;
+        this.screen[i + 1] = this.screen[i];
+        this.color[i + 1] = this.color[i];
+        if (draw) this.PrepareUpdateRow(i+1);
+    }
+    this.screen[this.scrolltop] = tempscreen;
+    this.color[this.scrolltop] = tempcolor;
+    this.DeleteRow(this.scrolltop);
+    if (draw) this.PrepareUpdateRow(this.scrolltop);
+}
+
+Terminal.prototype.ScrollUp = function(draw) {
+    var tempscreen = this.screen[this.scrolltop];
+    var tempcolor = this.color[this.scrolltop];
+
+    for (var i = this.scrolltop+1; i <= this.scrollbottom; i++) {
+        if (i == 0) continue;
+        this.screen[i - 1] = this.screen[i];
+        this.color[i - 1] = this.color[i];
+        if (draw) this.PrepareUpdateRow(i-1);
+    }
+
+    this.screen[this.scrollbottom] = tempscreen;
+    this.color[this.scrollbottom] = tempcolor;
+    this.DeleteRow(this.scrollbottom);
+    if (draw) this.PrepareUpdateRow(this.scrollbottom);
+};
+
+Terminal.prototype.LineFeed = function() {
+    if (this.cursory != this.scrollbottom) {
+        this.cursory++;
+        if (this.cursorvisible) {
+            this.PrepareUpdateRow(this.cursory-1); // delete old cursor position
+            this.PrepareUpdateRow(this.cursory); // show new cursor position
+        }
+        return;
+    }
+    this.ScrollUp(true);
+};
+
+Terminal.prototype.ChangeCursor = function(Numbers) {
+    switch (Numbers.length) {
+    case 0:
+        this.cursorx = 0;
+        this.cursory = 0;
+        break;
+    case 1:
+        this.cursory = Numbers[0];
+        if (this.cursory) this.cursory--;
+        break;
+    case 2:
+    default:
+        // TODO check for boundaries
+        this.cursory = Numbers[0];
+        this.cursorx = Numbers[1];
+        if (this.cursorx) this.cursorx--;
+        if (this.cursory) this.cursory--;
+        break;
+    }
+    if (this.cursorx >= this.ncolumns) this.cursorx = this.ncolumns - 1;
+    if (this.cursory >= this.nrows) this.cursory = this.nrows - 1;
+};
+
+Terminal.prototype.ChangeColor = function(Numbers) {
+
+    if (Numbers.length == 0) { // reset;
+         this.currentcolor = 0x7;
+         return;
+    }
+
+    var c = this.currentcolor;
+
+    for (var i = 0; i < Numbers.length; i++) {
+        switch (Number(Numbers[i])) {
+        case 30: case 31: case 32: case 33: case 34: case 35: case 36: case 37:
+            c = c & (0xFFF8) | (Numbers[i] - 30) & 0x7;
+            break;
+        case 40: case 41: case 42: case 43: case 44: case 45: case 46: case 47:
+            c = c & (0x00FF) | (((Numbers[i] - 40) & 0x7) << 8);
+            break;
+        case 0:
+            c = 0x7; // reset
+            break;
+        case 1: // brighter foreground color
+            c = c | 0x8;
+            break;
+        case 2: // dimmed foreground color
+            c = c | 0x10;
+            break;
+        case 4: // underline ignored
+            break;
+        case 5: // extended colors or blink ignored
+             //i++;
+             break;
+        case 7: // inverted
+            c = ((c & 0x7) << 8) | ((c >> 8)) & 0x7; 
+            break;
+        case 8: // hidden ignored
+            break;
+        case 39:
+            c = c & (0xFF00) | 0x7; // set standard foreground color
+            break;
+        case 49:
+            c = c & 0x00FF; // set standard background color
+            break;
+        case 10:
+            // reset mapping ?
+            break;
+        default:
+            console.log("Color " + Numbers[i] + " not found");
+            break;
+        }
+    }
+    this.currentcolor = c|0;
+
+};
+
+Terminal.prototype.HandleEscapeSequence = function() {
+    //console.log("Escape sequence:'" + this.escapestring+"'");
+    var i = 0;
+    if (this.escapestring == "[J") {
+        this.DeleteArea(this.cursory, this.cursorx, this.cursory, this.ncolumns - 1);
+        this.DeleteArea(this.cursory + 1, 0., this.nrows - 1, this.ncolumns - 1);
+        return;
+    } else
+    if (this.escapestring == "M") {
+        this.ScrollDown(true);
+        return;
+    }
+    // Testing for [x;y;z
+    var s = this.escapestring;
+
+    if (s.charAt(0) != "[") {
+        console.log("Escape sequence unknown:'" + this.escapestring + "'");
+        return; // the short escape sequences must be handled earlier
+    }
+
+    s = s.substr(1); // delete first sign
+    var lastsign = s.substr(s.length - 1); // extract command
+    s = s.substr(0, s.length - 1); // remove command
+    var numbers = s.split(";"); // if there are multiple numbers, split them
+    if (numbers[0].length == 0) {
+        numbers = [];
+    }
+    // the array must contain of numbers and not strings. Make this sure
+    if (s.charAt(0) != '?') {
+        for (i=0; i<numbers.length; i++) {
+            numbers[i] = Number(numbers[i]);
+        }
+    }
+
+    var oldcursory = this.cursory; // save current cursor position
+    var count = 0;
+    switch(lastsign) {
+
+        case 'l':
+            if (this.escapestring)
+            for(var i=0; i<numbers.length; i++) {
+                switch(numbers[i]) {
+                    case '7': // disable line wrap
+                    break;
+                    case '?25': // disable cursor
+                    break;
+                    case '?7': // reset auto-wrap mode 
+                    break;
+                    default:
+                        console.log("Term Parameter " + this.escapestring + " unknown");
+                    break;
+                }
+            }
+            break;
+
+        case 'h':
+            for(var i=0; i<numbers.length; i++) {
+                switch(numbers[i]) {
+                    case '7': // enable line wrap
+                    break;
+                    case '?25': // enable cursor
+                    break;
+                    case '?7': // Set auto-wrap mode 
+                    break;
+                    default:
+                        console.log("Term Parameter " + this.escapestring + " unknown");
+                    break;
+                }
+            }
+            break;
+
+        case 'c':
+            for(var i=0; i<numbers.length; i++) {
+                switch(numbers[i]) {
+                    default:
+                        console.log("Term Parameter " + this.escapestring + " unknown");
+                    break;
+                }
+            }
+            break;
+
+        case 'm': // colors
+            this.ChangeColor(numbers);
+            return;
+
+        case 'A': // move cursor up
+            count = numbers.length ? numbers[0] : 1;
+            if (count == 0) count = 1;
+            this.cursory -= count;
+            break;
+
+        case 'B': // move cursor down
+            count = numbers.length ? numbers[0] : 1;
+            if (count == 0) count = 1;
+            this.cursory += count;
+            break;
+
+        case 'C': // move cursor right
+            count = numbers.length ? numbers[0] : 1;
+            if (count == 0) count = 1;
+            this.cursorx += count;
+            break;
+
+        case 'D': // move cursor left
+            count = numbers.length ? numbers[0] : 1;
+            if (count == 0) count = 1;
+            this.cursorx -= count;
+            if (this.cursorx < 0) this.cursorx = 0;
+            break;
+
+        case 'E': // move cursor down
+            count = numbers.length ? numbers[0] : 1;
+            this.cursory += count;
+            this.cursorx = 0;
+            break;
+
+        case 'F': // move cursor up
+            count = numbers.length ? numbers[0] : 1;
+            this.cursory -= count;
+            if (this.cursory < 0) this.cursory = 0;
+            this.cursorx = 0;
+            break;
+
+        case 'G': // change cursor column
+            count = numbers.length ? numbers[0] : 1;
+            this.cursorx = count;
+            if (this.cursorx) this.cursorx--;
+            break;
+
+        case 'H': // cursor position
+        case 'd':
+        case 'f':
+            this.ChangeCursor(numbers);
+            break;
+
+        case 'K': // erase
+            count = numbers.length ? numbers[0] : 1;
+            if (!numbers.length) {
+                this.DeleteArea(this.cursory, this.cursorx, this.cursory, this.ncolumns - 1);
+            } else 
+            if (numbers[0] == 1) {
+                this.DeleteArea(this.cursory, 0., this.cursory, this.cursorx);
+            } else
+            if (numbers[0] == 2) {
+                this.DeleteRow(this.cursory);
+            }
+            break;
+
+        case 'L': // scroll down
+            count = numbers.length ? numbers[0] : 1;
+            if (count == 0) count = 1;
+            var top = this.scrolltop;
+            this.scrolltop = this.cursory;
+            if (count == 1) {
+                this.ScrollDown(true);
+            } else {
+                for (var j = 0; j < count-1; j++) {
+                    this.ScrollDown(false);
+                }
+                this.ScrollDown(true);
+            }
+            this.scrolltop = top;
+            break;
+
+        case 'M': // scroll up
+            count = numbers.length ? numbers[0] : 1;
+            if (count == 0) count = 1;
+            var top = this.scrolltop;
+            this.scrolltop = this.cursory;
+            if (count == 1) {
+                this.ScrollUp(true);
+            } else {
+                for (var j = 0; j < count-1; j++) {
+                    this.ScrollUp(false);
+                }
+                this.ScrollUp(true);
+            }
+            this.scrolltop = top;
+            break;
+
+        case 'P': /* shift left from cursor and fill with zero */
+            count = numbers.length ? numbers[0] : 1;
+            if (count == 0) count = 1;
+            var n = 0;n
+            for (var j = this.cursorx+count; j < this.ncolumns; j++) {
+                this.screen[this.cursory][this.cursorx+n] = this.screen[this.cursory][j];
+                this.color[this.cursory][this.cursorx+n] = this.color[this.cursory][j];
+                n++;
+            }
+            this.DeleteArea(this.cursory, this.ncolumns-count, this.cursory, this.ncolumns-1);
+            this.PrepareUpdateRow(this.cursory);
+            break;
+
+        case 'r': // set scrolling region
+            if (numbers.length == 0) {
+                this.scrolltop = 0;
+                this.scrollbottom = this.nrows-1;
+            } else {
+                this.scrolltop = numbers[0];
+                this.scrollbottom = numbers[1];
+                if (this.scrolltop) this.scrolltop--;
+                if (this.scrollbottom) this.scrollbottom--;
+            }
+            return;
+
+        case 'X': // erase only number of characters in current line    
+            count = numbers.length ? numbers[0] : 1;
+            if (count == 0) count = 1;
+            for (var j = 0; j < count; j++) {
+                this.screen[this.cursory][this.cursorx+j] = 0x20;
+                this.color[this.cursory][this.cursorx+j] = this.currentcolor;
+            }
+            this.PrepareUpdateRow(this.cursory);
+            break;    
+
+        default:
+            console.log("Escape sequence unknown:'" + this.escapestring + "'");
+        break;
+    }
+
+     if (this.cursorvisible) {
+        this.PrepareUpdateRow(this.cursory);
+        if (this.cursory != oldcursory) {
+            this.PrepareUpdateRow(oldcursory);
+        }
+    }
+};
+
+
+
+Terminal.prototype.PutChar = function(c) {
+    var i = 0;
+    //console.log("Char:" + c + " " +  String.fromCharCode(c));
+    // escape sequence (CS)
+    if (this.escapetype == 2) {
+        this.escapestring += String.fromCharCode(c);
+        if ((c >= 64) && (c <= 126)) {
+            this.HandleEscapeSequence();
+            this.escapetype = 0;
+        }
+        return;
+    }
+
+    // escape sequence
+    if ((this.escapetype == 0) && (c == 0x1B)) {
+        this.escapetype = 1;
+        this.escapestring = "";
+        return;
+    }
+
+    // starting escape sequence
+    if (this.escapetype == 1) {
+        this.escapestring += String.fromCharCode(c);
+        // Control Sequence Introducer ([)
+        if (c == 0x5B) {
+            this.escapetype = 2;
+            return;
+        }
+        this.HandleEscapeSequence();
+        this.escapetype = 0;
+        return;
+    }
+    switch (c) {
+    case 0xA:
+        // line feed
+        this.LineFeed();
+        this.OnCharReceived("\n");
+        //console.log("LineFeed");
+        return;
+    case 0xD:
+        // carriage return
+        this.cursorx = 0;
+        this.PrepareUpdateRow(this.cursory);
+        //console.log("Carriage Return");
+        return;
+    case 0x7:
+        // beep
+        return;
+    case 0x8:
+        // back space
+        this.cursorx--;
+        if (this.cursorx < 0) {
+            this.cursorx = 0;
+        }
+        this.PrepareUpdateRow(this.cursory);
+        //console.log("backspace");
+        return;
+    case 0x9:
+        // horizontal tab
+        //console.log("tab");
+        var spaces = 8 - (this.cursorx&7);
+        do
+        {
+            if (this.cursorx >= this.ncolumns) {
+                this.PrepareUpdateRow(this.cursory);
+                this.LineFeed();
+                this.cursorx = 0;
+            }
+            this.screen[this.cursory][this.cursorx] = 32;
+            this.color[this.cursory][this.cursorx] = this.currentcolor;	
+            this.cursorx++;
+        } while(spaces--);
+        this.PrepareUpdateRow(this.cursory);
+        return;
+
+    case 0x00:  case 0x01:  case 0x02:  case 0x03:
+    case 0x04:  case 0x05:  case 0x06:  case 0x0B:
+    case 0x0C:  case 0x0E:  case 0x0F:
+    case 0x10:  case 0x11:  case 0x12:  case 0x13:
+    case 0x14:  case 0x15:  case 0x16:  case 0x17:
+    case 0x18:  case 0x19:  case 0x1A:  case 0x1B:
+    case 0x1C:  case 0x1D:  case 0x1E:  case 0x1F:
+        console.log("unknown character " + c); //hex8 not defined
+        return;
+    }
+
+    if (this.cursorx >= this.ncolumns) {
+        this.LineFeed();
+        this.cursorx = 0;
+    }
+
+    c = this.utf8converter.Put(c);
+    if (c == -1) return;
+    var cx = this.cursorx;
+    var cy = this.cursory;
+    this.screen[cy][cx] = c;
+
+    this.color[cy][cx] = this.currentcolor;
+    this.cursorx++;
+    //console.log("Write: " + String.fromCharCode(c));
+    this.PrepareUpdateRow(cy);
+
+    this.OnCharReceived(String.fromCharCode(c));
+};
+
+module.exports = Terminal;
+
+},{"../../lib/utf8.js":2}],8:[function(require,module,exports){
+// -------------------------------------------------
+// -------------------- Master ---------------------
+// -------------------------------------------------
+
+var Terminal = require('./dev/terminal.js');
+var TerminalInput = require('./dev/terminal-input.js');
+var Framebuffer = require('./dev/framebuffer.js');
+var Ethernet = require('./dev/ethernet.js');
+var LoopSoundBuffer = require('./dev/sound.js');
+var download = require('../lib/download.js');
+
+"use strict";
+
+
+function DebugMessage(message) {
+    console.log(message);
+    //var myconsole = document.getElementById("console");
+    //myconsole.innerHTML += message + "<br>";
+}
+
+function jor1kGUI(parameters)
+{
+    this.params = parameters;
+
+    this.worker = new Worker('jor1k-worker-min.js');
+    this.worker.onmessage = this.OnMessage.bind(this);   
+    this.worker.onerror = function(e) {
+        DebugMessage("Error at " + e.filename + ":" + e.lineno + ": " + e.message);
+        this.stop = true;
+    }
+
+    //this.sound = new LoopSoundBuffer(22050);
+    
+    this.terminalcanvas = document.getElementById(this.params.termid);
+    this.clipboard = document.getElementById(this.params.clipboardid);
+    this.stats = document.getElementById(this.params.statsid);
+    this.term = new Terminal(24, 80, this.params.termid);
+    this.terminput = new TerminalInput(this.SendChars.bind(this));
+    this.framebuffer = new Framebuffer(this.params.fbid, this.params.fps, this.SendToWorker.bind(this));
+
+
+    this.terminalcanvas.onmousedown = function(event) {
+        if (!this.framebuffer.fbcanvas) return;
+        this.framebuffer.fbcanvas.style.border = "2px solid #000000";
+    }.bind(this);
+
+   if (this.clipboard) {
+   this.clipboard.onpaste = function(event) {
+       this.clipboard.value = "";
+       setTimeout(this.SendClipboard.bind(this), 4);    
+   }.bind(this);
+   
+
+   this.SendClipboard = function() {
+       var chars = [];
+       var v = this.clipboard.value;
+
+       for(var i=0; i<v.length; i++) {
+           chars.push(v.charCodeAt(i));
+       }
+
+       this.SendChars(chars);
+       this.clipboard.value = "";
+   }.bind(this);
+   }
+    this.IgnoreKeys = function() {
+      return (
+          (this.lastMouseDownTarget != this.terminalcanvas) &&
+          (this.lastMouseDownTarget != this.framebuffer.fbcanvas) &&
+          (this.lastMouseDownTarget != this.clipboard)
+      );
+    }
+
+    var recordTarget = function(event) {
+        this.lastMouseDownTarget = event.target;
+    }.bind(this);
+
+    if(document.addEventListener)
+      document.addEventListener('mousedown', recordTarget, false);
+    else
+      Window.onmousedown = recordTarget; // IE 10 support (untested)
+
+
+
+    document.onkeypress = function(event) {
+        if(this.IgnoreKeys()) return true;
+        if ((this.lastMouseDownTarget == this.terminalcanvas) || (this.lastMouseDownTarget == this.clipboard)) {
+            return this.terminput.OnKeyPress(event);
+        }
+        this.SendToWorker("keypress", {keyCode:event.keyCode, charCode:event.charCode});
+        return false;
+    }.bind(this);
+
+    document.onkeydown = function(event) {
+        if(this.IgnoreKeys()) return true;
+        if ((this.lastMouseDownTarget == this.terminalcanvas) || (this.lastMouseDownTarget == this.clipboard)) {
+            return this.terminput.OnKeyDown(event);
+        }
+        this.SendToWorker("keydown", {keyCode:event.keyCode, charCode:event.charCode});
+        return false;
+    }.bind(this);
+
+    document.onkeyup = function(event) {
+        if(this.IgnoreKeys()) return true;
+        if ((this.lastMouseDownTarget == this.terminalcanvas) || (this.lastMouseDownTarget == this.clipboard)) {
+            return this.terminput.OnKeyUp(event);
+        }
+        this.SendToWorker("keyup", {keyCode:event.keyCode, charCode:event.charCode});
+        return false;
+    }.bind(this);
+
+    this.ethernet = new Ethernet(this.params.relayURL);
+    this.ethernet.onmessage = function(e) {
+        this.SendToWorker("ethmac", e.data);
+    }.bind(this);
+
+    this.Reset();
+    
+   
+    window.setInterval(function(){this.SendToWorker("GetIPS", 0)}.bind(this), 1000);
+}
+
+jor1kGUI.prototype.SendToWorker = function(command, data) {
+    this.worker.postMessage(
+    {
+        "command": command,
+        "data": data
+    });
+}
+
+jor1kGUI.prototype.ChangeCore = function(core) {
+    this.SendToWorker("ChangeCore", core);
+};
+
+
+jor1kGUI.prototype.Reset = function () {
+    this.stop = false; // VM Stopped/Aborted
+    this.userpaused = false;
+    this.executepending=false; // if we rec an execute message while paused      
+    this.SendToWorker("Init", this.params.system);
+    this.SendToWorker("Reset");
+      
+    this.SendToWorker("LoadAndStart", this.params.system.kernelURL);
+    this.SendToWorker("LoadFilesystem", this.params.fs);
+    this.term.PauseBlink(false);
+    this.lastMouseDownTarget = this.terminalcanvas;
+}
+
+jor1kGUI.prototype.Pause = function(pause) {
+    pause = !! pause; // coerce to boolean
+    if(pause == this.userpaused) return; 
+    this.userpaused = pause;
+    if(! this.userpaused && this.executepending) {
+      this.executepending = false;
+       this.SendToWorker("execute", 0);
+    }
+    this.term.PauseBlink(pause);
+}
+
+// sends the input characters for the terminal
+jor1kGUI.prototype.SendChars = function(chars) {
+    if (this.lastMouseDownTarget == this.fbcanvas) return;
+    this.SendToWorker("tty0", chars);
+}
+
+
+jor1kGUI.prototype.TAR = function(path) {
+    this.SendToWorker("tar", path);
+}
+
+jor1kGUI.prototype.Sync = function(path) {
+    this.SendToWorker("sync", path);
+}
+
+jor1kGUI.prototype.UploadExternalFile = function(f) {
+    var reader = new FileReader();
+    reader.onload = function(e) {
+        this.SendToWorker("MergeFile", 
+        {name: "home/user/"+f.name, data: new Uint8Array(reader.result)});
+    }.bind(this);
+    reader.readAsArrayBuffer(f);
+}
+
+jor1kGUI.prototype.OnMessage = function(e) {
+    // print debug messages even if emulator is stopped
+    if (e.data.command == "Debug") DebugMessage(e.data.data);
+
+    if (this.stop) return;
+    switch(e.data.command)
+    {
+        case "execute":  // this command is send back and forth to be responsive
+            if(this.userpaused) {
+              this.executepending = true;
+            } else {
+              this.executepending = false; 
+              this.SendToWorker("execute", 0);
+            }
+            break;
+
+        case "sound":
+            //this.sound.AddBuffer(e.data.data);
+            break;
+
+        case "sound.rate":
+            //this.sound.SetRate(e.data.data);
+            break;
+
+        case "ethmac":
+            this.ethernet.SendFrame(e.data.data);
+            break;
+
+        case "tty0":
+            e.data.data.forEach(function(c) {
+                this.term.PutChar(c&0xFF);
+            }.bind(this));
+            //this.term.PutChar(e.data.data);
+            break;
+
+        case "GetFB":
+            this.framebuffer.Update(e.data.data);
+            break;
+
+        case "Stop":
+            DebugMessage("Received stop signal");
+            this.stop = true;
+            break;
+
+        case "GetIPS":
+            if (this.userpaused) {
+                this.stats.innerHTML = "Paused"; 
+            } else {
+                this.stats.innerHTML = e.data.data<1000000?
+                    Math.floor(e.data.data/1000) + " KIPS" 
+                    :
+                    (Math.floor(e.data.data/100000)/10.) + " MIPS";
+            }
+            break;
+
+        case "tar":
+            download(e.data.data, "user.tar", "application/x-tar");
+            break;
+
+        case "sync":
+            UploadBinaryResource(this.params.syncURL, this.params.userid + ".tar", e.data.data, 
+            function(response) {
+            // alert(response);
+            alert(
+                "Message from Server:" + response + "\n" +
+                "The home folder '/home/user' has been synced with the server\n" +
+                "In order to access the data at a later date,\n" +
+                "start the next session with the current url with the user id\n" +
+                "The folder size is currently limited to 1MB. Note that the feature is experimental.\n" +
+                "The content can be downloaded under http://jor1k.com/sync/tarballs/" + this.params.userid+".tar.bz2");
+            }.bind(this)
+           , function(msg) {alert(msg);}
+           );
+           
+            break;
+        }
+}
+
+module.exports = jor1kGUI;
+
+},{"../lib/download.js":1,"./dev/ethernet.js":3,"./dev/framebuffer.js":4,"./dev/sound.js":5,"./dev/terminal-input.js":6,"./dev/terminal.js":7}],"Jor1k":[function(require,module,exports){
+var Jor1k = require('./system.js');
+
+module.exports = Jor1k;
+
+},{"./system.js":8}]},{},[]);

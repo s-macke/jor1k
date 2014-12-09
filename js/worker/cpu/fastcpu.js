@@ -1630,3 +1630,5 @@ return {
 };
 
 }
+
+module.exports = FastCPU;

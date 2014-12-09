@@ -8,7 +8,8 @@
 // 0xyy000000 where yy is a number between 0x0 and 0xFF
 
 // constructor
-function RAM(heap, ramoffset) {
+function RAM(message, heap, ramoffset) {
+    this.message = message;
     //use typed arrays
     this.heap = heap;
     this.int32mem = new Int32Array(this.heap, ramoffset);
@@ -20,8 +21,8 @@ function RAM(heap, ramoffset) {
 RAM.prototype.AddDevice = function(device, devaddr, devsize)
 {
     if (devaddr & 0xFFFFFF) {
-        DebugMessage("Error: The device address not in the allowed memory region");
-        abort();
+        this.message.Debug("Error: The device address not in the allowed memory region");
+        this.message.Abort();
     }
     this.devices[(devaddr>>24)&0xFF] = device;
 }
@@ -31,8 +32,8 @@ RAM.prototype.ReadMemory32 = function(addr) {
         return this.int32mem[addr >> 2];
     }
     return this.devices[(addr>>24)&0xFF].ReadReg32(addr & 0xFFFFFF);
-    //DebugMessage("Error in ReadMemory32: RAM region " + hex8(addr) + " is not accessible");
-    //abort();
+    //this.message.Debug("Error in ReadMemory32: RAM region " + hex8(addr) + " is not accessible");
+    //this.message.Abort();
     return 0x0;
 };
 
@@ -42,8 +43,8 @@ RAM.prototype.WriteMemory32 = function(addr, x) {
         return;
     }
     this.devices[(addr>>24)&0xFF].WriteReg32(addr & 0xFFFFFF, x);
-    //DebugMessage("Error in WriteMemory32: RAM region " + hex8(addr) + " is not accessible");
-    //abort();
+    //this.message.Debug("Error in WriteMemory32: RAM region " + hex8(addr) + " is not accessible");
+    //this.message.Abort();
 };
 
 RAM.prototype.ReadMemory8 = function(addr) {
@@ -51,8 +52,8 @@ RAM.prototype.ReadMemory8 = function(addr) {
         return this.uint8mem[addr ^ 3];
     }
     return this.devices[(addr>>24)&0xFF].ReadReg8(addr & 0xFFFFFF);
-    //DebugMessage("Error in ReadMemory8: RAM region " + hex8(addr) + " is not accessible");
-    //abort();
+    //this.message.Debug("Error in ReadMemory8: RAM region " + hex8(addr) + " is not accessible");
+    //this.message.Abort();
     return 0x0;
 };
 
@@ -63,8 +64,8 @@ RAM.prototype.WriteMemory8 = function(addr, x) {
         return;
     }
     this.devices[(addr>>24)&0xFF].WriteReg8(addr & 0xFFFFFF, x);
-    //DebugMessage("Error in WriteMemory8: RAM region " + hex8(addr) + " is not accessible");
-    //abort();
+    //this.message.Debug("Error in WriteMemory8: RAM region " + hex8(addr) + " is not accessible");
+    //this.message.Abort();
     // Exception(EXCEPT_BUSERR, addr);
 };
 
@@ -74,8 +75,8 @@ RAM.prototype.ReadMemory16 = function(addr) {
         return (this.uint8mem[(addr ^ 2)+1] << 8) | this.uint8mem[(addr ^ 2)];
     }
     return this.devices[(addr>>24)&0xFF].ReadReg16(addr & 0xFFFFFF);
-    //DebugMessage("Error in ReadMemory16: RAM region " + hex8(addr) + " is not accessible");
-    //abort();
+    //this.message.Debug("Error in ReadMemory16: RAM region " + hex8(addr) + " is not accessible");
+    //this.message.Abort();
     return 0x0;
 };
 
@@ -86,6 +87,8 @@ RAM.prototype.WriteMemory16 = function(addr, x) {
         return;
     }
     this.devices[(addr>>24)&0xFF].WriteReg16(addr & 0xFFFFFF, x);
-    //DebugMessage("Error in WriteMemory16: RAM region " + hex8(addr) + " is not accessible");
-    //abort();
+    //this.message.Debug("Error in WriteMemory16: RAM region " + hex8(addr) + " is not accessible");
+    //this.message.Abort();
 };
+
+module.exports = RAM;

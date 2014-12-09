@@ -18,7 +18,8 @@ var LPC32XX_RTC_INTSTAT           = 0x14;
 var LPC32XX_RTC_KEY               = 0x18;
 var LPC32XX_RTC_SRAM              = 0x80;
 
-function RTCDev(intdev) {
+function RTCDev(message, intdev) {
+    this.message = message;
     this.intdev = intdev;
     this.Reset();
 }
@@ -53,7 +54,7 @@ RTCDev.prototype.ReadReg32 = function (addr) {
 
 
         default:
-            DebugMessage("RTC: unknown ReadReg32: " + hex8(addr));
+            this.message.Debug("RTC: unknown ReadReg32: " + hex8(addr));
             return 0x0;
             break;
     }
@@ -68,8 +69,11 @@ RTCDev.prototype.WriteReg32 = function (addr, value) {
             break;
 
         default:
-            DebugMessage("RTC: unknown  WriteReg32: " + hex8(addr) + ": " + hex8(value));
+            this.message.Debug("RTC: unknown  WriteReg32: " + hex8(addr) + ": " + hex8(value));
             return;
             break;
     }
 }
+
+
+module.exports = RTCDev;

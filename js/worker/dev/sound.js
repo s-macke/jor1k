@@ -14,7 +14,8 @@ var REG_OFFSET         = 0x0010; // current position in buffer
 var REG_RATE           = 0x0014; // rate
 var REG_CHANNELS       = 0x0018; // channels
 
-function SoundDev(intdev, ramdev) {
+function SoundDev(message, intdev, ramdev) {
+    this.message = message;
     this.intdev = intdev;
     this.ramdev = ramdev
     this.Reset();
@@ -55,7 +56,7 @@ SoundDev.prototype.Progress = function() {
         if (this.offset == totalperiodbuffer) this.offset = 0;
     }
 
-    SendToMaster("sound", x);
+    message.Send("sound", x);
 
     this.lasttotalframe += deltaframes;
     this.nextperiod -= deltaframes;
@@ -63,7 +64,7 @@ SoundDev.prototype.Progress = function() {
     if (this.nextperiod <= 0) { 
         this.intdev.RaiseInterrupt(0x7);
         this.nextperiod += this.period_size;
-        //if (this.nextperiod < 0) DebugMessage("Error in sound device: Buffer underrun");
+        //if (this.nextperiod < 0) this.message.Debug("Error in sound device: Buffer underrun");
     }
 }
 
@@ -82,7 +83,7 @@ SoundDev.prototype.ReadReg32 = function (addr) {
             break; 
 
         default:
-            DebugMessage("Sound: unknown ReadReg32: " + hex8(addr));
+            this.message.Debug("Sound: unknown ReadReg32: " + hex8(addr));
             return 0x0;
             break;
     }
@@ -98,9 +99,9 @@ SoundDev.prototype.WriteReg32 = function (addr, value) {
             this.starttime = GetMilliseconds();
             this.lasttotalframe = 0;
             this.offset = 0;
-            SendToMaster("sound.rate", this.rate);
-            DebugMessage("rate: " + this.rate);
-            DebugMessage("channels: " + this.channels);
+            message.Send("sound.rate", this.rate);
+            message.Send("rate: " + this.rate);
+            message.Send("channels: " + this.channels);
             break;
 
         case REG_ADDR:
@@ -124,8 +125,10 @@ SoundDev.prototype.WriteReg32 = function (addr, value) {
             break;
 
         default:
-            DebugMessage("sound: unknown  WriteReg32: " + hex8(addr) + ": " + hex8(value));
+            this.message.Debug("sound: unknown  WriteReg32: " + hex8(addr) + ": " + hex8(value));
             return;
             break;
     }
 }
+
+module.exports = SoundDev;
