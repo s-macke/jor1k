@@ -140,6 +140,8 @@ I hereby release this code under the GNU Library General Public License
 (LGPL) version 2, available at http://www.gnu.org/copyleft/lgpl.html
 */
 
+var message = require('./messagehandler');
+
 var bzip2 = {};
 
 bzip2.crcTable = 
@@ -506,7 +508,7 @@ bzip2.decompress = function(bits, stream, buf, bufsize) {
 
 module.exports = bzip2;
 
-},{}],3:[function(require,module,exports){
+},{"./messagehandler":21}],3:[function(require,module,exports){
 
 function FastCPU(stdlib, foreign, heap) {
 "use asm";
@@ -2109,7 +2111,7 @@ function Step(steps, clockspeed) {
             break;
 
         default:
-            //DebugMessage("Error: Instruction with opcode " + hex8(ins >>> 26) + " not supported");
+            //DebugMessage("Error: Instruction with opcode " + utils.ToHex(ins >>> 26) + " not supported");
             DebugMessage(ERROR_UNKNOWN|0);
             abort();
             break;
@@ -2146,6 +2148,10 @@ module.exports = FastCPU;
 // -------------------------------------------------
 // -------------------- CPU ------------------------
 // -------------------------------------------------
+
+"use strict";
+var message = require('../messagehandler');
+var utils = require('../utils');
 
 // special purpose register index
 var SPR_UPR = 1; // unit present register
@@ -2306,20 +2312,20 @@ SafeCPU.prototype.SetFlags = function (x) {
     this.SR_SUMRA = (x & (1 << 16)) ? true : false;
     this.SR_CID = (x >> 28) & 0xF;
     if (this.SR_LEE) {
-        DebugMessage("little endian not supported");
-        abort();
+        message.Debug("little endian not supported");
+        message.Abort();
     }
     if (this.SR_CID) {
-        DebugMessage("context id not supported");
-        abort();
+        message.Debug("context id not supported");
+        message.Abort();
     }
     if (this.SR_EPH) {
-        DebugMessage("exception prefix not supported");
-        abort();
+        message.Debug("exception prefix not supported");
+        message.Abort();
     }
     if (this.SR_DSX) {
-        DebugMessage("delay slot exception not supported");
-        abort();
+        message.Debug("delay slot exception not supported");
+        message.Abort();
     }
     if (this.SR_IEE && !old_SR_IEE) {
         this.CheckForInterrupt();
@@ -2403,16 +2409,16 @@ SafeCPU.prototype.SetSPR = function (idx, x) {
             // check immediate for interrupt
             if (this.SR_IEE) {
                 if (this.PICMR & this.PICSR) {
-                    DebugMessage("Error in SetSPR: Direct triggering of interrupt exception not supported?");
-                    abort();
+                    message.Debug("Error in SetSPR: Direct triggering of interrupt exception not supported?");
+                    message.Abort();
                 }
             }
             break;
         case 2: // PICSR
             break;
         default:
-            DebugMessage("Error in SetSPR: interrupt address not supported");
-            abort();
+            message.Debug("Error in SetSPR: interrupt address not supported");
+            message.Abort();
         }
         break;
     case 10:
@@ -2421,23 +2427,23 @@ SafeCPU.prototype.SetSPR = function (idx, x) {
         case 0:
             this.TTMR = x;
             if (((this.TTMR >> 30)&3) != 0x3) {
-                DebugMessage("Error in SetSPR: Timer mode other than continuous not supported");
-                abort();
+                message.Debug("Error in SetSPR: Timer mode other than continuous not supported");
+                message.Abort();
             }
             break;
         case 1:
             this.TTCR = x;
             break;
         default:
-            DebugMessage("Error in SetSPR: Tick timer address not supported");
-            abort();
+            message.Debug("Error in SetSPR: Tick timer address not supported");
+            message.Abort();
             break;
         }
         break;
 
     default:
-        DebugMessage("Error in SetSPR: group " + group + " not found");
-        abort();
+        message.Debug("Error in SetSPR: group " + group + " not found");
+        message.Abort();
         break;
     }
 };
@@ -2467,8 +2473,8 @@ SafeCPU.prototype.GetSPR = function (idx) {
         case 2:
             return this.PICSR;
         default:
-            DebugMessage("Error in GetSPR: PIC address unknown");
-            abort();
+            message.Debug("Error in GetSPR: PIC address unknown");
+            message.Abort();
             break;
         }
         break;
@@ -2481,14 +2487,14 @@ SafeCPU.prototype.GetSPR = function (idx) {
         case 1:
             return this.TTCR; // or clock
         default:
-            DebugMessage("Error in GetSPR: Tick timer address unknown");
-            abort();
+            message.Debug("Error in GetSPR: Tick timer address unknown");
+            message.Abort();
             break;
         }
         break;
     default:
-        DebugMessage("Error in GetSPR: group " + group +  " unknown");
-        abort();
+        message.Debug("Error in GetSPR: group " + group +  " unknown");
+        message.Abort();
         break;
     }
 
@@ -2496,7 +2502,7 @@ SafeCPU.prototype.GetSPR = function (idx) {
 
 SafeCPU.prototype.Exception = function (excepttype, addr) {
     var except_vector = excepttype | (this.SR_EPH ? 0xf0000000 : 0x0);
-    //DebugMessage("Info: Raising Exception " + hex8(excepttype));
+    //message.Debug("Info: Raising Exception " + utils.ToHex(excepttype));
 
     this.SetSPR(SPR_EEAR_BASE, addr);
     this.SetSPR(SPR_ESR_BASE, this.GetFlags());
@@ -2529,8 +2535,8 @@ SafeCPU.prototype.Exception = function (excepttype, addr) {
         this.SetSPR(SPR_EPCR_BASE, (this.pc<<2) + 4 - (this.delayedins ? 4 : 0));
         break;
     default:
-        DebugMessage("Error in Exception: exception type not supported");
-        abort();
+        message.Debug("Error in Exception: exception type not supported");
+        message.Abort();
     }
     this.delayedins = false;
     this.SR_IME = false;
@@ -2553,8 +2559,8 @@ SafeCPU.prototype.DTLBLookup = function (addr, write) {
     }
         // set lru 
         if (tlmbr & 0xC0) {
-            DebugMessage("Error: LRU ist not supported");
-            abort();
+            message.Debug("Error: LRU ist not supported");
+            message.Abort();
         }
     
     var tlbtr = this.group1[0x280 | setindex]; // translate register
@@ -2600,8 +2606,8 @@ SafeCPU.prototype.GetInstruction = function (addr) {
     }
     // set lru
     if (tlmbr & 0xC0) {
-        DebugMessage("Error: LRU ist not supported");
-        abort();
+        message.Debug("Error: LRU ist not supported");
+        message.Abort();
     }
 
     var tlbtr = this.group2[0x280 | setindex];
@@ -2725,8 +2731,8 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
             rindex = (ins >> 21) & 0x1F;
             // if 16th bit is set
             if (ins & 0x10000) {
-                DebugMessage("Error: macrc not supported\n");
-                abort();
+                message.Debug("Error: macrc not supported\n");
+                message.Abort();
             } else {
                 r[rindex] = ((ins & 0xFFFF) << 16); // movhi
             }
@@ -2735,7 +2741,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
         case 0x8:
             // sys and trap
             if ((ins&0xFFFF0000) == 0x21000000) {
-                DebugMessage("Trap at " + hex8(this.pc<<2));
+                message.Debug("Trap at " + utils.ToHex(this.pc<<2));
                 this.Exception(EXCEPT_TRAP, this.group0[SPR_EEAR_BASE]);
             } else {
                 this.Exception(EXCEPT_SYSCALL, this.group0[SPR_EEAR_BASE]);
@@ -2770,7 +2776,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
             // lwa
             r[32] = r[(ins >> 16) & 0x1F] + ((ins << 16) >> 16);
             if ((r[32] & 3) != 0) {
-                DebugMessage("Error in lwz: no unaligned access allowed");
+                message.Debug("Error in lwz: no unaligned access allowed");
                 abort();
             }
             r[33] = this.DTLBLookup(r[32], false);
@@ -2786,7 +2792,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
             // lwz
             r[32] = r[(ins >> 16) & 0x1F] + ((ins << 16) >> 16);
             if ((r[32] & 3) != 0) {
-                DebugMessage("Error in lwz: no unaligned access allowed");
+                message.Debug("Error in lwz: no unaligned access allowed");
                 abort();
             }
             r[33] = this.DTLBLookup(r[32], false);
@@ -2885,7 +2891,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                 r[(ins >> 21) & 0x1F] = r[(ins >> 16) & 0x1F] >> (ins & 0x1F);
                 break;
             default:
-                DebugMessage("Error: opcode 2E function not implemented");
+                message.Debug("Error: opcode 2E function not implemented");
                 abort();
                 break;
             }
@@ -2936,7 +2942,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                 this.SR_F = (r[(ins >> 16) & 0x1F] <= imm) ? true : false;
                 break;
             default:
-                DebugMessage("Error: sf...i not supported yet");
+                message.Debug("Error: sf...i not supported yet");
                 abort();
                 break;
             }
@@ -3009,8 +3015,8 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                 this.SR_F = (f[rA] <= f[rB]) ? true : false;
                 break;
             default:
-                DebugMessage("Error: lf. function " + hex8(ins & 0xFF) + " not supported yet");
-                abort();
+                message.Debug("Error: lf. function " + utils.ToHex(ins & 0xFF) + " not supported yet");
+                message.Abort();
                 break;
             }
             break;
@@ -3020,7 +3026,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
             imm = ((((ins >> 10) & 0xF800) | (ins & 0x7FF)) << 16) >> 16;
             r[32] = r[(ins >> 16) & 0x1F] + imm;
             if (r[32] & 0x3) {
-                DebugMessage("Error in sw: no aligned memory access");
+                message.Debug("Error in sw: no aligned memory access");
                 abort();
             }
             r[33] = this.DTLBLookup(r[32], true);
@@ -3044,8 +3050,8 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
             imm = ((((ins >> 10) & 0xF800) | (ins & 0x7FF)) << 16) >> 16;
             r[32] = r[(ins >> 16) & 0x1F] + imm;
             if (r[32] & 0x3) {
-                DebugMessage("Error in sw: no aligned memory access");
-                abort();
+                message.Debug("Error in sw: no aligned memory access");
+                message.Abort();
             }
             r[33] = this.DTLBLookup(r[32], true);
             if (r[33] == -1) {
@@ -3177,8 +3183,8 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
 
                 break;
             default:
-                DebugMessage("Error: op38 opcode not supported yet");
-                abort();
+                message.Debug("Error: op38 opcode not supported yet");
+                message.Abort();
                 break;
             }
             break;
@@ -3227,14 +3233,14 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                 this.SR_F = (r[(ins >> 16) & 0x1F] <= r[(ins >> 11) & 0x1F]) ? true : false;
                 break;
             default:
-                DebugMessage("Error: sf.... function supported yet");
-                abort();
+                message.Debug("Error: sf.... function supported yet");
+                message.Abort();
             }
             break;
 
         default:
-            DebugMessage("Error: Instruction with opcode " + hex8(ins >>> 26) + " not supported");
-            abort();
+            message.Debug("Error: Instruction with opcode " + utils.ToHex(ins >>> 26) + " not supported");
+            message.Abort();
             break;
         }
 
@@ -3248,7 +3254,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
 
 module.exports = SafeCPU;
 
-},{}],5:[function(require,module,exports){
+},{"../messagehandler":21,"../utils":24}],5:[function(require,module,exports){
 
 function SMPCPU(stdlib, foreign, heap) {
 
@@ -5033,7 +5039,7 @@ function Step(steps, clockspeed) {
             break;
 
         default:
-            //DebugMessage("Error: Instruction with opcode " + hex8(ins >>> 26) + " not supported");
+            //DebugMessage("Error: Instruction with opcode " + utils.ToHex(ins >>> 26) + " not supported");
             DebugMessage(ERROR_UNKNOWN|0);
             abort();
             break;
@@ -5073,7 +5079,8 @@ module.exports = SMPCPU;
 
 "use strict";
 
-var utils = require('../utils.js');
+var utils = require('../utils');
+var message = require('../messagehandler');
 
 // ata-generic implementation (according to Linux)
 // simulation of a hard disk loaded on demand from the webserver in small chunks.
@@ -5124,8 +5131,7 @@ var ATA_SR_IDX  = 0x02;  //                (obsolete)
 var ATA_SR_ERR  = 0x01;  // Error
 
 // constructor
-function ATADev(message, intdev) {
-    this.message = message;
+function ATADev(intdev) {
     this.intdev = intdev;
     var buffer = new ArrayBuffer(512);
     this.identifybuffer = new Uint16Array(buffer);
@@ -5228,42 +5234,42 @@ ATADev.prototype.ReadReg8 = function(addr) {
     switch(addr)
     {
         case ATA_REG_ERR:
-            //this.message.Debug("ATADev: read error register");
+            //message.Debug("ATADev: read error register");
             return this.ER;
 
         case ATA_REG_NSECT:
-            //this.message.Debug("ATADev: read sector count register");
+            //message.Debug("ATADev: read sector count register");
             return this.SNR;
 
         case ATA_REG_LBAL:
-            //this.message.Debug("ATADev: read sector number register");
+            //message.Debug("ATADev: read sector number register");
             return this.SCR;
 
         case ATA_REG_LBAM:
-            //this.message.Debug("ATADev: read cylinder low register");
+            //message.Debug("ATADev: read cylinder low register");
             return this.lcyl;
         
         case ATA_REG_LBAH:
-            //this.message.Debug("ATADev: read cylinder high register");
+            //message.Debug("ATADev: read cylinder high register");
             return this.hcyl;
 
         case ATA_REG_DEVICE:
-            //this.message.Debug("ATADev: read drive/head register");
+            //message.Debug("ATADev: read drive/head register");
             return this.DR;
 
         case ATA_REG_STATUS:
-            //this.message.Debug("ATADev: read status register");			
+            //message.Debug("ATADev: read status register");			
             this.intdev.ClearInterrupt(15);
             return this.SR;
 
         case 0x100: // device control register, but read as status register
-            //this.message.Debug("ATADev: read alternate status register")
+            //message.Debug("ATADev: read alternate status register")
             return this.SR;
             break;
 
         default:
-            this.message.Debug("ATADev: Error in ReadRegister8: register " + hex8(addr) + " not supported");
-            this.message.Abort();
+            message.Debug("ATADev: Error in ReadRegister8: register " + utils.ToHex(addr) + " not supported");
+            message.Abort();
             break;
     }    
     return 0x0;
@@ -5272,8 +5278,8 @@ ATADev.prototype.ReadReg8 = function(addr) {
 ATADev.prototype.GetSector = function()
 {
     if (!(this.DR & 0x40)) {
-        this.message.Debug("ATADev: CHS mode not supported");
-        this.message.Abort();
+        message.Debug("ATADev: CHS mode not supported");
+        message.Abort();
     }
     return ((this.DR&0x0F) << 24) | (this.hcyl << 16) | (this.lcyl << 8) | this.SCR;
 }
@@ -5281,8 +5287,8 @@ ATADev.prototype.GetSector = function()
 ATADev.prototype.SetSector = function(sector)
 {
     if (!(this.DR & 0x40)) {
-        this.message.Debug("ATADev: CHS mode not supported");
-        this.message.Abort();
+        message.Debug("ATADev: CHS mode not supported");
+        message.Abort();
     }
     this.SCR = sector & 0xFF;
     this.lcyl = (sector >> 8) & 0xFF;
@@ -5319,7 +5325,7 @@ ATADev.prototype.ExecuteCommand = function()
             if (this.SNR == 0) {
                 this.SNR = 256;
             }
-            //this.message.Debug("ATADev: Load sector " + hex8(sector) + ". number of sectors " + hex8(this.SNR));
+            //message.Debug("ATADev: Load sector " + utils.ToHex(sector) + ". number of sectors " + utils.ToHex(this.SNR));
             this.readbuffer = this.diskbuffer;
             this.readbufferindex = sector*256;
             this.readbuffermax = this.readbufferindex+256;
@@ -5338,7 +5344,7 @@ ATADev.prototype.ExecuteCommand = function()
             if (this.SNR == 0) {
                 this.SNR = 256;
             }
-            //this.message.Debug("ATADev: Load multiple sector " + hex8(sector) + ". number of sectors " + hex8(this.SNR));
+            //message.Debug("ATADev: Load multiple sector " + utils.ToHex(sector) + ". number of sectors " + utils.ToHex(this.SNR));
             this.readbuffer = this.diskbuffer;
             this.readbufferindex = sector*256;
             this.readbuffermax = this.readbufferindex + 256*this.SNR;
@@ -5353,8 +5359,8 @@ ATADev.prototype.ExecuteCommand = function()
             break;
 
         default:
-            this.message.Debug("ATADev: Command " + hex8(this.CR) + " not supported");
-            this.message.Abort();
+            message.Debug("ATADev: Command " + utils.ToHex(this.CR) + " not supported");
+            message.Abort();
             break;
     }
 }
@@ -5363,20 +5369,20 @@ ATADev.prototype.ExecuteCommand = function()
 ATADev.prototype.WriteReg8 = function(addr, x) {
     
     if (addr == ATA_REG_DEVICE) {
-        //this.message.Debug("ATADev: Write drive/head register value: " + hex8(x));
+        //message.Debug("ATADev: Write drive/head register value: " + utils.ToHex(x));
         this.DR = x;
-        //this.message.Debug("Head " + (x&0xF));
-        //this.message.Debug("Drive No. " + ((x>>4)&1));
-        //this.message.Debug("LBA Mode " + ((x>>6)&1));
+        //message.Debug("Head " + (x&0xF));
+        //message.Debug("Drive No. " + ((x>>4)&1));
+        //message.Debug("LBA Mode " + ((x>>6)&1));
         this.driveselected = ((x>>4)&1)?false:true;
         return;
     }
 
     if (addr == 0x100) { //device control register
-        //this.message.Debug("ATADev: Write CTL register" + " value: " + hex8(x));
+        //message.Debug("ATADev: Write CTL register" + " value: " + utils.ToHex(x));
 
         if (!(x&ATA_DCR_RST) && (this.DCR&ATA_DCR_RST)) { // reset done
-            //this.message.Debug("ATADev: drive reset done");
+            //message.Debug("ATADev: drive reset done");
             this.DR &= 0xF0; // reset head
             this.SR = ATA_SR_DRDY | ATA_SR_DSC;
             this.SCR = 0x1;
@@ -5387,7 +5393,7 @@ ATADev.prototype.WriteReg8 = function(addr, x) {
             this.CR = 0x0;
         } else
         if ((x&ATA_DCR_RST) && !(this.DCR&ATA_DCR_RST)) { // reset
-            //this.message.Debug("ATADev: drive reset");
+            //message.Debug("ATADev: drive reset");
             this.ER = 0x1; // set diagnostics message
             this.SR = ATA_SR_BSY | ATA_SR_DSC;
         }
@@ -5403,51 +5409,51 @@ ATADev.prototype.WriteReg8 = function(addr, x) {
     switch(addr)
     {
         case ATA_REG_FEATURE:
-            //this.message.Debug("ATADev: Write feature register value: " + hex8(x));
+            //message.Debug("ATADev: Write feature register value: " + utils.ToHex(x));
             this.FR = x;
             break;
 
         case ATA_REG_NSECT:
-            //this.message.Debug("ATADev: Write sector count register value: " + hex8(x));
+            //message.Debug("ATADev: Write sector count register value: " + utils.ToHex(x));
             this.SNR = x;
             break;
 
         case ATA_REG_LBAL:
-            //this.message.Debug("ATADev: Write sector number register value: " + hex8(x));
+            //message.Debug("ATADev: Write sector number register value: " + utils.ToHex(x));
             this.SCR = x;
             break;
 
         case ATA_REG_LBAM:
-            //this.message.Debug("ATADev: Write cylinder low register value: " + hex8(x));
+            //message.Debug("ATADev: Write cylinder low register value: " + utils.ToHex(x));
             this.lcyl = x;
             break;
 
         case ATA_REG_LBAH:
-            //this.message.Debug("ATADev: Write cylinder high number register value: " + hex8(x));
+            //message.Debug("ATADev: Write cylinder high number register value: " + utils.ToHex(x));
             this.hcyl = x;
             break;
 
         case ATA_REG_CMD:
-            //this.message.Debug("ATADev: Write Command register " + hex8(x));
+            //message.Debug("ATADev: Write Command register " + utils.ToHex(x));
             this.CR = x;
             this.ExecuteCommand();
             break;
 
         default:
-            this.message.Debug("ATADev: Error in WriteRegister8: register " + hex8(addr) + " not supported (value: " + hex8(x) + ")");
-            this.message.Abort();    
+            message.Debug("ATADev: Error in WriteRegister8: register " + utils.ToHex(addr) + " not supported (value: " + utils.ToHex(x) + ")");
+            message.Abort();    
             break;
     }
 };
 
 ATADev.prototype.ReadReg16 = function(addr) {
     if (addr != 0) { // data register
-        this.message.Debug("ATADev: Error in ReadRegister16: register " + hex8(addr) + " not supported");
-        this.message.Abort();
+        message.Debug("ATADev: Error in ReadRegister16: register " + utils.ToHex(addr) + " not supported");
+        message.Abort();
     }
 
     var val = utils.Swap16(this.readbuffer[this.readbufferindex]);
-    //this.message.Debug("ATADev: read data register");
+    //message.Debug("ATADev: read data register");
     this.readbufferindex++;
     if (this.readbufferindex >= this.readbuffermax) {
         this.SR = ATA_SR_DRDY | ATA_SR_DSC; // maybe no DSC for identify command but it works
@@ -5468,11 +5474,11 @@ ATADev.prototype.ReadReg16 = function(addr) {
 
 ATADev.prototype.WriteReg16 = function(addr, x) {
     if (addr != 0) { // data register
-        this.message.Debug("ATADev: Error in WriteRegister16: register " + hex8(addr) + " not supported");
-        this.message.Abort();
+        message.Debug("ATADev: Error in WriteRegister16: register " + utils.ToHex(addr) + " not supported");
+        message.Abort();
     }
     this.readbuffer[this.readbufferindex] = utils.Swap16(x);
-    //this.message.Debug("ATADev: write data register");
+    //message.Debug("ATADev: write data register");
     this.readbufferindex++;
     if (this.readbufferindex >= this.readbuffermax) {
         this.SR = ATA_SR_DRDY | ATA_SR_DSC;
@@ -5489,24 +5495,28 @@ ATADev.prototype.WriteReg16 = function(addr, x) {
 };
 
 ATADev.prototype.ReadReg32 = function(addr) {
-    this.message.Debug("ATADev: Error in ReadRegister32: register " + hex8(addr) + " not supported");
+    message.Debug("ATADev: Error in ReadRegister32: register " + utils.ToHex(addr) + " not supported");
     this.mesage.Abort();
 };
 
 ATADev.prototype.WriteReg32 = function(addr, x) {
-    this.message.Debug("ATADev: Error in WriteRegister32: register " + hex8(addr) + " not supported");
-    this.message.Abort()
+    message.Debug("ATADev: Error in WriteRegister32: register " + utils.ToHex(addr) + " not supported");
+    message.Abort()
 };
 
 
 module.exports = ATADev;
 
-},{"../utils.js":24}],7:[function(require,module,exports){
+},{"../messagehandler":21,"../utils":24}],7:[function(require,module,exports){
 // -------------------------------------------------
 // ----------------- Ethernet ----------------------
 // -------------------------------------------------
-
 // Emulation of the OpenCores ethmac ethernet controller.
+
+"use strict";
+
+var message = require('../messagehandler');
+var utils = require('../utils');
 
 //REGISTER ADDRESSES
 var ETHMAC_ADDR_MODER = 0x0;
@@ -5559,15 +5569,13 @@ var MII_NCONFIG =        0x1c;        /* Network interface config    */
 
 
 
-
 //TODO: MODER.LOOPBCK - loopback support
 //TODO: Carrier Sense?
 //TODO: Huge frames
 //TODO: IAM mode
 //TODO: MODER.BRO
-function EthDev(message, ram, intdev, mac) {
+function EthDev(ram, intdev, mac) {
     "use strict";
-    this.message = message;
     this.ram = ram;
     this.intdev = intdev;
     this.TransmitCallback = function(data){}; // Should call handler to send data asynchronously.
@@ -6073,7 +6081,7 @@ function EthDev(message, ram, intdev, mac) {
                     addr <= ETHMAC_ADDR_BD_END) {
                     ret = this.BD[(addr-ETHMAC_ADDR_BD_START)>>>2];
                 } else {
-                    this.message.Debug("Attempt to access ethmac register beyond 0x800");
+                    message.Debug("Attempt to access ethmac register beyond 0x800");
                 }
         }
         return ret;
@@ -6095,7 +6103,7 @@ function EthDev(message, ram, intdev, mac) {
                 if (fiad != phy_addr) {
                     this.MIIRX_DATA = 0xFFFF;
                 } else {
-                    // this.message.Debug("MIICOMMAND read" + " " + hex8(rgad));
+                    // message.Debug("MIICOMMAND read" + " " + utils.ToHex(rgad));
                     this.MIIRX_DATA = this.MIIregs[rgad];
                 }
                 break;
@@ -6103,13 +6111,13 @@ function EthDev(message, ram, intdev, mac) {
             case 4: // write status
                 if (fiad != phy_addr) {
                 } else {
-                    // this.message.Debug("MIICOMMAND write" + " " + hex8(rgad) + " " + hex8(this.MIITX_DATA));
+                    // message.Debug("MIICOMMAND write" + " " + utils.ToHex(rgad) + " " + utils.ToHex(this.MIITX_DATA));
                     //this.MIIregs[rgad] = this.MIITX_DATA & 0xFFFF;
                 }
                 break;
 
             default:
-                this.message.Debug("Error in ethmac: Unknown mii command detected");
+                message.Debug("Error in ethmac: Unknown mii command detected");
                 break;
         }
 
@@ -6118,7 +6126,7 @@ function EthDev(message, ram, intdev, mac) {
 
 
     this.WriteReg32 = function (addr, val) {
-        // this.message.Debug("write ethmac " + hex8(addr));
+        // message.Debug("write ethmac " + utils.ToHex(addr));
         switch (addr) {
             case ETHMAC_ADDR_MODER:
                 this.MODER = val;
@@ -6243,30 +6251,30 @@ function EthDev(message, ram, intdev, mac) {
                         }
                     }
                 } else {
-                    this.message.Debug("Attempt to access ethmac register beyond 0x800");
+                    message.Debug("Attempt to access ethmac register beyond 0x800");
                 }
         }
     };
 
     this.Reset();
-    this.message.Register("ethmac", this.Receive.bind(this) );
+    message.Register("ethmac", this.Receive.bind(this) );
 
 }
 
 module.exports = EthDev;
 
-},{}],8:[function(require,module,exports){
+},{"../messagehandler":21,"../utils":24}],8:[function(require,module,exports){
 // -------------------------------------------------
 // ---------------- Framebuffer --------------------
 // -------------------------------------------------
 
 "use strict";
 
-var utils = require('../utils.js');
+var utils = require('../utils');
+var message = require('../messagehandler');
 
 // constructor
-function FBDev(message, ram) {
-    this.message = message;
+function FBDev(ram) {
     this.ram = ram;
     this.width = 640;
     this.height = 400;
@@ -6298,7 +6306,7 @@ FBDev.prototype.WriteReg32 = function (addr, value) {
 };
 
 FBDev.prototype.OnGetFB = function() {
-    this.message.Send("GetFB", this.GetBuffer() );
+    message.Send("GetFB", this.GetBuffer() );
 }
 
 FBDev.prototype.GetBuffer = function () {
@@ -6315,7 +6323,7 @@ FBDev.prototype.GetBuffer = function () {
 
 module.exports = FBDev;
 
-},{"../utils.js":24}],9:[function(require,module,exports){
+},{"../messagehandler":21,"../utils":24}],9:[function(require,module,exports){
 // -------------------------------------------------
 // ---------------------- IRQ ----------------------
 // -------------------------------------------------
@@ -6323,6 +6331,9 @@ module.exports = FBDev;
 // Just the ipi part
 
 "use strict";
+
+var message = require('../messagehandler');
+var utils = require('../utils');
 
 // Control register
 // +---------+---------+----------+---------+
@@ -6342,8 +6353,7 @@ var OMPIC_IPI_CTRL_IRQ_ACK = (1 << 31);
 var OMPIC_IPI_CTRL_IRQ_GEN = (1 << 30);
 var OMPIC_IPI_STAT_IRQ_PENDING = (1 << 30);
 
-function IRQDev(message, intdev) {
-    this.message = message;
+function IRQDev(intdev) {
     this.intdev = intdev;
     this.regs = new Uint32Array(32*2); // maximum 32 cpus
     this.Reset();
@@ -6358,15 +6368,15 @@ IRQDev.prototype.Reset = function() {
 IRQDev.prototype.ReadReg32 = function (addr) {
     addr >>= 2;
     if (addr > 32*2) {
-        this.message.Debug("IRQDev: Unknown ReadReg32: " + hex8(addr));
+        message.Debug("IRQDev: Unknown ReadReg32: " + utils.ToHex(addr));
         return 0x0;
     }
     /*
     var cpuid = addr >> 1;    
     if (addr&1) {
-        this.message.Debug("IRQDev: Read STAT of CPU " + cpuid);
+        message.Debug("IRQDev: Read STAT of CPU " + cpuid);
     } else {
-        this.message.Debug("IRQDev: Read CTRL of CPU " + cpuid);
+        message.Debug("IRQDev: Read CTRL of CPU " + cpuid);
     }
     */
     return this.regs[addr];
@@ -6375,20 +6385,20 @@ IRQDev.prototype.ReadReg32 = function (addr) {
 IRQDev.prototype.WriteReg32 = function (addr, value) {
     addr >>= 2;
     if (addr > 32*2) {
-        this.message.Debug("IRQDev: unknown  WriteReg32: " + hex8(addr) + ": " + hex8(value));
+        message.Debug("IRQDev: unknown  WriteReg32: " + utils.ToHex(addr) + ": " + utils.ToHex(value));
         return;
     }
 
     var cpuid = addr >> 1;
     if (addr&1) {
-        this.message.Debug("Error in IRQDev: Write STAT of CPU " + cpuid +" : " + hex8(value));
+        message.Debug("Error in IRQDev: Write STAT of CPU " + cpuid +" : " + utils.ToHex(value));
     } else {
         this.regs[addr] = value;
         var irqno = value & 0xFFFF;
         var dstcpu = (value >> 16) & 0x3fff;
         var flags = (value >> 30) & 3;
         /*
-        this.message.Debug("IRQDev: Write CTRL of CPU " + cpuid + " : " +
+        message.Debug("IRQDev: Write CTRL of CPU " + cpuid + " : " +
             " dstcpu=" + dstcpu  +
             " irqno=" + irqno +
             " flags=" + flags
@@ -6397,14 +6407,14 @@ IRQDev.prototype.WriteReg32 = function (addr, value) {
 
         if (flags & 1) { // irq gen
             if (dstcpu == cpuid) {
-                this.message.Debug("Warning in IRQDev: Try to raise its own IRQ");
+                message.Debug("Warning in IRQDev: Try to raise its own IRQ");
             }
             if (this.regs[(dstcpu<<1)+1] & OMPIC_IPI_STAT_IRQ_PENDING) {
-                this.message.Debug("Warning in IRQDev: CPU " + cpuid + " raised irq on cpu " + dstcpu + " without previous acknowledge");
+                message.Debug("Warning in IRQDev: CPU " + cpuid + " raised irq on cpu " + dstcpu + " without previous acknowledge");
                 var h = new Int32Array(this.intdev.heap);
-                this.message.Debug("The pc of cpu " + dstcpu + " is " + hex8(h[(dstcpu<<15) + 0x124 >> 2]));
-                this.message.Debug("The IEE flag of cpu " + dstcpu + " is " + ( h[(dstcpu<<15) + 0x120 >> 2] & (1<<2)) );
-                this.message.Debug("r9 of cpu " + dstcpu + " is " + hex8(h[(dstcpu<<15) + (0x9<<2) >> 2]));
+                message.Debug("The pc of cpu " + dstcpu + " is " + utils.ToHex(h[(dstcpu<<15) + 0x124 >> 2]));
+                message.Debug("The IEE flag of cpu " + dstcpu + " is " + ( h[(dstcpu<<15) + 0x120 >> 2] & (1<<2)) );
+                message.Debug("r9 of cpu " + dstcpu + " is " + utils.ToHex(h[(dstcpu<<15) + (0x9<<2) >> 2]));
             }
             this.regs[(dstcpu<<1)+1] = OMPIC_IPI_STAT_IRQ_PENDING | ((cpuid & 0x3fff) << 16) | irqno;
             this.intdev.RaiseSoftInterrupt(0x1, dstcpu);
@@ -6419,12 +6429,14 @@ IRQDev.prototype.WriteReg32 = function (addr, value) {
 
 module.exports = IRQDev;
 
-},{}],10:[function(require,module,exports){
+},{"../messagehandler":21,"../utils":24}],10:[function(require,module,exports){
 // -------------------------------------------------
 // ------------------ KEYBOARD ---------------------
 // -------------------------------------------------
-
 // Emulating the Opencores Keyboard Controller
+
+"use strict";
+var message = require('../messagehandler');
 
 // translation table from Javascript keycodes to Linux keyboard scancodes
 // http://lxr.free-electrons.com/source/include/dt-bindings/input/input.h
@@ -6711,7 +6723,7 @@ var kc2kc =
 
 
 
-function KeyboardDev(message, intdev) {
+function KeyboardDev(intdev) {
     this.intdev = intdev;
     message.Register("keydown", this.OnKeyDown.bind(this) );
     message.Register("keyup", this.OnKeyUp.bind(this) );
@@ -6746,14 +6758,15 @@ KeyboardDev.prototype.ReadReg8 = function (addr) {
 
 module.exports = KeyboardDev;
 
-},{}],11:[function(require,module,exports){
+},{"../messagehandler":21}],11:[function(require,module,exports){
 // -------------------------------------------------
 // ---------------------- RTC ----------------------
 // -------------------------------------------------
 // Real Time Clock emulating the nxp,lpc3220-rtc
 
-
 "use strict";
+var message = require('../messagehandler');
+var utils = require('../utils');
 
 /*
  * Clock and Power control register offsets
@@ -6767,8 +6780,7 @@ var LPC32XX_RTC_INTSTAT           = 0x14;
 var LPC32XX_RTC_KEY               = 0x18;
 var LPC32XX_RTC_SRAM              = 0x80;
 
-function RTCDev(message, intdev) {
-    this.message = message;
+function RTCDev(intdev) {
     this.intdev = intdev;
     this.Reset();
 }
@@ -6803,7 +6815,7 @@ RTCDev.prototype.ReadReg32 = function (addr) {
 
 
         default:
-            this.message.Debug("RTC: unknown ReadReg32: " + hex8(addr));
+            message.Debug("RTC: unknown ReadReg32: " + utils.ToHex(addr));
             return 0x0;
             break;
     }
@@ -6818,7 +6830,7 @@ RTCDev.prototype.WriteReg32 = function (addr, value) {
             break;
 
         default:
-            this.message.Debug("RTC: unknown  WriteReg32: " + hex8(addr) + ": " + hex8(value));
+            message.Debug("RTC: unknown  WriteReg32: " + utils.ToHex(addr) + ": " + utils.ToHex(value));
             return;
             break;
     }
@@ -6827,7 +6839,7 @@ RTCDev.prototype.WriteReg32 = function (addr, value) {
 
 module.exports = RTCDev;
 
-},{}],12:[function(require,module,exports){
+},{"../messagehandler":21,"../utils":24}],12:[function(require,module,exports){
 // -------------------------------------------------
 // --------------------- SOUND ---------------------
 // -------------------------------------------------
@@ -6835,6 +6847,9 @@ module.exports = RTCDev;
 // Emulating my own virtual sound card
 
 "use strict";
+
+var message = require('../messagehandler');
+var utils = require('../utils');
 
 var REG_CTL            = 0x0; // format
 var REG_ADDR           = 0x0004; // pointer to dma buffer
@@ -6844,8 +6859,7 @@ var REG_OFFSET         = 0x0010; // current position in buffer
 var REG_RATE           = 0x0014; // rate
 var REG_CHANNELS       = 0x0018; // channels
 
-function SoundDev(message, intdev, ramdev) {
-    this.message = message;
+function SoundDev(intdev, ramdev) {
     this.intdev = intdev;
     this.ramdev = ramdev
     this.Reset();
@@ -6894,7 +6908,7 @@ SoundDev.prototype.Progress = function() {
     if (this.nextperiod <= 0) { 
         this.intdev.RaiseInterrupt(0x7);
         this.nextperiod += this.period_size;
-        //if (this.nextperiod < 0) this.message.Debug("Error in sound device: Buffer underrun");
+        //if (this.nextperiod < 0) message.Debug("Error in sound device: Buffer underrun");
     }
 }
 
@@ -6913,7 +6927,7 @@ SoundDev.prototype.ReadReg32 = function (addr) {
             break; 
 
         default:
-            this.message.Debug("Sound: unknown ReadReg32: " + hex8(addr));
+            message.Debug("Sound: unknown ReadReg32: " + utils.ToHex(addr));
             return 0x0;
             break;
     }
@@ -6955,7 +6969,7 @@ SoundDev.prototype.WriteReg32 = function (addr, value) {
             break;
 
         default:
-            this.message.Debug("sound: unknown  WriteReg32: " + hex8(addr) + ": " + hex8(value));
+            message.Debug("sound: unknown  WriteReg32: " + utils.ToHex(addr) + ": " + utils.ToHex(value));
             return;
             break;
     }
@@ -6963,7 +6977,7 @@ SoundDev.prototype.WriteReg32 = function (addr, value) {
 
 module.exports = SoundDev;
 
-},{}],13:[function(require,module,exports){
+},{"../messagehandler":21,"../utils":24}],13:[function(require,module,exports){
 // -------------------------------------------------
 // -------------------- Timer ----------------------
 // -------------------------------------------------
@@ -6972,8 +6986,9 @@ module.exports = SoundDev;
 
 "use strict";
 
-function TimerDev(message) {
-    this.message = message;
+var message = require('../messagehandler');
+
+function TimerDev() {
     this.Reset();
 }
 
@@ -6982,47 +6997,50 @@ TimerDev.prototype.Reset = function() {
 }
 
 TimerDev.prototype.ReadReg32 = function (addr) {
-    //this.message.Debug("Timer: Read reg " + addr);
+    //message.Debug("Timer: Read reg " + addr);
     return this.sync;    
 }
 
 TimerDev.prototype.WriteReg32 = function (addr, value) {
-    this.message.Debug("Error in Timer: Write reg " + addr + " : " + value);
+    message.Debug("Error in Timer: Write reg " + addr + " : " + value);
 }
 
 module.exports = TimerDev;
 
-},{}],14:[function(require,module,exports){
+},{"../messagehandler":21}],14:[function(require,module,exports){
 // -------------------------------------------------
 // ---------------- TOUCHSCREEN --------------------
 // -------------------------------------------------
-
 // Emulating the LPC32xx
 
+"use strict";
+
+var message = require('../messagehandler');
+var utils = require('../utils');
+
 // controller register offsets
-LPC32XX_TSC_STAT                      = 0x00;
-LPC32XX_TSC_SEL                       = 0x04;
-LPC32XX_TSC_CON                       = 0x08;
-LPC32XX_TSC_FIFO                      = 0x0C;
-LPC32XX_TSC_DTR                       = 0x10;
-LPC32XX_TSC_RTR                       = 0x14;
-LPC32XX_TSC_UTR                       = 0x18;
-LPC32XX_TSC_TTR                       = 0x1C;
-LPC32XX_TSC_DXP                       = 0x20;
-LPC32XX_TSC_MIN_X                     = 0x24;
-LPC32XX_TSC_MAX_X                     = 0x28;
-LPC32XX_TSC_MIN_Y                     = 0x2C;
-LPC32XX_TSC_MAX_Y                     = 0x30;
-LPC32XX_TSC_AUX_UTR                   = 0x34;
-LPC32XX_TSC_AUX_MIN                   = 0x38;
-LPC32XX_TSC_AUX_MAX                   = 0x3C;
+var LPC32XX_TSC_STAT                      = 0x00;
+var LPC32XX_TSC_SEL                       = 0x04;
+var LPC32XX_TSC_CON                       = 0x08;
+var LPC32XX_TSC_FIFO                      = 0x0C;
+var LPC32XX_TSC_DTR                       = 0x10;
+var LPC32XX_TSC_RTR                       = 0x14;
+var LPC32XX_TSC_UTR                       = 0x18;
+var LPC32XX_TSC_TTR                       = 0x1C;
+var LPC32XX_TSC_DXP                       = 0x20;
+var LPC32XX_TSC_MIN_X                     = 0x24;
+var LPC32XX_TSC_MAX_X                     = 0x28;
+var LPC32XX_TSC_MIN_Y                     = 0x2C;
+var LPC32XX_TSC_MAX_Y                     = 0x30;
+var LPC32XX_TSC_AUX_UTR                   = 0x34;
+var LPC32XX_TSC_AUX_MIN                   = 0x38;
+var LPC32XX_TSC_AUX_MAX                   = 0x3C;
 
-LPC32XX_TSC_ADCCON_AUTO_EN = (1 << 0); // automatic ts event capture
-LPC32XX_TSC_STAT_FIFO_EMPTY = (1 << 7); // fifo is empty; 
-LPC32XX_TSC_FIFO_TS_P_LEVEL = (1 << 31) // touched
+var LPC32XX_TSC_ADCCON_AUTO_EN = (1 << 0); // automatic ts event capture
+var LPC32XX_TSC_STAT_FIFO_EMPTY = (1 << 7); // fifo is empty; 
+var LPC32XX_TSC_FIFO_TS_P_LEVEL = (1 << 31) // touched
 
-function TouchscreenDev(message, intdev) {
-    this.message = message;
+function TouchscreenDev(intdev) {
     this.intdev = intdev;
     this.Reset();
     message.Register("tsmousedown", this.onmousedown.bind(this) );
@@ -7098,7 +7116,7 @@ TouchscreenDev.prototype.ReadReg32 = function (addr) {
             return this.fifo;
             break;
     }
-    // this.message.Debug("Touchscreen ReadReg32: " + hex8(addr));
+    // message.Debug("Touchscreen ReadReg32: " + utils.ToHex(addr));
     return 0x0;
 }
 
@@ -7126,13 +7144,13 @@ TouchscreenDev.prototype.WriteReg32 = function (addr, value) {
         break;
 
     }
-    // this.message.Debug("Touchscreen WriteReg32: " + hex8(addr) + ": " + hex8(value));
+    // message.Debug("Touchscreen WriteReg32: " + utils.ToHex(addr) + ": " + utils.ToHex(value));
     return;
 }
 
 module.exports = TouchscreenDev;
 
-},{}],15:[function(require,module,exports){
+},{"../messagehandler":21,"../utils":24}],15:[function(require,module,exports){
 // -------------------------------------------------
 // -------------------- UART -----------------------
 // -------------------------------------------------
@@ -7145,6 +7163,9 @@ module.exports = TouchscreenDev;
 // http://www.freebsd.org/doc/en/articles/serial-uart/
 
 "use strict";
+
+var message = require('../messagehandler');
+var utils = require('../utils');
 
 // Register offsets
 var UART_RXBUF = 0; /* R: Rx buffer, DLAB=0 */
@@ -7203,8 +7224,7 @@ var IER_BIT_DESC = ["RxAvailableI", "TxEmptyI", "BreakI", "MSI"];
 
 
 // constructor
-function UARTDev(message, id, intdev, intno) {
-    this.message = message;
+function UARTDev(id, intdev, intno) {
     this.intno = intno;
     this.intdev = intdev;
     this.id = id;
@@ -7241,7 +7261,7 @@ UARTDev.prototype.Reset = function() {
 
 UARTDev.prototype.Step = function() {
     if(this.txbuf.length != 0) {
-        this.message.Send("tty"+this.id, this.txbuf);
+        message.Send("tty"+this.id, this.txbuf);
         this.txbuf = new Array();
     }
 }
@@ -7319,7 +7339,7 @@ UARTDev.prototype.ReadReg8 = function(addr) {
     case UART_MSR:
         var ret = this.MSR;
         this.MSR &= 0xF0; // reset lowest 4 "delta" bits
-        if (this.verboseuart) this.message.Debug("Get UART_MSR " + this.ToBitDescription(ret, MSR_BIT_DESC));
+        if (this.verboseuart) message.Debug("Get UART_MSR " + this.ToBitDescription(ret, MSR_BIT_DESC));
         return ret;
         break;
 
@@ -7342,13 +7362,13 @@ UARTDev.prototype.ReadReg8 = function(addr) {
 
     case UART_LSR:
         // This gets polled many times a second, so logging is commented out
-        // if(this.verboseuart) this.message.Debug("Get UART_LSR " + this.ToBitDescription(this.LSR, LSR_BIT_DESC));
+        // if(this.verboseuart) message.Debug("Get UART_LSR " + this.ToBitDescription(this.LSR, LSR_BIT_DESC));
         return this.LSR;
         break;
 
     default:
-        this.message.Debug("Error in ReadRegister: not supported");
-        this.message.Abort();
+        message.Debug("Error in ReadRegister: not supported");
+        message.Abort();
         break;
     }
 };
@@ -7378,7 +7398,7 @@ UARTDev.prototype.WriteReg8 = function(addr, x) {
         //this.LSR &= ~UART_LSR_TX_EMPTY;
 
         this.txbuf.push(x);
-        //this.message.Debug("send " + x);
+        //message.Debug("send " + x);
         // the data is sent immediately
         this.LSR |= UART_LSR_TRANSMITTER_EMPTY | UART_LSR_TX_EMPTY; // txbuffer is empty immediately
         this.ThrowInterrupt(UART_IIR_THRI);
@@ -7387,13 +7407,13 @@ UARTDev.prototype.WriteReg8 = function(addr, x) {
     case UART_IER:
         // 2 = 10b ,5=101b, 7=111b
         this.IER = x & 0x0F; // only the first four bits are valid
-        //if(this.verboseuart) this.message.Debug("Set UART_IER " + this.ToBitDescription(x, IER_BIT_DESC));
+        //if(this.verboseuart) message.Debug("Set UART_IER " + this.ToBitDescription(x, IER_BIT_DESC));
         // Check immediately if there is a interrupt pending
         this.CheckInterrupt();
         break;
 
     case UART_FCR:
-        if(this.verboseuart) this.message.Debug("Set UART_FCR " + this.ToBitDescription(x, FCR_BIT_DESC));
+        if(this.verboseuart) message.Debug("Set UART_FCR " + this.ToBitDescription(x, FCR_BIT_DESC));
         this.FCR = x & 0xC9;
         if (this.FCR & 2) {
             this.ClearInterrupt(UART_IIR_CTI);
@@ -7405,21 +7425,21 @@ UARTDev.prototype.WriteReg8 = function(addr, x) {
         break;
 
     case UART_LCR:
-        if(this.verboseuart)  this.message.Debug("Set UART_LCR " + this.ToBitDescription(x, LCR_BIT_DESC));
+        if(this.verboseuart)  message.Debug("Set UART_LCR " + this.ToBitDescription(x, LCR_BIT_DESC));
         if ((this.LCR & 3) != 3) {
-            this.message.Debug("Warning in UART: Data word length other than 8 bits are not supported");
+            message.Debug("Warning in UART: Data word length other than 8 bits are not supported");
         }
         this.LCR = x;
         break;
 
     case UART_MCR:
-        if(this.verboseuart) this.message.Debug("Set UART_MCR " + this.ToBitDescription(x,MCR_BIT_DESC));
+        if(this.verboseuart) message.Debug("Set UART_MCR " + this.ToBitDescription(x,MCR_BIT_DESC));
         this.MCR = x;
         break;
 
     default:
-        this.message.Debug("Error in WriteRegister: not supported");
-        this.message.Abort();
+        message.Debug("Error in WriteRegister: not supported");
+        message.Abort();
         break;
     }
 };
@@ -7427,7 +7447,7 @@ UARTDev.prototype.WriteReg8 = function(addr, x) {
 
 module.exports = UARTDev;
 
-},{}],16:[function(require,module,exports){
+},{"../messagehandler":21,"../utils":24}],16:[function(require,module,exports){
 // -------------------------------------------------
 // ------------------- VIRTIO ----------------------
 // -------------------------------------------------
@@ -7444,8 +7464,9 @@ module.exports = UARTDev;
 
 "use strict";
 
-var utils = require('../utils.js');
-var marshall = require('./virtio/marshall.js');
+var utils = require('../utils');
+var marshall = require('./virtio/marshall');
+var message = require('../messagehandler');
 
 var VIRTIO_MAGIC_REG = 0x0;
 var VIRTIO_VERSION_REG = 0x4;
@@ -7482,8 +7503,7 @@ function CopyBufferToMemory(from, to, offset, size) {
         to.WriteMemory8(offset+i, from[i]);
 }
 
-function VirtIODev(message, intdev, ramdev, device) {
-    this.message = message;
+function VirtIODev(intdev, ramdev, device) {
     this.dev = device;
     this.dev.SendReply = this.SendReply.bind(this);
     this.intdev = intdev;
@@ -7562,8 +7582,8 @@ VirtIODev.prototype.ReadReg32 = function (addr) {
             break;
 
         default:
-            this.message.Debug("Error in VirtIODev: Attempt to read register " + hex8(addr));
-            this.message.Abort();
+            message.Debug("Error in VirtIODev: Attempt to read register " + utils.ToHex(addr));
+            message.Abort();
             break;
     }
     return utils.Swap32(val);
@@ -7576,7 +7596,7 @@ VirtIODev.prototype.GetDescriptor = function(index) {
     CopyMemoryToBuffer(this.ramdev, buffer, addr, 16);
 
     var desc = marshall.Unmarshall(["w", "w", "w", "h", "h"], buffer, 0);
-//    this.message.Debug("GetDescriptor: index=" + index + " addr=" + hex8(utils.Swap32(desc[1])) + " len=" + utils.Swap32(desc[2]) + " flags=" + utils.Swap16(desc[3])  + " next=" + utils.Swap16(desc[4]));
+//    message.Debug("GetDescriptor: index=" + index + " addr=" + utils.ToHex(utils.Swap32(desc[1])) + " len=" + utils.Swap32(desc[2]) + " flags=" + utils.Swap16(desc[3])  + " next=" + utils.Swap16(desc[4]));
 
     return {
         addrhigh: utils.Swap32(desc[0]),
@@ -7592,28 +7612,28 @@ VirtIODev.prototype.GetDescriptor = function(index) {
 VirtIODev.prototype.PrintRing = function() {
     var desc = this.GetDescriptor(0);
     for(var i=0; i<10; i++) {
-        this.message.Debug("next: " + desc.next + " flags:" + desc.flags + " addr:" + hex8(desc.addr));
+        message.Debug("next: " + desc.next + " flags:" + desc.flags + " addr:" + utils.ToHex(desc.addr));
         if (desc.flags & 1)
             desc = this.GetDescriptor(desc.next); else
         break;
     }
     var availidx = this.ramdev.ReadMemory16(this.availaddr + 2) & (this.queuenum-1);
-    this.message.Debug("avail idx: " + availidx);
-    this.message.Debug("avail buffer index: " + this.ramdev.ReadMemory16(this.availaddr + 4 + (availidx-4)*2));
-    this.message.Debug("avail buffer index: " + this.ramdev.ReadMemory16(this.availaddr + 4 + (availidx-3)*2));
-    this.message.Debug("avail buffer index: " + this.ramdev.ReadMemory16(this.availaddr + 4 + (availidx-2)*2));
-    this.message.Debug("avail buffer index: " + this.ramdev.ReadMemory16(this.availaddr + 4 + (availidx-1)*2));
-    //this.message.Debug("avail ring: " + this.ramdev.ReadMemory16(availaddr+4 + availidx*2 + -4) );
-    //this.message.Debug("avail ring: " + this.ramdev.ReadMemory16(availaddr+4 + availidx*2 + -2) );
-    //this.message.Debug("avail ring: " + this.ramdev.ReadMemory16(availaddr+4 + availidx*2 + 0) );
+    message.Debug("avail idx: " + availidx);
+    message.Debug("avail buffer index: " + this.ramdev.ReadMemory16(this.availaddr + 4 + (availidx-4)*2));
+    message.Debug("avail buffer index: " + this.ramdev.ReadMemory16(this.availaddr + 4 + (availidx-3)*2));
+    message.Debug("avail buffer index: " + this.ramdev.ReadMemory16(this.availaddr + 4 + (availidx-2)*2));
+    message.Debug("avail buffer index: " + this.ramdev.ReadMemory16(this.availaddr + 4 + (availidx-1)*2));
+    //message.Debug("avail ring: " + this.ramdev.ReadMemory16(availaddr+4 + availidx*2 + -4) );
+    //message.Debug("avail ring: " + this.ramdev.ReadMemory16(availaddr+4 + availidx*2 + -2) );
+    //message.Debug("avail ring: " + this.ramdev.ReadMemory16(availaddr+4 + availidx*2 + 0) );
     var usedidx = this.ramdev.ReadMemory16(this.usedaddr + 2) & (this.queuenum-1);
-    this.message.Debug("used idx: " + usedidx);
+    message.Debug("used idx: " + usedidx);
 }
 
 
 VirtIODev.prototype.ConsumeDescriptor = function(descindex, desclen) {
     var index = this.ramdev.ReadMemory16(this.usedaddr + 2); // get used index
-    //this.message.Debug("used index:" + index + " descindex=" + descindex);
+    //message.Debug("used index:" + index + " descindex=" + descindex);
     var usedaddr = this.usedaddr + 4 + (index & (this.queuenum-1)) * 8;
     this.ramdev.WriteMemory32(usedaddr+0, descindex);
     this.ramdev.WriteMemory32(usedaddr+4, desclen);
@@ -7621,7 +7641,7 @@ VirtIODev.prototype.ConsumeDescriptor = function(descindex, desclen) {
 }
 
 VirtIODev.prototype.SendReply = function (index) {
-    //this.message.Debug("Send Reply index="+index + " size=" + this.dev.replybuffersize);
+    //message.Debug("Send Reply index="+index + " size=" + this.dev.replybuffersize);
     this.ConsumeDescriptor(index, this.dev.replybuffersize);
 
     var desc = this.GetDescriptor(index);
@@ -7629,14 +7649,14 @@ VirtIODev.prototype.SendReply = function (index) {
         if (desc.flags & 1) { // continuing buffer
             desc = this.GetDescriptor(desc.next);
         } else {
-            this.message.Debug("Error in virtiodev: Descriptor is not continuing");
-            this.message.Abort();
+            message.Debug("Error in virtiodev: Descriptor is not continuing");
+            message.Abort();
         }
     }
     
     if ((desc.flags & VRING_DESC_F_WRITE) == 0) {
-        this.message.Debug("Error in virtiodev: Descriptor is not allowed to write");
-        this.message.Abort();
+        message.Debug("Error in virtiodev: Descriptor is not allowed to write");
+        message.Abort();
     }
 
     var offset = 0;
@@ -7645,8 +7665,8 @@ VirtIODev.prototype.SendReply = function (index) {
             desc = this.GetDescriptor(desc.next);
             offset = 0;            
             if ((desc.flags & VRING_DESC_F_WRITE) == 0) {
-                this.message.Debug("Error in virtiodev: Descriptor is not allowed to write");
-                this.message.Abort();
+                message.Debug("Error in virtiodev: Descriptor is not allowed to write");
+                message.Abort();
             }
         }
         this.ramdev.WriteMemory8(desc.addr+offset, this.dev.replybuffer[i]);
@@ -7666,38 +7686,38 @@ VirtIODev.prototype.WriteReg32 = function (addr, val) {
         case VIRTIO_GUEST_PAGE_SIZE_REG:
             this.pagesize = val;
             this.UpdateAddr();
-            //this.message.Debug("Guest page size : " + hex8(val));
+            //message.Debug("Guest page size : " + utils.ToHex(val));
             break;
 
         case VIRTIO_STATUS_REG:
-            //this.message.Debug("write status reg : " + hex8(val));
+            //message.Debug("write status reg : " + utils.ToHex(val));
             this.status = val;
             break;
 
         case VIRTIO_HOSTFEATURESSEL_REG:
-            //this.message.Debug("write hostfeaturesel reg : " + hex8(val));
+            //message.Debug("write hostfeaturesel reg : " + utils.ToHex(val));
             break;
 
         case VIRTIO_GUESTFEATURESSEL_REG:
-            //this.message.Debug("write guestfeaturesel reg : " + hex8(val));
+            //message.Debug("write guestfeaturesel reg : " + utils.ToHex(val));
             break;
 
         case VIRTIO_GUESTFEATURES_REG:
-            //this.message.Debug("write guestfeatures reg : " + hex8(val));
+            //message.Debug("write guestfeatures reg : " + utils.ToHex(val));
             break;
 
         case VIRTIO_QUEUESEL_REG:
-            //this.message.Debug("write queuesel reg : " + hex8(val));
+            //message.Debug("write queuesel reg : " + utils.ToHex(val));
             break;
 
         case VIRTIO_QUEUENUM_REG:
             this.queuenum = val;
             this.UpdateAddr();
-            //this.message.Debug("write queuenum reg : " + hex8(val));
+            //message.Debug("write queuenum reg : " + utils.ToHex(val));
             break;
 
         case VIRTIO_QUEUEALIGN_REG:
-            //this.message.Debug("write queuealign reg : " + hex8(val));
+            //message.Debug("write queuealign reg : " + utils.ToHex(val));
             this.align = val;
             this.UpdateAddr();
             break;
@@ -7705,21 +7725,21 @@ VirtIODev.prototype.WriteReg32 = function (addr, val) {
         case VIRTIO_QUEUEPFN_REG:
             this.queuepfn = val;
             this.UpdateAddr();
-            //this.message.Debug("write queuepfn reg : " + hex8(val));
+            //message.Debug("write queuepfn reg : " + utils.ToHex(val));
             break;
 
         case VIRTIO_QUEUENOTIFY_REG:
-            //this.message.Debug("write queuenotify reg : " + hex8(val));
+            //message.Debug("write queuenotify reg : " + utils.ToHex(val));
             this.UpdateAddr();
             if (val != 0) {
-                this.message.Debug("Error in virtiodev: Untested case of queuenotify " + val);
-                this.message.Abort();
+                message.Debug("Error in virtiodev: Untested case of queuenotify " + val);
+                message.Abort();
                 return;
             }
             var availidx = (this.ramdev.ReadMemory16(this.availaddr + 2)-1) & (this.queuenum-1);
-            //this.message.Debug((this.ramdev.ReadMemory16(this.availaddr + 2)-1));
+            //message.Debug((this.ramdev.ReadMemory16(this.availaddr + 2)-1));
             val = this.ramdev.ReadMemory16(this.availaddr + 4 + (availidx)*2);
-            //this.message.Debug("write to index : " + hex8(val) + " availidx:" + availidx);
+            //message.Debug("write to index : " + utils.ToHex(val) + " availidx:" + availidx);
 
             var currentindex = val;
             // build stream function
@@ -7732,8 +7752,8 @@ VirtIODev.prototype.WriteReg32 = function (addr, val) {
                     if (desc.flags & 1) { // continuing buffer
                         desc = this.GetDescriptor(desc.next);
                     } else {
-                        this.message.Debug("Error in virtiodev: Descriptor is not continuing");
-                        this.message.Abort();
+                        message.Debug("Error in virtiodev: Descriptor is not continuing");
+                        message.Abort();
                     }
                 }
                 var x = this.ramdev.ReadMemory8(desc.addr + offset);
@@ -7745,14 +7765,14 @@ VirtIODev.prototype.WriteReg32 = function (addr, val) {
             break;
 
         case VIRTIO_INTERRUPTACK_REG:
-            //this.message.Debug("write interruptack reg : " + hex8(val));
+            //message.Debug("write interruptack reg : " + utils.ToHex(val));
             this.intstatus &= ~val;
             this.intdev.ClearInterrupt(0x6);
             break;
 
         default:
-            this.message.Debug("Error in VirtIODev: Attempt to write register " + hex8(addr) + ":" + hex8(val));
-            this.message.Abort();
+            message.Debug("Error in VirtIODev: Attempt to write register " + utils.ToHex(addr) + ":" + utils.ToHex(val));
+            message.Abort();
             break;
     }
 
@@ -7761,7 +7781,7 @@ VirtIODev.prototype.WriteReg32 = function (addr, val) {
 
 module.exports = VirtIODev;
 
-},{"../utils.js":24,"./virtio/marshall.js":18}],17:[function(require,module,exports){
+},{"../messagehandler":21,"../utils":24,"./virtio/marshall":18}],17:[function(require,module,exports){
 // -------------------------------------------------
 // --------------------- 9P ------------------------
 // -------------------------------------------------
@@ -7770,7 +7790,9 @@ module.exports = VirtIODev;
 
 "use strict";
 
-var marshall = require('./marshall.js');
+var marshall = require('./marshall');
+var message = require('../../messagehandler');
+var utils = require('../../utils');
 
 // TODO
 // flush
@@ -7816,8 +7838,7 @@ var FID_INODE = 1;
 var FID_XATTR = 2;
 
 // small 9p device
-function Virtio9p(message, ramdev, filesystem) {
-    this.message = message;
+function Virtio9p(ramdev, filesystem) {
     this.fs = filesystem;
     this.SendReply = function() {};
     this.deviceid = 0x9; // 9p filesystem
@@ -7840,7 +7861,7 @@ Virtio9p.prototype.Reset = function() {
 Virtio9p.prototype.BuildReply = function(id, tag, payloadsize) {
     marshall.Marshall(["w", "b", "h"], [payloadsize+7, id+1, tag], this.replybuffer, 0);
     if ((payloadsize+7) >= this.replybuffer.length) {
-        this.message.Debug("Error in 9p: payloadsize exceeds maximum length");
+        message.Debug("Error in 9p: payloadsize exceeds maximum length");
     }
     //for(var i=0; i<payload.length; i++)
     //    this.replybuffer[7+i] = payload[i];
@@ -7859,7 +7880,7 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
     var size = header[0];
     var id = header[1];
     var tag = header[2];
-    //this.message.Debug("size:" + size + " id:" + id + " tag:" + tag);
+    //message.Debug("size:" + size + " id:" + id + " tag:" + tag);
 
     switch(id)
     {
@@ -7886,18 +7907,18 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             var req = marshall.Unmarshall2(["w", "w"], GetByte);
             var fid = req[0];
             var mode = req[1];
-            //this.message.Debug("[open] fid=" + fid + ", mode=" + mode);
+            //message.Debug("[open] fid=" + fid + ", mode=" + mode);
             var inode = this.fs.GetInode(this.fid2inode[fid]);
             req[0] = inode.qid;
             req[1] = this.msize - 24;
             marshall.Marshall(["Q", "w"], req, this.replybuffer, 7);
             this.BuildReply(id, tag, 13+4);
-            //this.message.Debug("file open " + inode.name);
+            //message.Debug("file open " + inode.name);
             //if (inode.status == STATUS_LOADING) return;
             var ret = this.fs.OpenInode(this.fid2inode[fid], mode);
             this.fs.AddEvent(this.fid2inode[fid], 
                 function() {
-                    //this.message.Debug("file opened " + inode.name + " tag:"+tag);
+                    //message.Debug("file opened " + inode.name + " tag:"+tag);
                     req[0] = inode.qid;
                     req[1] = this.msize - 24;
                     marshall.Marshall(["Q", "w"], req, this.replybuffer, 7);
@@ -7912,7 +7933,7 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             var dfid = req[0];
             var fid = req[1];
             var name = req[2];
-            //this.message.Debug("[link] dfid=" + dfid + ", name=" + name);
+            //message.Debug("[link] dfid=" + dfid + ", name=" + name);
             var inode = this.fs.CreateInode();
             var inodetarget = this.fs.GetInode(this.fid2inode[fid]);
             //inode = inodetarget;
@@ -7940,7 +7961,7 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             var name = req[1];
             var symgt = req[2];
             var gid = req[3];
-            //this.message.Debug("[symlink] fid=" + fid + ", name=" + name + ", symgt=" + symgt + ", gid=" + gid); 
+            //message.Debug("[symlink] fid=" + fid + ", name=" + name + ", symgt=" + symgt + ", gid=" + gid); 
             var idx = this.fs.CreateSymlink(name, this.fid2inode[fid], symgt);
             var inode = this.fs.GetInode(idx);
             inode.uid = gid;
@@ -7958,7 +7979,7 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             var major = req[3];
             var minor = req[4];
             var gid = req[5];
-            //this.message.Debug("[mknod] fid=" + fid + ", name=" + name + ", major=" + major + ", minor=" + minor+ "");
+            //message.Debug("[mknod] fid=" + fid + ", name=" + name + ", major=" + major + ", minor=" + minor+ "");
             var idx = this.fs.CreateNode(name, this.fid2inode[fid], major, minor);
             var inode = this.fs.GetInode(idx);
             inode.mode = mode;
@@ -7973,7 +7994,7 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
         case 22: // TREADLINK
             var req = marshall.Unmarshall2(["w"], GetByte);
             var fid = req[0];
-            //this.message.Debug("[readlink] fid=" + fid);
+            //message.Debug("[readlink] fid=" + fid);
             var inode = this.fs.GetInode(this.fid2inode[fid]);
             var size = marshall.Marshall(["s"], [inode.symlink], this.replybuffer, 7);
             this.BuildReply(id, tag, size);
@@ -7987,7 +8008,7 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             var name = req[1];
             var mode = req[2];
             var gid = req[3];
-            //this.message.Debug("[mkdir] fid=" + fid + ", name=" + name + ", mode=" + mode + ", gid=" + gid); 
+            //message.Debug("[mkdir] fid=" + fid + ", name=" + name + ", mode=" + mode + ", gid=" + gid); 
             var idx = this.fs.CreateDirectory(name, this.fid2inode[fid]);
             var inode = this.fs.GetInode(idx);
             inode.mode = mode | S_IFDIR;
@@ -8005,7 +8026,7 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             var flags = req[2];
             var mode = req[3];
             var gid = req[4];
-            //this.message.Debug("[create] fid=" + fid + ", name=" + name + ", flags=" + flags + ", mode=" + mode + ", gid=" + gid); 
+            //message.Debug("[create] fid=" + fid + ", name=" + name + ", flags=" + flags + ", mode=" + mode + ", gid=" + gid); 
             var idx = this.fs.CreateFile(name, this.fid2inode[fid]);
             this.fid2inode[fid] = idx;
             this.fidtype[fid] = FID_INODE;
@@ -8019,7 +8040,7 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             break;
 
         case 52: // lock always suceed
-            //this.message.Debug("lock file\n");
+            //message.Debug("lock file\n");
             marshall.Marshall(["w"], [0], this.replybuffer, 7);
             this.BuildReply(id, tag, 1);
             this.SendReply(index);
@@ -8034,7 +8055,7 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             var req = marshall.Unmarshall2(["w", "d"], GetByte);
             var fid = req[0];
             var inode = this.fs.GetInode(this.fid2inode[fid]);
-            //this.message.Debug("[getattr]: fid=" + fid + " name=" + inode.name + " request mask=" + req[1]);
+            //message.Debug("[getattr]: fid=" + fid + " name=" + inode.name + " request mask=" + req[1]);
             req[0] |= 0x1000; // P9_STATS_GEN
 
             req[0] = req[1]; // request mask
@@ -8085,7 +8106,7 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             , GetByte);
             var fid = req[0];
             var inode = this.fs.GetInode(this.fid2inode[fid]);
-            //this.message.Debug("[setattr]: fid=" + fid + " request mask=" + req[1] + " name=" +inode.name);
+            //message.Debug("[setattr]: fid=" + fid + " request mask=" + req[1] + " name=" +inode.name);
             if (req[1] & P9_SETATTR_MODE) {
                 inode.mode = req[2];
             }
@@ -8130,8 +8151,8 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             var fid = req[0];
             var offset = req[1];
             var count = req[2];
-            //if (id == 40) this.message.Debug("[treaddir]: fid=" + fid + " offset=" + offset + " count=" + count);
-            //if (id == 116) this.message.Debug("[read]: fid=" + fid + " offset=" + offset + " count=" + count);
+            //if (id == 40) message.Debug("[treaddir]: fid=" + fid + " offset=" + offset + " count=" + count);
+            //if (id == 116) message.Debug("[read]: fid=" + fid + " offset=" + offset + " count=" + count);
             var inode = this.fs.GetInode(this.fid2inode[fid]);
             if (this.fidtype[fid] == FID_XATTR) {
                 if (inode.caps.length < offset+count) count = inode.caps.length - offset;
@@ -8152,7 +8173,7 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             var fid = req[0];
             var offset = req[1];
             var count = req[2];
-            //this.message.Debug("[write]: fid=" + fid + " offset=" + offset + " count=" + count);
+            //message.Debug("[write]: fid=" + fid + " offset=" + offset + " count=" + count);
             this.fs.Write(this.fid2inode[fid], offset, count, GetByte);
             marshall.Marshall(["w"], [count], this.replybuffer, 7);
             this.BuildReply(id, tag, 4);
@@ -8165,7 +8186,7 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             var oldname = req[1];
             var newdirfid = req[2];
             var newname = req[3];
-            //this.message.Debug("[renameat]: oldname=" + oldname + " newname=" + newname);
+            //message.Debug("[renameat]: oldname=" + oldname + " newname=" + newname);
             var ret = this.fs.Rename(this.fid2inode[olddirfid], oldname, this.fid2inode[newdirfid], newname);
             if (ret == false) {
                 this.SendError(tag, "No such file or directory", ENOENT);                   
@@ -8181,7 +8202,7 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             var dirfd = req[0];
             var name = req[1];
             var flags = req[2];
-            //this.message.Debug("[unlink]: dirfd=" + dirfd + " name=" + name + " flags=" + flags);
+            //message.Debug("[unlink]: dirfd=" + dirfd + " name=" + name + " flags=" + flags);
             var id = this.fs.Search(this.fid2inode[dirfd], name);
             if (id == -1) {
                    this.SendError(tag, "No such file or directory", ENOENT);
@@ -8200,7 +8221,7 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
 
         case 100: // version
             var version = marshall.Unmarshall2(["w", "s"], GetByte);
-            //this.message.Debug("[version]: msize=" + version[0] + " version=" + version[1]);
+            //message.Debug("[version]: msize=" + version[0] + " version=" + version[1]);
             this.msize = version[0];
             var size = marshall.Marshall(["w", "s"], [this.msize, this.VERSION], this.replybuffer, 7);
             this.BuildReply(id, tag, size);
@@ -8211,7 +8232,7 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             // return root directorie's QID
             var req = marshall.Unmarshall2(["w", "w", "s", "s"], GetByte);
             var fid = req[0];
-            //this.message.Debug("[attach]: fid=" + fid + " afid=" + hex8(req[1]) + " uname=" + req[2] + " aname=" + req[3]);
+            //message.Debug("[attach]: fid=" + fid + " afid=" + utils.ToHex(req[1]) + " uname=" + req[2] + " aname=" + req[3]);
             this.fid2inode[fid] = 0;            
             this.fidtype[fid] = FID_INODE;
             var inode = this.fs.GetInode(this.fid2inode[fid]);
@@ -8223,7 +8244,7 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
         case 108: // tflush
             var req = marshall.Unmarshall2(["h"], GetByte);
             var oldtag = req[0];
-            this.message.Debug("[flush] " + tag);
+            message.Debug("[flush] " + tag);
             //marshall.Marshall(["Q"], [inode.qid], this.replybuffer, 7);
             this.BuildReply(id, tag, 0);
             this.SendReply(index);
@@ -8235,7 +8256,7 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             var fid = req[0];
             var nwfid = req[1];
             var nwname = req[2];
-            //this.message.Debug("[walk]: fid=" + req[0] + " nwfid=" + req[1] + " nwname=" + nwname);
+            //message.Debug("[walk]: fid=" + req[0] + " nwfid=" + req[1] + " nwname=" + nwname);
             if (nwname == 0) {
                 this.fid2inode[nwfid] = this.fid2inode[fid];
                 marshall.Marshall(["h"], [0], this.replybuffer, 7);
@@ -8251,17 +8272,17 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             var idx = this.fid2inode[fid];
             var offset = 7+2;
             var nwidx = 0;
-            //this.message.Debug("walk in dir " + this.fs.inodes[idx].name  + " to :" + walk.toString());
+            //message.Debug("walk in dir " + this.fs.inodes[idx].name  + " to :" + walk.toString());
             for(var i=0; i<nwname; i++) {
                 idx = this.fs.Search(idx, walk[i]);
                 
                 if (idx == -1) {
-                   //this.message.Debug("Could not find :" + walk[i]);
+                   //message.Debug("Could not find :" + walk[i]);
                    break;
                 }
                 offset += marshall.Marshall(["Q"], [this.fs.inodes[idx].qid], this.replybuffer, offset);
                 nwidx++;
-                //this.message.Debug(this.fid2inode[nwfid]);
+                //message.Debug(this.fid2inode[nwfid]);
                 this.fid2inode[nwfid] = idx;
                 this.fidtype[nwfid] = FID_INODE;
             }
@@ -8272,7 +8293,7 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
 
         case 120: // clunk
             var req = marshall.Unmarshall2(["w"], GetByte);
-            //this.message.Debug("[clunk]: fid=" + req[0]);
+            //message.Debug("[clunk]: fid=" + req[0]);
             if (this.fid2inode[req[0]] >=  0) {
                 this.fs.CloseInode(this.fid2inode[req[0]]);
                 this.fid2inode[req[0]] = -1;
@@ -8287,7 +8308,7 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             var fid = req[0];
             var newfid = req[1];
             var name = req[2];
-            //this.message.Debug("[xattrwalk]: fid=" + req[0] + " newfid=" + req[1] + " name=" + req[2]);
+            //message.Debug("[xattrwalk]: fid=" + req[0] + " newfid=" + req[1] + " name=" + req[2]);
             this.fid2inode[newfid] = this.fid2inode[fid];
             this.fidtype[newfid] = FID_NONE;
             var length = 0;
@@ -8301,8 +8322,8 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             break; 
 
         default:
-            this.message.Debug("Error in Virtio9p: Unknown id " + id + " received");
-            this.message.Abort();
+            message.Debug("Error in Virtio9p: Unknown id " + id + " received");
+            message.Abort();
             //this.SendError(tag, "Operation i not supported",  ENOTSUPP);
             //this.SendReply(index);
             break;
@@ -8315,14 +8336,14 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
 
 module.exports = Virtio9p;
 
-},{"./marshall.js":18}],18:[function(require,module,exports){
+},{"../../messagehandler":21,"../../utils":24,"./marshall":18}],18:[function(require,module,exports){
 // -------------------------------------------------
 // ------------------ Marshall ---------------------
 // -------------------------------------------------
 // helper functions for virtio and 9p.
 
-var UTF8 = require('../../../lib/utf8.js');
-
+var UTF8 = require('../../../lib/utf8');
+var message = require('../../messagehandler');
 
 // Inserts data from an array to a byte aligned struct in memory
 function Marshall(typelist, input, struct, offset) {
@@ -8381,7 +8402,7 @@ function Marshall(typelist, input, struct, offset) {
                 size += 13;
                 break;
             default:
-                DebugMessage("Marshall: Unknown type=" + type[i]);
+                message.Debug("Marshall: Unknown type=" + type[i]);
                 break;
         }
     }
@@ -8429,7 +8450,7 @@ function Unmarshall(typelist, struct, offset) {
                 output.push(str);
                 break;
             default:
-                DebugMessage("Error in Unmarshall: Unknown type=" + typelist[i]);
+                message.Debug("Error in Unmarshall: Unknown type=" + typelist[i]);
                 break;
         }
     }
@@ -8477,7 +8498,7 @@ function Unmarshall2(typelist, GetByte) {
                 output.push(str);
                 break;
             default:
-                DebugMessage("Error in Unmarshall2: Unknown type=" + typelist[i]);
+                message.Debug("Error in Unmarshall2: Unknown type=" + typelist[i]);
                 break;
         }
     }
@@ -8489,7 +8510,7 @@ module.exports.Marshall = Marshall;
 module.exports.Unmarshall = Unmarshall;
 module.exports.Unmarshall2 = Unmarshall2;
 
-},{"../../../lib/utf8.js":1}],19:[function(require,module,exports){
+},{"../../../lib/utf8":1,"../../messagehandler":21}],19:[function(require,module,exports){
 // -------------------------------------------------
 // ----------------- FILESYSTEM---------------------
 // -------------------------------------------------
@@ -8502,7 +8523,7 @@ var utils = require('../utils.js');
 var bzip2 = require('../bzip2.js');
 var marshall = require('../dev/virtio/marshall.js');
 var UTF8 = require('../../lib/utf8.js');
-
+var message = require('../messagehandler');
 
 var S_IRWXUGO = 0x1FF;
 var S_IFMT = 0xF000;
@@ -8531,8 +8552,7 @@ var STATUS_LOADING = 0x3;
 var STATUS_UNLINKED = 0x4;
 
 
-function FS(message) {
-    this.message = message;
+function FS() {
     this.inodes = [];
     this.events = [];
 
@@ -8540,7 +8560,7 @@ function FS(message) {
     this.filesinloadingqueue = 0;
     this.OnLoaded = function() {};
 
-    this.tar = new TAR(message, this);
+    this.tar = new TAR(this);
     this.userinfo = [];
 
     message.Register("LoadFilesystem", this.LoadFilesystem.bind(this) );
@@ -8575,7 +8595,6 @@ FS.prototype.LoadFilesystem = function(userinfo)
 
 }
 
-
 // -----------------------------------------------------
 
 FS.prototype.AddEvent = function(id, OnEvent) {
@@ -8605,12 +8624,12 @@ FS.prototype.HandleEvent = function(id) {
 FS.prototype.LoadImage = function(url)
 {
     if (!url) return;
-    //this.message.Debug("Load Image " + url);
+    //message.Debug("Load Image " + url);
 /*
     if (typeof Worker !== 'undefined') {
         LoadBZIP2Resource(url, 
             function(m){ for(var i=0; i<m.size; i++) this.tar.Unpack(m.data[i]); }.bind(this), 
-            function(e){this.message.Debug("Error: Could not load " + url + ". Skipping.");});
+            function(e){message.Debug("Error: Could not load " + url + ". Skipping.");});
         return;
     }
 */
@@ -8620,7 +8639,7 @@ FS.prototype.LoadImage = function(url)
         bzip2.simple(buffer8, this.tar.Unpack.bind(this.tar));
     }.bind(this),
     function(error){
-        this.message.Debug("Error: Could not load " + url + ". Skipping.");
+        message.Debug("Error: Could not load " + url + ". Skipping.");
     }.bind(this)
     );
 }
@@ -8657,7 +8676,7 @@ function ReadVariable(buffer, offset) {
     }
     offset = i+1;
     variable.offset = offset;
-    //this.message.Debug("read " + variable.name + "=" + variable.value);
+    //message.Debug("read " + variable.name + "=" + variable.value);
     return variable;
 }
 
@@ -8710,7 +8729,7 @@ FS.prototype.CheckEarlyload = function(path)
 
 FS.prototype.LoadFSXML = function(urls)
 {
-    this.message.Debug("Load filesystem information from " + urls);
+    message.Debug("Load filesystem information from " + urls);
     utils.LoadXMLResource(urls, this.OnXMLLoaded.bind(this), function(error){throw error;});
 }
 
@@ -8764,7 +8783,7 @@ FS.prototype.OnXMLLoaded = function(fs)
         this.PushInode(inode);
         var url = sysrootdir + (tag.src.length==0?this.GetFullPath(idx):tag.src);
         inode.url = url;
-        //this.message.Debug("Load id=" + (idx) + " " + url);
+        //message.Debug("Load id=" + (idx) + " " + url);
         if (tag.load || this.CheckEarlyload(this.GetFullPath(idx)) ) {
             this.LoadFile(idx);
         }
@@ -8777,7 +8796,7 @@ FS.prototype.OnXMLLoaded = function(fs)
         break;
         }
     }
-    this.message.Debug("processed " + this.inodes.length + " inodes");
+    message.Debug("processed " + this.inodes.length + " inodes");
     this.Check();
 }
 
@@ -8865,8 +8884,8 @@ FS.prototype.PushInode = function(inode) {
         }
     }
 
-    this.message.Debug("Error in Filesystem: Pushed inode with name = "+ inode.name + " has no parent");
-    this.message.Abort();
+    message.Debug("Error in Filesystem: Pushed inode with name = "+ inode.name + " has no parent");
+    message.Abort();
 
 }
 
@@ -8980,7 +8999,7 @@ FS.prototype.OpenInode = function(id, mode) {
         case S_IFCHR: type = "Character Device"; break;
     }
     */
-    //this.message.Debug("open:" + this.GetFullPath(id) +  " type: " + type + " status:" + inode.status);
+    //message.Debug("open:" + this.GetFullPath(id) +  " type: " + type + " status:" + inode.status);
     if (inode.status == STATUS_ON_SERVER) {
         this.LoadFile(id);
         return false;
@@ -8989,10 +9008,10 @@ FS.prototype.OpenInode = function(id, mode) {
 }
 
 FS.prototype.CloseInode = function(id) {
-    //this.message.Debug("close: " + this.GetFullPath(id));
+    //message.Debug("close: " + this.GetFullPath(id));
     var inode = this.GetInode(id);
     if (inode.status == STATUS_UNLINKED) {
-        //this.message.Debug("Filesystem: Delete unlinked file");
+        //message.Debug("Filesystem: Delete unlinked file");
         inode.status == STATUS_INVALID;
         inode.data = new Uint8Array(0);
         inode.size = 0;
@@ -9000,7 +9019,7 @@ FS.prototype.CloseInode = function(id) {
 }
 
 FS.prototype.Rename = function(olddirid, oldname, newdirid, newname) {
-    // this.message.Debug("Rename " + oldname + " to " + newname);
+    // message.Debug("Rename " + oldname + " to " + newname);
     if ((olddirid == newdirid) && (oldname == newname)) {
         return true;
     }
@@ -9022,8 +9041,8 @@ FS.prototype.Rename = function(olddirid, oldname, newdirid, newname) {
     } else {
         var id = this.FindPreviousID(idx);
         if (id == -1) {
-            this.message.Debug("Error in Filesystem: Cannot find previous id of inode");
-            this.message.Abort();
+            message.Debug("Error in Filesystem: Cannot find previous id of inode");
+            message.Abort();
         }
         this.inodes[id].nextid = inode.nextid;
     }
@@ -9058,7 +9077,7 @@ FS.prototype.Search = function(parentid, name) {
     var id = this.inodes[parentid].firstid;
     while(id != -1) {
         if (this.inodes[id].parentid != parentid) { // consistency check
-            this.message.Debug("Error in Filesystem: Found inode with wrong parent id");
+            message.Debug("Error in Filesystem: Found inode with wrong parent id");
         }
         if (this.inodes[id].name == name) return id;
         id = this.inodes[id].nextid;
@@ -9098,7 +9117,7 @@ FS.prototype.FindPreviousID = function(idx) {
 FS.prototype.Unlink = function(idx) {
     if (idx == 0) return false; // root node cannot be deleted
     var inode = this.GetInode(idx);
-    //this.message.Debug("Unlink " + inode.name);
+    //message.Debug("Unlink " + inode.name);
 
     // check if directory is not empty
     if ((inode.mode&S_IFMT) == S_IFDIR) {
@@ -9111,8 +9130,8 @@ FS.prototype.Unlink = function(idx) {
     } else {
         var id = this.FindPreviousID(idx);
         if (id == -1) {
-            this.message.Debug("Error in Filesystem: Cannot find previous id of inode");
-            this.message.Abort();
+            message.Debug("Error in Filesystem: Cannot find previous id of inode");
+            message.Abort();
         }
         this.inodes[id].nextid = inode.nextid;
     }
@@ -9128,12 +9147,12 @@ FS.prototype.Unlink = function(idx) {
 FS.prototype.GetInode = function(idx)
 {
     if (isNaN(idx)) {
-        this.message.Debug("Error in filesystem: id is not a number ");
+        message.Debug("Error in filesystem: id is not a number ");
         return 0;
     }
 
     if ((idx < 0) || (idx > this.inodes.length)) {
-        this.message.Debug("Error in filesystem: Attempt to get inode with id " + idx);
+        message.Debug("Error in filesystem: Attempt to get inode with id " + idx);
         return 0;
     }
     return this.inodes[idx];
@@ -9143,7 +9162,7 @@ FS.prototype.ChangeSize = function(idx, newsize)
 {
     var inode = this.GetInode(idx);
     var temp = inode.data;
-    //this.message.Debug("change size to: " + newsize);
+    //message.Debug("change size to: " + newsize);
     if (newsize == inode.size) return;
     inode.data = new Uint8Array(newsize);
     inode.size = newsize;
@@ -9188,7 +9207,7 @@ FS.prototype.GetRecursiveList = function(dirid, list) {
 }
 
 FS.prototype.MergeFile = function(file) {
-    this.message.Debug("Merge path:" + file.name);
+    message.Debug("Merge path:" + file.name);
     var ids = this.SearchPath(file.name);
     if (ids.parentid == -1) return; // not even the path seems to exist
     if (ids.id == -1) {
@@ -9204,23 +9223,23 @@ FS.prototype.Check = function() {
     {
         if (this.inodes[i].status == STATUS_INVALID) continue;
         if (this.inodes[i].nextid == i) {
-            this.message.Debug("Error in filesystem: file points to itself");
-            this.message.Abort();
+            message.Debug("Error in filesystem: file points to itself");
+            message.Abort();
         }
 
         var inode = this.GetInode(i);
         if (inode.parentid < 0) {
-            this.message.Debug("Error in filesystem: negative parent id " + i);
+            message.Debug("Error in filesystem: negative parent id " + i);
         }
         var n = inode.name.length;
         if (n == 0) {
-            this.message.Debug("Error in filesystem: inode with no name and id " + i);
+            message.Debug("Error in filesystem: inode with no name and id " + i);
         }
 
         for (var j in inode.name) {
             var c = inode.name.charCodeAt(j);
             if (c < 32) {
-                this.message.Debug("Error in filesystem: Unallowed char in filename");
+                message.Debug("Error in filesystem: Unallowed char in filename");
             } 
         }
     }
@@ -9244,7 +9263,7 @@ FS.prototype.FillDirectory = function(dirid) {
 
     size += 13 + 8 + 1 + 2 + 1; // "." entry
     size += 13 + 8 + 1 + 2 + 2; // ".." entry
-    //this.message.Debug("size of dir entry: " + size);
+    //message.Debug("size of dir entry: " + size);
     inode.data = new Uint8Array(size);
     inode.size = size;
 
@@ -9318,14 +9337,26 @@ FS.prototype.PrepareCAPs = function(id) {
 
 module.exports = FS;
 
-},{"../../lib/utf8.js":1,"../bzip2.js":2,"../dev/virtio/marshall.js":18,"../utils.js":24,"./tar.js":20}],20:[function(require,module,exports){
+},{"../../lib/utf8.js":1,"../bzip2.js":2,"../dev/virtio/marshall.js":18,"../messagehandler":21,"../utils.js":24,"./tar.js":20}],20:[function(require,module,exports){
 // -------------------------------------------------
 // -------------------- TAR ------------------------
 // -------------------------------------------------
 // TAR file support for the filesystem
 
-function TAR(message, filesystem) {
-    this.message = message;
+"use strict";
+
+var message = require('../messagehandler');
+
+var S_IRWXUGO = 0x1FF;
+var S_IFMT = 0xF000;
+var S_IFSOCK = 0xC000;
+var S_IFLNK = 0xA000;
+var S_IFREG = 0x8000;
+var S_IFBLK = 0x6000;
+var S_IFDIR = 0x4000;
+var S_IFCHR = 0x2000;
+
+function TAR(filesystem) {
     this.fs = filesystem;
     this.tarbuffer = new Uint8Array(512);
     this.tarbufferofs = 0;
@@ -9371,13 +9402,13 @@ TAR.prototype.Unpack = function(x) {
 
     var typeflag = String.fromCharCode(this.tarbuffer[156]);
     var name = ReadStringFromBinary(this.tarbuffer, 0, 100);    
-    //this.message.Debug("name:" + name);
+    //message.Debug("name:" + name);
     //TODO: use searchpath function
     var walk = name.split("/");
     var n = walk.length;
     if (walk[n-1].length == 0) walk.pop();
     var n = walk.length;
-    //this.message.Debug("walk:" + walk);
+    //message.Debug("walk:" + walk);
 
     var parentid = 0;
     var id = -1;
@@ -9438,7 +9469,7 @@ TAR.prototype.Unpack = function(x) {
 }
 
 TAR.prototype.Pack = function(path) {
-    this.message.Debug("tar: " + path);
+    message.Debug("tar: " + path);
     var id = this.fs.SearchPath(path).id;
     if (id == -1) return new Uint8Array(0);
     var filelist = [];
@@ -9458,8 +9489,8 @@ TAR.prototype.Pack = function(path) {
                 break;
         }
     }    
-    this.message.Debug("tar: " + this.fs.GetFullPath(id) + " size: " + size + " files: " + filelist.length);
-    this.message.Debug(filelist);
+    message.Debug("tar: " + this.fs.GetFullPath(id) + " size: " + size + " files: " + filelist.length);
+    message.Debug(filelist);
     
     var buffer = new Uint8Array(size);
     var offset = 0;
@@ -9521,15 +9552,14 @@ TAR.prototype.Pack = function(path) {
 
 module.exports = TAR;
 
-},{}],21:[function(require,module,exports){
+},{"../messagehandler":21}],21:[function(require,module,exports){
 // -------------------------------------------------
 // ------------- MessageHandler --------------------
 // -------------------------------------------------
 
 "use strict";
 
-
-function SendToMaster(command, data) {
+function Send(command, data) {
     postMessage(
     {
         "command" : command,
@@ -9538,22 +9568,23 @@ function SendToMaster(command, data) {
     );
 }
 
-function DebugMessage(message) {
-    SendToMaster("Debug", message);
+function Debug(message) {
+    Send("Debug", message);
 }
 
 function Abort() {
     DebugMessage("Abort execution.");
-    SendToMaster("Stop", {});
+    Send("Stop", {});
     throw new Error('Kill worker');
 }
 
 
 var messagemap = new Object();
-function RegisterMessage(message, OnReceive) {
+function Register(message, OnReceive) {
     messagemap[message] = OnReceive;
 }
 
+// this is a global object of the worker
 onmessage = function(e) {
     if (typeof messagemap[e.data.command] == 'function') {
             messagemap[e.data.command](e.data.data);
@@ -9561,10 +9592,10 @@ onmessage = function(e) {
     }
 }
 
-module.exports.Register = RegisterMessage;
-module.exports.Debug = DebugMessage;
+module.exports.Register = Register;
+module.exports.Debug = Debug;
 module.exports.Abort = Abort;
-module.exports.Send = SendToMaster;
+module.exports.Send = Send;
  
 
 },{}],22:[function(require,module,exports){
@@ -9574,12 +9605,14 @@ module.exports.Send = SendToMaster;
 
 // consider that the data is saved in 32-Bit little endian format
 
-// For faster access to the devices we limit the offset to 
+// For faster access for the devices we limit the offset of the device to 
 // 0xyy000000 where yy is a number between 0x0 and 0xFF
 
+var message = require('./messagehandler');
+var utils = require('./utils');
+
 // constructor
-function RAM(message, heap, ramoffset) {
-    this.message = message;
+function RAM(heap, ramoffset) {
     //use typed arrays
     this.heap = heap;
     this.int32mem = new Int32Array(this.heap, ramoffset);
@@ -9591,8 +9624,8 @@ function RAM(message, heap, ramoffset) {
 RAM.prototype.AddDevice = function(device, devaddr, devsize)
 {
     if (devaddr & 0xFFFFFF) {
-        this.message.Debug("Error: The device address not in the allowed memory region");
-        this.message.Abort();
+        message.Debug("Error: The device address not in the allowed memory region");
+        message.Abort();
     }
     this.devices[(devaddr>>24)&0xFF] = device;
 }
@@ -9602,8 +9635,8 @@ RAM.prototype.ReadMemory32 = function(addr) {
         return this.int32mem[addr >> 2];
     }
     return this.devices[(addr>>24)&0xFF].ReadReg32(addr & 0xFFFFFF);
-    //this.message.Debug("Error in ReadMemory32: RAM region " + hex8(addr) + " is not accessible");
-    //this.message.Abort();
+    //message.Debug("Error in ReadMemory32: RAM region " + utils.ToHex(addr) + " is not accessible");
+    //message.Abort();
     return 0x0;
 };
 
@@ -9613,8 +9646,8 @@ RAM.prototype.WriteMemory32 = function(addr, x) {
         return;
     }
     this.devices[(addr>>24)&0xFF].WriteReg32(addr & 0xFFFFFF, x);
-    //this.message.Debug("Error in WriteMemory32: RAM region " + hex8(addr) + " is not accessible");
-    //this.message.Abort();
+    //message.Debug("Error in WriteMemory32: RAM region " + utils.ToHex(addr) + " is not accessible");
+    //message.Abort();
 };
 
 RAM.prototype.ReadMemory8 = function(addr) {
@@ -9622,8 +9655,8 @@ RAM.prototype.ReadMemory8 = function(addr) {
         return this.uint8mem[addr ^ 3];
     }
     return this.devices[(addr>>24)&0xFF].ReadReg8(addr & 0xFFFFFF);
-    //this.message.Debug("Error in ReadMemory8: RAM region " + hex8(addr) + " is not accessible");
-    //this.message.Abort();
+    //message.Debug("Error in ReadMemory8: RAM region " + utils.ToHex(addr) + " is not accessible");
+    //message.Abort();
     return 0x0;
 };
 
@@ -9634,8 +9667,8 @@ RAM.prototype.WriteMemory8 = function(addr, x) {
         return;
     }
     this.devices[(addr>>24)&0xFF].WriteReg8(addr & 0xFFFFFF, x);
-    //this.message.Debug("Error in WriteMemory8: RAM region " + hex8(addr) + " is not accessible");
-    //this.message.Abort();
+    //message.Debug("Error in WriteMemory8: RAM region " + utils.ToHex(addr) + " is not accessible");
+    //message.Abort();
     // Exception(EXCEPT_BUSERR, addr);
 };
 
@@ -9645,8 +9678,8 @@ RAM.prototype.ReadMemory16 = function(addr) {
         return (this.uint8mem[(addr ^ 2)+1] << 8) | this.uint8mem[(addr ^ 2)];
     }
     return this.devices[(addr>>24)&0xFF].ReadReg16(addr & 0xFFFFFF);
-    //this.message.Debug("Error in ReadMemory16: RAM region " + hex8(addr) + " is not accessible");
-    //this.message.Abort();
+    //message.Debug("Error in ReadMemory16: RAM region " + utils.ToHex(addr) + " is not accessible");
+    //message.Abort();
     return 0x0;
 };
 
@@ -9657,13 +9690,13 @@ RAM.prototype.WriteMemory16 = function(addr, x) {
         return;
     }
     this.devices[(addr>>24)&0xFF].WriteReg16(addr & 0xFFFFFF, x);
-    //this.message.Debug("Error in WriteMemory16: RAM region " + hex8(addr) + " is not accessible");
-    //this.message.Abort();
+    //message.Debug("Error in WriteMemory16: RAM region " + utils.ToHex(addr) + " is not accessible");
+    //message.Abort();
 };
 
 module.exports = RAM;
 
-},{}],23:[function(require,module,exports){
+},{"./messagehandler":21,"./utils":24}],23:[function(require,module,exports){
 // -------------------------------------------------
 // ------------------- SYSTEM ----------------------
 // -------------------------------------------------
@@ -9856,7 +9889,7 @@ System.prototype.Init = function(system) {
     var ramoffset = 0x100000;
     this.heap = new ArrayBuffer(this.memorysize*0x100000); 
     this.memorysize--; // - the lower 1 MB are used for the cpu cores
-    this.ram = new RAM(message, this.heap, ramoffset);
+    this.ram = new RAM(this.heap, ramoffset);
 
 if (typeof Math.imul == "undefined") {
     Math.imul = function(a, b) {
@@ -9899,25 +9932,25 @@ if (typeof Math.imul == "undefined") {
 
     this.CreateCPU(system.cpu);
 
-    this.irqdev = new IRQDev(message, this);
-    this.timerdev = new TimerDev(message);
-    this.uartdev0 = new UARTDev(message, 0, this, 0x2);
-    this.uartdev1 = new UARTDev(message, 1, this, 0x3);
-    this.ethdev = new EthDev(message, this.ram, this);
+    this.irqdev = new IRQDev(this);
+    this.timerdev = new TimerDev();
+    this.uartdev0 = new UARTDev(0, this, 0x2);
+    this.uartdev1 = new UARTDev(1, this, 0x3);
+    this.ethdev = new EthDev(this.ram, this);
     this.ethdev.TransmitCallback = function(data){
         message.Send("ethmac", data);
     }
 
-    this.fbdev = new FBDev(message, this.ram);
-    this.atadev = new ATADev(message, this);
-    this.tsdev = new TouchscreenDev(message, this);
-    this.kbddev = new KeyboardDev(message, this);
-    this.snddev = new SoundDev(message, this, this.ram);
-    this.rtcdev = new RTCDev(message, this);
+    this.fbdev = new FBDev(this.ram);
+    this.atadev = new ATADev(this);
+    this.tsdev = new TouchscreenDev(this);
+    this.kbddev = new KeyboardDev(this);
+    this.snddev = new SoundDev(this, this.ram);
+    this.rtcdev = new RTCDev(this);
 
-    this.filesystem = new FS(message);
-    this.virtio9pdev = new Virtio9p(message, this.ram, this.filesystem);
-    this.virtiodev = new VirtIODev(message, this, this.ram, this.virtio9pdev);
+    this.filesystem = new FS();
+    this.virtio9pdev = new Virtio9p(this.ram, this.filesystem);
+    this.virtiodev = new VirtIODev(this, this.ram, this.virtio9pdev);
 
     this.ram.AddDevice(this.atadev,    0x9e000000, 0x1000);
     this.ram.AddDevice(this.uartdev0,  0x90000000, 0x7);
@@ -9977,20 +10010,20 @@ System.prototype.ClearSoftInterrupt = function (line, cpuid) {
 System.prototype.PrintState = function() {
     var r = new Uint32Array(this.heap);
     message.Debug("Current state of the machine")
-    //message.Debug("clock: " + hex8(cpu.clock));
-    message.Debug("PC: " + hex8(this.cpu.pc<<2));
-    message.Debug("next PC: " + hex8(this.cpu.nextpc<<2));
-    //message.Debug("ins: " + hex8(cpu.ins));
-    //message.Debug("main opcode: " + hex8(cpu.ins>>>26));
-    //message.Debug("sf... opcode: " + hex8((cpu.ins>>>21)&0x1F));
-    //message.Debug("op38. opcode: " + hex8((cpu.ins>>>0)&0x3CF));
+    //message.Debug("clock: " + utils.ToHex(cpu.clock));
+    message.Debug("PC: " + utils.ToHex(this.cpu.pc<<2));
+    message.Debug("next PC: " + utils.ToHex(this.cpu.nextpc<<2));
+    //message.Debug("ins: " + utils.ToHex(cpu.ins));
+    //message.Debug("main opcode: " + utils.ToHex(cpu.ins>>>26));
+    //message.Debug("sf... opcode: " + utils.ToHex((cpu.ins>>>21)&0x1F));
+    //message.Debug("op38. opcode: " + utils.ToHex((cpu.ins>>>0)&0x3CF));
 
     for (var i = 0; i < 32; i += 4) {
         message.Debug("   r" + (i + 0) + ": " +
-            hex8(r[i + 0]) + "   r" + (i + 1) + ": " +
-            hex8(r[i + 1]) + "   r" + (i + 2) + ": " +
-            hex8(r[i + 2]) + "   r" + (i + 3) + ": " +
-            hex8(r[i + 3]));
+            utils.ToHex(r[i + 0]) + "   r" + (i + 1) + ": " +
+            utils.ToHex(r[i + 1]) + "   r" + (i + 2) + ": " +
+            utils.ToHex(r[i + 2]) + "   r" + (i + 3) + ": " +
+            utils.ToHex(r[i + 3]));
     }
     
     if (this.cpu.delayedins) {
@@ -10161,8 +10194,6 @@ module.exports = System;
 // ------------------ Utils ------------------------
 // -------------------------------------------------
 
-var message = require('./messagehandler');
-
 function GetMilliseconds() {
     return (new Date()).getTime();
 }
@@ -10186,7 +10217,7 @@ function uint32(val) {
     return (val >>> 0);
 }
 
-function hex8(x) {
+function ToHex(x) {
     var val = uint32(x);
     return ("0x" + ("00000000" + val.toString(16)).substr(-8).toUpperCase());
 }
@@ -10336,12 +10367,12 @@ module.exports.Swap32 = Swap32;
 module.exports.Swap16 = Swap16;
 module.exports.int32 = int32;
 module.exports.uint32 = uint32;
-module.exports.hex8 = hex8;
+module.exports.ToHex = ToHex;
 module.exports.LoadBinaryResource = LoadBinaryResource;
 module.exports.LoadXMLResource = LoadXMLResource;
 
 
-},{"./messagehandler":21}],25:[function(require,module,exports){
+},{}],25:[function(require,module,exports){
 // -------------------------------------------------
 // -------------------- Worker ---------------------
 // -------------------------------------------------

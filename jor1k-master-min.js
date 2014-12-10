@@ -490,7 +490,7 @@ module.exports = LoopSoundBuffer;
 
 "use strict";
 
-var UTF8 = require('../../lib/utf8.js');
+var UTF8 = require('../../lib/utf8');
 
 function TerminalInput(SendChars) {
     this.CTRLpressed = false;
@@ -672,14 +672,14 @@ TerminalInput.prototype.OnKeyDown = function(e) {
 
 module.exports = TerminalInput;
 
-},{"../../lib/utf8.js":2}],7:[function(require,module,exports){
+},{"../../lib/utf8":2}],7:[function(require,module,exports){
 // -------------------------------------------------
 // --------------- Terminal Emulator ---------------
 // -------------------------------------------------
 
 "use strict";
 
-var UTF8 = require('../../lib/utf8.js');
+var UTF8 = require('../../lib/utf8');
 
 var Colors = new Array(
     // standard colors
@@ -1252,7 +1252,7 @@ Terminal.prototype.PutChar = function(c) {
     case 0x14:  case 0x15:  case 0x16:  case 0x17:
     case 0x18:  case 0x19:  case 0x1A:  case 0x1B:
     case 0x1C:  case 0x1D:  case 0x1E:  case 0x1F:
-        console.log("unknown character " + c); //hex8 not defined
+        console.log("unknown character " + c);
         return;
     }
 
@@ -1277,17 +1277,18 @@ Terminal.prototype.PutChar = function(c) {
 
 module.exports = Terminal;
 
-},{"../../lib/utf8.js":2}],8:[function(require,module,exports){
+},{"../../lib/utf8":2}],8:[function(require,module,exports){
 // -------------------------------------------------
 // -------------------- Master ---------------------
 // -------------------------------------------------
 
-var Terminal = require('./dev/terminal.js');
-var TerminalInput = require('./dev/terminal-input.js');
-var Framebuffer = require('./dev/framebuffer.js');
-var Ethernet = require('./dev/ethernet.js');
-var LoopSoundBuffer = require('./dev/sound.js');
-var download = require('../lib/download.js');
+var Terminal = require('./dev/terminal');
+var TerminalInput = require('./dev/terminal-input');
+var Framebuffer = require('./dev/framebuffer');
+var Ethernet = require('./dev/ethernet');
+var LoopSoundBuffer = require('./dev/sound');
+var download = require('../lib/download');
+var utils = require('./utils');
 
 "use strict";
 
@@ -1521,7 +1522,7 @@ jor1kGUI.prototype.OnMessage = function(e) {
             break;
 
         case "sync":
-            UploadBinaryResource(this.params.syncURL, this.params.userid + ".tar", e.data.data, 
+            utils.UploadBinaryResource(this.params.syncURL, this.params.userid + ".tar", e.data.data, 
             function(response) {
             // alert(response);
             alert(
@@ -1541,9 +1542,58 @@ jor1kGUI.prototype.OnMessage = function(e) {
 
 module.exports = jor1kGUI;
 
-},{"../lib/download.js":1,"./dev/ethernet.js":3,"./dev/framebuffer.js":4,"./dev/sound.js":5,"./dev/terminal-input.js":6,"./dev/terminal.js":7}],"Jor1k":[function(require,module,exports){
-var Jor1k = require('./system.js');
+},{"../lib/download":1,"./dev/ethernet":3,"./dev/framebuffer":4,"./dev/sound":5,"./dev/terminal":7,"./dev/terminal-input":6,"./utils":9}],9:[function(require,module,exports){
+// -------------------------------------------------
+// --------------------- Utils ---------------------
+// -------------------------------------------------
+
+"use strict";
+
+function UploadBinaryResource(url, filename, data, OnSuccess, OnError) {
+
+    var boundary = "xxxxxxxxx";
+
+    var xhr = new XMLHttpRequest();
+    xhr.open('post', url, true);
+    xhr.setRequestHeader("Content-Type", "multipart/form-data, boundary=" + boundary);
+    xhr.setRequestHeader("Content-Length", data.length);
+    xhr.onreadystatechange = function () {
+        if (xhr.readyState != 4) {
+            return;
+        }
+        if ((xhr.status != 200) && (xhr.status != 0)) {
+            OnError("Error: Could not upload file " + filename);
+            return;
+        }
+        OnSuccess(this.responseText);
+    };
+
+    var bodyheader = "--" + boundary + "\r\n";
+    bodyheader += 'Content-Disposition: form-data; name="uploaded"; filename="' + filename + '"\r\n';
+    bodyheader += "Content-Type: application/octet-stream\r\n\r\n";
+
+    var bodyfooter = "\r\n";
+    bodyfooter += "--" + boundary + "--";
+
+    var newdata = new Uint8Array(data.length + bodyheader.length + bodyfooter.length);
+    var offset = 0;
+    for(var i=0; i<bodyheader.length; i++)
+        newdata[offset++] = bodyheader.charCodeAt(i);
+
+    for(var i=0; i<data.length; i++)
+        newdata[offset++] = data[i];
+
+    for(var i=0; i<bodyfooter.length; i++)
+        newdata[offset++] = bodyfooter.charCodeAt(i);
+
+    xhr.send(newdata.buffer);
+}
+
+module.exports.UploadBinaryResource = UploadBinaryResource;
+
+},{}],"Jor1k":[function(require,module,exports){
+var Jor1k = require('./system');
 
 module.exports = Jor1k;
 
-},{"./system.js":8}]},{},[]);
+},{"./system":8}]},{},[]);

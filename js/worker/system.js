@@ -190,7 +190,7 @@ System.prototype.Init = function(system) {
     var ramoffset = 0x100000;
     this.heap = new ArrayBuffer(this.memorysize*0x100000); 
     this.memorysize--; // - the lower 1 MB are used for the cpu cores
-    this.ram = new RAM(message, this.heap, ramoffset);
+    this.ram = new RAM(this.heap, ramoffset);
 
 if (typeof Math.imul == "undefined") {
     Math.imul = function(a, b) {
@@ -233,25 +233,25 @@ if (typeof Math.imul == "undefined") {
 
     this.CreateCPU(system.cpu);
 
-    this.irqdev = new IRQDev(message, this);
-    this.timerdev = new TimerDev(message);
-    this.uartdev0 = new UARTDev(message, 0, this, 0x2);
-    this.uartdev1 = new UARTDev(message, 1, this, 0x3);
-    this.ethdev = new EthDev(message, this.ram, this);
+    this.irqdev = new IRQDev(this);
+    this.timerdev = new TimerDev();
+    this.uartdev0 = new UARTDev(0, this, 0x2);
+    this.uartdev1 = new UARTDev(1, this, 0x3);
+    this.ethdev = new EthDev(this.ram, this);
     this.ethdev.TransmitCallback = function(data){
         message.Send("ethmac", data);
     }
 
-    this.fbdev = new FBDev(message, this.ram);
-    this.atadev = new ATADev(message, this);
-    this.tsdev = new TouchscreenDev(message, this);
-    this.kbddev = new KeyboardDev(message, this);
-    this.snddev = new SoundDev(message, this, this.ram);
-    this.rtcdev = new RTCDev(message, this);
+    this.fbdev = new FBDev(this.ram);
+    this.atadev = new ATADev(this);
+    this.tsdev = new TouchscreenDev(this);
+    this.kbddev = new KeyboardDev(this);
+    this.snddev = new SoundDev(this, this.ram);
+    this.rtcdev = new RTCDev(this);
 
-    this.filesystem = new FS(message);
-    this.virtio9pdev = new Virtio9p(message, this.ram, this.filesystem);
-    this.virtiodev = new VirtIODev(message, this, this.ram, this.virtio9pdev);
+    this.filesystem = new FS();
+    this.virtio9pdev = new Virtio9p(this.ram, this.filesystem);
+    this.virtiodev = new VirtIODev(this, this.ram, this.virtio9pdev);
 
     this.ram.AddDevice(this.atadev,    0x9e000000, 0x1000);
     this.ram.AddDevice(this.uartdev0,  0x90000000, 0x7);
@@ -311,20 +311,20 @@ System.prototype.ClearSoftInterrupt = function (line, cpuid) {
 System.prototype.PrintState = function() {
     var r = new Uint32Array(this.heap);
     message.Debug("Current state of the machine")
-    //message.Debug("clock: " + hex8(cpu.clock));
-    message.Debug("PC: " + hex8(this.cpu.pc<<2));
-    message.Debug("next PC: " + hex8(this.cpu.nextpc<<2));
-    //message.Debug("ins: " + hex8(cpu.ins));
-    //message.Debug("main opcode: " + hex8(cpu.ins>>>26));
-    //message.Debug("sf... opcode: " + hex8((cpu.ins>>>21)&0x1F));
-    //message.Debug("op38. opcode: " + hex8((cpu.ins>>>0)&0x3CF));
+    //message.Debug("clock: " + utils.ToHex(cpu.clock));
+    message.Debug("PC: " + utils.ToHex(this.cpu.pc<<2));
+    message.Debug("next PC: " + utils.ToHex(this.cpu.nextpc<<2));
+    //message.Debug("ins: " + utils.ToHex(cpu.ins));
+    //message.Debug("main opcode: " + utils.ToHex(cpu.ins>>>26));
+    //message.Debug("sf... opcode: " + utils.ToHex((cpu.ins>>>21)&0x1F));
+    //message.Debug("op38. opcode: " + utils.ToHex((cpu.ins>>>0)&0x3CF));
 
     for (var i = 0; i < 32; i += 4) {
         message.Debug("   r" + (i + 0) + ": " +
-            hex8(r[i + 0]) + "   r" + (i + 1) + ": " +
-            hex8(r[i + 1]) + "   r" + (i + 2) + ": " +
-            hex8(r[i + 2]) + "   r" + (i + 3) + ": " +
-            hex8(r[i + 3]));
+            utils.ToHex(r[i + 0]) + "   r" + (i + 1) + ": " +
+            utils.ToHex(r[i + 1]) + "   r" + (i + 2) + ": " +
+            utils.ToHex(r[i + 2]) + "   r" + (i + 3) + ": " +
+            utils.ToHex(r[i + 3]));
     }
     
     if (this.cpu.delayedins) {

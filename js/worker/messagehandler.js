@@ -4,8 +4,7 @@
 
 "use strict";
 
-
-function SendToMaster(command, data) {
+function Send(command, data) {
     postMessage(
     {
         "command" : command,
@@ -14,22 +13,23 @@ function SendToMaster(command, data) {
     );
 }
 
-function DebugMessage(message) {
-    SendToMaster("Debug", message);
+function Debug(message) {
+    Send("Debug", message);
 }
 
 function Abort() {
     DebugMessage("Abort execution.");
-    SendToMaster("Stop", {});
+    Send("Stop", {});
     throw new Error('Kill worker');
 }
 
 
 var messagemap = new Object();
-function RegisterMessage(message, OnReceive) {
+function Register(message, OnReceive) {
     messagemap[message] = OnReceive;
 }
 
+// this is a global object of the worker
 onmessage = function(e) {
     if (typeof messagemap[e.data.command] == 'function') {
             messagemap[e.data.command](e.data.data);
@@ -37,8 +37,8 @@ onmessage = function(e) {
     }
 }
 
-module.exports.Register = RegisterMessage;
-module.exports.Debug = DebugMessage;
+module.exports.Register = Register;
+module.exports.Debug = Debug;
 module.exports.Abort = Abort;
-module.exports.Send = SendToMaster;
+module.exports.Send = Send;
  

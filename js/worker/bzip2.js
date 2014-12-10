@@ -14,6 +14,8 @@ I hereby release this code under the GNU Library General Public License
 (LGPL) version 2, available at http://www.gnu.org/copyleft/lgpl.html
 */
 
+var message = require('./messagehandler');
+
 var bzip2 = {};
 
 bzip2.crcTable = 

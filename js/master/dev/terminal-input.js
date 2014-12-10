@@ -8,7 +8,7 @@
 
 "use strict";
 
-var UTF8 = require('../../lib/utf8.js');
+var UTF8 = require('../../lib/utf8');
 
 function TerminalInput(SendChars) {
     this.CTRLpressed = false;

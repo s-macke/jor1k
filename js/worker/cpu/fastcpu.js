@@ -1600,7 +1600,7 @@ function Step(steps, clockspeed) {
             break;
 
         default:
-            //DebugMessage("Error: Instruction with opcode " + hex8(ins >>> 26) + " not supported");
+            //DebugMessage("Error: Instruction with opcode " + utils.ToHex(ins >>> 26) + " not supported");
             DebugMessage(ERROR_UNKNOWN|0);
             abort();
             break;

@@ -2,12 +2,13 @@
 // -------------------- Master ---------------------
 // -------------------------------------------------
 
-var Terminal = require('./dev/terminal.js');
-var TerminalInput = require('./dev/terminal-input.js');
-var Framebuffer = require('./dev/framebuffer.js');
-var Ethernet = require('./dev/ethernet.js');
-var LoopSoundBuffer = require('./dev/sound.js');
-var download = require('../lib/download.js');
+var Terminal = require('./dev/terminal');
+var TerminalInput = require('./dev/terminal-input');
+var Framebuffer = require('./dev/framebuffer');
+var Ethernet = require('./dev/ethernet');
+var LoopSoundBuffer = require('./dev/sound');
+var download = require('../lib/download');
+var utils = require('./utils');
 
 "use strict";
 
@@ -241,7 +242,7 @@ jor1kGUI.prototype.OnMessage = function(e) {
             break;
 
         case "sync":
-            UploadBinaryResource(this.params.syncURL, this.params.userid + ".tar", e.data.data, 
+            utils.UploadBinaryResource(this.params.syncURL, this.params.userid + ".tar", e.data.data, 
             function(response) {
             // alert(response);
             alert(

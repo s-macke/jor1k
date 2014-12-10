@@ -1,33 +1,36 @@
 // -------------------------------------------------
 // ---------------- TOUCHSCREEN --------------------
 // -------------------------------------------------
-
 // Emulating the LPC32xx
 
+"use strict";
+
+var message = require('../messagehandler');
+var utils = require('../utils');
+
 // controller register offsets
-LPC32XX_TSC_STAT                      = 0x00;
-LPC32XX_TSC_SEL                       = 0x04;
-LPC32XX_TSC_CON                       = 0x08;
-LPC32XX_TSC_FIFO                      = 0x0C;
-LPC32XX_TSC_DTR                       = 0x10;
-LPC32XX_TSC_RTR                       = 0x14;
-LPC32XX_TSC_UTR                       = 0x18;
-LPC32XX_TSC_TTR                       = 0x1C;
-LPC32XX_TSC_DXP                       = 0x20;
-LPC32XX_TSC_MIN_X                     = 0x24;
-LPC32XX_TSC_MAX_X                     = 0x28;
-LPC32XX_TSC_MIN_Y                     = 0x2C;
-LPC32XX_TSC_MAX_Y                     = 0x30;
-LPC32XX_TSC_AUX_UTR                   = 0x34;
-LPC32XX_TSC_AUX_MIN                   = 0x38;
-LPC32XX_TSC_AUX_MAX                   = 0x3C;
+var LPC32XX_TSC_STAT                      = 0x00;
+var LPC32XX_TSC_SEL                       = 0x04;
+var LPC32XX_TSC_CON                       = 0x08;
+var LPC32XX_TSC_FIFO                      = 0x0C;
+var LPC32XX_TSC_DTR                       = 0x10;
+var LPC32XX_TSC_RTR                       = 0x14;
+var LPC32XX_TSC_UTR                       = 0x18;
+var LPC32XX_TSC_TTR                       = 0x1C;
+var LPC32XX_TSC_DXP                       = 0x20;
+var LPC32XX_TSC_MIN_X                     = 0x24;
+var LPC32XX_TSC_MAX_X                     = 0x28;
+var LPC32XX_TSC_MIN_Y                     = 0x2C;
+var LPC32XX_TSC_MAX_Y                     = 0x30;
+var LPC32XX_TSC_AUX_UTR                   = 0x34;
+var LPC32XX_TSC_AUX_MIN                   = 0x38;
+var LPC32XX_TSC_AUX_MAX                   = 0x3C;
 
-LPC32XX_TSC_ADCCON_AUTO_EN = (1 << 0); // automatic ts event capture
-LPC32XX_TSC_STAT_FIFO_EMPTY = (1 << 7); // fifo is empty; 
-LPC32XX_TSC_FIFO_TS_P_LEVEL = (1 << 31) // touched
+var LPC32XX_TSC_ADCCON_AUTO_EN = (1 << 0); // automatic ts event capture
+var LPC32XX_TSC_STAT_FIFO_EMPTY = (1 << 7); // fifo is empty; 
+var LPC32XX_TSC_FIFO_TS_P_LEVEL = (1 << 31) // touched
 
-function TouchscreenDev(message, intdev) {
-    this.message = message;
+function TouchscreenDev(intdev) {
     this.intdev = intdev;
     this.Reset();
     message.Register("tsmousedown", this.onmousedown.bind(this) );
@@ -103,7 +106,7 @@ TouchscreenDev.prototype.ReadReg32 = function (addr) {
             return this.fifo;
             break;
     }
-    // this.message.Debug("Touchscreen ReadReg32: " + hex8(addr));
+    // message.Debug("Touchscreen ReadReg32: " + utils.ToHex(addr));
     return 0x0;
 }
 
@@ -131,7 +134,7 @@ TouchscreenDev.prototype.WriteReg32 = function (addr, value) {
         break;
 
     }
-    // this.message.Debug("Touchscreen WriteReg32: " + hex8(addr) + ": " + hex8(value));
+    // message.Debug("Touchscreen WriteReg32: " + utils.ToHex(addr) + ": " + utils.ToHex(value));
     return;
 }
 

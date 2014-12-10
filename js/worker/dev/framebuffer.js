@@ -4,11 +4,11 @@
 
 "use strict";
 
-var utils = require('../utils.js');
+var utils = require('../utils');
+var message = require('../messagehandler');
 
 // constructor
-function FBDev(message, ram) {
-    this.message = message;
+function FBDev(ram) {
     this.ram = ram;
     this.width = 640;
     this.height = 400;
@@ -40,7 +40,7 @@ FBDev.prototype.WriteReg32 = function (addr, value) {
 };
 
 FBDev.prototype.OnGetFB = function() {
-    this.message.Send("GetFB", this.GetBuffer() );
+    message.Send("GetFB", this.GetBuffer() );
 }
 
 FBDev.prototype.GetBuffer = function () {

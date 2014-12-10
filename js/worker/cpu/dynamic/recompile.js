@@ -3,6 +3,9 @@
 // -------------------------------------------------
 "use strict";
 
+var message = require('../../messagehandler');
+var utils = require('../../utils');
+
 var PAGESIZE = 8192;
 var PAGE_STATUS_OK = 0x0;
 var PAGE_STATUS_EMPTY = 0x1;
@@ -197,8 +200,8 @@ RecompileCPU.prototype.Gen_lsfi = function(ins) {
             return "SR_F=(r[" + rA + "]|0)<=" + imm + ";";
             break;
         default:
-            DebugMessage("Error in dynamic CPU: l.sf..i instruction with id " +
-            hex8((ins >> 21) & 0x1F) + " not found");
+            message.Debug("Error in dynamic CPU: l.sf..i instruction with id " +
+            utils.ToHex((ins >> 21) & 0x1F) + " not found");
             this.error = true;
             break;
         }
@@ -245,8 +248,8 @@ RecompileCPU.prototype.Gen_3OPs = function(ins) {
             s += "}";
             break;
         default:
-            DebugMessage("Error in dynamic CPU: Three operand instruction with id " +
-            hex8(ins & 0x3CF) + " not found");
+            message.Debug("Error in dynamic CPU: Three operand instruction with id " +
+            utils.ToHex(ins & 0x3CF) + " not found");
             this.error = true;
             break;
         }
@@ -289,7 +292,7 @@ RecompileCPU.prototype.Gen_lsf = function(ins) {
             break;
 
         default:
-            DebugMessage("Error in dynamic CPU: sf.... opcode " + ((ins >> 21) & 0x1F) + " unknown");
+            message.Debug("Error in dynamic CPU: sf.... opcode " + ((ins >> 21) & 0x1F) + " unknown");
             this.error = true;
     }
     return "";
@@ -571,8 +574,8 @@ RecompileCPU.prototype.RecompileInstruction = function(ins)
                 break;
 
         default:
-            DebugMessage("Error in dynamic CPU: Instruction with id " +
-                hex8(((ins >> 26)&0x3F)) + " not found");
+            message.Debug("Error in dynamic CPU: Instruction with id " +
+                utils.ToHex(((ins >> 26)&0x3F)) + " not found");
             this.error = true;
             break;
     }
@@ -590,11 +593,11 @@ RecompileCPU.prototype.Recompile = function(pcbase, ppc, supervisor) {
     var page = ppc >> 13;
     var pageoffset = ppc & 8191;
     if (this.pagestatus[page] == PAGE_STATUS_TAINTED) {
-        DebugMessage("Info: page " + page + "tainted");
+        message.Debug("Info: page " + page + "tainted");
         //this.fns[page] = [];
     }
     	
-    DebugMessage("Recompile at pc="+hex8(pcbase) + " ppc=" + hex8(ppcbase));
+    message.Debug("Recompile at pc="+utils.ToHex(pcbase) + " ppc=" + utils.ToHex(ppcbase));
 
     var ins = 0x0;
     var i = 0;
@@ -669,8 +672,8 @@ RecompileCPU.prototype.Recompile = function(pcbase, ppc, supervisor) {
             this.m[ppcbase >> 2] = (0x7<<26) | (this.fnsshort.length-1);
 
             this.pagestatus[page] = PAGE_STATUS_OK;
-            DebugMessage("Generated code with " + this.n + " instructions");
-            DebugMessage(finalcode);
+            message.Debug("Generated code with " + this.n + " instructions");
+            message.Debug(finalcode);
 
             return true;
         } // end of fence
@@ -697,8 +700,8 @@ RecompileCPU.prototype.Recompile = function(pcbase, ppc, supervisor) {
         if (this.error) break;
     } // for loop
 
-//    DebugMessage("Error in the recompilation process: code so far:");
-//    DebugMessage(codestr);
+//    message.Debug("Error in the recompilation process: code so far:");
+//    message.Debug(codestr);
 
     return false;
 }

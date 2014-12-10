@@ -4,10 +4,6 @@
 
 "use strict";
 
-function DebugMessage(message) {
-    console.log(message);
-}
-
 function UploadBinaryResource(url, filename, data, OnSuccess, OnError) {
 
     var boundary = "xxxxxxxxx";
@@ -48,3 +44,4 @@ function UploadBinaryResource(url, filename, data, OnSuccess, OnError) {
     xhr.send(newdata.buffer);
 }
 
+module.exports.UploadBinaryResource = UploadBinaryResource;

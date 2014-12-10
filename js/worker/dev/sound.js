@@ -6,6 +6,9 @@
 
 "use strict";
 
+var message = require('../messagehandler');
+var utils = require('../utils');
+
 var REG_CTL            = 0x0; // format
 var REG_ADDR           = 0x0004; // pointer to dma buffer
 var REG_PERIODS        = 0x0008; // number of perionds
@@ -14,8 +17,7 @@ var REG_OFFSET         = 0x0010; // current position in buffer
 var REG_RATE           = 0x0014; // rate
 var REG_CHANNELS       = 0x0018; // channels
 
-function SoundDev(message, intdev, ramdev) {
-    this.message = message;
+function SoundDev(intdev, ramdev) {
     this.intdev = intdev;
     this.ramdev = ramdev
     this.Reset();
@@ -64,7 +66,7 @@ SoundDev.prototype.Progress = function() {
     if (this.nextperiod <= 0) { 
         this.intdev.RaiseInterrupt(0x7);
         this.nextperiod += this.period_size;
-        //if (this.nextperiod < 0) this.message.Debug("Error in sound device: Buffer underrun");
+        //if (this.nextperiod < 0) message.Debug("Error in sound device: Buffer underrun");
     }
 }
 
@@ -83,7 +85,7 @@ SoundDev.prototype.ReadReg32 = function (addr) {
             break; 
 
         default:
-            this.message.Debug("Sound: unknown ReadReg32: " + hex8(addr));
+            message.Debug("Sound: unknown ReadReg32: " + utils.ToHex(addr));
             return 0x0;
             break;
     }
@@ -125,7 +127,7 @@ SoundDev.prototype.WriteReg32 = function (addr, value) {
             break;
 
         default:
-            this.message.Debug("sound: unknown  WriteReg32: " + hex8(addr) + ": " + hex8(value));
+            message.Debug("sound: unknown  WriteReg32: " + utils.ToHex(addr) + ": " + utils.ToHex(value));
             return;
             break;
     }

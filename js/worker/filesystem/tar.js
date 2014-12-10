@@ -3,8 +3,20 @@
 // -------------------------------------------------
 // TAR file support for the filesystem
 
-function TAR(message, filesystem) {
-    this.message = message;
+"use strict";
+
+var message = require('../messagehandler');
+
+var S_IRWXUGO = 0x1FF;
+var S_IFMT = 0xF000;
+var S_IFSOCK = 0xC000;
+var S_IFLNK = 0xA000;
+var S_IFREG = 0x8000;
+var S_IFBLK = 0x6000;
+var S_IFDIR = 0x4000;
+var S_IFCHR = 0x2000;
+
+function TAR(filesystem) {
     this.fs = filesystem;
     this.tarbuffer = new Uint8Array(512);
     this.tarbufferofs = 0;
@@ -50,13 +62,13 @@ TAR.prototype.Unpack = function(x) {
 
     var typeflag = String.fromCharCode(this.tarbuffer[156]);
     var name = ReadStringFromBinary(this.tarbuffer, 0, 100);    
-    //this.message.Debug("name:" + name);
+    //message.Debug("name:" + name);
     //TODO: use searchpath function
     var walk = name.split("/");
     var n = walk.length;
     if (walk[n-1].length == 0) walk.pop();
     var n = walk.length;
-    //this.message.Debug("walk:" + walk);
+    //message.Debug("walk:" + walk);
 
     var parentid = 0;
     var id = -1;
@@ -117,7 +129,7 @@ TAR.prototype.Unpack = function(x) {
 }
 
 TAR.prototype.Pack = function(path) {
-    this.message.Debug("tar: " + path);
+    message.Debug("tar: " + path);
     var id = this.fs.SearchPath(path).id;
     if (id == -1) return new Uint8Array(0);
     var filelist = [];
@@ -137,8 +149,8 @@ TAR.prototype.Pack = function(path) {
                 break;
         }
     }    
-    this.message.Debug("tar: " + this.fs.GetFullPath(id) + " size: " + size + " files: " + filelist.length);
-    this.message.Debug(filelist);
+    message.Debug("tar: " + this.fs.GetFullPath(id) + " size: " + size + " files: " + filelist.length);
+    message.Debug(filelist);
     
     var buffer = new Uint8Array(size);
     var offset = 0;

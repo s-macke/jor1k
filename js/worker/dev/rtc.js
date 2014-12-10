@@ -3,8 +3,9 @@
 // -------------------------------------------------
 // Real Time Clock emulating the nxp,lpc3220-rtc
 
-
 "use strict";
+var message = require('../messagehandler');
+var utils = require('../utils');
 
 /*
  * Clock and Power control register offsets
@@ -18,8 +19,7 @@ var LPC32XX_RTC_INTSTAT           = 0x14;
 var LPC32XX_RTC_KEY               = 0x18;
 var LPC32XX_RTC_SRAM              = 0x80;
 
-function RTCDev(message, intdev) {
-    this.message = message;
+function RTCDev(intdev) {
     this.intdev = intdev;
     this.Reset();
 }
@@ -54,7 +54,7 @@ RTCDev.prototype.ReadReg32 = function (addr) {
 
 
         default:
-            this.message.Debug("RTC: unknown ReadReg32: " + hex8(addr));
+            message.Debug("RTC: unknown ReadReg32: " + utils.ToHex(addr));
             return 0x0;
             break;
     }
@@ -69,7 +69,7 @@ RTCDev.prototype.WriteReg32 = function (addr, value) {
             break;
 
         default:
-            this.message.Debug("RTC: unknown  WriteReg32: " + hex8(addr) + ": " + hex8(value));
+            message.Debug("RTC: unknown  WriteReg32: " + utils.ToHex(addr) + ": " + utils.ToHex(value));
             return;
             break;
     }

@@ -3,6 +3,9 @@
 // -------------------------------------------------
 "use strict";
 
+var message = require('../../messagehandler');
+var utils = require('../../utils');
+
 // special purpose register index
 var SPR_UPR = 1; // unit present register
 var SPR_SR = 17; // supervision register
@@ -183,20 +186,20 @@ SafeCPU.prototype.SetFlags = function (x) {
     this.SR_SUMRA = (x & (1 << 16)) ? true : false;
     this.SR_CID = (x >> 28) & 0xF;
     if (this.SR_LEE) {
-        DebugMessage("little endian not supported");
-        abort();
+        message.Debug("little endian not supported");
+        message.Abort();
     }
     if (this.SR_CID) {
-        DebugMessage("context id not supported");
-        abort();
+        message.Debug("context id not supported");
+        message.Abort();
     }
     if (this.SR_EPH) {
-        DebugMessage("exception prefix not supported");
-        abort();
+        message.Debug("exception prefix not supported");
+        message.Abort();
     }
     if (this.SR_DSX) {
-        DebugMessage("delay slot exception not supported");
-        abort();
+        message.Debug("delay slot exception not supported");
+        message.Abort();
     }
     if (this.SR_IEE && !old_SR_IEE) {
         this.CheckForInterrupt();
@@ -280,16 +283,16 @@ SafeCPU.prototype.SetSPR = function (idx, x) {
             // check immediate for interrupt
             if (this.SR_IEE) {
                 if (this.PICMR & this.PICSR) {
-                    DebugMessage("Error in SetSPR: Direct triggering of interrupt exception not supported?");
-                    abort();
+                    message.Debug("Error in SetSPR: Direct triggering of interrupt exception not supported?");
+                    message.Abort();
                 }
             }
             break;
         case 2: // PICSR
             break;
         default:
-            DebugMessage("Error in SetSPR: interrupt address not supported");
-            abort();
+            message.Debug("Error in SetSPR: interrupt address not supported");
+            message.Abort();
         }
         break;
     case 10:
@@ -298,23 +301,23 @@ SafeCPU.prototype.SetSPR = function (idx, x) {
         case 0:
             this.TTMR = x;
             if (((this.TTMR >> 30)&3) != 0x3) {
-                DebugMessage("Error in SetSPR: Timer mode other than continuous not supported");
-                abort();
+                message.Debug("Error in SetSPR: Timer mode other than continuous not supported");
+                message.Abort();
             }
             break;
         case 1:
             this.TTCR = x;
             break;
         default:
-            DebugMessage("Error in SetSPR: Tick timer address not supported");
-            abort();
+            message.Debug("Error in SetSPR: Tick timer address not supported");
+            message.Abort();
             break;
         }
         break;
 
     default:
-        DebugMessage("Error in SetSPR: group " + group + " not found");
-        abort();
+        message.Debug("Error in SetSPR: group " + group + " not found");
+        message.Abort();
         break;
     }
 };
@@ -344,8 +347,8 @@ SafeCPU.prototype.GetSPR = function (idx) {
         case 2:
             return this.PICSR;
         default:
-            DebugMessage("Error in GetSPR: PIC address unknown");
-            abort();
+            message.Debug("Error in GetSPR: PIC address unknown");
+            message.Abort();
             break;
         }
         break;
@@ -358,14 +361,14 @@ SafeCPU.prototype.GetSPR = function (idx) {
         case 1:
             return this.TTCR; // or clock
         default:
-            DebugMessage("Error in GetSPR: Tick timer address unknown");
-            abort();
+            message.Debug("Error in GetSPR: Tick timer address unknown");
+            message.Abort();
             break;
         }
         break;
     default:
-        DebugMessage("Error in GetSPR: group " + group +  " unknown");
-        abort();
+        message.Debug("Error in GetSPR: group " + group +  " unknown");
+        message.Abort();
         break;
     }
 };
@@ -373,7 +376,7 @@ SafeCPU.prototype.GetSPR = function (idx) {
 
 SafeCPU.prototype.Exception = function (excepttype, addr) {
     var except_vector = excepttype | (this.SR_EPH ? 0xf0000000 : 0x0);
-    //DebugMessage("Info: Raising Exception " + hex8(excepttype));
+    //message.Debug("Info: Raising Exception " + utils.ToHex(excepttype));
 
     this.SetSPR(SPR_EEAR_BASE, addr);
     this.SetSPR(SPR_ESR_BASE, this.GetFlags());
@@ -408,8 +411,8 @@ SafeCPU.prototype.Exception = function (excepttype, addr) {
         this.SetSPR(SPR_EPCR_BASE, (this.pc<<2) + 4 - (this.delayedins ? 4 : 0));
         break;
     default:
-        DebugMessage("Error in Exception: exception type not supported");
-        abort();
+        message.Debug("Error in Exception: exception type not supported");
+        message.Abort();
     }
     this.delayedins = false;
     this.delayedins_at_fence = false;
@@ -434,8 +437,8 @@ SafeCPU.prototype.DTLBLookup = function (addr, write) {
     }
         // set lru 
         if (tlmbr & 0xC0) {
-            DebugMessage("Error: LRU ist not supported");
-            abort();
+            message.Debug("Error: LRU ist not supported");
+            message.Abort();
         }
     
     var tlbtr = this.group1[0x280 | setindex]; // translate register
@@ -481,8 +484,8 @@ SafeCPU.prototype.GetInstructionPointer = function (addr) {
     }
     // set lru
     if (tlmbr & 0xC0) {
-        DebugMessage("Error: LRU ist not supported");
-        abort();
+        message.Debug("Error: LRU ist not supported");
+        message.Abort();
     }
 
     var tlbtr = this.group2[0x280 | setindex];
@@ -605,7 +608,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
         if (nn>=0) {
             nn++;
             if (nn > 31000) {
-                //DebugMessage("Found");
+                //message.Debug("Found");
                 nn = -1;
                     //if (this.nnn < 5)
                         this.rc.Recompile(this.pc<<2, ppc, this.SR_SM);
@@ -620,7 +623,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
         if (this.pagestatus[this.ppc>>13]==0) {
             var f = this.rc.fns[this.ppc>>13][((this.ppc&8191)>>2)];
             if (f) {
-                //DebugMessage("Found at " + hex8(ppc) + " with pc=" + hex8(this.pc<<2));
+                //message.Debug("Found at " + utils.ToHex(ppc) + " with pc=" + utils.ToHex(this.pc<<2));
                 f.fn.Execute();
                 dsteps = dsteps - f.n|0;
                 this.pc = this.nextpc|0;
@@ -733,8 +736,8 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
             rindex = (ins >> 21) & 0x1F;
             // if 16th bit is set
             if (ins & 0x10000) {
-                DebugMessage("Error: macrc not supported\n");
-                abort();
+                message.Debug("Error: macrc not supported\n");
+                message.Abort();
             } else {
                 r[rindex] = ((ins & 0xFFFF) << 16); // movhi
             }
@@ -743,7 +746,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
         case 0x8:
             // sys and trap
             if ((ins&0xFFFF0000) == 0x21000000) {
-                DebugMessage("Trap at " + hex8(this.pc<<2));
+                message.Debug("Trap at " + utils.ToHex(this.pc<<2));
                 this.Exception(EXCEPT_TRAP, this.group0[SPR_EEAR_BASE]);
             } else {
                 this.Exception(EXCEPT_SYSCALL, this.group0[SPR_EEAR_BASE]);
@@ -788,8 +791,8 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
             // lwa
             r[32] = r[(ins >> 16) & 0x1F] + ((ins << 16) >> 16);
             if ((r[32] & 3) != 0) {
-                DebugMessage("Error in lwa: no unaligned access allowed");
-                abort();
+                message.Debug("Error in lwa: no unaligned access allowed");
+                message.Abort();
             }
             r[33] = this.DTLBLookup(r[32], false);
             if (r[33] == -1) {
@@ -804,8 +807,8 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
             // lwz
             r[32] = r[(ins >> 16) & 0x1F] + ((ins << 16) >> 16);
             if ((r[32] & 3) != 0) {
-                DebugMessage("Error in lwz: no unaligned access allowed");
-                abort();
+                message.Debug("Error in lwz: no unaligned access allowed");
+                message.Abort();
             }
             r[33] = this.DTLBLookup(r[32], false);
             if (r[33] == -1) {
@@ -899,8 +902,8 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                 r[(ins >> 21) & 0x1F] = r[(ins >> 16) & 0x1F] >> (ins & 0x1F);
                 break;
             default:
-                DebugMessage("Error: opcode 2E function not implemented");
-                abort();
+                message.Debug("Error: opcode 2E function not implemented");
+                message.Abort();
                 break;
             }
             break;
@@ -950,8 +953,8 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                 this.SR_F = (r[(ins >> 16) & 0x1F] <= imm) ? true : false;
                 break;
             default:
-                DebugMessage("Error: sf...i not supported yet");
-                abort();
+                message.Debug("Error: sf...i not supported yet");
+                message.Abort();
                 break;
             }
             break;
@@ -1029,8 +1032,8 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                 this.SR_F = (f[rA] <= f[rB]) ? true : false;
                 break;
             default:
-                DebugMessage("Error: lf. function " + hex8(ins & 0xFF) + " not supported yet");
-                abort();
+                message.Debug("Error: lf. function " + utils.ToHex(ins & 0xFF) + " not supported yet");
+                message.Abort();
                 break;
             }
             break;
@@ -1040,8 +1043,8 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
             imm = ((((ins >> 10) & 0xF800) | (ins & 0x7FF)) << 16) >> 16;
             r[32] = r[(ins >> 16) & 0x1F] + imm;
             if (r[32] & 0x3) {
-                DebugMessage("Error in swa: no aligned memory access");
-                abort();
+                message.Debug("Error in swa: no aligned memory access");
+                message.Abort();
             }
             r[33] = this.DTLBLookup(r[32], true);
             if (r[33] == -1) {
@@ -1065,8 +1068,8 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
             imm = ((((ins >> 10) & 0xF800) | (ins & 0x7FF)) << 16) >> 16;
             r[32] = r[(ins >> 16) & 0x1F] + imm;
             if (r[32] & 0x3) {
-                DebugMessage("Error in sw: no aligned memory access");
-                abort();
+                message.Debug("Error in sw: no aligned memory access");
+                message.Abort();
             }
             r[33] = this.DTLBLookup(r[32], true);
             if (r[33] == -1) {
@@ -1191,8 +1194,8 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
 
                 break;
             default:
-                DebugMessage("Error: op38 opcode not supported yet");
-                abort();
+                message.Debug("Error: op38 opcode not supported yet");
+                message.Abort();
                 break;
             }
             break;
@@ -1241,14 +1244,14 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                 this.SR_F = (r[(ins >> 16) & 0x1F] <= r[(ins >> 11) & 0x1F]) ? true : false;
                 break;
             default:
-                DebugMessage("Error: sf.... function supported yet");
-                abort();
+                message.Debug("Error: sf.... function supported yet");
+                message.Abort();
             }
             break;
 
         default:
-            DebugMessage("Error: Instruction with opcode " + hex8(ins >>> 26) + " not supported");
-            abort();
+            message.Debug("Error: Instruction with opcode " + utils.ToHex(ins >>> 26) + " not supported");
+            message.Abort();
             break;
         }
 

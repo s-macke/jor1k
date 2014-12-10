@@ -1,8 +1,12 @@
 // -------------------------------------------------
 // ----------------- Ethernet ----------------------
 // -------------------------------------------------
-
 // Emulation of the OpenCores ethmac ethernet controller.
+
+"use strict";
+
+var message = require('../messagehandler');
+var utils = require('../utils');
 
 //REGISTER ADDRESSES
 var ETHMAC_ADDR_MODER = 0x0;
@@ -55,15 +59,13 @@ var MII_NCONFIG =        0x1c;        /* Network interface config    */
 
 
 
-
 //TODO: MODER.LOOPBCK - loopback support
 //TODO: Carrier Sense?
 //TODO: Huge frames
 //TODO: IAM mode
 //TODO: MODER.BRO
-function EthDev(message, ram, intdev, mac) {
+function EthDev(ram, intdev, mac) {
     "use strict";
-    this.message = message;
     this.ram = ram;
     this.intdev = intdev;
     this.TransmitCallback = function(data){}; // Should call handler to send data asynchronously.
@@ -569,7 +571,7 @@ function EthDev(message, ram, intdev, mac) {
                     addr <= ETHMAC_ADDR_BD_END) {
                     ret = this.BD[(addr-ETHMAC_ADDR_BD_START)>>>2];
                 } else {
-                    this.message.Debug("Attempt to access ethmac register beyond 0x800");
+                    message.Debug("Attempt to access ethmac register beyond 0x800");
                 }
         }
         return ret;
@@ -591,7 +593,7 @@ function EthDev(message, ram, intdev, mac) {
                 if (fiad != phy_addr) {
                     this.MIIRX_DATA = 0xFFFF;
                 } else {
-                    // this.message.Debug("MIICOMMAND read" + " " + hex8(rgad));
+                    // message.Debug("MIICOMMAND read" + " " + utils.ToHex(rgad));
                     this.MIIRX_DATA = this.MIIregs[rgad];
                 }
                 break;
@@ -599,13 +601,13 @@ function EthDev(message, ram, intdev, mac) {
             case 4: // write status
                 if (fiad != phy_addr) {
                 } else {
-                    // this.message.Debug("MIICOMMAND write" + " " + hex8(rgad) + " " + hex8(this.MIITX_DATA));
+                    // message.Debug("MIICOMMAND write" + " " + utils.ToHex(rgad) + " " + utils.ToHex(this.MIITX_DATA));
                     //this.MIIregs[rgad] = this.MIITX_DATA & 0xFFFF;
                 }
                 break;
 
             default:
-                this.message.Debug("Error in ethmac: Unknown mii command detected");
+                message.Debug("Error in ethmac: Unknown mii command detected");
                 break;
         }
 
@@ -614,7 +616,7 @@ function EthDev(message, ram, intdev, mac) {
 
 
     this.WriteReg32 = function (addr, val) {
-        // this.message.Debug("write ethmac " + hex8(addr));
+        // message.Debug("write ethmac " + utils.ToHex(addr));
         switch (addr) {
             case ETHMAC_ADDR_MODER:
                 this.MODER = val;
@@ -739,13 +741,13 @@ function EthDev(message, ram, intdev, mac) {
                         }
                     }
                 } else {
-                    this.message.Debug("Attempt to access ethmac register beyond 0x800");
+                    message.Debug("Attempt to access ethmac register beyond 0x800");
                 }
         }
     };
 
     this.Reset();
-    this.message.Register("ethmac", this.Receive.bind(this) );
+    message.Register("ethmac", this.Receive.bind(this) );
 
 }
 
