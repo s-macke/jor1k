@@ -40,6 +40,7 @@
                     </label>
                     <img src="images/tar.png" width="20px" height="20px"  onclick='jor1kgui.TAR("home/user")' title="Download of home folder" />
                     <img src="images/sync.png" width="20px" height="20px"  onclick='jor1kgui.Sync("home/user")' title="Sync with server" />
+                    <textarea style="display:none;" id="clipboard">clipb</textarea>
                     </span>
                     <span id="stats" style="float: right"></span>
                     </td></tr>
@@ -60,7 +61,15 @@ int main() {
 }
 </div>
 
-gcc options:<input type="text" maxlen=32 id="gccoptions" value="-Wall" /><button type='button' onclick= "RunCode(GetCodeText(),document.getElementById('gccoptions').value);return false;" >Compile and run</button>
+<select id="lang" onchange='editor.setValue("");editor.getSession().setMode("ace/mode/"+this.options[this.selectedIndex].value)'>
+  <option value="c_cpp">gcc</option>
+  <option value="lua">lua</option>
+  <option value="perl">perl</option>
+  <option value="php">php</option>
+  <option value="python">python</option>
+  <option value="ruby">ruby</option>
+  <option value="sh">sh</option>
+</select> options:<input type="text" maxlen=32 id="gccoptions" value="-Wall" /><button type='button' onclick= "RunCode(GetCodeText(),document.getElementById('gccoptions').value);return false;" >Compile and run</button>
 <span style="margin: 0 5px 0 5px" id="gcc-compile-status"></span>
 <span style="margin: 0 5px 0 5px">Errors: <span id="gcc-error-count">0</span> Warnings: <span id="gcc-warning-count">0</span></span>
 Theme<select onchange='editor.setTheme("ace/theme/"+this.options[this.selectedIndex].value)'>
@@ -88,11 +97,11 @@ Theme<select onchange='editor.setTheme("ace/theme/"+this.options[this.selectedIn
        <br>
         </div>
 
-<script src="js/lib/ace-editor-src-min-noconflict/ace.js" type="text/javascript" charset="utf-8"></script>
+<script src="js/lib/ace-editor-src-min-noconflict/ace.js"></script>
 <script src="jor1k-master-min.js"></script>
 
 <script>
-var Jor1k = require("Jor1k");
+
 
 function OnUploadFiles(files)
 {
@@ -138,8 +147,8 @@ function Start() {
         },
         termid: "tty",   // canvas id for the terminal
         fbid: "fb",     // canvas id for the framebuffer
+        clipboardid: "clipboard",  // input id for the clipboard
         statsid: "stats",  // object id for the statistics test
-        clipboard: "",
         relayURL: "", // relay url for the network
         userid: userid, // unique user id string. Empty, choosen randomly, from a url, or from a cookie.
         syncURL: "http://jor1k.com/sync/upload.php", // url to sync a certain folder
@@ -180,6 +189,8 @@ function Start() {
     }
 
     // --------------------------------------------------------
+
+    var Jor1k = require("Jor1k");
 
     jor1kgui = new Jor1k(jor1kparameters);
     jor1kgui.term.OnCharReceived = terminalPutCharListener;
@@ -296,6 +307,7 @@ function CreateEditor()
 {
     editor = ace.edit("code");
     editor.setTheme("ace/theme/monokai");
+    editor.getSession().setNewLineMode("unix");
     editor.getSession().setMode("ace/mode/c_cpp");
 }
 
@@ -305,35 +317,41 @@ function GetCodeText() {
 }
 
 function SendKeysToJor1k(text,quiet) {
-  var tty = quiet ? "tty1" : "tty0";
-  for(var i=0;i<text.length;i++) {
-    jor1kgui.SendToWorker(tty, [text.charCodeAt(i) >>>0]);
-  }
+    var tty = quiet ? "tty1" : "tty0";
+    for(var i=0;i<text.length;i++) {
+        jor1kgui.SendToWorker(tty, [text.charCodeAt(i) >>>0]);
+    }
 }
 
 function RunCode(code,gccoptions) {
-   if(code.length ===0 || code.indexOf("\x03") >= 0 || code.indexOf("\x04") >= 0 ) return;           
+    if(code.length ===0 || code.indexOf("\x03") >= 0 || code.indexOf("\x04") >= 0 ) return;           
 
-   jor1kgui.Pause(false);
+    jor1kgui.Pause(false);
     // wakeup tty0
-   SendKeysToJor1k("\x03\n\nstty -clocal\nstty crtscts\nstty -ixoff\n",false); 
-// wakeup hidden tty1
-//tty1-unusedfornow SendKeysToJor1k("\x03\n",true);
+    SendKeysToJor1k("\x03\n\nstty -clocal\nstty crtscts\nstty -ixoff\n",false); 
+    // wakeup hidden tty1
+    //tty1-unusedfornow SendKeysToJor1k("\x03\n",true);
    
-   //SendKeysToJor1k("cd ~;rm prog.c program 2>/dev/null\n");
+    //SendKeysToJor1k("cd ~;rm prog.c program 2>/dev/null\n");
     var bufView = new Uint8Array(code.length);
     for (var i=0; i<code.length; i++) {
-      bufView[i] = code.charCodeAt(i);
+        bufView[i] = code.charCodeAt(i);
     }
     jor1kgui.SendToWorker("MergeFile", {name: "home/user/prog.c", data: bufView});
+    
+    var lang = document.getElementById("lang").value;
+    if(lang == "c_cpp"){  
+        // For now we want gcc output to be viewable, so this goes on the main terminal
+        // To use tty1 we would need to synchronize gcc i.e. wait for prog.c upload
 
-   // For now we want gcc output to be viewable, so this goes on the main terminal
-   // To use tty1 we would need to synchronize gcc i.e. wait for prog.c upload
-
-      // not-reliable SendKeysToJor1k("stty echo\n\nclear\n");
-    term_output = "";
-    SendKeysToJor1k("echo \\#\\#\\#GCC_COMPILE\\#\\#\\#;clear;gcc " + gccoptions + " prog.c -o program; echo GCC_EXIT_CODE: $?; echo \\#\\#\\#GCC_COMPILE_FINISHED\\#\\#\\#;clear\n");
-    waitForGccCompletion();
+        // not-reliable SendKeysToJor1k("stty echo\n\nclear\n");
+        term_output = "";
+        SendKeysToJor1k("echo \\#\\#\\#GCC_COMPILE\\#\\#\\#;clear;gcc " + gccoptions + " prog.c -o program; echo GCC_EXIT_CODE: $?; echo \\#\\#\\#GCC_COMPILE_FINISHED\\#\\#\\#;clear\n");
+        waitForGccCompletion();
+    } else {
+        document.getElementById('gcc-compile-status').innerHTML = "";
+        SendKeysToJor1k("mv prog.c prog\nclear\n" + lang + " prog\n");
+    }
 }
 </script>
 
