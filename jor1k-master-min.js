@@ -252,6 +252,10 @@ module.exports.UnicodeToUTF8Stream = UnicodeToUTF8Stream;
 },{}],3:[function(require,module,exports){
 // manages the websocket connection for the ethmac peripheral
 
+var message = require('../messagehandler');
+
+"use strict";
+
 function Ethernet(relayURL) {
     this.url = relayURL;
     this.onmessage = function(e) { };
@@ -273,15 +277,15 @@ function EthernetMessageHandler(e) {
 
 function EthernetCloseHandler(e) {
     // reopen websocket if it closes
-    console.log("Websocket closed. Reopening.");
+    message.Debug("Websocket closed. Reopening.");
     this.OpenSocket();
 }
 
 function EthernetErrorHandler(e) {
     // just report the error to console, close event
     // will handle reopening if possible
-    console.error("Websocket error:");
-    console.error(e);
+    message.Debug("Websocket error:");
+    message.Debug(e);
 }
 
 Ethernet.prototype.OpenSocket = function() {
@@ -311,12 +315,15 @@ Ethernet.prototype.Close = function() {
 
 module.exports = Ethernet;
 
-},{}],4:[function(require,module,exports){
+},{"../messagehandler":8}],4:[function(require,module,exports){
+var message = require('../messagehandler.js');
+
+
 "use strict";
 
-function Framebuffer(fbid, fps, SendToWorker) {
+
+function Framebuffer(fbid, fps) {
     this.fbid = fbid;
-    this.SendToWorker = SendToWorker;
 
     this.Init(fbid);
     this.SetFPS(fps);
@@ -339,21 +346,21 @@ Framebuffer.prototype.Init = function(fbid) {
         var rect = this.fbcanvas.getBoundingClientRect();
         var x = (event.clientX - rect.left)*640/rect.width;
         var y = (event.clientY - rect.top)*400/rect.height;
-        this.SendToWorker("tsmousedown", {x:x, y:y});
+        message.Send("tsmousedown", {x:x, y:y});
     }.bind(this);
 
     this.fbcanvas.onmouseup = function(event) {
         var rect = this.fbcanvas.getBoundingClientRect();
         var x = (event.clientX - rect.left)*640/rect.width;
         var y = (event.clientY - rect.top)*400/rect.height;
-        this.SendToWorker("tsmouseup", {x:x, y:y});
+        message.Send("tsmouseup", {x:x, y:y});
     }.bind(this);
 
     this.fbcanvas.onmousemove = function(event) {
         var rect = this.fbcanvas.getBoundingClientRect();
         var x = (event.clientX - rect.left)*640/rect.width;
         var y = (event.clientY - rect.top)*400/rect.height;
-        this.SendToWorker("tsmousemove", {x:x, y:y});
+        message.Send("tsmousemove", {x:x, y:y});
     }.bind(this);
 }
 
@@ -366,7 +373,7 @@ Framebuffer.prototype.SetFPS = function(fps) {
         window.clearInterval(this.fbinterval);
     }
     if (fps != 0) {
-        this.fbinterval = window.setInterval(function(){this.SendToWorker("GetFB", 0)}.bind(this), 1000/this.fps);
+        this.fbinterval = window.setInterval(function(){message.Send("GetFB", 0)}.bind(this), 1000/this.fps);
     }
 }
 
@@ -397,8 +404,10 @@ Framebuffer.prototype.Update = function(buffer) {
 
 module.exports = Framebuffer;
 
-},{}],5:[function(require,module,exports){
+},{"../messagehandler.js":8}],5:[function(require,module,exports){
 // Provides a loop sound buffer.
+
+var message = require('../messagehandler');
 
 "use strict";
 
@@ -464,11 +473,11 @@ LoopSoundBuffer.prototype.AddBuffer = function(addbuffer)
     var currentperiod = (this.bufferpos / this.periodsize);
     if ((currentperiod) < (this.period+2)) {
         this.bufferpos = this.periodsize*(this.period+3);
-        //console.log("Warning: Sound buffer underrun, resetting");
+        //message.Debug("Warning: Sound buffer underrun, resetting");
     }
     if (currentperiod > (this.period+4)) {
         this.bufferpos = this.periodsize*(this.period+3);
-        //console.log("Warning: Sound buffer overrun, resetting");
+        //message.Debug("Warning: Sound buffer overrun, resetting");
     }
 
     for(var i=0; i<addbuffer.length; i++) {
@@ -479,7 +488,7 @@ LoopSoundBuffer.prototype.AddBuffer = function(addbuffer)
 
 module.exports = LoopSoundBuffer;
 
-},{}],6:[function(require,module,exports){
+},{"../messagehandler":8}],6:[function(require,module,exports){
 // -------------------------------------------------
 // -------------- Terminal Input -------------------
 // -------------------------------------------------
@@ -680,6 +689,7 @@ module.exports = TerminalInput;
 "use strict";
 
 var UTF8 = require('../../lib/utf8');
+var message = require('../messagehandler');
 
 var Colors = new Array(
     // standard colors
@@ -932,7 +942,7 @@ Terminal.prototype.ChangeColor = function(Numbers) {
             // reset mapping ?
             break;
         default:
-            console.log("Color " + Numbers[i] + " not found");
+            message.Debug("Color " + Numbers[i] + " not found");
             break;
         }
     }
@@ -941,7 +951,7 @@ Terminal.prototype.ChangeColor = function(Numbers) {
 };
 
 Terminal.prototype.HandleEscapeSequence = function() {
-    //console.log("Escape sequence:'" + this.escapestring+"'");
+    //message.Debug("Escape sequence:'" + this.escapestring+"'");
     var i = 0;
     if (this.escapestring == "[J") {
         this.DeleteArea(this.cursory, this.cursorx, this.cursory, this.ncolumns - 1);
@@ -956,7 +966,7 @@ Terminal.prototype.HandleEscapeSequence = function() {
     var s = this.escapestring;
 
     if (s.charAt(0) != "[") {
-        console.log("Escape sequence unknown:'" + this.escapestring + "'");
+        message.Debug("Escape sequence unknown:'" + this.escapestring + "'");
         return; // the short escape sequences must be handled earlier
     }
 
@@ -989,7 +999,7 @@ Terminal.prototype.HandleEscapeSequence = function() {
                     case '?7': // reset auto-wrap mode 
                     break;
                     default:
-                        console.log("Term Parameter " + this.escapestring + " unknown");
+                        message.Debug("Term Parameter " + this.escapestring + " unknown");
                     break;
                 }
             }
@@ -1005,7 +1015,7 @@ Terminal.prototype.HandleEscapeSequence = function() {
                     case '?7': // Set auto-wrap mode 
                     break;
                     default:
-                        console.log("Term Parameter " + this.escapestring + " unknown");
+                        message.Debug("Term Parameter " + this.escapestring + " unknown");
                     break;
                 }
             }
@@ -1015,7 +1025,7 @@ Terminal.prototype.HandleEscapeSequence = function() {
             for(var i=0; i<numbers.length; i++) {
                 switch(numbers[i]) {
                     default:
-                        console.log("Term Parameter " + this.escapestring + " unknown");
+                        message.Debug("Term Parameter " + this.escapestring + " unknown");
                     break;
                 }
             }
@@ -1156,7 +1166,7 @@ Terminal.prototype.HandleEscapeSequence = function() {
             break;    
 
         default:
-            console.log("Escape sequence unknown:'" + this.escapestring + "'");
+            message.Debug("Escape sequence unknown:'" + this.escapestring + "'");
         break;
     }
 
@@ -1172,7 +1182,7 @@ Terminal.prototype.HandleEscapeSequence = function() {
 
 Terminal.prototype.PutChar = function(c) {
     var i = 0;
-    //console.log("Char:" + c + " " +  String.fromCharCode(c));
+    //message.Debug("Char:" + c + " " +  String.fromCharCode(c));
     // escape sequence (CS)
     if (this.escapetype == 2) {
         this.escapestring += String.fromCharCode(c);
@@ -1207,13 +1217,11 @@ Terminal.prototype.PutChar = function(c) {
         // line feed
         this.LineFeed();
         this.OnCharReceived("\n");
-        //console.log("LineFeed");
         return;
     case 0xD:
         // carriage return
         this.cursorx = 0;
         this.PrepareUpdateRow(this.cursory);
-        //console.log("Carriage Return");
         return;
     case 0x7:
         // beep
@@ -1225,11 +1233,9 @@ Terminal.prototype.PutChar = function(c) {
             this.cursorx = 0;
         }
         this.PrepareUpdateRow(this.cursory);
-        //console.log("backspace");
         return;
     case 0x9:
         // horizontal tab
-        //console.log("tab");
         var spaces = 8 - (this.cursorx&7);
         do
         {
@@ -1252,7 +1258,7 @@ Terminal.prototype.PutChar = function(c) {
     case 0x14:  case 0x15:  case 0x16:  case 0x17:
     case 0x18:  case 0x19:  case 0x1A:  case 0x1B:
     case 0x1C:  case 0x1D:  case 0x1E:  case 0x1F:
-        console.log("unknown character " + c);
+        message.Debug("unknown character " + c);
         return;
     }
 
@@ -1269,7 +1275,7 @@ Terminal.prototype.PutChar = function(c) {
 
     this.color[cy][cx] = this.currentcolor;
     this.cursorx++;
-    //console.log("Write: " + String.fromCharCode(c));
+    //message.Debug("Write: " + String.fromCharCode(c));
     this.PrepareUpdateRow(cy);
 
     this.OnCharReceived(String.fromCharCode(c));
@@ -1277,7 +1283,68 @@ Terminal.prototype.PutChar = function(c) {
 
 module.exports = Terminal;
 
-},{"../../lib/utf8":2}],8:[function(require,module,exports){
+},{"../../lib/utf8":2,"../messagehandler":8}],8:[function(require,module,exports){
+// -------------------------------------------------
+// ------------- MessageHandler --------------------
+// -------------------------------------------------
+
+"use strict";
+
+var worker;
+
+
+function Send(command, data) {
+    worker.postMessage(
+    {
+        "command" : command,
+        "data" : data
+    }
+    );
+}
+
+function Debug(message) {
+    console.log(message);
+}
+
+function Abort() {
+    DebugMessage("Abort execution.");
+    Send("Stop", {});
+    throw new Error('Kill worker');
+}
+
+
+var messagemap = new Object();
+function Register(message, OnReceive) {
+    messagemap[message] = OnReceive;
+}
+
+// this is a global object of the worker
+function OnMessage(e) {
+    if (typeof messagemap[e.data.command] == 'function') {
+            messagemap[e.data.command](e.data.data);
+            return;
+    }
+}
+
+function SetWorker(_worker) {
+    worker = _worker;
+    worker.onmessage = OnMessage;
+    worker.onerror = function(e) {
+        DebugMessage("Error at " + e.filename + ":" + e.lineno + ": " + e.message);
+        Abort();
+    }
+}
+
+
+
+module.exports.SetWorker = SetWorker;
+module.exports.Register = Register;
+module.exports.Debug = Debug;
+module.exports.Abort = Abort;
+module.exports.Send = Send;
+ 
+
+},{}],9:[function(require,module,exports){
 // -------------------------------------------------
 // -------------------- Master ---------------------
 // -------------------------------------------------
@@ -1289,36 +1356,39 @@ var Ethernet = require('./dev/ethernet');
 var LoopSoundBuffer = require('./dev/sound');
 var download = require('../lib/download');
 var utils = require('./utils');
+var message = require('./messagehandler');
 
 "use strict";
 
 
-function DebugMessage(message) {
-    console.log(message);
-    //var myconsole = document.getElementById("console");
-    //myconsole.innerHTML += message + "<br>";
-}
-
 function jor1kGUI(parameters)
 {
     this.params = parameters;
+    this.message = message;
 
     this.worker = new Worker('jor1k-worker-min.js');
-    this.worker.onmessage = this.OnMessage.bind(this);   
-    this.worker.onerror = function(e) {
-        DebugMessage("Error at " + e.filename + ":" + e.lineno + ": " + e.message);
-        this.stop = true;
-    }
-
-    //this.sound = new LoopSoundBuffer(22050);
+    message.SetWorker(this.worker);
     
     this.terminalcanvas = document.getElementById(this.params.termid);
     this.clipboard = document.getElementById(this.params.clipboardid);
     this.stats = document.getElementById(this.params.statsid);
-    this.term = new Terminal(24, 80, this.params.termid);
-    this.terminput = new TerminalInput(this.SendChars.bind(this));
-    this.framebuffer = new Framebuffer(this.params.fbid, this.params.fps, this.SendToWorker.bind(this));
 
+    this.terminput = new TerminalInput(this.SendChars.bind(this));
+
+    this.term = new Terminal(24, 80, this.params.termid);
+    message.Register("tty0", function(d) {
+       d.forEach(function(c) {
+            this.term.PutChar(c&0xFF);
+       }.bind(this));
+    }.bind(this));
+
+
+    this.framebuffer = new Framebuffer(this.params.fbid, this.params.fps);
+    message.Register("GetFB", this.framebuffer.Update.bind(this.framebuffer));
+
+    //this.sound = new LoopSoundBuffer(22050);
+    //message.Register("sound",      this.sound.AddBuffer.bind(this.sound));
+    //message.Register("sound.rate", this.sound.SetRate.bind(this.sound));
 
     this.terminalcanvas.onmousedown = function(event) {
         if (!this.framebuffer.fbcanvas) return;
@@ -1362,13 +1432,12 @@ function jor1kGUI(parameters)
       Window.onmousedown = recordTarget; // IE 10 support (untested)
 
 
-
     document.onkeypress = function(event) {
         if(this.IgnoreKeys()) return true;
         if ((this.lastMouseDownTarget == this.terminalcanvas) || (this.lastMouseDownTarget == this.clipboard)) {
             return this.terminput.OnKeyPress(event);
         }
-        this.SendToWorker("keypress", {keyCode:event.keyCode, charCode:event.charCode});
+        message.Send("keypress", {keyCode:event.keyCode, charCode:event.charCode});
         return false;
     }.bind(this);
 
@@ -1377,7 +1446,7 @@ function jor1kGUI(parameters)
         if ((this.lastMouseDownTarget == this.terminalcanvas) || (this.lastMouseDownTarget == this.clipboard)) {
             return this.terminput.OnKeyDown(event);
         }
-        this.SendToWorker("keydown", {keyCode:event.keyCode, charCode:event.charCode});
+        message.Send("keydown", {keyCode:event.keyCode, charCode:event.charCode});
         return false;
     }.bind(this);
 
@@ -1386,45 +1455,68 @@ function jor1kGUI(parameters)
         if ((this.lastMouseDownTarget == this.terminalcanvas) || (this.lastMouseDownTarget == this.clipboard)) {
             return this.terminput.OnKeyUp(event);
         }
-        this.SendToWorker("keyup", {keyCode:event.keyCode, charCode:event.charCode});
+        message.Send("keyup", {keyCode:event.keyCode, charCode:event.charCode});
         return false;
     }.bind(this);
 
     this.ethernet = new Ethernet(this.params.relayURL);
     this.ethernet.onmessage = function(e) {
-        this.SendToWorker("ethmac", e.data);
+        message.Send("ethmac", e.data);
     }.bind(this);
+    message.Register("ethmac", this.ethernet.SendFrame.bind(this.ethernet));
+
+
+    message.Register("Stop", function(){message.Debug("Received stop signal"); this.stop = true}.bind(this));
+    message.Register("GetIPS", this.ShowIPS.bind(this));
+    message.Register("execute", this.Execute.bind(this));
+
 
     this.Reset();
     
    
-    window.setInterval(function(){this.SendToWorker("GetIPS", 0)}.bind(this), 1000);
+    window.setInterval(function(){message.Send("GetIPS", 0)}.bind(this), 1000);
 }
 
-jor1kGUI.prototype.SendToWorker = function(command, data) {
-    this.worker.postMessage(
-    {
-        "command": command,
-        "data": data
-    });
-}
+
+// this command is send back and forth to be responsive
+jor1kGUI.prototype.Execute = function() {
+    if (this.stop) return;
+    if(this.userpaused) {
+        this.executepending = true;
+    } else {
+        this.executepending = false; 
+        message.Send("execute", 0);
+    }
+};
+
+jor1kGUI.prototype.ShowIPS = function(ips) {
+    if (this.userpaused) {
+        this.stats.innerHTML = "Paused"; 
+    } else {
+        this.stats.innerHTML = ips<1000000?
+        Math.floor(ips/1000) + " KIPS" 
+        :
+        (Math.floor(ips/100000)/10.) + " MIPS";
+   }
+};
+
 
 jor1kGUI.prototype.ChangeCore = function(core) {
-    this.SendToWorker("ChangeCore", core);
+    message.Send("ChangeCore", core);
 };
 
 
 jor1kGUI.prototype.Reset = function () {
     this.stop = false; // VM Stopped/Aborted
     this.userpaused = false;
-    this.executepending=false; // if we rec an execute message while paused      
-    this.SendToWorker("Init", this.params.system);
-    this.SendToWorker("Reset");
+    this.executepending = false; // if we rec an execute message while paused      
+    message.Send("Init", this.params.system);
+    message.Send("Reset");
       
-    this.SendToWorker("LoadAndStart", this.params.system.kernelURL);
-    this.SendToWorker("LoadFilesystem", this.params.fs);
+    message.Send("LoadAndStart", this.params.system.kernelURL);
+    message.Send("LoadFilesystem", this.params.fs);
     this.term.PauseBlink(false);
-    this.lastMouseDownTarget = this.terminalcanvas;
+    message.lastMouseDownTarget = this.terminalcanvas;
 }
 
 jor1kGUI.prototype.Pause = function(pause) {
@@ -1433,7 +1525,7 @@ jor1kGUI.prototype.Pause = function(pause) {
     this.userpaused = pause;
     if(! this.userpaused && this.executepending) {
       this.executepending = false;
-       this.SendToWorker("execute", 0);
+       message.Send("execute", 0);
     }
     this.term.PauseBlink(pause);
 }
@@ -1441,108 +1533,51 @@ jor1kGUI.prototype.Pause = function(pause) {
 // sends the input characters for the terminal
 jor1kGUI.prototype.SendChars = function(chars) {
     if (this.lastMouseDownTarget == this.fbcanvas) return;
-    this.SendToWorker("tty0", chars);
+    message.Send("tty0", chars);
 }
 
 
 jor1kGUI.prototype.TAR = function(path) {
-    this.SendToWorker("tar", path);
+    message.Register("tar", function(d){download(d, "user.tar", "application/x-tar");} );
+    message.Send("tar", path);
 }
 
 jor1kGUI.prototype.Sync = function(path) {
-    this.SendToWorker("sync", path);
+    message.Register("sync", this.OnSync.bind(this));
+    message.Send("sync", path);
 }
 
-jor1kGUI.prototype.UploadExternalFile = function(f) {
-    var reader = new FileReader();
-    reader.onload = function(e) {
-        this.SendToWorker("MergeFile", 
-        {name: "home/user/"+f.name, data: new Uint8Array(reader.result)});
-    }.bind(this);
-    reader.readAsArrayBuffer(f);
-}
-
-jor1kGUI.prototype.OnMessage = function(e) {
-    // print debug messages even if emulator is stopped
-    if (e.data.command == "Debug") DebugMessage(e.data.data);
-
-    if (this.stop) return;
-    switch(e.data.command)
-    {
-        case "execute":  // this command is send back and forth to be responsive
-            if(this.userpaused) {
-              this.executepending = true;
-            } else {
-              this.executepending = false; 
-              this.SendToWorker("execute", 0);
-            }
-            break;
-
-        case "sound":
-            //this.sound.AddBuffer(e.data.data);
-            break;
-
-        case "sound.rate":
-            //this.sound.SetRate(e.data.data);
-            break;
-
-        case "ethmac":
-            this.ethernet.SendFrame(e.data.data);
-            break;
-
-        case "tty0":
-            e.data.data.forEach(function(c) {
-                this.term.PutChar(c&0xFF);
-            }.bind(this));
-            //this.term.PutChar(e.data.data);
-            break;
-
-        case "GetFB":
-            this.framebuffer.Update(e.data.data);
-            break;
-
-        case "Stop":
-            DebugMessage("Received stop signal");
-            this.stop = true;
-            break;
-
-        case "GetIPS":
-            if (this.userpaused) {
-                this.stats.innerHTML = "Paused"; 
-            } else {
-                this.stats.innerHTML = e.data.data<1000000?
-                    Math.floor(e.data.data/1000) + " KIPS" 
-                    :
-                    (Math.floor(e.data.data/100000)/10.) + " MIPS";
-            }
-            break;
-
-        case "tar":
-            download(e.data.data, "user.tar", "application/x-tar");
-            break;
-
-        case "sync":
-            utils.UploadBinaryResource(this.params.syncURL, this.params.userid + ".tar", e.data.data, 
-            function(response) {
-            // alert(response);
+jor1kGUI.prototype.OnSync = function(d) {
+    utils.UploadBinaryResource(this.params.syncURL, this.params.userid + ".tar", d, 
+        function(response) {
             alert(
                 "Message from Server:" + response + "\n" +
                 "The home folder '/home/user' has been synced with the server\n" +
                 "In order to access the data at a later date,\n" +
                 "start the next session with the current url with the user id\n" +
                 "The folder size is currently limited to 1MB. Note that the feature is experimental.\n" +
-                "The content can be downloaded under http://jor1k.com/sync/tarballs/" + this.params.userid+".tar.bz2");
-            }.bind(this)
-           , function(msg) {alert(msg);}
-           );
-           
-            break;
-        }
+                "The content can be downloaded under http://jor1k.com/sync/tarballs/" + this.params.userid+".tar.bz2"
+            );
+            }.bind(this),
+        function(msg) {alert(msg);}
+    );
 }
+
+
+
+jor1kGUI.prototype.UploadExternalFile = function(f) {
+    var reader = new FileReader();
+    reader.onload = function(e) {
+        message.Send("MergeFile", 
+        {name: "home/user/"+f.name, data: new Uint8Array(reader.result)});
+    }.bind(this);
+    reader.readAsArrayBuffer(f);
+}
+
 
 module.exports = jor1kGUI;
 
-},{"../lib/download":1,"./dev/ethernet":3,"./dev/framebuffer":4,"./dev/sound":5,"./dev/terminal":7,"./dev/terminal-input":6,"./utils":9}],9:[function(require,module,exports){
+},{"../lib/download":1,"./dev/ethernet":3,"./dev/framebuffer":4,"./dev/sound":5,"./dev/terminal":7,"./dev/terminal-input":6,"./messagehandler":8,"./utils":10}],10:[function(require,module,exports){
 // -------------------------------------------------
 // --------------------- Utils ---------------------
 // -------------------------------------------------
@@ -1596,4 +1631,4 @@ var Jor1k = require('./system');
 
 module.exports = Jor1k;
 
-},{"./system":8}]},{},[]);
+},{"./system":9}]},{},[]);

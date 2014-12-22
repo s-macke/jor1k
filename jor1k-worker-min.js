@@ -508,7 +508,7 @@ bzip2.decompress = function(bits, stream, buf, bufsize) {
 
 module.exports = bzip2;
 
-},{"./messagehandler":21}],3:[function(require,module,exports){
+},{"./messagehandler":22}],3:[function(require,module,exports){
 
 function FastCPU(stdlib, foreign, heap) {
 "use asm";
@@ -3254,7 +3254,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
 
 module.exports = SafeCPU;
 
-},{"../messagehandler":21,"../utils":24}],5:[function(require,module,exports){
+},{"../messagehandler":22,"../utils":25}],5:[function(require,module,exports){
 
 function SMPCPU(stdlib, foreign, heap) {
 
@@ -5507,7 +5507,7 @@ ATADev.prototype.WriteReg32 = function(addr, x) {
 
 module.exports = ATADev;
 
-},{"../messagehandler":21,"../utils":24}],7:[function(require,module,exports){
+},{"../messagehandler":22,"../utils":25}],7:[function(require,module,exports){
 // -------------------------------------------------
 // ----------------- Ethernet ----------------------
 // -------------------------------------------------
@@ -6263,7 +6263,7 @@ function EthDev(ram, intdev, mac) {
 
 module.exports = EthDev;
 
-},{"../messagehandler":21,"../utils":24}],8:[function(require,module,exports){
+},{"../messagehandler":22,"../utils":25}],8:[function(require,module,exports){
 // -------------------------------------------------
 // ---------------- Framebuffer --------------------
 // -------------------------------------------------
@@ -6323,7 +6323,7 @@ FBDev.prototype.GetBuffer = function () {
 
 module.exports = FBDev;
 
-},{"../messagehandler":21,"../utils":24}],9:[function(require,module,exports){
+},{"../messagehandler":22,"../utils":25}],9:[function(require,module,exports){
 // -------------------------------------------------
 // ---------------------- IRQ ----------------------
 // -------------------------------------------------
@@ -6429,7 +6429,7 @@ IRQDev.prototype.WriteReg32 = function (addr, value) {
 
 module.exports = IRQDev;
 
-},{"../messagehandler":21,"../utils":24}],10:[function(require,module,exports){
+},{"../messagehandler":22,"../utils":25}],10:[function(require,module,exports){
 // -------------------------------------------------
 // ------------------ KEYBOARD ---------------------
 // -------------------------------------------------
@@ -6758,7 +6758,7 @@ KeyboardDev.prototype.ReadReg8 = function (addr) {
 
 module.exports = KeyboardDev;
 
-},{"../messagehandler":21}],11:[function(require,module,exports){
+},{"../messagehandler":22}],11:[function(require,module,exports){
 // -------------------------------------------------
 // ---------------------- RTC ----------------------
 // -------------------------------------------------
@@ -6839,7 +6839,7 @@ RTCDev.prototype.WriteReg32 = function (addr, value) {
 
 module.exports = RTCDev;
 
-},{"../messagehandler":21,"../utils":24}],12:[function(require,module,exports){
+},{"../messagehandler":22,"../utils":25}],12:[function(require,module,exports){
 // -------------------------------------------------
 // --------------------- SOUND ---------------------
 // -------------------------------------------------
@@ -6977,7 +6977,7 @@ SoundDev.prototype.WriteReg32 = function (addr, value) {
 
 module.exports = SoundDev;
 
-},{"../messagehandler":21,"../utils":24}],13:[function(require,module,exports){
+},{"../messagehandler":22,"../utils":25}],13:[function(require,module,exports){
 // -------------------------------------------------
 // -------------------- Timer ----------------------
 // -------------------------------------------------
@@ -7007,7 +7007,7 @@ TimerDev.prototype.WriteReg32 = function (addr, value) {
 
 module.exports = TimerDev;
 
-},{"../messagehandler":21}],14:[function(require,module,exports){
+},{"../messagehandler":22}],14:[function(require,module,exports){
 // -------------------------------------------------
 // ---------------- TOUCHSCREEN --------------------
 // -------------------------------------------------
@@ -7150,7 +7150,7 @@ TouchscreenDev.prototype.WriteReg32 = function (addr, value) {
 
 module.exports = TouchscreenDev;
 
-},{"../messagehandler":21,"../utils":24}],15:[function(require,module,exports){
+},{"../messagehandler":22,"../utils":25}],15:[function(require,module,exports){
 // -------------------------------------------------
 // -------------------- UART -----------------------
 // -------------------------------------------------
@@ -7447,7 +7447,7 @@ UARTDev.prototype.WriteReg8 = function(addr, x) {
 
 module.exports = UARTDev;
 
-},{"../messagehandler":21,"../utils":24}],16:[function(require,module,exports){
+},{"../messagehandler":22,"../utils":25}],16:[function(require,module,exports){
 // -------------------------------------------------
 // ------------------- VIRTIO ----------------------
 // -------------------------------------------------
@@ -7781,7 +7781,7 @@ VirtIODev.prototype.WriteReg32 = function (addr, val) {
 
 module.exports = VirtIODev;
 
-},{"../messagehandler":21,"../utils":24,"./virtio/marshall":18}],17:[function(require,module,exports){
+},{"../messagehandler":22,"../utils":25,"./virtio/marshall":18}],17:[function(require,module,exports){
 // -------------------------------------------------
 // --------------------- 9P ------------------------
 // -------------------------------------------------
@@ -7853,10 +7853,15 @@ function Virtio9p(ramdev, filesystem) {
     this.Reset();
 }
 
-Virtio9p.prototype.Reset = function() {
-    this.fid2inode = [];
-    this.fidtype = [];
+Virtio9p.prototype.Createfid = function(inode, type, uid) {
+	return {inodeid: inode, type: type, uid: uid};
 }
+
+Virtio9p.prototype.Reset = function() {
+    this.fids = [];
+}
+
+
 
 Virtio9p.prototype.BuildReply = function(id, tag, payloadsize) {
     marshall.Marshall(["w", "b", "h"], [payloadsize+7, id+1, tag], this.replybuffer, 0);
@@ -7908,15 +7913,15 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             var fid = req[0];
             var mode = req[1];
             //message.Debug("[open] fid=" + fid + ", mode=" + mode);
-            var inode = this.fs.GetInode(this.fid2inode[fid]);
+            var inode = this.fs.GetInode(this.fids[fid].inodeid);
             req[0] = inode.qid;
             req[1] = this.msize - 24;
             marshall.Marshall(["Q", "w"], req, this.replybuffer, 7);
             this.BuildReply(id, tag, 13+4);
             //message.Debug("file open " + inode.name);
             //if (inode.status == STATUS_LOADING) return;
-            var ret = this.fs.OpenInode(this.fid2inode[fid], mode);
-            this.fs.AddEvent(this.fid2inode[fid], 
+            var ret = this.fs.OpenInode(this.fids[fid].inodeid, mode);
+            this.fs.AddEvent(this.fids[fid].inodeid, 
                 function() {
                     //message.Debug("file opened " + inode.name + " tag:"+tag);
                     req[0] = inode.qid;
@@ -7935,7 +7940,7 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             var name = req[2];
             //message.Debug("[link] dfid=" + dfid + ", name=" + name);
             var inode = this.fs.CreateInode();
-            var inodetarget = this.fs.GetInode(this.fid2inode[fid]);
+            var inodetarget = this.fs.GetInode(this.fids[fid].inodeid);
             //inode = inodetarget;
             inode.mode = inodetarget.mode;
             inode.size = inodetarget.size;
@@ -7945,7 +7950,7 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
                 inode.data[i] = inodetarget.data[i];
             }
             inode.name = name;
-            inode.parentid = this.fid2inode[dfid];
+            inode.parentid = this.fids[dfid].inodeid;
             this.fs.PushInode(inode);
             
             //inode.uid = inodetarget.uid;
@@ -7962,9 +7967,9 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             var symgt = req[2];
             var gid = req[3];
             //message.Debug("[symlink] fid=" + fid + ", name=" + name + ", symgt=" + symgt + ", gid=" + gid); 
-            var idx = this.fs.CreateSymlink(name, this.fid2inode[fid], symgt);
+            var idx = this.fs.CreateSymlink(name, this.fids[fid].inodeid, symgt);
             var inode = this.fs.GetInode(idx);
-            inode.uid = gid;
+            inode.uid = this.fids[fid].uid;
             inode.gid = gid;
             marshall.Marshall(["Q"], [inode.qid], this.replybuffer, 7);
             this.BuildReply(id, tag, 13);
@@ -7980,10 +7985,10 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             var minor = req[4];
             var gid = req[5];
             //message.Debug("[mknod] fid=" + fid + ", name=" + name + ", major=" + major + ", minor=" + minor+ "");
-            var idx = this.fs.CreateNode(name, this.fid2inode[fid], major, minor);
+            var idx = this.fs.CreateNode(name, this.fids[fid].inodeid, major, minor);
             var inode = this.fs.GetInode(idx);
             inode.mode = mode;
-            inode.uid = gid;
+            inode.uid = this.fids[fid].uid;
             inode.gid = gid;
             marshall.Marshall(["Q"], [inode.qid], this.replybuffer, 7);
             this.BuildReply(id, tag, 13);
@@ -7995,7 +8000,7 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             var req = marshall.Unmarshall2(["w"], GetByte);
             var fid = req[0];
             //message.Debug("[readlink] fid=" + fid);
-            var inode = this.fs.GetInode(this.fid2inode[fid]);
+            var inode = this.fs.GetInode(this.fids[fid].inodeid);
             var size = marshall.Marshall(["s"], [inode.symlink], this.replybuffer, 7);
             this.BuildReply(id, tag, size);
             this.SendReply(index);
@@ -8009,10 +8014,10 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             var mode = req[2];
             var gid = req[3];
             //message.Debug("[mkdir] fid=" + fid + ", name=" + name + ", mode=" + mode + ", gid=" + gid); 
-            var idx = this.fs.CreateDirectory(name, this.fid2inode[fid]);
+            var idx = this.fs.CreateDirectory(name, this.fids[fid].inodeid);
             var inode = this.fs.GetInode(idx);
             inode.mode = mode | S_IFDIR;
-            inode.uid = gid;
+            inode.uid = this.fids[fid].uid;
             inode.gid = gid;
             marshall.Marshall(["Q"], [inode.qid], this.replybuffer, 7);
             this.BuildReply(id, tag, 13);
@@ -8027,11 +8032,11 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             var mode = req[3];
             var gid = req[4];
             //message.Debug("[create] fid=" + fid + ", name=" + name + ", flags=" + flags + ", mode=" + mode + ", gid=" + gid); 
-            var idx = this.fs.CreateFile(name, this.fid2inode[fid]);
-            this.fid2inode[fid] = idx;
-            this.fidtype[fid] = FID_INODE;
+            var idx = this.fs.CreateFile(name, this.fids[fid].inodeid);
+            this.fids[fid].inodeid = idx;
+            this.fids[fid].type = FID_INODE;
             var inode = this.fs.GetInode(idx);
-            inode.uid = gid;
+            inode.uid = this.fids[fid].uid;
             inode.gid = gid;
             inode.mode = mode;
             marshall.Marshall(["Q", "w"], [inode.qid, this.msize - 24], this.replybuffer, 7);
@@ -8054,7 +8059,7 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
         case 24: // getattr
             var req = marshall.Unmarshall2(["w", "d"], GetByte);
             var fid = req[0];
-            var inode = this.fs.GetInode(this.fid2inode[fid]);
+            var inode = this.fs.GetInode(this.fids[fid].inodeid);
             //message.Debug("[getattr]: fid=" + fid + " name=" + inode.name + " request mask=" + req[1]);
             req[0] |= 0x1000; // P9_STATS_GEN
 
@@ -8068,8 +8073,8 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             req[5] = 0x1; // number of hard links
             req[6] = (inode.major<<8) | (inode.minor); // device id low
             req[7] = inode.size; // size low
-            req[8] = inode.size; // blk size low
-            req[9] = Math.floor(inode.size/this.BLOCKSIZE+1); // number of file system blocks
+            req[8] = this.BLOCKSIZE;
+            req[9] = Math.floor(inode.size/512+1);; // blk size low
             req[10] = inode.atime; // atime
             req[11] = 0x0;
             req[12] = inode.mtime; // mtime
@@ -8105,7 +8110,7 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
                 "d", "d"] // mtime
             , GetByte);
             var fid = req[0];
-            var inode = this.fs.GetInode(this.fid2inode[fid]);
+            var inode = this.fs.GetInode(this.fids[fid].inodeid);
             //message.Debug("[setattr]: fid=" + fid + " request mask=" + req[1] + " name=" +inode.name);
             if (req[1] & P9_SETATTR_MODE) {
                 inode.mode = req[2];
@@ -8132,7 +8137,7 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
                 inode.ctime = Math.floor((new Date()).getTime()/1000);
             }
             if (req[1] & P9_SETATTR_SIZE) {
-                this.fs.ChangeSize(this.fid2inode[fid], req[5]);
+                this.fs.ChangeSize(this.fids[fid].inodeid, req[5]);
             }
             this.BuildReply(id, tag, 0);
             this.SendReply(index);
@@ -8153,8 +8158,8 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             var count = req[2];
             //if (id == 40) message.Debug("[treaddir]: fid=" + fid + " offset=" + offset + " count=" + count);
             //if (id == 116) message.Debug("[read]: fid=" + fid + " offset=" + offset + " count=" + count);
-            var inode = this.fs.GetInode(this.fid2inode[fid]);
-            if (this.fidtype[fid] == FID_XATTR) {
+            var inode = this.fs.GetInode(this.fids[fid].inodeid);
+            if (this.fids[fid].type == FID_XATTR) {
                 if (inode.caps.length < offset+count) count = inode.caps.length - offset;
                 for(var i=0; i<count; i++)
                     this.replybuffer[7+4+i] = inode.caps[offset+i];
@@ -8174,7 +8179,7 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             var offset = req[1];
             var count = req[2];
             //message.Debug("[write]: fid=" + fid + " offset=" + offset + " count=" + count);
-            this.fs.Write(this.fid2inode[fid], offset, count, GetByte);
+            this.fs.Write(this.fids[fid].inodeid, offset, count, GetByte);
             marshall.Marshall(["w"], [count], this.replybuffer, 7);
             this.BuildReply(id, tag, 4);
             this.SendReply(index);
@@ -8187,7 +8192,7 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             var newdirfid = req[2];
             var newname = req[3];
             //message.Debug("[renameat]: oldname=" + oldname + " newname=" + newname);
-            var ret = this.fs.Rename(this.fid2inode[olddirfid], oldname, this.fid2inode[newdirfid], newname);
+            var ret = this.fs.Rename(this.fids[olddirfid].inodeid, oldname, this.fids[newdirfid].inodeid, newname);
             if (ret == false) {
                 this.SendError(tag, "No such file or directory", ENOENT);                   
                 this.SendReply(index);
@@ -8203,7 +8208,7 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             var name = req[1];
             var flags = req[2];
             //message.Debug("[unlink]: dirfd=" + dirfd + " name=" + name + " flags=" + flags);
-            var id = this.fs.Search(this.fid2inode[dirfd], name);
+            var id = this.fs.Search(this.fids[dirfd].inodeid, name);
             if (id == -1) {
                    this.SendError(tag, "No such file or directory", ENOENT);
                    this.SendReply(index);
@@ -8230,12 +8235,12 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
 
         case 104: // attach
             // return root directorie's QID
-            var req = marshall.Unmarshall2(["w", "w", "s", "s"], GetByte);
+            var req = marshall.Unmarshall2(["w", "w", "s", "s", "w"], GetByte);
             var fid = req[0];
-            //message.Debug("[attach]: fid=" + fid + " afid=" + utils.ToHex(req[1]) + " uname=" + req[2] + " aname=" + req[3]);
-            this.fid2inode[fid] = 0;            
-            this.fidtype[fid] = FID_INODE;
-            var inode = this.fs.GetInode(this.fid2inode[fid]);
+            var uid = req[4];
+            //message.Debug("[attach]: fid=" + fid + " afid=" + utils.ToHex(req[1]) + " uname=" + req[2] + " aname=" + req[3] + " uid=" + req[4]);
+            this.fids[fid] = this.Createfid(0, FID_INODE, uid);
+            var inode = this.fs.GetInode(this.fids[fid].inodeid);
             marshall.Marshall(["Q"], [inode.qid], this.replybuffer, 7);
             this.BuildReply(id, tag, 13);
             this.SendReply(index);
@@ -8244,7 +8249,7 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
         case 108: // tflush
             var req = marshall.Unmarshall2(["h"], GetByte);
             var oldtag = req[0];
-            message.Debug("[flush] " + tag);
+            //message.Debug("[flush] " + tag);
             //marshall.Marshall(["Q"], [inode.qid], this.replybuffer, 7);
             this.BuildReply(id, tag, 0);
             this.SendReply(index);
@@ -8258,7 +8263,8 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             var nwname = req[2];
             //message.Debug("[walk]: fid=" + req[0] + " nwfid=" + req[1] + " nwname=" + nwname);
             if (nwname == 0) {
-                this.fid2inode[nwfid] = this.fid2inode[fid];
+                this.fids[nwfid] = this.Createfid(this.fids[fid].inodeid, FID_INODE, this.fids[fid].uid);
+                this.fids[nwfid].inodeid = this.fids[fid].inodeid;
                 marshall.Marshall(["h"], [0], this.replybuffer, 7);
                 this.BuildReply(id, tag, 2);
                 this.SendReply(index);
@@ -8269,7 +8275,7 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
                 wnames.push("s");
             }
             var walk = marshall.Unmarshall2(wnames, GetByte);                        
-            var idx = this.fid2inode[fid];
+            var idx = this.fids[fid].inodeid;
             var offset = 7+2;
             var nwidx = 0;
             //message.Debug("walk in dir " + this.fs.inodes[idx].name  + " to :" + walk.toString());
@@ -8282,9 +8288,8 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
                 }
                 offset += marshall.Marshall(["Q"], [this.fs.inodes[idx].qid], this.replybuffer, offset);
                 nwidx++;
-                //message.Debug(this.fid2inode[nwfid]);
-                this.fid2inode[nwfid] = idx;
-                this.fidtype[nwfid] = FID_INODE;
+                //message.Debug(this.fids[nwfid].inodeid);
+                this.fids[nwfid] = this.Createfid(idx, FID_INODE, this.fids[fid].uid);
             }
             marshall.Marshall(["h"], [nwidx], this.replybuffer, 7);
             this.BuildReply(id, tag, offset-7);
@@ -8294,10 +8299,12 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
         case 120: // clunk
             var req = marshall.Unmarshall2(["w"], GetByte);
             //message.Debug("[clunk]: fid=" + req[0]);
-            if (this.fid2inode[req[0]] >=  0) {
-                this.fs.CloseInode(this.fid2inode[req[0]]);
-                this.fid2inode[req[0]] = -1;
-                this.fidtype[req[0]] = FID_NONE;
+            
+            if (this.fids[req[0]]) 
+            if (this.fids[req[0]].inodeid >=  0) {
+                this.fs.CloseInode(this.fids[req[0]].inodeid);
+                this.fids[req[0]].inodeid = -1;
+                this.fids[req[0]].type = FID_NONE;
             }
             this.BuildReply(id, tag, 0);
             this.SendReply(index);
@@ -8309,12 +8316,12 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             var newfid = req[1];
             var name = req[2];
             //message.Debug("[xattrwalk]: fid=" + req[0] + " newfid=" + req[1] + " name=" + req[2]);
-            this.fid2inode[newfid] = this.fid2inode[fid];
-            this.fidtype[newfid] = FID_NONE;
+            this.fids[newfid].inodeid = this.fids[fid].inodeid;
+            this.fids[newfid].type = FID_NONE;
             var length = 0;
             if (name == "security.capability") {
-                length = this.fs.PrepareCAPs(this.fid2inode[fid]);
-                this.fidtype[newfid] = FID_XATTR;
+                length = this.fs.PrepareCAPs(this.fids[fid].inodeid);
+                this.fids[newfid].type = FID_XATTR;
             }
             marshall.Marshall(["d"], [length], this.replybuffer, 7);
             this.BuildReply(id, tag, 8);
@@ -8336,7 +8343,7 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
 
 module.exports = Virtio9p;
 
-},{"../../messagehandler":21,"../../utils":24,"./marshall":18}],18:[function(require,module,exports){
+},{"../../messagehandler":22,"../../utils":25,"./marshall":18}],18:[function(require,module,exports){
 // -------------------------------------------------
 // ------------------ Marshall ---------------------
 // -------------------------------------------------
@@ -8510,7 +8517,7 @@ module.exports.Marshall = Marshall;
 module.exports.Unmarshall = Unmarshall;
 module.exports.Unmarshall2 = Unmarshall2;
 
-},{"../../../lib/utf8":1,"../../messagehandler":21}],19:[function(require,module,exports){
+},{"../../../lib/utf8":1,"../../messagehandler":22}],19:[function(require,module,exports){
 // -------------------------------------------------
 // ----------------- FILESYSTEM---------------------
 // -------------------------------------------------
@@ -8519,6 +8526,7 @@ module.exports.Unmarshall2 = Unmarshall2;
 "use strict";
 
 var TAR = require('./tar.js');
+var FSLoader = require('./fsloader.js');
 var utils = require('../utils.js');
 var bzip2 = require('../bzip2.js');
 var marshall = require('../dev/virtio/marshall.js');
@@ -8561,6 +8569,7 @@ function FS() {
     this.OnLoaded = function() {};
 
     this.tar = new TAR(this);
+    this.fsloader = new FSLoader(this);
     this.userinfo = [];
 
     message.Register("LoadFilesystem", this.LoadFilesystem.bind(this) );
@@ -8585,9 +8594,9 @@ function FS() {
 FS.prototype.LoadFilesystem = function(userinfo)
 {
     this.userinfo = userinfo;
-    this.LoadFSXML(this.userinfo.basefsURL);
+    this.fsloader.LoadXML(this.userinfo.basefsURL);
     this.OnLoaded = function() { // the basic filesystem is loaded, so download the rest
-        this.LoadFSXML(this.userinfo.extendedfsURL);
+        this.fsloader.LoadXML(this.userinfo.extendedfsURL);
         for(var i=0; i<this.userinfo.lazyloadimages.length; i++) {
             this.LoadImage(this.userinfo.lazyloadimages[i]);
         }
@@ -8645,78 +8654,6 @@ FS.prototype.LoadImage = function(url)
 }
 // -----------------------------------------------------
 
-
-function ReadVariable(buffer, offset) {
-    var variable = [];
-    variable.name = "";
-    variable.value = "";
-
-    // read blanks
-    for(var i=offset; i<buffer.length; i++) {
-        if (buffer[i] == '>') return variable;
-        if (buffer[i] == '/') return variable;
-        if (buffer[i] != ' ') break;
-    }
-    offset = i;
-    if (buffer[i] == '>') return variable;
-
-    // read variable name
-    for(var i=offset; i<buffer.length; i++) {
-        if (buffer[i] == '>') break;
-        if (buffer[i] == '=') break;
-        variable.name = variable.name + buffer[i]; 
-    }
-    offset = i+1;
-    if (variable.name.length == 0) return variable;
-    // read variable value
-    for(var i=offset+1; i<buffer.length; i++) {
-        if (buffer[i] == '>') break;
-        if (buffer[i] == '\'') break;
-        variable.value = variable.value + buffer[i]; 
-    }
-    offset = i+1;
-    variable.offset = offset;
-    //message.Debug("read " + variable.name + "=" + variable.value);
-    return variable;
-}
-
-function ReadTag(buffer, offset) {
-    var tag = [];
-    tag.type = "";
-    tag.name = "";
-    tag.mode = 0x0;
-    tag.uid = 0x0;
-    tag.gid = 0x0;
-    tag.path = "";
-    tag.src = "";
-    tag.compressed = false;
-    tag.load = false;
-
-    if (buffer[offset] != '<') return tag;
-    for(var i=offset+1; i<buffer.length; i++) {
-        if (buffer[i] ==  ' ') break;
-        if (buffer[i] == '\n') break;
-        if (buffer[i] == '>') break;
-        tag.type = tag.type + buffer[i]; 
-    }
-    offset = i;
-    // read variables
-    do {
-        var variable = ReadVariable(buffer, offset);
-        if (variable.name == "name") tag.name = variable.value;
-        if (variable.name == "mode") tag.mode = parseInt(variable.value, 8);
-        if (variable.name == "uid") tag.uid = parseInt(variable.value, 10);
-        if (variable.name == "gid") tag.gid = parseInt(variable.value, 10);
-        if (variable.name == "path") tag.path = variable.value;
-        if (variable.name == "size") tag.size = parseInt(variable.value, 10);
-        if (variable.name == "src") tag.src = variable.value;
-        if (variable.name == "compressed") tag.compressed = true;
-        if (variable.name == "load") tag.load = true;
-        offset = variable.offset;
-    } while(variable.name.length != 0);
-    return tag;
-};
-
 FS.prototype.CheckEarlyload = function(path)
 {
     for(var i=0; i<this.userinfo.earlyload.length; i++) {
@@ -8727,78 +8664,6 @@ FS.prototype.CheckEarlyload = function(path)
     return false;
 }
 
-FS.prototype.LoadFSXML = function(urls)
-{
-    message.Debug("Load filesystem information from " + urls);
-    utils.LoadXMLResource(urls, this.OnXMLLoaded.bind(this), function(error){throw error;});
-}
-
-FS.prototype.OnXMLLoaded = function(fs)
-{
-    // At this point I realized, that the dom is not available in worker threads and that I cannot get the xml information directly.
-    // So let's analyze ourself
-    var sysrootdir = "";
-
-    var parentid = 0;
-    for(var i=0; i<fs.length; i++)
-    {
-        if (fs[i] != '<') continue;
-        var tag = ReadTag(fs, i, ' ');
-        var id = this.Search(parentid, tag.name);
-        if (id != -1) {
-            if (tag.type == "Dir") parentid = id;             
-            continue;
-        }
-        var inode = this.CreateInode();
-        inode.name = tag.name;
-        inode.uid = tag.uid;
-        inode.gid = tag.gid;
-        inode.parentid = parentid;
-        inode.mode = tag.mode;
-	
-        var size = tag.size;
-
-    switch(tag.type) {
-    case "FS":
-        sysrootdir = "" + tag.src + "/";
-        break;
-
-    case "Dir":
-        inode.mode |= S_IFDIR;
-        inode.updatedir = true;
-        parentid = this.inodes.length;
-        this.PushInode(inode);
-        break;
-
-    case "/Dir":
-        parentid = this.inodes[parentid].parentid;
-        break;
-
-    case "File":
-        inode.mode |= S_IFREG;
-        var idx = this.inodes.length;
-        inode.status = STATUS_ON_SERVER;
-        inode.compressed = tag.compressed;
-        inode.size = size;
-        this.PushInode(inode);
-        var url = sysrootdir + (tag.src.length==0?this.GetFullPath(idx):tag.src);
-        inode.url = url;
-        //message.Debug("Load id=" + (idx) + " " + url);
-        if (tag.load || this.CheckEarlyload(this.GetFullPath(idx)) ) {
-            this.LoadFile(idx);
-        }
-        break;
-
-    case "Link":
-        inode.mode = S_IFLNK | S_IRWXUGO;
-        inode.symlink = tag.path;
-        this.PushInode(inode);
-        break;
-        }
-    }
-    message.Debug("processed " + this.inodes.length + " inodes");
-    this.Check();
-}
 
 // The filesystem is responsible to add the correct time. This is a hack
 // Have to find a better solution.
@@ -9337,7 +9202,185 @@ FS.prototype.PrepareCAPs = function(id) {
 
 module.exports = FS;
 
-},{"../../lib/utf8.js":1,"../bzip2.js":2,"../dev/virtio/marshall.js":18,"../messagehandler":21,"../utils.js":24,"./tar.js":20}],20:[function(require,module,exports){
+},{"../../lib/utf8.js":1,"../bzip2.js":2,"../dev/virtio/marshall.js":18,"../messagehandler":22,"../utils.js":25,"./fsloader.js":20,"./tar.js":21}],20:[function(require,module,exports){
+// -------------------------------------------------
+// ------------- FILESYSTEM LOADER -----------------
+// -------------------------------------------------
+
+"use strict";
+
+var message = require('../messagehandler');
+var utils = require('../utils');
+
+var S_IRWXUGO = 0x1FF;
+var S_IFMT = 0xF000;
+var S_IFSOCK = 0xC000;
+var S_IFLNK = 0xA000;
+var S_IFREG = 0x8000;
+var S_IFBLK = 0x6000;
+var S_IFDIR = 0x4000;
+var S_IFCHR = 0x2000;
+
+var STATUS_INVALID = -0x1;
+var STATUS_OK = 0x0;
+var STATUS_OPEN = 0x1;
+var STATUS_ON_SERVER = 0x2;
+var STATUS_LOADING = 0x3;
+var STATUS_UNLINKED = 0x4;
+
+function FSLoader(filesystem) {
+    this.fs = filesystem;
+}
+
+FSLoader.prototype.ReadVariable = function(buffer, offset) {
+    var variable = [];
+    variable.name = "";
+    variable.value = "";
+
+    // read blanks
+    for(var i=offset; i<buffer.length; i++) {
+        if (buffer[i] == '>') return variable;
+        if (buffer[i] == '/') return variable;
+        if (buffer[i] != ' ') break;
+    }
+    offset = i;
+    if (buffer[i] == '>') return variable;
+
+    // read variable name
+    for(var i=offset; i<buffer.length; i++) {
+        if (buffer[i] == '>') break;
+        if (buffer[i] == '=') break;
+        variable.name = variable.name + buffer[i]; 
+    }
+    offset = i+1;
+    if (variable.name.length == 0) return variable;
+    // read variable value
+    for(var i=offset+1; i<buffer.length; i++) {
+        if (buffer[i] == '>') break;
+        if (buffer[i] == '\'') break;
+        variable.value = variable.value + buffer[i]; 
+    }
+    offset = i+1;
+    variable.offset = offset;
+    //message.Debug("read " + variable.name + "=" + variable.value);
+    return variable;
+}
+
+FSLoader.prototype.ReadTag = function(buffer, offset) {
+    var tag = [];
+    tag.type = "";
+    tag.name = "";
+    tag.mode = 0x0;
+    tag.uid = 0x0;
+    tag.gid = 0x0;
+    tag.path = "";
+    tag.src = "";
+    tag.compressed = false;
+    tag.load = false;
+
+    if (buffer[offset] != '<') return tag;
+    for(var i=offset+1; i<buffer.length; i++) {
+        if (buffer[i] ==  ' ') break;
+        if (buffer[i] == '\n') break;
+        if (buffer[i] == '>') break;
+        tag.type = tag.type + buffer[i]; 
+    }
+    offset = i;
+    // read variables
+    do {
+        var variable = this.ReadVariable(buffer, offset);
+        if (variable.name == "name") tag.name = variable.value;
+        if (variable.name == "mode") tag.mode = parseInt(variable.value, 8);
+        if (variable.name == "uid") tag.uid = parseInt(variable.value, 10);
+        if (variable.name == "gid") tag.gid = parseInt(variable.value, 10);
+        if (variable.name == "path") tag.path = variable.value;
+        if (variable.name == "size") tag.size = parseInt(variable.value, 10);
+        if (variable.name == "src") tag.src = variable.value;
+        if (variable.name == "compressed") tag.compressed = true;
+        if (variable.name == "load") tag.load = true;
+        offset = variable.offset;
+    } while(variable.name.length != 0);
+    return tag;
+};
+
+
+FSLoader.prototype.OnXMLLoaded = function(fsxml)
+{
+    // At this point I realized, that the dom is not available in worker threads and that I cannot get the xml information directly.
+    // So let's analyze ourself
+    var sysrootdir = "";
+
+    var parentid = 0;
+    for(var i=0; i<fsxml.length; i++)
+    {
+        if (fsxml[i] != '<') continue;
+        var tag = this.ReadTag(fsxml, i, ' ');
+        var id = this.fs.Search(parentid, tag.name);
+        if (id != -1) {
+            if (tag.type == "Dir") parentid = id;             
+            continue;
+        }
+        var inode = this.fs.CreateInode();
+        inode.name = tag.name;
+        inode.uid = tag.uid;
+        inode.gid = tag.gid;
+        inode.parentid = parentid;
+        inode.mode = tag.mode;
+        
+        var size = tag.size;
+
+    switch(tag.type) {
+    case "FS":
+        sysrootdir = "" + tag.src + "/";
+        break;
+
+    case "Dir":
+        inode.mode |= S_IFDIR;
+        inode.updatedir = true;
+        parentid = this.fs.inodes.length;
+        this.fs.PushInode(inode);
+        break;
+
+   case "/Dir":
+        parentid = this.fs.inodes[parentid].parentid;
+        break;
+
+   case "File":
+        inode.mode |= S_IFREG;
+        var idx = this.fs.inodes.length;
+        inode.status = STATUS_ON_SERVER;
+        inode.compressed = tag.compressed;
+        inode.size = size;
+        this.fs.PushInode(inode);
+        var url = sysrootdir + (tag.src.length==0?this.fs.GetFullPath(idx):tag.src);
+        inode.url = url;
+        //message.Debug("Load id=" + (idx) + " " + url);
+        if (tag.load || this.fs.CheckEarlyload(this.fs.GetFullPath(idx)) ) {
+            this.fs.LoadFile(idx);
+        }
+        break;
+
+    case "Link":
+        inode.mode = S_IFLNK | S_IRWXUGO;
+        inode.symlink = tag.path;
+        this.fs.PushInode(inode);
+        break;
+        }
+    }
+    message.Debug("processed " + this.fs.inodes.length + " inodes");
+    this.fs.Check();
+}
+
+FSLoader.prototype.LoadXML = function(url)
+{
+    message.Debug("Load filesystem information from " + url);
+    utils.LoadXMLResource(url, this.OnXMLLoaded.bind(this), function(error){throw error;});
+}
+
+
+module.exports = FSLoader;
+
+},{"../messagehandler":22,"../utils":25}],21:[function(require,module,exports){
 // -------------------------------------------------
 // -------------------- TAR ------------------------
 // -------------------------------------------------
@@ -9552,7 +9595,7 @@ TAR.prototype.Pack = function(path) {
 
 module.exports = TAR;
 
-},{"../messagehandler":21}],21:[function(require,module,exports){
+},{"../messagehandler":22}],22:[function(require,module,exports){
 // -------------------------------------------------
 // ------------- MessageHandler --------------------
 // -------------------------------------------------
@@ -9598,7 +9641,7 @@ module.exports.Abort = Abort;
 module.exports.Send = Send;
  
 
-},{}],22:[function(require,module,exports){
+},{}],23:[function(require,module,exports){
 // -------------------------------------------------
 // -------------------- RAM ------------------------
 // -------------------------------------------------
@@ -9696,7 +9739,7 @@ RAM.prototype.WriteMemory16 = function(addr, x) {
 
 module.exports = RAM;
 
-},{"./messagehandler":21,"./utils":24}],23:[function(require,module,exports){
+},{"./messagehandler":22,"./utils":25}],24:[function(require,module,exports){
 // -------------------------------------------------
 // ------------------- SYSTEM ----------------------
 // -------------------------------------------------
@@ -10189,7 +10232,7 @@ System.prototype.MainLoop = function() {
 
 module.exports = System;
 
-},{"./bzip2.js":2,"./cpu/fastcpu.js":3,"./cpu/safecpu.js":4,"./cpu/smpcpu.js":5,"./dev/ata.js":6,"./dev/ethmac.js":7,"./dev/framebuffer.js":8,"./dev/irq.js":9,"./dev/keyboard.js":10,"./dev/rtc.js":11,"./dev/sound.js":12,"./dev/timer.js":13,"./dev/touchscreen.js":14,"./dev/uart.js":15,"./dev/virtio.js":16,"./dev/virtio/9p.js":17,"./filesystem/filesystem.js":19,"./messagehandler.js":21,"./ram.js":22,"./utils.js":24}],24:[function(require,module,exports){
+},{"./bzip2.js":2,"./cpu/fastcpu.js":3,"./cpu/safecpu.js":4,"./cpu/smpcpu.js":5,"./dev/ata.js":6,"./dev/ethmac.js":7,"./dev/framebuffer.js":8,"./dev/irq.js":9,"./dev/keyboard.js":10,"./dev/rtc.js":11,"./dev/sound.js":12,"./dev/timer.js":13,"./dev/touchscreen.js":14,"./dev/uart.js":15,"./dev/virtio.js":16,"./dev/virtio/9p.js":17,"./filesystem/filesystem.js":19,"./messagehandler.js":22,"./ram.js":23,"./utils.js":25}],25:[function(require,module,exports){
 // -------------------------------------------------
 // ------------------ Utils ------------------------
 // -------------------------------------------------
@@ -10372,7 +10415,7 @@ module.exports.LoadBinaryResource = LoadBinaryResource;
 module.exports.LoadXMLResource = LoadXMLResource;
 
 
-},{}],25:[function(require,module,exports){
+},{}],26:[function(require,module,exports){
 // -------------------------------------------------
 // -------------------- Worker ---------------------
 // -------------------------------------------------
@@ -10380,4 +10423,4 @@ module.exports.LoadXMLResource = LoadXMLResource;
 var System = require('./system.js');
 var sys = new System();
 
-},{"./system.js":23}]},{},[25]);
+},{"./system.js":24}]},{},[26]);
