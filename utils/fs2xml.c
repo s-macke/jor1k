@@ -8,11 +8,10 @@
 #include <string.h>
 
 
-
 // compile with gcc patches/fs2xml.c -lbz2
 
 struct inode
-{ 
+{
 	char name[128];
 	char src[128];
 	char link[128];
@@ -71,6 +70,31 @@ char* GetFullPath(const char* root, int id)
 	return path;
 }
 
+char* GetFullPathNotHidden(const char* root, int id, int *hidden)
+{
+	static char path[1024];
+	char temp[1024];
+	path[0] = 0;
+	temp[0] = 0;
+	while(id != -1)
+	{
+		strcpy(temp, path);
+		if (inodes[id].name[0] == '.') {
+			sprintf(path, "/%s%s", &(inodes[id].name[1]), temp);
+			*hidden = 1;
+		} else
+		if (inodes[id].name[0] == '_') {
+			sprintf(path, "/%s%s", &(inodes[id].name[1]), temp);
+			*hidden = 1;
+		} else
+			sprintf(path, "/%s%s", inodes[id].name, temp);
+		id = inodes[id].parentid;
+	}
+	strcpy(temp, path);
+	sprintf(path, "%s%s", root, temp);
+	return path;
+}
+
 int decompress(const char *filename, unsigned char *buf)
 {
 	BZFILE *BZ2fp_r = NULL;
@@ -90,6 +114,7 @@ int decompress(const char *filename, unsigned char *buf)
 	//printf("decompressed size: %i\n", len);
 	return len;
 }
+
 
 int Split(char *name, char walk[12][128])
 {
@@ -180,6 +205,12 @@ void MergeFile(struct posix_header* ph)
 
 	int mode = strtol(ph->mode, NULL, 8);
 
+	if ((inodes[ninodes].uid != 0) && (inodes[ninodes].uid != 1000)) {
+		inodes[ninodes].uid = 0;
+		inodes[ninodes].gid = 0;
+	}
+
+
 	switch(ph->typeflag)
 	{
 		case '5':
@@ -207,7 +238,7 @@ void MergeFile(struct posix_header* ph)
                             inodes[ninodes].link[0] = '/';
 			}
 
-			printf("%s\n", ph->linkname);
+			//printf("%s\n", ph->linkname);
 		break;
 		default:
 			printf("Error:type %c unknown\n", ph->typeflag);
@@ -310,6 +341,7 @@ void WalkXML(FILE *fp, int parentid, int sub)
 
 }
 
+
 void CreateXML()
 {
 	FILE *fp = fopen("fs.xml", "w");
@@ -324,6 +356,95 @@ void CreateXML()
 	fprintf(fp, "</FS>\n");
 	fclose(fp);
 }
+
+
+void WalkJSON(FILE *fp, int parentid, int sub)
+{
+	int i=0;
+
+	int n=0;
+
+	for(i=0; i<ninodes; i++)
+	{
+		if (inodes[i].parentid != parentid) continue;
+		n++;
+	}
+
+	for(i=0; i<ninodes; i++)
+	{
+		if (inodes[i].parentid != parentid) continue;
+		n--;
+		if ((inodes[i].mode & S_IFMT) == S_IFDIR) {
+
+			PrintIdent(fp, sub);
+
+			fprintf(fp, "{ \"name\":\"%s\", \"mode\":\"%o\"", inodes[i].name, inodes[i].mode);
+			if (inodes[i].uid)
+				fprintf(fp, ", \"uid\":%i", inodes[i].uid);
+			if (inodes[i].gid)
+				fprintf(fp, ", \"gid\":%i", inodes[i].gid);
+
+			if (IsEmpty(i)) {
+				fprintf(fp, ", \"child\":[] }");
+			} else {
+				fprintf(fp, ", \"child\":[\n");
+				WalkJSON(fp, i, sub+1);
+				PrintIdent(fp, sub);
+				fprintf(fp, "]}");
+			}
+		}
+		else
+		if ((inodes[i].mode & S_IFMT) == S_IFREG){
+
+			PrintIdent(fp, sub);
+
+			fprintf(fp, "{ \"name\":\"%s\", \"mode\":\"%o\", \"size\":%i", inodes[i].name, inodes[i].mode, inodes[i].size);
+
+			if (inodes[i].uid)
+				fprintf(fp, ", \"uid\":%i", inodes[i].uid);
+			if (inodes[i].gid)
+				fprintf(fp, ", \"gid\":%i", inodes[i].gid);
+			if (inodes[i].compressed)
+				fprintf(fp, ", \"c\":1");
+			if (inodes[i].load)
+				fprintf(fp, ", \"load\":1");
+			if (inodes[i].src[0] != 0)
+				fprintf(fp, ", \"src\":\"%s\"", inodes[i].src);
+			fprintf(fp, "}");
+
+		} else
+		if ((inodes[i].mode & S_IFMT) == S_IFLNK) {
+			PrintIdent(fp, sub);
+			fprintf(fp, "{ \"name\":\"%s\", \"mode\":\"%o\", \"path\":\"%s\"}", inodes[i].name, inodes[i].mode, inodes[i].link);
+		} else
+		{
+			printf("Unknown file typ\n");
+			exit(1);
+		}
+		if (n == 0) fprintf(fp, "\n"); else fprintf(fp, ",\n");
+
+	}
+
+}
+
+
+void CreateJSON()
+{
+	FILE *fp = fopen("fs.json", "w");
+	if (fp == NULL)
+	{
+		fprintf(stderr, "Error: Cannot create file fs.json\n");
+		exit(1);
+	}
+	fprintf(fp, "{");
+	fprintf(fp, "\"src\":\"fs/\", ");
+	fprintf(fp, "\"fs\":[\n", ninodes);
+	WalkJSON(fp, -1, 1);
+	fprintf(fp, "]}\n");
+	fclose(fp);
+}
+
+
 
 int ShouldBeLoaded(char *name)
 {
@@ -350,6 +471,11 @@ int ShouldBeCompressed(char *name, char *data, int size)
 	if (name[len-2] == 'z')
 	if (name[len-1] == '2') return 0;
 	}
+
+	if (name[len-4] == '.')
+	if (name[len-3] == 'z')
+	if (name[len-2] == 'i')
+	if (name[len-1] == 'p') return 0;
 
 	if (size > 10*1024) return 1;
 
@@ -388,7 +514,8 @@ void AddFirstSigntoString(char *s, char x)
 void WalkDir(int parentid)
 {
 	char *path;
-	path = GetFullPath("fs", parentid);
+	int hidden = 0;
+	path = GetFullPathNotHidden("fs", parentid, &hidden);
 	//printf("mkdir %s\n", path);
 	mkdir(path, 0777);
 	int i = 0;
@@ -401,12 +528,10 @@ void WalkDir(int parentid)
 		}
 		if ((inodes[i].mode & S_IFMT) == S_IFREG)
 		{
-			path = GetFullPath("fs", i);
-			if (inodes[i].name[0] == '.') {
-				RemoveFirstSignofString(inodes[i].name);
-				path = GetFullPath("fs", i);
-				strcpy(inodes[i].src, &path[7]);
-				AddFirstSigntoString(inodes[i].name, '.');
+			hidden = 0;
+			path = GetFullPathNotHidden("fs", i, &hidden);
+			if (hidden) {
+				strcpy(inodes[i].src, &path[3]);
 				//printf("hidden file: %s src: %s path: %s\n", inodes[i].name, inodes[i].src, path);
 			}
 			FILE *fp = fopen(path, "wb");
@@ -425,6 +550,13 @@ void WalkDir(int parentid)
 				sprintf(command, "bzip2 -f \"%s\"\n", path);
 				//sprintf(command, "xz -e -f %s\n", path);
 				system(command);
+				/*
+				sprintf(command, "lz4 -9 -f \"%s\"\n", path);
+				system(command);
+				sprintf(command, "rm -f %s\n", path);
+				system(command);
+				*/
+				
 			}
 			if (ShouldBeLoaded(inodes[i].name)) {
                              inodes[i].load = 1;
@@ -456,7 +588,7 @@ int main(int argc, char *argv[])
 
 	int i=0;
 	char filename[256];
-	for(i=2; i<argc; i++)
+	for(i=1; i<argc; i++)
 	{
 		printf("decompress: %s\n", argv[i]);
 		int len = decompress(argv[i], buf);
@@ -478,6 +610,7 @@ int main(int argc, char *argv[])
 
 	fprintf(stderr, "Generate XML\n");
 	CreateXML();
+	CreateJSON();
 
 	return 0;
 }
