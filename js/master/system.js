@@ -9,36 +9,39 @@ var Ethernet = require('./dev/ethernet');
 var LoopSoundBuffer = require('./dev/sound');
 var download = require('../lib/download');
 var utils = require('./utils');
+var message = require('./messagehandler');
 
 "use strict";
 
 
-function DebugMessage(message) {
-    console.log(message);
-    //var myconsole = document.getElementById("console");
-    //myconsole.innerHTML += message + "<br>";
-}
-
 function jor1kGUI(parameters)
 {
     this.params = parameters;
+    this.message = message;
 
     this.worker = new Worker('jor1k-worker-min.js');
-    this.worker.onmessage = this.OnMessage.bind(this);   
-    this.worker.onerror = function(e) {
-        DebugMessage("Error at " + e.filename + ":" + e.lineno + ": " + e.message);
-        this.stop = true;
-    }
-
-    //this.sound = new LoopSoundBuffer(22050);
+    message.SetWorker(this.worker);
     
     this.terminalcanvas = document.getElementById(this.params.termid);
     this.clipboard = document.getElementById(this.params.clipboardid);
     this.stats = document.getElementById(this.params.statsid);
-    this.term = new Terminal(24, 80, this.params.termid);
-    this.terminput = new TerminalInput(this.SendChars.bind(this));
-    this.framebuffer = new Framebuffer(this.params.fbid, this.params.fps, this.SendToWorker.bind(this));
 
+    this.terminput = new TerminalInput(this.SendChars.bind(this));
+
+    this.term = new Terminal(24, 80, this.params.termid);
+    message.Register("tty0", function(d) {
+       d.forEach(function(c) {
+            this.term.PutChar(c&0xFF);
+       }.bind(this));
+    }.bind(this));
+
+
+    this.framebuffer = new Framebuffer(this.params.fbid, this.params.fps);
+    message.Register("GetFB", this.framebuffer.Update.bind(this.framebuffer));
+
+    //this.sound = new LoopSoundBuffer(22050);
+    //message.Register("sound",      this.sound.AddBuffer.bind(this.sound));
+    //message.Register("sound.rate", this.sound.SetRate.bind(this.sound));
 
     this.terminalcanvas.onmousedown = function(event) {
         if (!this.framebuffer.fbcanvas) return;
@@ -82,13 +85,12 @@ function jor1kGUI(parameters)
       Window.onmousedown = recordTarget; // IE 10 support (untested)
 
 
-
     document.onkeypress = function(event) {
         if(this.IgnoreKeys()) return true;
         if ((this.lastMouseDownTarget == this.terminalcanvas) || (this.lastMouseDownTarget == this.clipboard)) {
             return this.terminput.OnKeyPress(event);
         }
-        this.SendToWorker("keypress", {keyCode:event.keyCode, charCode:event.charCode});
+        message.Send("keypress", {keyCode:event.keyCode, charCode:event.charCode});
         return false;
     }.bind(this);
 
@@ -97,7 +99,7 @@ function jor1kGUI(parameters)
         if ((this.lastMouseDownTarget == this.terminalcanvas) || (this.lastMouseDownTarget == this.clipboard)) {
             return this.terminput.OnKeyDown(event);
         }
-        this.SendToWorker("keydown", {keyCode:event.keyCode, charCode:event.charCode});
+        message.Send("keydown", {keyCode:event.keyCode, charCode:event.charCode});
         return false;
     }.bind(this);
 
@@ -106,45 +108,68 @@ function jor1kGUI(parameters)
         if ((this.lastMouseDownTarget == this.terminalcanvas) || (this.lastMouseDownTarget == this.clipboard)) {
             return this.terminput.OnKeyUp(event);
         }
-        this.SendToWorker("keyup", {keyCode:event.keyCode, charCode:event.charCode});
+        message.Send("keyup", {keyCode:event.keyCode, charCode:event.charCode});
         return false;
     }.bind(this);
 
     this.ethernet = new Ethernet(this.params.relayURL);
     this.ethernet.onmessage = function(e) {
-        this.SendToWorker("ethmac", e.data);
+        message.Send("ethmac", e.data);
     }.bind(this);
+    message.Register("ethmac", this.ethernet.SendFrame.bind(this.ethernet));
+
+
+    message.Register("Stop", function(){message.Debug("Received stop signal"); this.stop = true}.bind(this));
+    message.Register("GetIPS", this.ShowIPS.bind(this));
+    message.Register("execute", this.Execute.bind(this));
+
 
     this.Reset();
     
    
-    window.setInterval(function(){this.SendToWorker("GetIPS", 0)}.bind(this), 1000);
+    window.setInterval(function(){message.Send("GetIPS", 0)}.bind(this), 1000);
 }
 
-jor1kGUI.prototype.SendToWorker = function(command, data) {
-    this.worker.postMessage(
-    {
-        "command": command,
-        "data": data
-    });
-}
+
+// this command is send back and forth to be responsive
+jor1kGUI.prototype.Execute = function() {
+    if (this.stop) return;
+    if(this.userpaused) {
+        this.executepending = true;
+    } else {
+        this.executepending = false; 
+        message.Send("execute", 0);
+    }
+};
+
+jor1kGUI.prototype.ShowIPS = function(ips) {
+    if (this.userpaused) {
+        this.stats.innerHTML = "Paused"; 
+    } else {
+        this.stats.innerHTML = ips<1000000?
+        Math.floor(ips/1000) + " KIPS" 
+        :
+        (Math.floor(ips/100000)/10.) + " MIPS";
+   }
+};
+
 
 jor1kGUI.prototype.ChangeCore = function(core) {
-    this.SendToWorker("ChangeCore", core);
+    message.Send("ChangeCore", core);
 };
 
 
 jor1kGUI.prototype.Reset = function () {
     this.stop = false; // VM Stopped/Aborted
     this.userpaused = false;
-    this.executepending=false; // if we rec an execute message while paused      
-    this.SendToWorker("Init", this.params.system);
-    this.SendToWorker("Reset");
+    this.executepending = false; // if we rec an execute message while paused      
+    message.Send("Init", this.params.system);
+    message.Send("Reset");
       
-    this.SendToWorker("LoadAndStart", this.params.system.kernelURL);
-    this.SendToWorker("LoadFilesystem", this.params.fs);
+    message.Send("LoadAndStart", this.params.system.kernelURL);
+    message.Send("LoadFilesystem", this.params.fs);
     this.term.PauseBlink(false);
-    this.lastMouseDownTarget = this.terminalcanvas;
+    message.lastMouseDownTarget = this.terminalcanvas;
 }
 
 jor1kGUI.prototype.Pause = function(pause) {
@@ -153,7 +178,7 @@ jor1kGUI.prototype.Pause = function(pause) {
     this.userpaused = pause;
     if(! this.userpaused && this.executepending) {
       this.executepending = false;
-       this.SendToWorker("execute", 0);
+       message.Send("execute", 0);
     }
     this.term.PauseBlink(pause);
 }
@@ -161,103 +186,46 @@ jor1kGUI.prototype.Pause = function(pause) {
 // sends the input characters for the terminal
 jor1kGUI.prototype.SendChars = function(chars) {
     if (this.lastMouseDownTarget == this.fbcanvas) return;
-    this.SendToWorker("tty0", chars);
+    message.Send("tty0", chars);
 }
 
 
 jor1kGUI.prototype.TAR = function(path) {
-    this.SendToWorker("tar", path);
+    message.Register("tar", function(d){download(d, "user.tar", "application/x-tar");} );
+    message.Send("tar", path);
 }
 
 jor1kGUI.prototype.Sync = function(path) {
-    this.SendToWorker("sync", path);
+    message.Register("sync", this.OnSync.bind(this));
+    message.Send("sync", path);
 }
 
-jor1kGUI.prototype.UploadExternalFile = function(f) {
-    var reader = new FileReader();
-    reader.onload = function(e) {
-        this.SendToWorker("MergeFile", 
-        {name: "home/user/"+f.name, data: new Uint8Array(reader.result)});
-    }.bind(this);
-    reader.readAsArrayBuffer(f);
-}
-
-jor1kGUI.prototype.OnMessage = function(e) {
-    // print debug messages even if emulator is stopped
-    if (e.data.command == "Debug") DebugMessage(e.data.data);
-
-    if (this.stop) return;
-    switch(e.data.command)
-    {
-        case "execute":  // this command is send back and forth to be responsive
-            if(this.userpaused) {
-              this.executepending = true;
-            } else {
-              this.executepending = false; 
-              this.SendToWorker("execute", 0);
-            }
-            break;
-
-        case "sound":
-            //this.sound.AddBuffer(e.data.data);
-            break;
-
-        case "sound.rate":
-            //this.sound.SetRate(e.data.data);
-            break;
-
-        case "ethmac":
-            this.ethernet.SendFrame(e.data.data);
-            break;
-
-        case "tty0":
-            e.data.data.forEach(function(c) {
-                this.term.PutChar(c&0xFF);
-            }.bind(this));
-            //this.term.PutChar(e.data.data);
-            break;
-
-        case "GetFB":
-            this.framebuffer.Update(e.data.data);
-            break;
-
-        case "Stop":
-            DebugMessage("Received stop signal");
-            this.stop = true;
-            break;
-
-        case "GetIPS":
-            if (this.userpaused) {
-                this.stats.innerHTML = "Paused"; 
-            } else {
-                this.stats.innerHTML = e.data.data<1000000?
-                    Math.floor(e.data.data/1000) + " KIPS" 
-                    :
-                    (Math.floor(e.data.data/100000)/10.) + " MIPS";
-            }
-            break;
-
-        case "tar":
-            download(e.data.data, "user.tar", "application/x-tar");
-            break;
-
-        case "sync":
-            utils.UploadBinaryResource(this.params.syncURL, this.params.userid + ".tar", e.data.data, 
-            function(response) {
-            // alert(response);
+jor1kGUI.prototype.OnSync = function(d) {
+    utils.UploadBinaryResource(this.params.syncURL, this.params.userid + ".tar", d, 
+        function(response) {
             alert(
                 "Message from Server:" + response + "\n" +
                 "The home folder '/home/user' has been synced with the server\n" +
                 "In order to access the data at a later date,\n" +
                 "start the next session with the current url with the user id\n" +
                 "The folder size is currently limited to 1MB. Note that the feature is experimental.\n" +
-                "The content can be downloaded under http://jor1k.com/sync/tarballs/" + this.params.userid+".tar.bz2");
-            }.bind(this)
-           , function(msg) {alert(msg);}
-           );
-           
-            break;
-        }
+                "The content can be downloaded under http://jor1k.com/sync/tarballs/" + this.params.userid+".tar.bz2"
+            );
+            }.bind(this),
+        function(msg) {alert(msg);}
+    );
 }
+
+
+
+jor1kGUI.prototype.UploadExternalFile = function(f) {
+    var reader = new FileReader();
+    reader.onload = function(e) {
+        message.Send("MergeFile", 
+        {name: "home/user/"+f.name, data: new Uint8Array(reader.result)});
+    }.bind(this);
+    reader.readAsArrayBuffer(f);
+}
+
 
 module.exports = jor1kGUI;

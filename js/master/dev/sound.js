@@ -1,5 +1,7 @@
 // Provides a loop sound buffer.
 
+var message = require('../messagehandler');
+
 "use strict";
 
 function LoopSoundBuffer(samplerate) {
@@ -64,11 +66,11 @@ LoopSoundBuffer.prototype.AddBuffer = function(addbuffer)
     var currentperiod = (this.bufferpos / this.periodsize);
     if ((currentperiod) < (this.period+2)) {
         this.bufferpos = this.periodsize*(this.period+3);
-        //console.log("Warning: Sound buffer underrun, resetting");
+        //message.Debug("Warning: Sound buffer underrun, resetting");
     }
     if (currentperiod > (this.period+4)) {
         this.bufferpos = this.periodsize*(this.period+3);
-        //console.log("Warning: Sound buffer overrun, resetting");
+        //message.Debug("Warning: Sound buffer overrun, resetting");
     }
 
     for(var i=0; i<addbuffer.length; i++) {

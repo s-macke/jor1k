@@ -319,7 +319,7 @@ function GetCodeText() {
 function SendKeysToJor1k(text,quiet) {
     var tty = quiet ? "tty1" : "tty0";
     for(var i=0;i<text.length;i++) {
-        jor1kgui.SendToWorker(tty, [text.charCodeAt(i) >>>0]);
+        jor1kgui.message.Send(tty, [text.charCodeAt(i) >>>0]);
     }
 }
 
@@ -337,7 +337,7 @@ function RunCode(code,gccoptions) {
     for (var i=0; i<code.length; i++) {
         bufView[i] = code.charCodeAt(i);
     }
-    jor1kgui.SendToWorker("MergeFile", {name: "home/user/prog.c", data: bufView});
+    jor1kgui.message.Send("MergeFile", {name: "home/user/prog.c", data: bufView});
     
     var lang = document.getElementById("lang").value;
     if(lang == "c_cpp"){  

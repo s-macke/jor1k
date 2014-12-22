@@ -1,5 +1,9 @@
 // manages the websocket connection for the ethmac peripheral
 
+var message = require('../messagehandler');
+
+"use strict";
+
 function Ethernet(relayURL) {
     this.url = relayURL;
     this.onmessage = function(e) { };
@@ -21,15 +25,15 @@ function EthernetMessageHandler(e) {
 
 function EthernetCloseHandler(e) {
     // reopen websocket if it closes
-    console.log("Websocket closed. Reopening.");
+    message.Debug("Websocket closed. Reopening.");
     this.OpenSocket();
 }
 
 function EthernetErrorHandler(e) {
     // just report the error to console, close event
     // will handle reopening if possible
-    console.error("Websocket error:");
-    console.error(e);
+    message.Debug("Websocket error:");
+    message.Debug(e);
 }
 
 Ethernet.prototype.OpenSocket = function() {

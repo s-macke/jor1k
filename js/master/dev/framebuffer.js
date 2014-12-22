@@ -1,8 +1,11 @@
+var message = require('../messagehandler.js');
+
+
 "use strict";
 
-function Framebuffer(fbid, fps, SendToWorker) {
+
+function Framebuffer(fbid, fps) {
     this.fbid = fbid;
-    this.SendToWorker = SendToWorker;
 
     this.Init(fbid);
     this.SetFPS(fps);
@@ -25,21 +28,21 @@ Framebuffer.prototype.Init = function(fbid) {
         var rect = this.fbcanvas.getBoundingClientRect();
         var x = (event.clientX - rect.left)*640/rect.width;
         var y = (event.clientY - rect.top)*400/rect.height;
-        this.SendToWorker("tsmousedown", {x:x, y:y});
+        message.Send("tsmousedown", {x:x, y:y});
     }.bind(this);
 
     this.fbcanvas.onmouseup = function(event) {
         var rect = this.fbcanvas.getBoundingClientRect();
         var x = (event.clientX - rect.left)*640/rect.width;
         var y = (event.clientY - rect.top)*400/rect.height;
-        this.SendToWorker("tsmouseup", {x:x, y:y});
+        message.Send("tsmouseup", {x:x, y:y});
     }.bind(this);
 
     this.fbcanvas.onmousemove = function(event) {
         var rect = this.fbcanvas.getBoundingClientRect();
         var x = (event.clientX - rect.left)*640/rect.width;
         var y = (event.clientY - rect.top)*400/rect.height;
-        this.SendToWorker("tsmousemove", {x:x, y:y});
+        message.Send("tsmousemove", {x:x, y:y});
     }.bind(this);
 }
 
@@ -52,7 +55,7 @@ Framebuffer.prototype.SetFPS = function(fps) {
         window.clearInterval(this.fbinterval);
     }
     if (fps != 0) {
-        this.fbinterval = window.setInterval(function(){this.SendToWorker("GetFB", 0)}.bind(this), 1000/this.fps);
+        this.fbinterval = window.setInterval(function(){message.Send("GetFB", 0)}.bind(this), 1000/this.fps);
     }
 }
 
