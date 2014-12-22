@@ -6,6 +6,7 @@
 "use strict";
 
 var TAR = require('./tar.js');
+var FSLoader = require('./fsloader.js');
 var utils = require('../utils.js');
 var bzip2 = require('../bzip2.js');
 var marshall = require('../dev/virtio/marshall.js');
@@ -48,6 +49,7 @@ function FS() {
     this.OnLoaded = function() {};
 
     this.tar = new TAR(this);
+    this.fsloader = new FSLoader(this);
     this.userinfo = [];
 
     message.Register("LoadFilesystem", this.LoadFilesystem.bind(this) );
@@ -72,9 +74,9 @@ function FS() {
 FS.prototype.LoadFilesystem = function(userinfo)
 {
     this.userinfo = userinfo;
-    this.LoadFSXML(this.userinfo.basefsURL);
+    this.fsloader.LoadXML(this.userinfo.basefsURL);
     this.OnLoaded = function() { // the basic filesystem is loaded, so download the rest
-        this.LoadFSXML(this.userinfo.extendedfsURL);
+        this.fsloader.LoadXML(this.userinfo.extendedfsURL);
         for(var i=0; i<this.userinfo.lazyloadimages.length; i++) {
             this.LoadImage(this.userinfo.lazyloadimages[i]);
         }
@@ -132,78 +134,6 @@ FS.prototype.LoadImage = function(url)
 }
 // -----------------------------------------------------
 
-
-function ReadVariable(buffer, offset) {
-    var variable = [];
-    variable.name = "";
-    variable.value = "";
-
-    // read blanks
-    for(var i=offset; i<buffer.length; i++) {
-        if (buffer[i] == '>') return variable;
-        if (buffer[i] == '/') return variable;
-        if (buffer[i] != ' ') break;
-    }
-    offset = i;
-    if (buffer[i] == '>') return variable;
-
-    // read variable name
-    for(var i=offset; i<buffer.length; i++) {
-        if (buffer[i] == '>') break;
-        if (buffer[i] == '=') break;
-        variable.name = variable.name + buffer[i]; 
-    }
-    offset = i+1;
-    if (variable.name.length == 0) return variable;
-    // read variable value
-    for(var i=offset+1; i<buffer.length; i++) {
-        if (buffer[i] == '>') break;
-        if (buffer[i] == '\'') break;
-        variable.value = variable.value + buffer[i]; 
-    }
-    offset = i+1;
-    variable.offset = offset;
-    //message.Debug("read " + variable.name + "=" + variable.value);
-    return variable;
-}
-
-function ReadTag(buffer, offset) {
-    var tag = [];
-    tag.type = "";
-    tag.name = "";
-    tag.mode = 0x0;
-    tag.uid = 0x0;
-    tag.gid = 0x0;
-    tag.path = "";
-    tag.src = "";
-    tag.compressed = false;
-    tag.load = false;
-
-    if (buffer[offset] != '<') return tag;
-    for(var i=offset+1; i<buffer.length; i++) {
-        if (buffer[i] ==  ' ') break;
-        if (buffer[i] == '\n') break;
-        if (buffer[i] == '>') break;
-        tag.type = tag.type + buffer[i]; 
-    }
-    offset = i;
-    // read variables
-    do {
-        var variable = ReadVariable(buffer, offset);
-        if (variable.name == "name") tag.name = variable.value;
-        if (variable.name == "mode") tag.mode = parseInt(variable.value, 8);
-        if (variable.name == "uid") tag.uid = parseInt(variable.value, 10);
-        if (variable.name == "gid") tag.gid = parseInt(variable.value, 10);
-        if (variable.name == "path") tag.path = variable.value;
-        if (variable.name == "size") tag.size = parseInt(variable.value, 10);
-        if (variable.name == "src") tag.src = variable.value;
-        if (variable.name == "compressed") tag.compressed = true;
-        if (variable.name == "load") tag.load = true;
-        offset = variable.offset;
-    } while(variable.name.length != 0);
-    return tag;
-};
-
 FS.prototype.CheckEarlyload = function(path)
 {
     for(var i=0; i<this.userinfo.earlyload.length; i++) {
@@ -214,78 +144,6 @@ FS.prototype.CheckEarlyload = function(path)
     return false;
 }
 
-FS.prototype.LoadFSXML = function(urls)
-{
-    message.Debug("Load filesystem information from " + urls);
-    utils.LoadXMLResource(urls, this.OnXMLLoaded.bind(this), function(error){throw error;});
-}
-
-FS.prototype.OnXMLLoaded = function(fs)
-{
-    // At this point I realized, that the dom is not available in worker threads and that I cannot get the xml information directly.
-    // So let's analyze ourself
-    var sysrootdir = "";
-
-    var parentid = 0;
-    for(var i=0; i<fs.length; i++)
-    {
-        if (fs[i] != '<') continue;
-        var tag = ReadTag(fs, i, ' ');
-        var id = this.Search(parentid, tag.name);
-        if (id != -1) {
-            if (tag.type == "Dir") parentid = id;             
-            continue;
-        }
-        var inode = this.CreateInode();
-        inode.name = tag.name;
-        inode.uid = tag.uid;
-        inode.gid = tag.gid;
-        inode.parentid = parentid;
-        inode.mode = tag.mode;
-	
-        var size = tag.size;
-
-    switch(tag.type) {
-    case "FS":
-        sysrootdir = "" + tag.src + "/";
-        break;
-
-    case "Dir":
-        inode.mode |= S_IFDIR;
-        inode.updatedir = true;
-        parentid = this.inodes.length;
-        this.PushInode(inode);
-        break;
-
-    case "/Dir":
-        parentid = this.inodes[parentid].parentid;
-        break;
-
-    case "File":
-        inode.mode |= S_IFREG;
-        var idx = this.inodes.length;
-        inode.status = STATUS_ON_SERVER;
-        inode.compressed = tag.compressed;
-        inode.size = size;
-        this.PushInode(inode);
-        var url = sysrootdir + (tag.src.length==0?this.GetFullPath(idx):tag.src);
-        inode.url = url;
-        //message.Debug("Load id=" + (idx) + " " + url);
-        if (tag.load || this.CheckEarlyload(this.GetFullPath(idx)) ) {
-            this.LoadFile(idx);
-        }
-        break;
-
-    case "Link":
-        inode.mode = S_IFLNK | S_IRWXUGO;
-        inode.symlink = tag.path;
-        this.PushInode(inode);
-        break;
-        }
-    }
-    message.Debug("processed " + this.inodes.length + " inodes");
-    this.Check();
-}
 
 // The filesystem is responsible to add the correct time. This is a hack
 // Have to find a better solution.
