@@ -24,9 +24,23 @@ var Colors = new Array(
 function Terminal(nrows, ncolumns, elemId) {
     this.nrows = nrows;
     this.ncolumns = ncolumns;
-    this.canvas = document.getElementById(elemId);
-    this.context = this.canvas.getContext("2d");
-    this.context.font = "13px courier,fixed,swiss,monospace,sans-serif";
+
+    var ele = document.getElementById(elemId);
+    if (ele.tagName == "CANVAS") {
+        this.canvas = ele;
+        this.context = this.canvas.getContext("2d");
+        this.context.font = "13px courier,fixed,swiss,monospace,sans-serif";
+    } else {
+        this.Table = ele;
+        this.rowelements = new Array(this.nrows);
+        for (var i = 0; i < nrows; i++) {
+            var TR = this.Table.insertRow(0);
+            var TD = document.createElement("td");
+            this.rowelements[i] = TD;
+            TR.appendChild(TD);
+        }
+    }
+
     this.cursorvisible = false;
     this.escapetype = 0;
     this.escapestring = "";
@@ -93,35 +107,117 @@ Terminal.prototype.DeleteArea = function(row, column, row2, column2) {
     }
 };
 
-Terminal.prototype.UpdateChar = function(row, column) {
-    var x = column<<3;
-    var y = row<<4;
-    var ccolor = this.color[row][column]|0;
-    var line = String.fromCharCode(this.screen[row][column]);
 
-    if (this.cursorvisible)
-    if (row == this.cursory)
-    if (column == this.cursorx) {
-       ccolor |= 0x600;
+Terminal.prototype.UpdateRowCanvas = function(row) {
+    var y = row << 4;
+    var line = this.screen[row];
+    var c = this.color[row][0]|0;
+    var n = 0;
+
+    for (var column = 0; column < this.ncolumns; column++) {
+
+        var cnew = this.color[row][column]|0;
+
+        if (this.cursorvisible)
+        if (row == this.cursory)
+        if (column == this.cursorx) {
+            cnew |= 0x600;
+        }
+
+        if (c != cnew) {
+            var x = (column - n) << 3;
+            this.context.fillStyle = Colors[(c >>> 8) & 0x1F]; 
+            this.context.fillRect(x, y, n*8, 16);
+            this.context.fillStyle = Colors[c & 0x1F];
+            for(var i=0; i<n; i++) {
+                this.context.fillText(String.fromCharCode(line[column - n + i]), x+(i<<3), y+12);
+            }
+            c = cnew;
+            n = 0;
+        }
+
+        n++;
     }
 
-    this.context.fillStyle = Colors[(ccolor >>> 8) & 0x1F]; 
-    this.context.fillRect(x, y, 8, 16);
-    this.context.fillStyle = Colors[ccolor & 0x1F];
-    this.context.fillText(line, x, y+12);
+    var x = (column - n) << 3;
+    this.context.fillStyle = Colors[(c >>> 8) & 0x1F]; 
+    this.context.fillRect(x, y, n*8, 16);
+    this.context.fillStyle = Colors[c & 0x1F];
+    for(var i=0; i<n; i++) {
+        this.context.fillText(String.fromCharCode(line[column - n + i]), x+(i<<3), y+12);
+    }
+
+};
+
+Terminal.prototype.GetSpan = function(c, line, idx, n) {
+    var html = "<span style=\"color:" + Colors[c & 0x1F] + ";background-color:" + Colors[(c >> 8) & 0x1F] + "\">";
+    for(var i=0; i<n; i++) {
+        switch (line[idx + i])
+        {
+        case 0x20:
+            html += "&nbsp;"; 
+            break;
+
+        case 0x26: // '&'
+            html += "&amp;"; 
+            break;
+
+        case 0x3C: // '<'
+            html += "&lt;"; 
+            break;
+
+        case 0x3E: // '>'
+            html += "&gt;"; 
+            break;
+
+        default:        
+            html += String.fromCharCode(line[idx + i]);
+            break;
+        }
+    }
+    html += "</span>";
+    return html;
 }
 
-Terminal.prototype.UpdateRow = function(row) {
-    for (var i = 0; i < this.ncolumns; i++) {
-        this.UpdateChar(row, i);
+
+Terminal.prototype.UpdateRowTable = function(row) {
+    var y = row << 4;
+    var line = this.screen[row];
+    var c = this.color[row][0]|0;
+    var n = 0;
+    var html = "";
+
+    for (var column = 0; column < this.ncolumns; column++) {
+
+        var cnew = this.color[row][column]|0;
+
+        if (this.cursorvisible)
+        if (row == this.cursory)
+        if (column == this.cursorx) {
+            cnew |= 0x600;
+        }
+
+        if (c != cnew) {
+            html += this.GetSpan(c, line, column - n, n);
+            c = cnew;
+            n = 0;
+        }
+        n++;
     }
+    html += this.GetSpan(c, line, column - n, n);
+    this.rowelements[this.nrows - row - 1].innerHTML = html;
+
 };
 
 Terminal.prototype.UpdateScreen = function() {
     var nupdated = 0;
     for (var i = 0; i < this.nrows; i++) {
         if (!this.updaterow[i]) continue;
-        this.UpdateRow(i);
+        if (this.canvas) {
+            this.UpdateRowCanvas(i);
+        } else {
+            this.UpdateRowTable(i);
+        }
         nupdated++;
         this.updaterow[i] = 0;
     }

@@ -97,7 +97,8 @@ function jor1kGUI(parameters)
        this.clipboard.value = "";
    }.bind(this);
    }
-    this.IgnoreKeys = function() {
+
+   this.IgnoreKeys = function() {
       return (
           (this.lastMouseDownTarget != this.terminalcanvas) &&
           (this.lastMouseDownTarget != this.framebuffer) &&
@@ -106,7 +107,10 @@ function jor1kGUI(parameters)
     }
 
     var recordTarget = function(event) {
-        this.lastMouseDownTarget = event.target;
+        if (this.terminalcanvas.contains(event.target))
+            this.lastMouseDownTarget = this.terminalcanvas;
+        else
+            this.lastMouseDownTarget = event.target;
     }.bind(this);
 
     if(document.addEventListener)
