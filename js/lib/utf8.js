@@ -91,7 +91,7 @@ function UnicodeToUTF8Stream(key) {
             (key & 0x3F) | 0x80
             ];
     } else {
-        DebugMessage("Error in utf-8 encoding: Invalid key");
+        //message.Debug("Error in utf-8 encoding: Invalid key");
     }
     return [];
 }

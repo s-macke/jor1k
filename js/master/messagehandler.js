@@ -21,7 +21,7 @@ function Debug(message) {
 }
 
 function Abort() {
-    DebugMessage("Abort execution.");
+    Debug("Abort execution.");
     Send("Stop", {});
     throw new Error('Kill worker');
 }
@@ -44,7 +44,7 @@ function SetWorker(_worker) {
     worker = _worker;
     worker.onmessage = OnMessage;
     worker.onerror = function(e) {
-        DebugMessage("Error at " + e.filename + ":" + e.lineno + ": " + e.message);
+        Debug("Error at " + e.filename + ":" + e.lineno + ": " + e.message);
         Abort();
     }
 }

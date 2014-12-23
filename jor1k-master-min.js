@@ -218,7 +218,7 @@ function UnicodeToUTF8Stream(key) {
             (key & 0x3F) | 0x80
             ];
     } else {
-        DebugMessage("Error in utf-8 encoding: Invalid key");
+        //message.Debug("Error in utf-8 encoding: Invalid key");
     }
     return [];
 }
@@ -1307,7 +1307,7 @@ function Debug(message) {
 }
 
 function Abort() {
-    DebugMessage("Abort execution.");
+    Debug("Abort execution.");
     Send("Stop", {});
     throw new Error('Kill worker');
 }
@@ -1330,7 +1330,7 @@ function SetWorker(_worker) {
     worker = _worker;
     worker.onmessage = OnMessage;
     worker.onerror = function(e) {
-        DebugMessage("Error at " + e.filename + ":" + e.lineno + ": " + e.message);
+        Debug("Error at " + e.filename + ":" + e.lineno + ": " + e.message);
         Abort();
     }
 }
@@ -1366,34 +1366,64 @@ function jor1kGUI(parameters)
     this.params = parameters;
     this.message = message;
 
-    this.worker = new Worker('jor1k-worker-min.js');
+    // --- parameters parsing ---
+    this.params.system = this.params.system  || {};
+
+    this.params.system.kernelURL = this.params.system.kernelURL || "bin/vmlinux.bin.bz2";
+    this.params.system.memorysize = this.params.system.memorysize || 32;
+    this.params.system.cpu = this.params.system.cpu || "asm";
+    this.params.system.ncores = this.params.system.ncores || 1;
+
+    this.params.fs = this.params.fs  || {};
+    this.params.fs.basefsURL = this.params.fs.basefsURL  || "bin/basefs.xml";
+    this.params.fs.extendedfsURL = this.params.fs.extendedfsURL  || "../jor1k-sysroot/fs.xml";
+    this.params.fs.earlyload = this.params.fs.earlyload  || [];
+    this.params.fs.lazyloadimages = this.params.fs.lazyloadimages  || [];
+
+    this.params.userid = this.params.userid || "";
+    this.params.path = this.params.path || "";
+
+    // ----------------------
+
+    this.worker = new Worker(this.params.path + "jor1k-worker-min.js");
     message.SetWorker(this.worker);
-    
-    this.terminalcanvas = document.getElementById(this.params.termid);
-    this.clipboard = document.getElementById(this.params.clipboardid);
-    this.stats = document.getElementById(this.params.statsid);
+
+    // ----
+
+    if (this.params.clipboardid) {
+        this.clipboard = document.getElementById(this.params.clipboardid);
+    }
+
+    if (this.params.statsid) {
+        this.stats = document.getElementById(this.params.statsid);
+    }
+
+    if (this.params.fbid) {
+        this.framebuffer = new Framebuffer(this.params.fbid, this.params.fps);
+        message.Register("GetFB", this.framebuffer.Update.bind(this.framebuffer));
+    }
+
+    if (this.params.termid) {
+        this.term = new Terminal(24, 80, this.params.termid);
+        message.Register("tty0", function(d) {
+           d.forEach(function(c) {
+               this.term.PutChar(c&0xFF);
+           }.bind(this));
+        }.bind(this));
+
+        this.terminalcanvas = document.getElementById(this.params.termid);
+        this.terminalcanvas.onmousedown = function(event) {
+            if (!this.framebuffer) return;
+            this.framebuffer.fbcanvas.style.border = "2px solid #000000";
+        }.bind(this);
+    }
 
     this.terminput = new TerminalInput(this.SendChars.bind(this));
 
-    this.term = new Terminal(24, 80, this.params.termid);
-    message.Register("tty0", function(d) {
-       d.forEach(function(c) {
-            this.term.PutChar(c&0xFF);
-       }.bind(this));
-    }.bind(this));
-
-
-    this.framebuffer = new Framebuffer(this.params.fbid, this.params.fps);
-    message.Register("GetFB", this.framebuffer.Update.bind(this.framebuffer));
 
     //this.sound = new LoopSoundBuffer(22050);
     //message.Register("sound",      this.sound.AddBuffer.bind(this.sound));
     //message.Register("sound.rate", this.sound.SetRate.bind(this.sound));
-
-    this.terminalcanvas.onmousedown = function(event) {
-        if (!this.framebuffer.fbcanvas) return;
-        this.framebuffer.fbcanvas.style.border = "2px solid #000000";
-    }.bind(this);
 
    if (this.clipboard) {
    this.clipboard.onpaste = function(event) {
@@ -1417,7 +1447,7 @@ function jor1kGUI(parameters)
     this.IgnoreKeys = function() {
       return (
           (this.lastMouseDownTarget != this.terminalcanvas) &&
-          (this.lastMouseDownTarget != this.framebuffer.fbcanvas) &&
+          (this.lastMouseDownTarget != this.framebuffer) &&
           (this.lastMouseDownTarget != this.clipboard)
       );
     }
@@ -1459,11 +1489,13 @@ function jor1kGUI(parameters)
         return false;
     }.bind(this);
 
-    this.ethernet = new Ethernet(this.params.relayURL);
-    this.ethernet.onmessage = function(e) {
-        message.Send("ethmac", e.data);
-    }.bind(this);
-    message.Register("ethmac", this.ethernet.SendFrame.bind(this.ethernet));
+    if (this.params.relayURL) {
+        this.ethernet = new Ethernet(this.params.relayURL);
+        this.ethernet.onmessage = function(e) {
+            message.Send("ethmac", e.data);
+        }.bind(this);
+        message.Register("ethmac", this.ethernet.SendFrame.bind(this.ethernet));
+    }
 
 
     message.Register("Stop", function(){message.Debug("Received stop signal"); this.stop = true}.bind(this));
@@ -1490,6 +1522,7 @@ jor1kGUI.prototype.Execute = function() {
 };
 
 jor1kGUI.prototype.ShowIPS = function(ips) {
+    if (!this.stats) return;
     if (this.userpaused) {
         this.stats.innerHTML = "Paused"; 
     } else {
@@ -1515,8 +1548,10 @@ jor1kGUI.prototype.Reset = function () {
       
     message.Send("LoadAndStart", this.params.system.kernelURL);
     message.Send("LoadFilesystem", this.params.fs);
-    this.term.PauseBlink(false);
-    message.lastMouseDownTarget = this.terminalcanvas;
+    if (this.term) {
+        this.term.PauseBlink(false);
+        message.lastMouseDownTarget = this.terminalcanvas;
+    }
 }
 
 jor1kGUI.prototype.Pause = function(pause) {
@@ -1527,7 +1562,9 @@ jor1kGUI.prototype.Pause = function(pause) {
       this.executepending = false;
        message.Send("execute", 0);
     }
-    this.term.PauseBlink(pause);
+    if (this.term) {
+        this.term.PauseBlink(pause);
+    }
 }
 
 // sends the input characters for the terminal
