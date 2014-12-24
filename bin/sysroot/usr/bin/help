@@ -15,6 +15,7 @@ showmenu \
 "Compile Stuff" \
 "Start X Server (glxgears, xterm, ...)" \
 "Start wayland/weston" \
+"Sound" \
 "Quit"
 
 case $? in
@@ -46,6 +47,8 @@ case $? in
 		echo "Loading files from server. This may take a while."
 		su -c startweston ;;
 	12)
+		Sound  ;;
+	13)
 		exit ;;
 esac
 
@@ -329,7 +332,7 @@ case $? in
 	8 )
 		/usr/sbin/sshd
 		;;
-	8 )
+	9 )
 		Main ;;
 esac
 	Network
@@ -413,6 +416,25 @@ case $? in
 esac
 	Compile
 }
+
+Sound () {
+
+showmenu \
+"Sound" \
+"MikMod          - mod file player" \
+"Back"
+
+case $? in
+	0 )
+		Main ;;
+	1 )
+		mikmod /usr/share/mikmod/playlist.mpl ;;
+	2 )
+		Main ;;
+esac
+	Sound
+}
+
 
 
 Main
