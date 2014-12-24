@@ -412,71 +412,84 @@ var message = require('../messagehandler');
 "use strict";
 
 function LoopSoundBuffer(samplerate) {
-    this.periods = 6;
+    this.enabled = false;
+    this.nperiods = 8; // number of periods
 
-    this.initialized = false;
-    this.source = new Array(this.periods);
-    this.soundbuffer = new Array(this.periods);
+    this.source = new Array(this.nperiods);
+    this.soundbuffer = new Array(this.nperiods);
+
     this.period = 0;
+    this.periodsize = 0;
     this.bufferpos = 0;
 
     if (typeof AudioContext == "undefined") return;
 
     this.context = new AudioContext();
     this.SetRate(samplerate);
-    this.initialized = true;
-    this.PlayBuffer(0);
-    this.PlayBuffer(1);
-    this.period = 2;
 }
 
 LoopSoundBuffer.prototype.SetRate = function(rate) {
     if (this.samplerate == rate) return;
     this.samplerate = rate;
-    this.sampleslen = rate;
-    this.periodsize = Math.floor(this.sampleslen/4);
-    this.sampleslen = this.periodsize*this.periods;
+    this.periodsize = Math.floor(this.samplerate/4); // 250ms
+    this.sampleslen = this.periodsize*this.nperiods;
     this.buffer = new Float32Array(this.sampleslen);
 
-    for(var i=0; i<this.periods; i++) {
+    for(var i=0; i<this.nperiods; i++) {
         this.soundbuffer[i] = this.context.createBuffer(1, this.periodsize, this.samplerate);
     }
 }
 
 LoopSoundBuffer.prototype.OnEnded = function()
 {
-        this.PlayBuffer(this.period);
-        this.period++;
+    if (!this.enabled) return;
+    this.PlayBuffer(this.period);
+    this.period++;
+}
+
+LoopSoundBuffer.prototype.Enabled = function(e)
+{
+    this.enabled = e;
+    if (!e) return;
+    this.period = 0;
+    this.basetime = this.context.currentTime;
+    this.PlayBuffer(0);
+    this.PlayBuffer(1);
+    this.period = 2;
+    this.bufferpos = this.periodsize*(this.period+4);
 }
 
 LoopSoundBuffer.prototype.PlayBuffer = function(period)
 {
-        var idx = period % this.periods;
-        var buffer = this.soundbuffer[idx].getChannelData(0);
-        var offset = idx * this.periodsize;
-        for(var i=0; i<this.periodsize; i++) {
-            buffer[i] = this.buffer[i + offset];
-            this.buffer[i+offset] = 0;
-        }
-        var source = this.context.createBufferSource(); // creates a sound source
-        source.buffer = this.soundbuffer[idx];
-        source.connect(this.context.destination);
-        source.onended = this.OnEnded.bind(this);
-        source.start(period*(this.periodsize)/this.samplerate);
+    if (!this.enabled) return;
+    var idx = period % this.nperiods;
+    var buffer = this.soundbuffer[idx].getChannelData(0);
+    var offset = idx * this.periodsize;
+    for(var i=0; i<this.periodsize; i++) {
+        buffer[i] = this.buffer[i + offset];
+        this.buffer[i+offset] = 0;
+    }
+    var source = this.context.createBufferSource(); // creates a sound source
+    source.buffer = this.soundbuffer[idx];
+    source.connect(this.context.destination);
+    source.onended = this.OnEnded.bind(this);
+    source.start(this.basetime + period*(this.periodsize)/this.samplerate);
 
-        // save the source. Otherwise the garbage collector might take them and the function OnEnded is not executed
-        this.source[idx] = source;
+    // save the source. Otherwise the garbage collector might take them and the function OnEnded is not executed
+    this.source[idx] = source;
 }
 
 LoopSoundBuffer.prototype.AddBuffer = function(addbuffer)
 {
+    if (!this.enabled) return;
+
     var currentperiod = (this.bufferpos / this.periodsize);
     if ((currentperiod) < (this.period+2)) {
-        this.bufferpos = this.periodsize*(this.period+3);
+        this.bufferpos = this.periodsize*(this.period+4);
         //message.Debug("Warning: Sound buffer underrun, resetting");
     }
-    if (currentperiod > (this.period+4)) {
-        this.bufferpos = this.periodsize*(this.period+3);
+    if (currentperiod > (this.period+5)) {
+        this.bufferpos = this.periodsize*(this.period+4);
         //message.Debug("Warning: Sound buffer overrun, resetting");
     }
 
@@ -708,9 +721,23 @@ var Colors = new Array(
 function Terminal(nrows, ncolumns, elemId) {
     this.nrows = nrows;
     this.ncolumns = ncolumns;
-    this.canvas = document.getElementById(elemId);
-    this.context = this.canvas.getContext("2d");
-    this.context.font = "13px courier,fixed,swiss,monospace,sans-serif";
+
+    var ele = document.getElementById(elemId);
+    if (ele.tagName == "CANVAS") {
+        this.canvas = ele;
+        this.context = this.canvas.getContext("2d");
+        this.context.font = "13px courier,fixed,swiss,monospace,sans-serif";
+    } else {
+        this.Table = ele;
+        this.rowelements = new Array(this.nrows);
+        for (var i = 0; i < nrows; i++) {
+            var TR = this.Table.insertRow(0);
+            var TD = document.createElement("td");
+            this.rowelements[i] = TD;
+            TR.appendChild(TD);
+        }
+    }
+
     this.cursorvisible = false;
     this.escapetype = 0;
     this.escapestring = "";
@@ -777,35 +804,117 @@ Terminal.prototype.DeleteArea = function(row, column, row2, column2) {
     }
 };
 
-Terminal.prototype.UpdateChar = function(row, column) {
-    var x = column<<3;
-    var y = row<<4;
-    var ccolor = this.color[row][column]|0;
-    var line = String.fromCharCode(this.screen[row][column]);
 
-    if (this.cursorvisible)
-    if (row == this.cursory)
-    if (column == this.cursorx) {
-       ccolor |= 0x600;
+Terminal.prototype.UpdateRowCanvas = function(row) {
+    var y = row << 4;
+    var line = this.screen[row];
+    var c = this.color[row][0]|0;
+    var n = 0;
+
+    for (var column = 0; column < this.ncolumns; column++) {
+
+        var cnew = this.color[row][column]|0;
+
+        if (this.cursorvisible)
+        if (row == this.cursory)
+        if (column == this.cursorx) {
+            cnew |= 0x600;
+        }
+
+        if (c != cnew) {
+            var x = (column - n) << 3;
+            this.context.fillStyle = Colors[(c >>> 8) & 0x1F]; 
+            this.context.fillRect(x, y, n*8, 16);
+            this.context.fillStyle = Colors[c & 0x1F];
+            for(var i=0; i<n; i++) {
+                this.context.fillText(String.fromCharCode(line[column - n + i]), x+(i<<3), y+12);
+            }
+            c = cnew;
+            n = 0;
+        }
+
+        n++;
     }
 
-    this.context.fillStyle = Colors[(ccolor >>> 8) & 0x1F]; 
-    this.context.fillRect(x, y, 8, 16);
-    this.context.fillStyle = Colors[ccolor & 0x1F];
-    this.context.fillText(line, x, y+12);
+    var x = (column - n) << 3;
+    this.context.fillStyle = Colors[(c >>> 8) & 0x1F]; 
+    this.context.fillRect(x, y, n*8, 16);
+    this.context.fillStyle = Colors[c & 0x1F];
+    for(var i=0; i<n; i++) {
+        this.context.fillText(String.fromCharCode(line[column - n + i]), x+(i<<3), y+12);
+    }
+
+};
+
+Terminal.prototype.GetSpan = function(c, line, idx, n) {
+    var html = "<span style=\"color:" + Colors[c & 0x1F] + ";background-color:" + Colors[(c >> 8) & 0x1F] + "\">";
+    for(var i=0; i<n; i++) {
+        switch (line[idx + i])
+        {
+        case 0x20:
+            html += "&nbsp;"; 
+            break;
+
+        case 0x26: // '&'
+            html += "&amp;"; 
+            break;
+
+        case 0x3C: // '<'
+            html += "&lt;"; 
+            break;
+
+        case 0x3E: // '>'
+            html += "&gt;"; 
+            break;
+
+        default:        
+            html += String.fromCharCode(line[idx + i]);
+            break;
+        }
+    }
+    html += "</span>";
+    return html;
 }
 
-Terminal.prototype.UpdateRow = function(row) {
-    for (var i = 0; i < this.ncolumns; i++) {
-        this.UpdateChar(row, i);
+
+Terminal.prototype.UpdateRowTable = function(row) {
+    var y = row << 4;
+    var line = this.screen[row];
+    var c = this.color[row][0]|0;
+    var n = 0;
+    var html = "";
+
+    for (var column = 0; column < this.ncolumns; column++) {
+
+        var cnew = this.color[row][column]|0;
+
+        if (this.cursorvisible)
+        if (row == this.cursory)
+        if (column == this.cursorx) {
+            cnew |= 0x600;
+        }
+
+        if (c != cnew) {
+            html += this.GetSpan(c, line, column - n, n);
+            c = cnew;
+            n = 0;
+        }
+        n++;
     }
+    html += this.GetSpan(c, line, column - n, n);
+    this.rowelements[this.nrows - row - 1].innerHTML = html;
+
 };
 
 Terminal.prototype.UpdateScreen = function() {
     var nupdated = 0;
     for (var i = 0; i < this.nrows; i++) {
         if (!this.updaterow[i]) continue;
-        this.UpdateRow(i);
+        if (this.canvas) {
+            this.UpdateRowCanvas(i);
+        } else {
+            this.UpdateRowTable(i);
+        }
         nupdated++;
         this.updaterow[i] = 0;
     }
@@ -1420,10 +1529,9 @@ function jor1kGUI(parameters)
 
     this.terminput = new TerminalInput(this.SendChars.bind(this));
 
-
-    //this.sound = new LoopSoundBuffer(22050);
-    //message.Register("sound",      this.sound.AddBuffer.bind(this.sound));
-    //message.Register("sound.rate", this.sound.SetRate.bind(this.sound));
+    this.sound = new LoopSoundBuffer(22050);
+    message.Register("sound",      this.sound.AddBuffer.bind(this.sound));
+    message.Register("sound.rate", this.sound.SetRate.bind(this.sound));
 
    if (this.clipboard) {
    this.clipboard.onpaste = function(event) {
@@ -1444,16 +1552,20 @@ function jor1kGUI(parameters)
        this.clipboard.value = "";
    }.bind(this);
    }
-    this.IgnoreKeys = function() {
+
+   this.IgnoreKeys = function() {
       return (
           (this.lastMouseDownTarget != this.terminalcanvas) &&
-          (this.lastMouseDownTarget != this.framebuffer) &&
+          (this.lastMouseDownTarget != this.framebuffer.fbcanvas) &&
           (this.lastMouseDownTarget != this.clipboard)
       );
     }
 
     var recordTarget = function(event) {
-        this.lastMouseDownTarget = event.target;
+        if (this.terminalcanvas.contains(event.target))
+            this.lastMouseDownTarget = this.terminalcanvas;
+        else
+            this.lastMouseDownTarget = event.target;
     }.bind(this);
 
     if(document.addEventListener)
@@ -1501,14 +1613,12 @@ function jor1kGUI(parameters)
     message.Register("Stop", function(){message.Debug("Received stop signal"); this.stop = true}.bind(this));
     message.Register("GetIPS", this.ShowIPS.bind(this));
     message.Register("execute", this.Execute.bind(this));
-
+    message.Register("Debug", function(d){message.Debug(d);}.bind(this));
 
     this.Reset();
-    
-   
+
     window.setInterval(function(){message.Send("GetIPS", 0)}.bind(this), 1000);
 }
-
 
 // this command is send back and forth to be responsive
 jor1kGUI.prototype.Execute = function() {
@@ -1527,7 +1637,7 @@ jor1kGUI.prototype.ShowIPS = function(ips) {
         this.stats.innerHTML = "Paused"; 
     } else {
         this.stats.innerHTML = ips<1000000?
-        Math.floor(ips/1000) + " KIPS" 
+        Math.floor(ips/1000) + " KIPS"
         :
         (Math.floor(ips/100000)/10.) + " MIPS";
    }
@@ -1600,8 +1710,6 @@ jor1kGUI.prototype.OnSync = function(d) {
     );
 }
 
-
-
 jor1kGUI.prototype.UploadExternalFile = function(f) {
     var reader = new FileReader();
     reader.onload = function(e) {
@@ -1610,7 +1718,6 @@ jor1kGUI.prototype.UploadExternalFile = function(f) {
     }.bind(this);
     reader.readAsArrayBuffer(f);
 }
-
 
 module.exports = jor1kGUI;
 
