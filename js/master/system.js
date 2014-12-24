@@ -73,10 +73,9 @@ function jor1kGUI(parameters)
 
     this.terminput = new TerminalInput(this.SendChars.bind(this));
 
-
-    //this.sound = new LoopSoundBuffer(22050);
-    //message.Register("sound",      this.sound.AddBuffer.bind(this.sound));
-    //message.Register("sound.rate", this.sound.SetRate.bind(this.sound));
+    this.sound = new LoopSoundBuffer(22050);
+    message.Register("sound",      this.sound.AddBuffer.bind(this.sound));
+    message.Register("sound.rate", this.sound.SetRate.bind(this.sound));
 
    if (this.clipboard) {
    this.clipboard.onpaste = function(event) {
@@ -101,7 +100,7 @@ function jor1kGUI(parameters)
    this.IgnoreKeys = function() {
       return (
           (this.lastMouseDownTarget != this.terminalcanvas) &&
-          (this.lastMouseDownTarget != this.framebuffer) &&
+          (this.lastMouseDownTarget != this.framebuffer.fbcanvas) &&
           (this.lastMouseDownTarget != this.clipboard)
       );
     }
@@ -158,14 +157,12 @@ function jor1kGUI(parameters)
     message.Register("Stop", function(){message.Debug("Received stop signal"); this.stop = true}.bind(this));
     message.Register("GetIPS", this.ShowIPS.bind(this));
     message.Register("execute", this.Execute.bind(this));
-
+    message.Register("Debug", function(d){message.Debug(d);}.bind(this));
 
     this.Reset();
-    
-   
+
     window.setInterval(function(){message.Send("GetIPS", 0)}.bind(this), 1000);
 }
-
 
 // this command is send back and forth to be responsive
 jor1kGUI.prototype.Execute = function() {
@@ -184,7 +181,7 @@ jor1kGUI.prototype.ShowIPS = function(ips) {
         this.stats.innerHTML = "Paused"; 
     } else {
         this.stats.innerHTML = ips<1000000?
-        Math.floor(ips/1000) + " KIPS" 
+        Math.floor(ips/1000) + " KIPS"
         :
         (Math.floor(ips/100000)/10.) + " MIPS";
    }
@@ -257,8 +254,6 @@ jor1kGUI.prototype.OnSync = function(d) {
     );
 }
 
-
-
 jor1kGUI.prototype.UploadExternalFile = function(f) {
     var reader = new FileReader();
     reader.onload = function(e) {
@@ -267,6 +262,5 @@ jor1kGUI.prototype.UploadExternalFile = function(f) {
     }.bind(this);
     reader.readAsArrayBuffer(f);
 }
-
 
 module.exports = jor1kGUI;

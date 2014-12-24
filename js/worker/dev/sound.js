@@ -2,22 +2,24 @@
 // --------------------- SOUND ---------------------
 // -------------------------------------------------
 
-// Emulating my own virtual sound card
+// Emulating my own virtual sound card, using the altered dummy sound device
 
 "use strict";
 
 var message = require('../messagehandler');
 var utils = require('../utils');
 
-var REG_CTL            = 0x0; // format
-var REG_ADDR           = 0x0004; // pointer to dma buffer
-var REG_PERIODS        = 0x0008; // number of perionds
-var REG_PERIOD_SIZE    = 0x000C; // size of periods
-var REG_OFFSET         = 0x0010; // current position in buffer
-var REG_RATE           = 0x0014; // rate
-var REG_CHANNELS       = 0x0018; // channels
+var REG_CTL            = 0x00; // format
+var REG_ADDR           = 0x04; // pointer to dma buffer
+var REG_PERIODS        = 0x08; // number of perionds
+var REG_PERIOD_SIZE    = 0x0C; // size of periods
+var REG_OFFSET         = 0x10; // current position in buffer
+var REG_RATE           = 0x14; // rate
+var REG_CHANNELS       = 0x18; // channels
+var REG_FORMAT         = 0x1C; // format
 
 function SoundDev(intdev, ramdev) {
+    message.Debug("Start sound");
     this.intdev = intdev;
     this.ramdev = ramdev
     this.Reset();
@@ -43,8 +45,10 @@ SoundDev.prototype.GetTimeToNextInterrupt = function() {
 }
 
 SoundDev.prototype.Progress = function() {
+    return;
+
     if (!this.playing) return;
-    var currenttime = GetMilliseconds();
+    var currenttime = utils.GetMilliseconds();
 
     var totalframes = Math.floor((currenttime - this.starttime) / 1000. * this.rate); // in frames
     var deltaframes = totalframes - this.lasttotalframe;
@@ -70,6 +74,23 @@ SoundDev.prototype.Progress = function() {
     }
 }
 
+SoundDev.prototype.Elapsed = function() {
+    var x = new Int8Array(this.period_size);
+    var totalperiodbuffer = this.periods*this.period_size;
+    if (this.format == 1) {
+        for(var i=0; i<this.period_size; i++) {
+            x[i] = this.ramdev.uint8mem[this.addr + (((this.offset++)<<0)^3)]-128;
+            if (this.offset == totalperiodbuffer) this.offset = 0;
+        }
+    } else {
+        for(var i=0; i<this.period_size; i++) {
+            x[i] = this.ramdev.sint8mem[this.addr + 1 + (((this.offset++)<<1)^3)];
+            if (this.offset == totalperiodbuffer) this.offset = 0;
+        }
+    }
+    message.Send("sound", x);
+    
+}
 
 SoundDev.prototype.ReadReg32 = function (addr) {
     switch(addr)
@@ -77,6 +98,8 @@ SoundDev.prototype.ReadReg32 = function (addr) {
         case REG_CTL:
             //if (this.nextperiod > 0)
             this.intdev.ClearInterrupt(0x7);
+            this.Elapsed();
+            
             return this.playing?1:0;
             break;
 
@@ -98,12 +121,19 @@ SoundDev.prototype.WriteReg32 = function (addr, value) {
         case REG_CTL:
             this.playing = value?true:false;               
             this.nextperiod = this.period_size;
-            this.starttime = GetMilliseconds();
+            this.starttime = utils.GetMilliseconds();
             this.lasttotalframe = 0;
             this.offset = 0;
             message.Send("sound.rate", this.rate);
-            message.Send("rate: " + this.rate);
-            message.Send("channels: " + this.channels);
+            this.Elapsed();
+            /*
+            message.Debug("rate: "        + this.rate);
+            message.Debug("channels: "    + this.channels);
+            message.Debug("periods: "     + this.periods);
+            message.Debug("period size: " + this.period_size);
+            message.Debug("format: "      + this.format);
+            message.Debug("addr: "        + utils.ToHex(this.addr));
+            */
             break;
 
         case REG_ADDR:
@@ -124,6 +154,10 @@ SoundDev.prototype.WriteReg32 = function (addr, value) {
 
         case REG_CHANNELS:
             this.channels = value;
+            break;
+
+        case REG_FORMAT:
+            this.format = value;
             break;
 
         default:

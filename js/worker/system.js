@@ -457,7 +457,7 @@ System.prototype.MainLoop = function() {
 
     this.uartdev0.Step();
     this.uartdev1.Step();
-    this.snddev.Progress();
+    //this.snddev.Progress();
 
     if (!stepsleft) {
       // recalibrate timer
