@@ -8,6 +8,7 @@ var message = require('./messagehandler.js'); // global variable
 var utils = require('./utils.js');
 var RAM = require('./ram.js');
 var bzip2 = require('./bzip2.js');
+var Timer = require('./timer.js');
 
 // CPUs
 var FastCPU = require('./cpu/fastcpu.js');
@@ -28,7 +29,6 @@ var SoundDev = require('./dev/sound.js');
 var VirtIODev = require('./dev/virtio.js');
 var Virtio9p = require('./dev/virtio/9p.js');
 
-
 //require('./dev/virtio/marshall.js');
 
 
@@ -39,7 +39,6 @@ require('./filesystem/tar.js');
 */
 
 var FS = require('./filesystem/filesystem.js');
-
 
 
 /* 
@@ -266,18 +265,15 @@ if (typeof Math.imul == "undefined") {
     this.ram.AddDevice(this.irqdev,    0x9A000000, 0x1000);
     this.ram.AddDevice(this.timerdev,  0x9B000000, 0x1000);
 
-    this.instructionsperloop = 0x40000;
     this.ips = 0; // external instruction per second counter
-    this.timercyclesperinstruction = 1; // clock cycles per instruction
     this.idletime = 0; // start time of the idle routine
     this.idlemaxwait = 0; // maximum waiting time in cycles
 
-    this.lastlooptime = -1;
-    this.internalips = 0x0;
-    
     // constants
+    this.ticksperms = 20000; // 20 MHz
     this.loopspersecond = 100; // main loops per second, to keep the system responsive
-    this.cyclesperms = 20000; // 20 MHz
+
+    this.timer = new Timer(this.ticksperms, this.loopspersecond);
 }
 
 System.prototype.RaiseInterrupt = function(line) {
@@ -287,12 +283,13 @@ System.prototype.RaiseInterrupt = function(line) {
     {
         this.status = SYSTEM_RUN;
         clearTimeout(this.idletimeouthandle);
-        var delta = (utils.GetMilliseconds() - this.idletime) * this.cyclesperms;
+        var delta = (utils.GetMilliseconds() - this.idletime) * this.ticksperms;
         if (delta > this.idlemaxwait) delta = this.idlemaxwait;
         this.cpu.ProgressTime(delta);
         this.MainLoop();
     }
 }
+
 System.prototype.ClearInterrupt = function (line) {
     this.cpu.ClearInterrupt(line, -1); // clear all cores
 }
@@ -429,7 +426,7 @@ System.prototype.HandleHalt = function() {
     var delta = this.cpu.GetTimeToNextInterrupt();
     if (delta == -1) return;
         this.idlemaxwait = delta;
-        var mswait = Math.floor(delta / this.cyclesperms + 0.5);
+        var mswait = Math.floor(delta / this.ticksperms / this.timer.correction + 0.5);
         //message.Debug("wait " + mswait);
         
         if (mswait <= 1) return;
@@ -439,8 +436,8 @@ System.prototype.HandleHalt = function() {
         this.idletimeouthandle = setTimeout(function() {
                 if (this.status == SYSTEM_HALT) {
                     this.status = SYSTEM_RUN;
-                    this.cpu.ProgressTime(/*mswait*this.cyclesperms*/delta);
-                    this.snddev.Progress();
+                    this.cpu.ProgressTime(delta);
+                    //this.snddev.Progress();
                     this.MainLoop();
                 }
             }.bind(this), mswait);
@@ -449,42 +446,27 @@ System.prototype.HandleHalt = function() {
 System.prototype.MainLoop = function() {
     if (this.status != SYSTEM_RUN) return;
     message.Send("execute", 0);
-    var stepsleft = this.cpu.Step(this.instructionsperloop, this.timercyclesperinstruction);
-    var totalsteps = this.instructionsperloop - stepsleft;
+
+    // execute the cpu loop for "instructionsperloop" instructions.
+    var stepsleft = this.cpu.Step(this.timer.instructionsperloop, this.timer.timercyclesperinstruction);
+
+    var totalsteps = this.timer.instructionsperloop - stepsleft;
     totalsteps++; // at least one instruction
     this.ips += totalsteps;
-    this.internalips += totalsteps;
 
     this.uartdev0.Step();
     this.uartdev1.Step();
     //this.snddev.Progress();
 
-    if (!stepsleft) {
-      // recalibrate timer
-      if (this.lastlooptime < 1) {
-          this.lastlooptime = utils.GetMilliseconds();
-          return; // don't calibrate, because we don't have the data
-      }
-      var delta = utils.GetMilliseconds() - this.lastlooptime;
-      if (delta > 50 && this.internalips > 2000) // we need statistics for calibration
-      {
-          var ipms = this.internalips / delta; // ipms (per millisecond) of current run
-          this.instructionsperloop = Math.floor(ipms*1000. / this.loopspersecond);
-          this.instructionsperloop = this.instructionsperloop<2000?2000:this.instructionsperloop;
-          this.instructionsperloop = this.instructionsperloop>4000000?4000000:this.instructionsperloop;    
-    
-          this.timercyclesperinstruction = Math.floor(this.cyclesperms * 64 / ipms);
-          this.timercyclesperinstruction  = this.timercyclesperinstruction<=1?1:this.timercyclesperinstruction;
-          this.timercyclesperinstruction  = this.timercyclesperinstruction>=1000?1000:this.timercyclesperinstruction;
-          //reset the integration parameters
-          this.lastlooptime = utils.GetMilliseconds();
-          this.internalips = 0;
-      }
-    } else { // stepsleft != 0 indicates CPU idle
-        this.lastlooptime = -1;
+    // stepsleft != 0 indicates CPU idle
+    var gotoidle = stepsleft?true:false;
+
+    this.timer.Update(totalsteps, this.cpu.GetTicks(), gotoidle);
+
+    if (gotoidle) {
         this.HandleHalt(); 
     }
-    
+
     // go to worker thread idle state that onmessage is executed
 }
 
