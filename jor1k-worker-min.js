@@ -3254,7 +3254,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
 
 module.exports = SafeCPU;
 
-},{"../messagehandler":22,"../utils":25}],5:[function(require,module,exports){
+},{"../messagehandler":22,"../utils":26}],5:[function(require,module,exports){
 
 function SMPCPU(stdlib, foreign, heap) {
 
@@ -5507,7 +5507,7 @@ ATADev.prototype.WriteReg32 = function(addr, x) {
 
 module.exports = ATADev;
 
-},{"../messagehandler":22,"../utils":25}],7:[function(require,module,exports){
+},{"../messagehandler":22,"../utils":26}],7:[function(require,module,exports){
 // -------------------------------------------------
 // ----------------- Ethernet ----------------------
 // -------------------------------------------------
@@ -6263,7 +6263,7 @@ function EthDev(ram, intdev, mac) {
 
 module.exports = EthDev;
 
-},{"../messagehandler":22,"../utils":25}],8:[function(require,module,exports){
+},{"../messagehandler":22,"../utils":26}],8:[function(require,module,exports){
 // -------------------------------------------------
 // ---------------- Framebuffer --------------------
 // -------------------------------------------------
@@ -6323,7 +6323,7 @@ FBDev.prototype.GetBuffer = function () {
 
 module.exports = FBDev;
 
-},{"../messagehandler":22,"../utils":25}],9:[function(require,module,exports){
+},{"../messagehandler":22,"../utils":26}],9:[function(require,module,exports){
 // -------------------------------------------------
 // ---------------------- IRQ ----------------------
 // -------------------------------------------------
@@ -6429,7 +6429,7 @@ IRQDev.prototype.WriteReg32 = function (addr, value) {
 
 module.exports = IRQDev;
 
-},{"../messagehandler":22,"../utils":25}],10:[function(require,module,exports){
+},{"../messagehandler":22,"../utils":26}],10:[function(require,module,exports){
 // -------------------------------------------------
 // ------------------ KEYBOARD ---------------------
 // -------------------------------------------------
@@ -6839,7 +6839,7 @@ RTCDev.prototype.WriteReg32 = function (addr, value) {
 
 module.exports = RTCDev;
 
-},{"../messagehandler":22,"../utils":25}],12:[function(require,module,exports){
+},{"../messagehandler":22,"../utils":26}],12:[function(require,module,exports){
 // -------------------------------------------------
 // --------------------- SOUND ---------------------
 // -------------------------------------------------
@@ -7011,7 +7011,7 @@ SoundDev.prototype.WriteReg32 = function (addr, value) {
 
 module.exports = SoundDev;
 
-},{"../messagehandler":22,"../utils":25}],13:[function(require,module,exports){
+},{"../messagehandler":22,"../utils":26}],13:[function(require,module,exports){
 // -------------------------------------------------
 // -------------------- Timer ----------------------
 // -------------------------------------------------
@@ -7184,7 +7184,7 @@ TouchscreenDev.prototype.WriteReg32 = function (addr, value) {
 
 module.exports = TouchscreenDev;
 
-},{"../messagehandler":22,"../utils":25}],15:[function(require,module,exports){
+},{"../messagehandler":22,"../utils":26}],15:[function(require,module,exports){
 // -------------------------------------------------
 // -------------------- UART -----------------------
 // -------------------------------------------------
@@ -7481,7 +7481,7 @@ UARTDev.prototype.WriteReg8 = function(addr, x) {
 
 module.exports = UARTDev;
 
-},{"../messagehandler":22,"../utils":25}],16:[function(require,module,exports){
+},{"../messagehandler":22,"../utils":26}],16:[function(require,module,exports){
 // -------------------------------------------------
 // ------------------- VIRTIO ----------------------
 // -------------------------------------------------
@@ -7815,7 +7815,7 @@ VirtIODev.prototype.WriteReg32 = function (addr, val) {
 
 module.exports = VirtIODev;
 
-},{"../messagehandler":22,"../utils":25,"./virtio/marshall":18}],17:[function(require,module,exports){
+},{"../messagehandler":22,"../utils":26,"./virtio/marshall":18}],17:[function(require,module,exports){
 // -------------------------------------------------
 // --------------------- 9P ------------------------
 // -------------------------------------------------
@@ -8377,7 +8377,7 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
 
 module.exports = Virtio9p;
 
-},{"../../messagehandler":22,"../../utils":25,"./marshall":18}],18:[function(require,module,exports){
+},{"../../messagehandler":22,"../../utils":26,"./marshall":18}],18:[function(require,module,exports){
 // -------------------------------------------------
 // ------------------ Marshall ---------------------
 // -------------------------------------------------
@@ -9236,7 +9236,7 @@ FS.prototype.PrepareCAPs = function(id) {
 
 module.exports = FS;
 
-},{"../../lib/utf8.js":1,"../bzip2.js":2,"../dev/virtio/marshall.js":18,"../messagehandler":22,"../utils.js":25,"./fsloader.js":20,"./tar.js":21}],20:[function(require,module,exports){
+},{"../../lib/utf8.js":1,"../bzip2.js":2,"../dev/virtio/marshall.js":18,"../messagehandler":22,"../utils.js":26,"./fsloader.js":20,"./tar.js":21}],20:[function(require,module,exports){
 // -------------------------------------------------
 // ------------- FILESYSTEM LOADER -----------------
 // -------------------------------------------------
@@ -9414,7 +9414,7 @@ FSLoader.prototype.LoadXML = function(url)
 
 module.exports = FSLoader;
 
-},{"../messagehandler":22,"../utils":25}],21:[function(require,module,exports){
+},{"../messagehandler":22,"../utils":26}],21:[function(require,module,exports){
 // -------------------------------------------------
 // -------------------- TAR ------------------------
 // -------------------------------------------------
@@ -9773,7 +9773,7 @@ RAM.prototype.WriteMemory16 = function(addr, x) {
 
 module.exports = RAM;
 
-},{"./messagehandler":22,"./utils":25}],24:[function(require,module,exports){
+},{"./messagehandler":22,"./utils":26}],24:[function(require,module,exports){
 // -------------------------------------------------
 // ------------------- SYSTEM ----------------------
 // -------------------------------------------------
@@ -9784,6 +9784,7 @@ var message = require('./messagehandler.js'); // global variable
 var utils = require('./utils.js');
 var RAM = require('./ram.js');
 var bzip2 = require('./bzip2.js');
+var Timer = require('./timer.js');
 
 // CPUs
 var FastCPU = require('./cpu/fastcpu.js');
@@ -9804,7 +9805,6 @@ var SoundDev = require('./dev/sound.js');
 var VirtIODev = require('./dev/virtio.js');
 var Virtio9p = require('./dev/virtio/9p.js');
 
-
 //require('./dev/virtio/marshall.js');
 
 
@@ -9815,7 +9815,6 @@ require('./filesystem/tar.js');
 */
 
 var FS = require('./filesystem/filesystem.js');
-
 
 
 /* 
@@ -10042,18 +10041,15 @@ if (typeof Math.imul == "undefined") {
     this.ram.AddDevice(this.irqdev,    0x9A000000, 0x1000);
     this.ram.AddDevice(this.timerdev,  0x9B000000, 0x1000);
 
-    this.instructionsperloop = 0x40000;
     this.ips = 0; // external instruction per second counter
-    this.timercyclesperinstruction = 1; // clock cycles per instruction
     this.idletime = 0; // start time of the idle routine
     this.idlemaxwait = 0; // maximum waiting time in cycles
 
-    this.lastlooptime = -1;
-    this.internalips = 0x0;
-    
     // constants
+    this.ticksperms = 20000; // 20 MHz
     this.loopspersecond = 100; // main loops per second, to keep the system responsive
-    this.cyclesperms = 20000; // 20 MHz
+
+    this.timer = new Timer(this.ticksperms, this.loopspersecond);
 }
 
 System.prototype.RaiseInterrupt = function(line) {
@@ -10063,12 +10059,13 @@ System.prototype.RaiseInterrupt = function(line) {
     {
         this.status = SYSTEM_RUN;
         clearTimeout(this.idletimeouthandle);
-        var delta = (utils.GetMilliseconds() - this.idletime) * this.cyclesperms;
+        var delta = (utils.GetMilliseconds() - this.idletime) * this.ticksperms;
         if (delta > this.idlemaxwait) delta = this.idlemaxwait;
         this.cpu.ProgressTime(delta);
         this.MainLoop();
     }
 }
+
 System.prototype.ClearInterrupt = function (line) {
     this.cpu.ClearInterrupt(line, -1); // clear all cores
 }
@@ -10205,7 +10202,7 @@ System.prototype.HandleHalt = function() {
     var delta = this.cpu.GetTimeToNextInterrupt();
     if (delta == -1) return;
         this.idlemaxwait = delta;
-        var mswait = Math.floor(delta / this.cyclesperms + 0.5);
+        var mswait = Math.floor(delta / this.ticksperms / this.timer.correction + 0.5);
         //message.Debug("wait " + mswait);
         
         if (mswait <= 1) return;
@@ -10215,8 +10212,8 @@ System.prototype.HandleHalt = function() {
         this.idletimeouthandle = setTimeout(function() {
                 if (this.status == SYSTEM_HALT) {
                     this.status = SYSTEM_RUN;
-                    this.cpu.ProgressTime(/*mswait*this.cyclesperms*/delta);
-                    this.snddev.Progress();
+                    this.cpu.ProgressTime(delta);
+                    //this.snddev.Progress();
                     this.MainLoop();
                 }
             }.bind(this), mswait);
@@ -10225,48 +10222,173 @@ System.prototype.HandleHalt = function() {
 System.prototype.MainLoop = function() {
     if (this.status != SYSTEM_RUN) return;
     message.Send("execute", 0);
-    var stepsleft = this.cpu.Step(this.instructionsperloop, this.timercyclesperinstruction);
-    var totalsteps = this.instructionsperloop - stepsleft;
+
+    // execute the cpu loop for "instructionsperloop" instructions.
+    var stepsleft = this.cpu.Step(this.timer.instructionsperloop, this.timer.timercyclesperinstruction);
+
+    var totalsteps = this.timer.instructionsperloop - stepsleft;
     totalsteps++; // at least one instruction
     this.ips += totalsteps;
-    this.internalips += totalsteps;
 
     this.uartdev0.Step();
     this.uartdev1.Step();
     //this.snddev.Progress();
 
-    if (!stepsleft) {
-      // recalibrate timer
-      if (this.lastlooptime < 1) {
-          this.lastlooptime = utils.GetMilliseconds();
-          return; // don't calibrate, because we don't have the data
-      }
-      var delta = utils.GetMilliseconds() - this.lastlooptime;
-      if (delta > 50 && this.internalips > 2000) // we need statistics for calibration
-      {
-          var ipms = this.internalips / delta; // ipms (per millisecond) of current run
-          this.instructionsperloop = Math.floor(ipms*1000. / this.loopspersecond);
-          this.instructionsperloop = this.instructionsperloop<2000?2000:this.instructionsperloop;
-          this.instructionsperloop = this.instructionsperloop>4000000?4000000:this.instructionsperloop;    
-    
-          this.timercyclesperinstruction = Math.floor(this.cyclesperms * 64 / ipms);
-          this.timercyclesperinstruction  = this.timercyclesperinstruction<=1?1:this.timercyclesperinstruction;
-          this.timercyclesperinstruction  = this.timercyclesperinstruction>=1000?1000:this.timercyclesperinstruction;
-          //reset the integration parameters
-          this.lastlooptime = utils.GetMilliseconds();
-          this.internalips = 0;
-      }
-    } else { // stepsleft != 0 indicates CPU idle
-        this.lastlooptime = -1;
+    // stepsleft != 0 indicates CPU idle
+    var gotoidle = stepsleft?true:false;
+
+    this.timer.Update(totalsteps, this.cpu.GetTicks(), gotoidle);
+
+    if (gotoidle) {
         this.HandleHalt(); 
     }
-    
+
     // go to worker thread idle state that onmessage is executed
 }
 
 module.exports = System;
 
-},{"./bzip2.js":2,"./cpu/fastcpu.js":3,"./cpu/safecpu.js":4,"./cpu/smpcpu.js":5,"./dev/ata.js":6,"./dev/ethmac.js":7,"./dev/framebuffer.js":8,"./dev/irq.js":9,"./dev/keyboard.js":10,"./dev/rtc.js":11,"./dev/sound.js":12,"./dev/timer.js":13,"./dev/touchscreen.js":14,"./dev/uart.js":15,"./dev/virtio.js":16,"./dev/virtio/9p.js":17,"./filesystem/filesystem.js":19,"./messagehandler.js":22,"./ram.js":23,"./utils.js":25}],25:[function(require,module,exports){
+},{"./bzip2.js":2,"./cpu/fastcpu.js":3,"./cpu/safecpu.js":4,"./cpu/smpcpu.js":5,"./dev/ata.js":6,"./dev/ethmac.js":7,"./dev/framebuffer.js":8,"./dev/irq.js":9,"./dev/keyboard.js":10,"./dev/rtc.js":11,"./dev/sound.js":12,"./dev/timer.js":13,"./dev/touchscreen.js":14,"./dev/uart.js":15,"./dev/virtio.js":16,"./dev/virtio/9p.js":17,"./filesystem/filesystem.js":19,"./messagehandler.js":22,"./ram.js":23,"./timer.js":25,"./utils.js":26}],25:[function(require,module,exports){
+// -------------------------------------------------
+// ------------------- TIMER -----------------------
+// -------------------------------------------------
+
+// helper function for correct timing
+
+"use strict";
+
+var message = require('./messagehandler.js'); // global variable
+var utils = require('./utils.js');
+
+function Timer(_ticksperms, _loopspersecond) {
+    // constants
+    this.ticksperms = _ticksperms;
+    this.loopspersecond = _loopspersecond;
+
+    // global synchronization variables
+    this.baserealtime = 0.; // real time when the timer was started
+    this.realtime = 0.; // time passed in real in ms
+    this.lastsystemticks = 0.; // temp variable to calculate the correct systemtime
+    this.systemtime = 0. // time passed in the system in ms
+    this.correction = 1.; // return value
+    this.oldcorrection = 1.;
+    this.steps = 0;
+
+    // short time synchronization
+    this.nins = 0;
+    this.lastlooptime = -1; // last time the loop was executed in ms, without idle in between
+
+    this.ipms = 5000; // initial guess for: 5 MIPS
+    this.instructionsperloop = 0;  // return value
+    this.timercyclesperinstruction = 10; // return value
+    this.UpdateTimings();
+}
+
+
+// nins: instructions executed in last loop
+// ticks: The current value of the TTCR register
+// gotoidle: bool if the cpu is gone to idle mode
+Timer.prototype.Update = function(nins, ticks, gotoidle) {
+
+    this.GlobalUpdate(ticks);
+    this.LocalUpdate(nins, gotoidle);
+}
+
+
+Timer.prototype.UpdateTimings = function(_nins, gotoidle) {
+    this.instructionsperloop = Math.floor(this.ipms*1000. / this.loopspersecond);
+    this.instructionsperloop = this.instructionsperloop<2000?2000:this.instructionsperloop;
+    this.instructionsperloop = this.instructionsperloop>4000000?4000000:this.instructionsperloop;
+
+    this.timercyclesperinstruction = Math.floor(this.ticksperms * 64 / this.ipms * this.correction);
+    this.timercyclesperinstruction  = this.timercyclesperinstruction<=1?1:this.timercyclesperinstruction;
+    this.timercyclesperinstruction  = this.timercyclesperinstruction>=1000?1000:this.timercyclesperinstruction
+}
+
+
+Timer.prototype.LocalUpdate = function(_nins, gotoidle) {
+
+    this.nins += _nins;
+    if (gotoidle) {
+        // reset the whole routine
+        this.lastlooptime = -1;
+        this.nins = 0;
+        return;
+    }
+
+    // recalibrate timer
+    if (this.lastlooptime < 0) {
+        this.lastlooptime = utils.GetMilliseconds();
+        this.nins = 0;
+        return; // don't calibrate, because we don't have the data
+    }
+    var delta = utils.GetMilliseconds() - this.lastlooptime;
+    if (delta > 50 && this.nins > 2000) // we need statistics for calibration
+    {
+        this.ipms = this.nins / delta; // ipms (per millisecond) of current run
+        this.UpdateTimings();
+
+        //reset the integration parameters
+        this.lastlooptime = utils.GetMilliseconds();
+        this.nins = 0;
+    }    
+}
+
+
+Timer.prototype.GlobalUpdate = function(ticks) {
+
+    // global time handling
+    if (ticks < 0) return; // timer hasn't started yet
+    
+    ticks = ticks / this.ticksperms; // ticks in ms
+
+    // ---------------
+    // update realtime
+    // ---------------
+    if (this.baserealtime <= 0) this.baserealtime = utils.GetMilliseconds();
+    this.realtime = utils.GetMilliseconds() - this.baserealtime;
+        
+    // -----------------
+    // update systemtime (time in emulator)
+    // -----------------
+    if (this.lastsystemticks > ticks) {
+        this.systemtime += ticks - this.lastsystemticks + (0x10000000/this.ticksperms);
+    } else {
+        this.systemtime += ticks - this.lastsystemticks;
+    }
+    this.lastsystemticks = ticks;
+
+    // -----------------
+
+    var deltaabs = Math.abs(this.systemtime-this.realtime);
+
+    if (deltaabs > 500) {
+        // we are too far off, so do a reset of the timers
+        this.baserealtime = utils.GetMilliseconds();
+        this.systemtime = 0.;
+        this.lastsystemticks = 0.;
+    }
+
+    // calculate a correction value for the timers
+    this.correction = 1.;
+    if (this.systemtime > (this.realtime+50)) this.correction = 0.9; // too fast
+    if (this.realtime > (this.systemtime+50)) this.correction = 1.1; // too slow
+    if (deltaabs > 200) this.correction = this.correction*this.correction;
+    if (deltaabs > 400) this.correction = this.correction*this.correction;
+
+    if (this.oldcorrection != this.correction) {
+        this.UpdateTimings();
+        this.oldcorrection = this.correction;
+    }
+
+    //this.steps++;
+    //if ((this.steps&63) == 0) message.Debug(this.systemtime-this.realtime);
+}
+
+
+module.exports = Timer;
+
+},{"./messagehandler.js":22,"./utils.js":26}],26:[function(require,module,exports){
 // -------------------------------------------------
 // ------------------ Utils ------------------------
 // -------------------------------------------------
@@ -10449,7 +10571,7 @@ module.exports.LoadBinaryResource = LoadBinaryResource;
 module.exports.LoadXMLResource = LoadXMLResource;
 
 
-},{}],26:[function(require,module,exports){
+},{}],27:[function(require,module,exports){
 // -------------------------------------------------
 // -------------------- Worker ---------------------
 // -------------------------------------------------
@@ -10457,4 +10579,4 @@ module.exports.LoadXMLResource = LoadXMLResource;
 var System = require('./system.js');
 var sys = new System();
 
-},{"./system.js":24}]},{},[26]);
+},{"./system.js":24}]},{},[27]);
