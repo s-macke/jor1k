@@ -18,7 +18,7 @@ function Debug(message) {
 }
 
 function Abort() {
-    DebugMessage("Abort execution.");
+    Debug("Abort execution.");
     Send("Stop", {});
     throw new Error('Kill worker');
 }
