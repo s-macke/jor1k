@@ -9,6 +9,7 @@ var utils = require('./utils.js');
 var RAM = require('./ram.js');
 var bzip2 = require('./bzip2.js');
 var Timer = require('./timer.js');
+var imul = require('./imul.js');
 
 // CPUs
 var FastCPU = require('./cpu/fastcpu.js');
@@ -102,7 +103,7 @@ System.prototype.CreateCPU = function(cpuname) {
         return;
     }
     this.currentcpuname = cpuname;
-}
+};
 
 
 System.prototype.ChangeCPU = function(cpuname) {
@@ -116,9 +117,9 @@ System.prototype.ChangeCPU = function(cpuname) {
     this.cpu.InvalidateTLB(); // reset TLB
     var f = oldcpu.GetFlags();
     this.cpu.SetFlags(f|0);
-
+    var h;
     if (oldcpuname == "asm") {
-        var h = new Int32Array(this.heap);
+        h = new Int32Array(this.heap);
         oldcpu.GetState();
         this.cpu.pc = h[(0x40 + 0)];
         this.cpu.nextpc = h[(0x40 + 1)];
@@ -132,7 +133,7 @@ System.prototype.ChangeCPU = function(cpuname) {
         this.cpu.current_pgd = h[(0x40 + 10)];
     } else
     if (cpuname == "asm") {
-        var h = new Int32Array(this.heap);
+        h = new Int32Array(this.heap);
         h[(0x40 + 0)] = oldcpu.pc;
         h[(0x40 + 1)] = oldcpu.nextpc;
         h[(0x40 + 2)] = oldcpu.delayedins;
@@ -157,7 +158,7 @@ System.prototype.ChangeCPU = function(cpuname) {
         this.cpu.boot_itlb_misshandler_address = oldcpu.itlb_misshandler_address;
         this.cpu.current_pgd = oldcpu.current_pgd;
     }
-}
+};
 
 System.prototype.Reset = function() {
     this.status = SYSTEM_STOP;
@@ -176,7 +177,7 @@ System.prototype.Reset = function() {
     this.virtio9pdev.Reset();
     this.cpu.Reset();
     this.ips = 0;
-}
+};
 
 System.prototype.Init = function(system) {
     this.status = SYSTEM_STOP;
@@ -191,18 +192,9 @@ System.prototype.Init = function(system) {
     this.memorysize--; // - the lower 1 MB are used for the cpu cores
     this.ram = new RAM(this.heap, ramoffset);
 
-if (typeof Math.imul == "undefined") {
-    Math.imul = function(a, b) {
-        var ah  = (a >>> 16) & 0xffff;
-        var al = a & 0xffff;
-        var bh  = (b >>> 16) & 0xffff;
-        var bl = b & 0xffff;
-        // the shift by 0 fixes the sign on the high part
-        // the final |0 converts the unsigned value into a signed value
-        return ((al * bl) + (((ah * bl + al * bh) << 16) >>> 0)|0);
+    if (typeof Math.imul == "undefined") {
+        Math.imul = imul;
     }
-}
-
 
     // Create the asm.js core. Because of Firefox limitations it can only be created once.
     var stdlib = {
@@ -239,7 +231,7 @@ if (typeof Math.imul == "undefined") {
     this.ethdev = new EthDev(this.ram, this);
     this.ethdev.TransmitCallback = function(data){
         message.Send("ethmac", data);
-    }
+    };
 
     this.fbdev = new FBDev(this.ram);
     this.atadev = new ATADev(this);
@@ -274,7 +266,7 @@ if (typeof Math.imul == "undefined") {
     this.loopspersecond = 100; // main loops per second, to keep the system responsive
 
     this.timer = new Timer(this.ticksperms, this.loopspersecond);
-}
+};
 
 System.prototype.RaiseInterrupt = function(line) {
     //message.Debug("Raise " + line);
@@ -288,26 +280,26 @@ System.prototype.RaiseInterrupt = function(line) {
         this.cpu.ProgressTime(delta);
         this.MainLoop();
     }
-}
+};
 
 System.prototype.ClearInterrupt = function (line) {
     this.cpu.ClearInterrupt(line, -1); // clear all cores
-}
+};
 
 System.prototype.RaiseSoftInterrupt = function(line, cpuid) {
     // the cpu cannot be halted when this function is called, so skip this check
     this.cpu.RaiseInterrupt(line, cpuid);
-}
+};
 
 System.prototype.ClearSoftInterrupt = function (line, cpuid) {
     this.cpu.ClearInterrupt(line, cpuid);
-}
+};
 
 
 
 System.prototype.PrintState = function() {
     var r = new Uint32Array(this.heap);
-    message.Debug("Current state of the machine")
+    message.Debug("Current state of the machine");
     //message.Debug("clock: " + utils.ToHex(cpu.clock));
     message.Debug("PC: " + utils.ToHex(this.cpu.pc<<2));
     message.Debug("next PC: " + utils.ToHex(this.cpu.nextpc<<2));
@@ -360,7 +352,7 @@ System.prototype.PrintState = function() {
     if (this.cpu.SR_OV) {
         message.Debug("overflow set");
     }
-}
+};
 
 System.prototype.SendStringToTerminal = function(str)
 {
@@ -369,37 +361,37 @@ System.prototype.SendStringToTerminal = function(str)
         chars.push(str.charCodeAt(i));
     }
     message.Send("tty0", chars);
-}
+};
 
 System.prototype.LoadImageAndStart = function(url) {
     this.SendStringToTerminal("\r================================================================================");
     this.SendStringToTerminal("\r\nLoading kernel and hard and basic file system from web server. Please wait ...\r\n");
     utils.LoadBinaryResource(url, this.OnKernelLoaded.bind(this), function(error){throw error;});
-}
+};
 
 System.prototype.PatchKernel = function(length)
 {
     var m = this.ram.uint8mem;
     // set the correct memory size
     for(var i=0; i<length; i++) { // search for the compiled dts file in the kernel
-        if (m[i+0] == 0x6d) // find "memory\0"
-        if (m[i+1] == 0x65)
-        if (m[i+2] == 0x6d)
-        if (m[i+3] == 0x6f)
-        if (m[i+4] == 0x72)
-        if (m[i+5] == 0x79)
-        if (m[i+6] == 0x00) 
-        if (m[i+24] == 0x01) 
-        if (m[i+25] == 0xF0) 
-        if (m[i+26] == 0x00) 
-        if (m[i+27] == 0x00) {
+        if (m[i+0] === 0x6d) // find "memory\0"
+        if (m[i+1] === 0x65)
+        if (m[i+2] === 0x6d)
+        if (m[i+3] === 0x6f)
+        if (m[i+4] === 0x72)
+        if (m[i+5] === 0x79)
+        if (m[i+6] === 0x00) 
+        if (m[i+24] === 0x01) 
+        if (m[i+25] === 0xF0) 
+        if (m[i+26] === 0x00) 
+        if (m[i+27] === 0x00) {
             m[i+24] = (this.memorysize*0x100000)>>24;
             m[i+25] = (this.memorysize*0x100000)>>16;
             m[i+26] = 0x00;
             m[i+27] = 0x00;
         }
     }
-}
+};
 
 System.prototype.OnKernelLoaded = function(buffer) {
     this.SendStringToTerminal("Decompressing kernel...\r\n");
@@ -419,7 +411,7 @@ System.prototype.OnKernelLoaded = function(buffer) {
     this.status = SYSTEM_RUN;
 
     message.Send("execute", 0);
-}
+};
 
 // the kernel has sent a halt signal, so stop everything until the next interrupt is raised
 System.prototype.HandleHalt = function() {
@@ -441,7 +433,7 @@ System.prototype.HandleHalt = function() {
                     this.MainLoop();
                 }
             }.bind(this), mswait);
-}
+};
 
 System.prototype.MainLoop = function() {
     if (this.status != SYSTEM_RUN) return;
@@ -468,6 +460,6 @@ System.prototype.MainLoop = function() {
     }
 
     // go to worker thread idle state that onmessage is executed
-}
+};
 
 module.exports = System;
