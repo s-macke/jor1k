@@ -371,14 +371,14 @@
 	</Dir>
 	<Dir name='dev' mode='40755'></Dir>
 	<Dir name='etc' mode='40755'>
-		<File name='group' mode='100644' size='22' load='1'/>
+		<File name='group' mode='100644' size='31' load='1'/>
 		<File name='fstab' mode='100755' size='174' load='1'/>
 		<File name='passwd' mode='100644' size='137' load='1'/>
 		<File name='inetd.conf' mode='100644' size='59' load='1'/>
 		<File name='services' mode='100644' size='18832' load='1'/>
 		<File name='nsswitch.conf' mode='100644' size='134' load='1'/>
 		<File name='host.conf' mode='100644' size='27' load='1'/>
-		<File name='inittab' mode='100755' size='233' load='1'/>
+		<File name='inittab' mode='100755' size='234' load='1'/>
 		<Dir name='init.d' mode='40755'>
 			<File name='rcS' mode='100755' size='788' src='etc/init.d/rcS-compile' load='1'/>
 		</Dir>
