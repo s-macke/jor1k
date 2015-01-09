@@ -3,6 +3,7 @@
 // -------------------------------------------------
 
 var Terminal = require('./dev/terminal');
+var TermJS = require("../lib/term.js");
 var TerminalInput = require('./dev/terminal-input');
 var Framebuffer = require('./dev/framebuffer');
 var Ethernet = require('./dev/ethernet');
@@ -13,6 +14,17 @@ var message = require('./messagehandler');
 
 "use strict";
 
+function TerminalWrapper(realTerm) {
+        this.realTerm = realTerm;
+}
+
+TerminalWrapper.prototype.PauseBlink = function(disabl) {
+    console.log(disabl);
+    if (!disabl) {
+         this.realTerm.cursorBlink = true;
+         this.realTerm.startBlink();
+    }
+}
 
 function jor1kGUI(parameters)
 {
@@ -69,9 +81,25 @@ function jor1kGUI(parameters)
             if (!this.framebuffer) return;
             this.framebuffer.fbcanvas.style.border = "2px solid #000000";
         }.bind(this);
+    } else if (this.params.termel) {
+        var term = this.termjs = new TermJS({ cols: 80, rows: 24, screenKeys: true, useStyle: true, cursorBlink: false });
+        term.on("keypress", function(key, ev) {
+            if (ev)
+                this.terminput.OnKeyPress(ev);
+        }.bind(this));
+        term.on("keydown", function(key, ev) {
+            if (ev)
+                this.terminput.OnKeyDown(ev);
+        }.bind(this));
+        this.term = new TerminalWrapper(term);
+        term.open(this.params.termel);
+        message.Register("tty0", function(d) {
+            term.write(String.fromCharCode.apply(null, d));
+        }.bind(this));
+        this.terminput = new TerminalInput(this.SendChars.bind(this));
     }
 
-    this.terminput = new TerminalInput(this.SendChars.bind(this));
+    if (!this.params.termel) this.terminput = new TerminalInput(this.SendChars.bind(this));
 
     this.sound = new LoopSoundBuffer(22050);
     message.Register("sound",      this.sound.AddBuffer.bind(this.sound));
@@ -99,17 +127,21 @@ function jor1kGUI(parameters)
 
    this.IgnoreKeys = function() {
       return (
-          (this.lastMouseDownTarget != this.terminalcanvas) &&
+          (this.lastMouseDownTarget !== true) &&
           (this.lastMouseDownTarget != this.framebuffer.fbcanvas) &&
           (this.lastMouseDownTarget != this.clipboard)
       );
     }
 
     var recordTarget = function(event) {
-        if (this.terminalcanvas.contains(event.target))
-            this.lastMouseDownTarget = this.terminalcanvas;
-        else
-            this.lastMouseDownTarget = event.target;
+      this.lastMouseDownTarget = event.target;
+      if (this.terminalcanvas) {
+        if (this.terminalcanvas.contains(event.target)) {
+            this.lastMouseDownTarget = true;
+        }
+      } else if (this.params.termel.contains(event.target)) {
+        this.lastMouseDownTarget = true;
+      }
     }.bind(this);
 
     if(document.addEventListener)
@@ -120,7 +152,7 @@ function jor1kGUI(parameters)
 
     document.onkeypress = function(event) {
         if(this.IgnoreKeys()) return true;
-        if ((this.lastMouseDownTarget == this.terminalcanvas) || (this.lastMouseDownTarget == this.clipboard)) {
+        if ((this.lastMouseDownTarget === true) || (this.lastMouseDownTarget == this.clipboard)) {
             return this.terminput.OnKeyPress(event);
         }
         message.Send("keypress", {keyCode:event.keyCode, charCode:event.charCode});
@@ -129,7 +161,7 @@ function jor1kGUI(parameters)
 
     document.onkeydown = function(event) {
         if(this.IgnoreKeys()) return true;
-        if ((this.lastMouseDownTarget == this.terminalcanvas) || (this.lastMouseDownTarget == this.clipboard)) {
+        if ((this.lastMouseDownTarget === true) || (this.lastMouseDownTarget == this.clipboard)) {
             return this.terminput.OnKeyDown(event);
         }
         message.Send("keydown", {keyCode:event.keyCode, charCode:event.charCode});
@@ -138,7 +170,7 @@ function jor1kGUI(parameters)
 
     document.onkeyup = function(event) {
         if(this.IgnoreKeys()) return true;
-        if ((this.lastMouseDownTarget == this.terminalcanvas) || (this.lastMouseDownTarget == this.clipboard)) {
+        if ((this.lastMouseDownTarget === true) || (this.lastMouseDownTarget == this.clipboard)) {
             return this.terminput.OnKeyUp(event);
         }
         message.Send("keyup", {keyCode:event.keyCode, charCode:event.charCode});
@@ -204,7 +236,7 @@ jor1kGUI.prototype.Reset = function () {
     message.Send("LoadFilesystem", this.params.fs);
     if (this.term) {
         this.term.PauseBlink(false);
-        message.lastMouseDownTarget = this.terminalcanvas;
+        message.lastMouseDownTarget = true;
     }
 }
 
