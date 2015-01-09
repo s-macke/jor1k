@@ -464,7 +464,7 @@ Terminal.prototype.initGlobal = function() {
   }
   Terminal._boundDocs.push(document);
 
-  Terminal.bindPaste(document);
+  //Terminal.bindPaste(document);
 
   //Terminal.bindKeys(document);
 
