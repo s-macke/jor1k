@@ -1467,6 +1467,8 @@ var download = require('../lib/download');
 var utils = require('./utils');
 var message = require('./messagehandler');
 
+var TERMINAL = 0xDEADBEEF;
+
 "use strict";
 
 
@@ -1478,14 +1480,16 @@ function jor1kGUI(parameters)
     // --- parameters parsing ---
     this.params.system = this.params.system  || {};
 
-    this.params.system.kernelURL = this.params.system.kernelURL || "bin/vmlinux.bin.bz2";
+    this.params.path = this.params.path || "";
+
+    this.params.system.kernelURL = this.params.system.kernelURL || "vmlinux.bin.bz2";
     this.params.system.memorysize = this.params.system.memorysize || 32;
     this.params.system.cpu = this.params.system.cpu || "asm";
     this.params.system.ncores = this.params.system.ncores || 1;
 
     this.params.fs = this.params.fs  || {};
-    this.params.fs.basefsURL = this.params.fs.basefsURL  || "bin/basefs.xml";
-    this.params.fs.extendedfsURL = this.params.fs.extendedfsURL  || "../jor1k-sysroot/fs.xml";
+    this.params.fs.basefsURL = this.params.fs.basefsURL  || "basefs.xml";
+    // this.params.fs.extendedfsURL = this.params.fs.extendedfsURL  || "";
     this.params.fs.earlyload = this.params.fs.earlyload  || [];
     this.params.fs.lazyloadimages = this.params.fs.lazyloadimages  || [];
 
@@ -1512,19 +1516,9 @@ function jor1kGUI(parameters)
         message.Register("GetFB", this.framebuffer.Update.bind(this.framebuffer));
     }
 
-    if (this.params.termid) {
-        this.term = new Terminal(24, 80, this.params.termid);
-        message.Register("tty0", function(d) {
-           d.forEach(function(c) {
-               this.term.PutChar(c&0xFF);
-           }.bind(this));
-        }.bind(this));
-
-        this.terminalcanvas = document.getElementById(this.params.termid);
-        this.terminalcanvas.onmousedown = function(event) {
-            if (!this.framebuffer) return;
-            this.framebuffer.fbcanvas.style.border = "2px solid #000000";
-        }.bind(this);
+    if (this.params.term) {
+        this.term = this.params.term;
+        this.term.Init(this);
     }
 
     this.terminput = new TerminalInput(this.SendChars.bind(this));
@@ -1555,15 +1549,15 @@ function jor1kGUI(parameters)
 
    this.IgnoreKeys = function() {
       return (
-          (this.lastMouseDownTarget != this.terminalcanvas) &&
+          (this.lastMouseDownTarget != TERMINAL) &&
           (this.lastMouseDownTarget != this.framebuffer.fbcanvas) &&
           (this.lastMouseDownTarget != this.clipboard)
       );
     }
 
     var recordTarget = function(event) {
-        if (this.terminalcanvas.contains(event.target))
-            this.lastMouseDownTarget = this.terminalcanvas;
+        if (this.term.WasHitByEvent(event))
+            this.lastMouseDownTarget = TERMINAL;
         else
             this.lastMouseDownTarget = event.target;
     }.bind(this);
@@ -1576,7 +1570,7 @@ function jor1kGUI(parameters)
 
     document.onkeypress = function(event) {
         if(this.IgnoreKeys()) return true;
-        if ((this.lastMouseDownTarget == this.terminalcanvas) || (this.lastMouseDownTarget == this.clipboard)) {
+        if ((this.lastMouseDownTarget == TERMINAL) || (this.lastMouseDownTarget == this.clipboard)) {
             return this.terminput.OnKeyPress(event);
         }
         message.Send("keypress", {keyCode:event.keyCode, charCode:event.charCode});
@@ -1585,7 +1579,7 @@ function jor1kGUI(parameters)
 
     document.onkeydown = function(event) {
         if(this.IgnoreKeys()) return true;
-        if ((this.lastMouseDownTarget == this.terminalcanvas) || (this.lastMouseDownTarget == this.clipboard)) {
+        if ((this.lastMouseDownTarget == TERMINAL) || (this.lastMouseDownTarget == this.clipboard)) {
             return this.terminput.OnKeyDown(event);
         }
         message.Send("keydown", {keyCode:event.keyCode, charCode:event.charCode});
@@ -1594,7 +1588,7 @@ function jor1kGUI(parameters)
 
     document.onkeyup = function(event) {
         if(this.IgnoreKeys()) return true;
-        if ((this.lastMouseDownTarget == this.terminalcanvas) || (this.lastMouseDownTarget == this.clipboard)) {
+        if ((this.lastMouseDownTarget == TERMINAL) || (this.lastMouseDownTarget == this.clipboard)) {
             return this.terminput.OnKeyUp(event);
         }
         message.Send("keyup", {keyCode:event.keyCode, charCode:event.charCode});
@@ -1660,7 +1654,7 @@ jor1kGUI.prototype.Reset = function () {
     message.Send("LoadFilesystem", this.params.fs);
     if (this.term) {
         this.term.PauseBlink(false);
-        message.lastMouseDownTarget = this.terminalcanvas;
+        message.lastMouseDownTarget = TERMINAL;
     }
 }
 
@@ -1775,4 +1769,36 @@ var Jor1k = require('./system');
 
 module.exports = Jor1k;
 
-},{"./system":9}]},{},[]);
+},{"./system":9}],"MackeTerm":[function(require,module,exports){
+var Terminal = require("../master/dev/terminal");
+
+function MackeTerm(termid) {
+    this.termid = termid;
+}
+
+MackeTerm.prototype.Init = function(jor1kGUI) {
+    this.term = new Terminal(24, 80, this.termid);
+    jor1kGUI.message.Register("tty0", function(d) {
+       d.forEach(function(c) {
+           this.term.PutChar(c&0xFF);
+       }.bind(this));
+    }.bind(this));
+
+    this.terminalcanvas = document.getElementById(this.termid);
+    this.terminalcanvas.onmousedown = function(event) {
+        if (!jor1kGUI.framebuffer) return;
+        jor1kGUI.framebuffer.fbcanvas.style.border = "2px solid #000000";
+    }.bind(this);
+}
+
+MackeTerm.prototype.WasHitByEvent = function(evt) {
+    return this.terminalcanvas.contains(evt.target);
+}
+
+MackeTerm.prototype.PauseBlink = function(pause) {
+    this.term.PauseBlink(pause);
+}
+
+module.exports = MackeTerm;
+
+},{"../master/dev/terminal":7}]},{},[]);

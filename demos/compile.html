@@ -97,8 +97,8 @@ Theme<select onchange='editor.setTheme("ace/theme/"+this.options[this.selectedIn
        <br>
         </div>
 
-<script src="js/lib/ace-editor-src-min-noconflict/ace.js"></script>
-<script src="jor1k-master-min.js"></script>
+<script src="../js/lib/ace-editor-src-min-noconflict/ace.js"></script>
+<script src="../bin/jor1k-master-min.js"></script>
 
 <script>
 
@@ -126,15 +126,15 @@ function Start() {
 
     jor1kparameters = {
         system: {
-            kernelURL: "bin/vmlinux.bin.bz2", // kernel image
+            kernelURL: "vmlinux.bin.bz2", // kernel image
             memorysize: 32, // in MB, must be a power of two
             cpu: "asm", // short name for the cpu to use
             ncores: 1,
         },
 
         fs: {
-            basefsURL: "bin/basefs-compile.xml", // xml file with the basic filesystem configuration.
-            extendedfsURL: "../jor1k-sysroot/fs.xml", // xml file with extended filesystem informations. Loaded after the basic filesystem has been loaded.
+            basefsURL: "basefs-compile.xml", // xml file with the basic filesystem configuration.
+            extendedfsURL: "../../jor1k-sysroot/fs.xml", // xml file with extended filesystem informations. Loaded after the basic filesystem has been loaded.
             earlyload: [
                 "usr/bin/gcc", 
                 "usr/libexec/gcc/or1k-linux-musl/4.9.0/cc1",
@@ -155,7 +155,8 @@ function Start() {
         userid: userid, // unique user id string. Empty, choosen randomly, from a url, or from a cookie.
         syncURL: "http://jor1k.com/sync/upload.php", // url to sync a certain folder
         fps: 10, // update interval of framebuffer
-        memorysize: 32 // in MB, must be a power of two
+        memorysize: 32, // in MB, must be a power of two
+        path: "../bin/",
     }
 
     // --------------------------------------------------------

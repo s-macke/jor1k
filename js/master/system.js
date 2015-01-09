@@ -24,14 +24,16 @@ function jor1kGUI(parameters)
     // --- parameters parsing ---
     this.params.system = this.params.system  || {};
 
-    this.params.system.kernelURL = this.params.system.kernelURL || "bin/vmlinux.bin.bz2";
+    this.params.path = this.params.path || "";
+
+    this.params.system.kernelURL = this.params.system.kernelURL || "vmlinux.bin.bz2";
     this.params.system.memorysize = this.params.system.memorysize || 32;
     this.params.system.cpu = this.params.system.cpu || "asm";
     this.params.system.ncores = this.params.system.ncores || 1;
 
     this.params.fs = this.params.fs  || {};
-    this.params.fs.basefsURL = this.params.fs.basefsURL  || "bin/basefs.xml";
-    this.params.fs.extendedfsURL = this.params.fs.extendedfsURL  || "../jor1k-sysroot/fs.xml";
+    this.params.fs.basefsURL = this.params.fs.basefsURL  || "basefs.xml";
+    // this.params.fs.extendedfsURL = this.params.fs.extendedfsURL  || "";
     this.params.fs.earlyload = this.params.fs.earlyload  || [];
     this.params.fs.lazyloadimages = this.params.fs.lazyloadimages  || [];
 

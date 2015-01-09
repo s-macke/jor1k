@@ -1,4 +1,4 @@
-<FS src='bin/sysroot'>
+<FS src='sysroot'>
 	<Dir name='bin' mode='40755'>
 		<Link name='login' mode='120777' path='busybox' />
 		<Link name='kbd_mode' mode='120777' path='busybox' />

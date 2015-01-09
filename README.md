@@ -9,8 +9,8 @@ More information can be found on the [Wiki][project wiki] pages.
 ### Demos
 
 * Main [demo][project demo] page
-* [Edit, compile and run](http://s-macke.github.io/jor1k/compile.html) C code in your browser
-* Symmetric multiprocessing with  [2 cores](http://s-macke.github.io/jor1k/index.html?cpu=smp&n=2), [4 cores](http://s-macke.github.io/jor1k/index.html?cpu=smp&n=4), [8 cores](http://s-macke.github.io/jor1k/index.html?cpu=smp&n=8), [16 cores](http://s-macke.github.io/jor1k/index.html?cpu=smp&n=16) (unstable with inreasing cores)
+* [Edit, compile and run](http://s-macke.github.io/jor1k/demos/compile.html) C code in your browser
+* Symmetric multiprocessing with  [2 cores](http://s-macke.github.io/jor1k/demos/main.html?cpu=smp&n=2), [4 cores](http://s-macke.github.io/jor1k/demos/main.html?cpu=smp&n=4), [8 cores](http://s-macke.github.io/jor1k/demos/main.html?cpu=smp&n=8), [16 cores](http://s-macke.github.io/jor1k/demos/main/index.html?cpu=smp&n=16) (unstable with inreasing cores)
 * Simple [demo](http://s-macke.github.io/jor1k/demos/simple.html)
 
 
@@ -35,6 +35,6 @@ Neelabh Gupta [github.com/neelabhg](http://github.com/neelabhg)
 
 
 [or1k specification]: http://opencores.org/or1k/Main_Page
-[project demo]: http://s-macke.github.com/jor1k/
+[project demo]: http://s-macke.github.com/jor1k/demos/main.html
 [project issues]: https://github.com/s-macke/jor1k/issues
 [project wiki]: https://github.com/s-macke/jor1k/wiki

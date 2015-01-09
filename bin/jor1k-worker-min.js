@@ -8630,7 +8630,9 @@ FS.prototype.LoadFilesystem = function(userinfo)
     this.userinfo = userinfo;
     this.fsloader.LoadXML(this.userinfo.basefsURL);
     this.OnLoaded = function() { // the basic filesystem is loaded, so download the rest
-        this.fsloader.LoadXML(this.userinfo.extendedfsURL);
+        if (this.userinfo.extendedfsURL) {
+            this.fsloader.LoadXML(this.userinfo.extendedfsURL);
+        }
         for(var i=0; i<this.userinfo.lazyloadimages.length; i++) {
             this.LoadImage(this.userinfo.lazyloadimages[i]);
         }
@@ -9661,7 +9663,7 @@ function Debug(message) {
 }
 
 function Abort() {
-    DebugMessage("Abort execution.");
+    Debug("Abort execution.");
     Send("Stop", {});
     throw new Error('Kill worker');
 }
