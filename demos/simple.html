@@ -11,8 +11,9 @@
 <script>
 
 var Jor1k = require("Jor1k");
+var MackeTerm = require("MackeTerm");
 
-jor1kgui = new Jor1k({termid: "tty", path: "../"});
+jor1kgui = new Jor1k({term: new MackeTerm("tty"), path: "../"});
 
 </script>
 

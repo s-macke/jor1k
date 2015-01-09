@@ -122,6 +122,8 @@ function Start() {
 
     var userid = RandomString(10);
 
+    var MackeTerm = require("MackeTerm");
+
     jor1kparameters = {
         system: {
             kernelURL: "bin/vmlinux.bin.bz2", // kernel image
@@ -145,7 +147,7 @@ function Start() {
             lazyloadimages: [
             ] // list of automatically loaded images after the basic filesystem has been loaded
         },
-        termid: "tty",   // canvas id for the terminal
+        term: new MackeTerm("tty"),   // canvas id for the terminal
         fbid: "fb",     // canvas id for the framebuffer
         clipboardid: "clipboard",  // input id for the clipboard
         statsid: "stats",  // object id for the statistics test
