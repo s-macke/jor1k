@@ -83,6 +83,10 @@ char* GetFullPathNotHidden(const char* root, int id, int *hidden)
 			sprintf(path, "/%s%s", &(inodes[id].name[1]), temp);
 			*hidden = 1;
 		} else
+		if ((inodes[id].name[0] == '_') && (inodes[id].name[1] == '_')) {
+			sprintf(path, "/%s%s", &(inodes[id].name[2]), temp);
+			*hidden = 1;
+		} else
 		if (inodes[id].name[0] == '_') {
 			sprintf(path, "/%s%s", &(inodes[id].name[1]), temp);
 			*hidden = 1;
@@ -455,27 +459,31 @@ int ShouldBeLoaded(char *name)
 	return 0;
 }
 
+int EndsWith(const char *str, const char *suffix)
+{
+    if (!str || !suffix)
+        return 0;
+    size_t lenstr = strlen(str);
+    size_t lensuffix = strlen(suffix);
+    if (lensuffix > lenstr)
+        return 0;
+    return strncmp(str + lenstr - lensuffix, suffix, lensuffix) == 0;
+}
 
 int ShouldBeCompressed(char *name, char *data, int size)
 {
 	if (size < 4) return 0;
 
-	int len=strlen(name);
-	if (len > 4) { // already compressed?
-	if (name[len-3] == '.')
-	if (name[len-2] == 'g')
-	if (name[len-1] == 'z') return 0;
+	int len = strlen(name);
 
-	if (name[len-4] == '.')
-	if (name[len-3] == 'b')
-	if (name[len-2] == 'z')
-	if (name[len-1] == '2') return 0;
-	}
-
-	if (name[len-4] == '.')
-	if (name[len-3] == 'z')
-	if (name[len-2] == 'i')
-	if (name[len-1] == 'p') return 0;
+        if (EndsWith(name, ".jpg")) return 0;
+        if (EndsWith(name, ".png")) return 0;
+        if (EndsWith(name, ".gz"))  return 0;
+        if (EndsWith(name, ".bz2")) return 0;
+        if (EndsWith(name, ".zip")) return 0;
+        if (EndsWith(name, ".png")) return 0;
+        if (EndsWith(name, ".3gp")) return 0;
+        if (EndsWith(name, ".mpg")) return 0;
 
 	if (size > 10*1024) return 1;
 
@@ -549,6 +557,7 @@ void WalkDir(int parentid)
 				char command[1024];
 				sprintf(command, "bzip2 -f \"%s\"\n", path);
 				//sprintf(command, "xz -e -f %s\n", path);
+				//sprintf(command, "lzma -f %s\n", path);
 				system(command);
 				/*
 				sprintf(command, "lz4 -9 -f \"%s\"\n", path);
@@ -556,6 +565,7 @@ void WalkDir(int parentid)
 				sprintf(command, "rm -f %s\n", path);
 				system(command);
 				*/
+
 				
 			}
 			if (ShouldBeLoaded(inodes[i].name)) {
@@ -610,6 +620,7 @@ int main(int argc, char *argv[])
 
 	fprintf(stderr, "Generate XML\n");
 	CreateXML();
+	fprintf(stderr, "Generate JSON\n");
 	CreateJSON();
 
 	return 0;
