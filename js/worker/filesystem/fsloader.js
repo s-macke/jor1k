@@ -27,150 +27,72 @@ function FSLoader(filesystem) {
     this.fs = filesystem;
 }
 
-FSLoader.prototype.ReadVariable = function(buffer, offset) {
-    var variable = [];
-    variable.name = "";
-    variable.value = "";
+FSLoader.prototype.HandleDirContents = function(list, parentid) {
+    for (var tag of list) {
+         var inode;
 
-    // read blanks
-    for(var i=offset; i<buffer.length; i++) {
-        if (buffer[i] == '>') return variable;
-        if (buffer[i] == '/') return variable;
-        if (buffer[i] != ' ') break;
-    }
-    offset = i;
-    if (buffer[i] == '>') return variable;
+         var id = this.fs.Search(parentid, tag.name);
+         if (id != -1) {
+             if (!tag.path && !tag.size) {
+                 if (tag.child) this.HandleDirContents(tag.child, id);
+                 continue;
+             } else {
+                 message.Debug("Overwriting non-directory!");
+             }
+         }
 
-    // read variable name
-    for(var i=offset; i<buffer.length; i++) {
-        if (buffer[i] == '>') break;
-        if (buffer[i] == '=') break;
-        variable.name = variable.name + buffer[i]; 
+         inode = this.fs.CreateInode();
+         inode.name = tag.name;
+         inode.uid = tag.uid|0;
+         inode.gid = tag.gid|0;
+         inode.parentid = parentid;
+         inode.mode = parseInt(tag.mode, 8);
+
+         if (tag.path) { // link
+             inode.mode = S_IFLNK | S_IRWXUGO;
+             inode.symlink = tag.path;
+             this.fs.PushInode(inode);
+         } else if (!tag.size) { // dir
+             inode.mode |= S_IFDIR;
+             inode.updatedir = true;
+             this.fs.PushInode(inode);
+             if (tag.child)
+                 this.HandleDirContents(tag.child, id != -1 ? id : this.fs.inodes.length-1);
+         } else { // file
+             inode.mode |= S_IFREG;
+             var idx = this.fs.inodes.length;
+             inode.status = STATUS_ON_SERVER;
+             inode.compressed = !!tag.c;
+             inode.size = tag.size|0;
+             this.fs.PushInode(inode);
+             var url = this.sysrootdir + (!tag.src?this.fs.GetFullPath(idx):tag.src);
+             inode.url = url;
+             //message.Debug("Load id=" + (idx) + " " + url);
+             if (tag.load || this.fs.CheckEarlyload(this.fs.GetFullPath(idx)) ) {
+                 this.fs.LoadFile(idx);
+             }
+         }
     }
-    offset = i+1;
-    if (variable.name.length == 0) return variable;
-    // read variable value
-    for(var i=offset+1; i<buffer.length; i++) {
-        if (buffer[i] == '>') break;
-        if (buffer[i] == '\'') break;
-        variable.value = variable.value + buffer[i]; 
-    }
-    offset = i+1;
-    variable.offset = offset;
-    //message.Debug("read " + variable.name + "=" + variable.value);
-    return variable;
 }
 
-FSLoader.prototype.ReadTag = function(buffer, offset) {
-    var tag = [];
-    tag.type = "";
-    tag.name = "";
-    tag.mode = 0x0;
-    tag.uid = 0x0;
-    tag.gid = 0x0;
-    tag.path = "";
-    tag.src = "";
-    tag.compressed = false;
-    tag.load = false;
-
-    if (buffer[offset] != '<') return tag;
-    for(var i=offset+1; i<buffer.length; i++) {
-        if (buffer[i] ==  ' ') break;
-        if (buffer[i] == '\n') break;
-        if (buffer[i] == '>') break;
-        tag.type = tag.type + buffer[i]; 
-    }
-    offset = i;
-    // read variables
-    do {
-        var variable = this.ReadVariable(buffer, offset);
-        if (variable.name == "name") tag.name = variable.value;
-        if (variable.name == "mode") tag.mode = parseInt(variable.value, 8);
-        if (variable.name == "uid") tag.uid = parseInt(variable.value, 10);
-        if (variable.name == "gid") tag.gid = parseInt(variable.value, 10);
-        if (variable.name == "path") tag.path = variable.value;
-        if (variable.name == "size") tag.size = parseInt(variable.value, 10);
-        if (variable.name == "src") tag.src = variable.value;
-        if (variable.name == "compressed") tag.compressed = true;
-        if (variable.name == "load") tag.load = true;
-        offset = variable.offset;
-    } while(variable.name.length != 0);
-    return tag;
-};
-
-
-FSLoader.prototype.OnXMLLoaded = function(fsxml)
+FSLoader.prototype.OnJSONLoaded = function(fsxml)
 {
-    // At this point I realized, that the dom is not available in worker threads and that I cannot get the xml information directly.
-    // So let's analyze ourself
-    var sysrootdir = "";
+    var t = JSON.parse(fsxml);
 
-    var parentid = 0;
-    for(var i=0; i<fsxml.length; i++)
-    {
-        if (fsxml[i] != '<') continue;
-        var tag = this.ReadTag(fsxml, i, ' ');
-        var id = this.fs.Search(parentid, tag.name);
-        if (id != -1) {
-            if (tag.type == "Dir") parentid = id;             
-            continue;
-        }
-        var inode = this.fs.CreateInode();
-        inode.name = tag.name;
-        inode.uid = tag.uid;
-        inode.gid = tag.gid;
-        inode.parentid = parentid;
-        inode.mode = tag.mode;
-        
-        var size = tag.size;
+    this.sysrootdir = t.src;
+    if (String(this.sysrootdir) !== this.sysrootdir) message.Debug("No sysroot (src tag)!");
+    this.sysrootdir += "/";
 
-    switch(tag.type) {
-    case "FS":
-        sysrootdir = "" + tag.src + "/";
-        break;
+    this.HandleDirContents(t.fs, 0);
 
-    case "Dir":
-        inode.mode |= S_IFDIR;
-        inode.updatedir = true;
-        parentid = this.fs.inodes.length;
-        this.fs.PushInode(inode);
-        break;
-
-   case "/Dir":
-        parentid = this.fs.inodes[parentid].parentid;
-        break;
-
-   case "File":
-        inode.mode |= S_IFREG;
-        var idx = this.fs.inodes.length;
-        inode.status = STATUS_ON_SERVER;
-        inode.compressed = tag.compressed;
-        inode.size = size;
-        this.fs.PushInode(inode);
-        var url = sysrootdir + (tag.src.length==0?this.fs.GetFullPath(idx):tag.src);
-        inode.url = url;
-        //message.Debug("Load id=" + (idx) + " " + url);
-        if (tag.load || this.fs.CheckEarlyload(this.fs.GetFullPath(idx)) ) {
-            this.fs.LoadFile(idx);
-        }
-        break;
-
-    case "Link":
-        inode.mode = S_IFLNK | S_IRWXUGO;
-        inode.symlink = tag.path;
-        this.fs.PushInode(inode);
-        break;
-        }
-    }
     message.Debug("processed " + this.fs.inodes.length + " inodes");
     this.fs.Check();
 }
 
-FSLoader.prototype.LoadXML = function(url)
+FSLoader.prototype.LoadJSON = function(url)
 {
     message.Debug("Load filesystem information from " + url);
-    utils.LoadXMLResource(url, this.OnXMLLoaded.bind(this), function(error){throw error;});
+    utils.LoadTextResource(url, this.OnJSONLoaded.bind(this), function(error){throw error;});
 }
-
 
 module.exports = FSLoader;

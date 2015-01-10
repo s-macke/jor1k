@@ -1,14 +1,16 @@
 #! /bin/sh
 
-mount -a
+busybox mount -a
+
+#remount everything, read/write
+#echo "Remounting root" &
+busybox mount -o remount,rw /
+
+/bin/busybox --install -s
 
 # set hostname
 #echo "Setting hostname" &
 hostname openrisc &
-
-#remount everything, read/write
-#echo "Remounting root" &
-mount -o remount,rw /
 
 # create some dirs to avoid warning messages
 #mkdir -p /var/run && \
@@ -37,7 +39,7 @@ mount -t tmpfs none /dev/shm &
 
 #route add default gw 192.168.1.1
 
-#ifup -a
+#/sbin/ifup -a
 
 #alternative
 #setup dhcp
@@ -46,5 +48,5 @@ mount -t tmpfs none /dev/shm &
 
 
 # inetd startup
-inetd &
+/usr/sbin/inetd &
 

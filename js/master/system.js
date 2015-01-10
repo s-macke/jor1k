@@ -42,7 +42,7 @@ function jor1kGUI(parameters)
 
     // ----------------------
 
-    this.worker = new Worker(this.params.path + "jor1k-worker-min.js");
+    this.worker = new Worker(this.params.path + "../bin/jor1k-worker-min.js");
     message.SetWorker(this.worker);
 
     // ----

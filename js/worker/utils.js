@@ -68,7 +68,7 @@ function LoadBinaryResource(url, OnSuccess, OnError) {
     req.send(null);
 }
 
-function LoadXMLResource(url, OnSuccess, OnError) {
+function LoadTextResource(url, OnSuccess, OnError) {
     var req = new XMLHttpRequest();
     req.open('GET', url, true);
     //req.overrideMimeType('text/xml');
@@ -77,10 +77,10 @@ function LoadXMLResource(url, OnSuccess, OnError) {
             return;
         }
         if ((req.status != 200) && (req.status != 0)) {
-            OnError("Error: Could not load XML file " + url);
+            OnError("Error: Could not load text file " + url);
             return;
-        }        
-        OnSuccess(req.responseText);        
+        }
+        OnSuccess(req.responseText);
     };
     req.send(null);
 }
@@ -177,5 +177,5 @@ module.exports.int32 = int32;
 module.exports.uint32 = uint32;
 module.exports.ToHex = ToHex;
 module.exports.LoadBinaryResource = LoadBinaryResource;
-module.exports.LoadXMLResource = LoadXMLResource;
+module.exports.LoadTextResource = LoadTextResource;
 
