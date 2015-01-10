@@ -210,7 +210,7 @@ var forwardedMethods = [
     "ClearInterrupt"];
 forwardedMethods.forEach(function(m) {
     CPU.prototype[m] = function() {
-        this.cpu[m].apply(this.cpu, arguments);        
+        return this.cpu[m].apply(this.cpu, arguments);        
     };
 });
 
