@@ -9,12 +9,9 @@ var utils = require('./utils.js');
 var RAM = require('./ram.js');
 var bzip2 = require('./bzip2.js');
 var Timer = require('./timer.js');
-var imul = require('./imul.js');
 
-// CPUs
-var FastCPU = require('./cpu/fastcpu.js');
-var SafeCPU = require('./cpu/safecpu.js');
-var SMPCPU = require('./cpu/smpcpu.js');
+// CPU
+var CPU = require('./cpu');
 
 // Devices
 var UARTDev = require('./dev/uart.js');
@@ -88,76 +85,16 @@ function System() {
 }
 
 System.prototype.CreateCPU = function(cpuname) {
-    if (cpuname == "safe") {
-        this.cpu = new SafeCPU(this.ram);
-    } else 
-    if (cpuname == "asm") {
-        this.cpu = this.fastcpu;
-        this.cpu.Init();
-    } else
-    if (cpuname == "smp") {
-        this.cpu = this.smpcpu;
-        this.cpu.Init(this.ncores);
-    } else {
-        message.Debug("Error: CPU name unknown");
-        return;
+    try {
+        this.cpu = new CPU(cpuname, this.ram, this.heap, this.ncores);
+    } catch (e) {
+        message.Debug("Error: failed to create CPU:" + e);
     }
-    this.currentcpuname = cpuname;
 };
 
 
 System.prototype.ChangeCPU = function(cpuname) {
-
-    var oldcpu = this.cpu;
-    var oldcpuname = this.currentcpuname;
-    if (oldcpuname == "smp") return;
-
-    this.CreateCPU(cpuname);
-
-    this.cpu.InvalidateTLB(); // reset TLB
-    var f = oldcpu.GetFlags();
-    this.cpu.SetFlags(f|0);
-    var h;
-    if (oldcpuname == "asm") {
-        h = new Int32Array(this.heap);
-        oldcpu.GetState();
-        this.cpu.pc = h[(0x40 + 0)];
-        this.cpu.nextpc = h[(0x40 + 1)];
-        this.cpu.delayedins = h[(0x40 + 2)]?true:false;
-        this.cpu.TTMR = h[(0x40 + 4)];
-        this.cpu.TTCR = h[(0x40 + 5)];
-        this.cpu.PICMR = h[(0x40 + 6)];
-        this.cpu.PICSR = h[(0x40 + 7)];
-        this.cpu.boot_dtlb_misshandler_address = h[(0x40 + 8)];
-        this.cpu.boot_itlb_misshandler_address = h[(0x40 + 9)];
-        this.cpu.current_pgd = h[(0x40 + 10)];
-    } else
-    if (cpuname == "asm") {
-        h = new Int32Array(this.heap);
-        h[(0x40 + 0)] = oldcpu.pc;
-        h[(0x40 + 1)] = oldcpu.nextpc;
-        h[(0x40 + 2)] = oldcpu.delayedins;
-        h[(0x40 + 3)] = 0x0;
-        h[(0x40 + 4)] = oldcpu.TTMR;
-        h[(0x40 + 5)] = oldcpu.TTCR;
-        h[(0x40 + 6)] = oldcpu.PICMR;
-        h[(0x40 + 7)] = oldcpu.PICSR;
-        h[(0x40 + 8)] = oldcpu.boot_dtlb_misshandler_address;
-        h[(0x40 + 9)] = oldcpu.boot_itlb_misshandler_address;
-        h[(0x40 + 10)] = oldcpu.current_pgd;
-        this.cpu.PutState();
-    } else {
-        this.cpu.pc = oldcpu.pc;
-        this.cpu.nextpc = oldcpu.nextpc;
-        this.cpu.delayedins = oldcpu.delayedins;
-        this.cpu.TTMR = oldcpu.TTMR;
-        this.cpu.TTCR = oldcpu.TTCR;
-        this.cpu.PICMR = oldcpu.PICMR;
-        this.cpu.PICSR = oldcpu.PICSR;
-        this.cpu.boot_dtlb_misshandler_address = oldcpu.boot_dtlb_misshandler_address;
-        this.cpu.boot_itlb_misshandler_address = oldcpu.itlb_misshandler_address;
-        this.cpu.current_pgd = oldcpu.current_pgd;
-    }
+    this.cpu.switchImplementation(cpuname);
 };
 
 System.prototype.Reset = function() {
@@ -192,37 +129,8 @@ System.prototype.Init = function(system) {
     this.memorysize--; // - the lower 1 MB are used for the cpu cores
     this.ram = new RAM(this.heap, ramoffset);
 
-    if (typeof Math.imul == "undefined") {
-        Math.imul = imul;
-    }
 
-    // Create the asm.js core. Because of Firefox limitations it can only be created once.
-    var stdlib = {
-        Int32Array : Int32Array,
-        Float32Array : Float32Array,
-        Uint8Array : Uint8Array,
-        Uint16Array : Uint16Array,
-        Math : Math
-    };
-    var foreign = 
-    {
-        DebugMessage: message.Debug,
-        abort : message.Abort,
-        imul : Math.imul,
-        ReadMemory32 : this.ram.ReadMemory32.bind(this.ram),
-        WriteMemory32 : this.ram.WriteMemory32.bind(this.ram),
-        ReadMemory16 : this.ram.ReadMemory16.bind(this.ram),
-        WriteMemory16 : this.ram.WriteMemory16.bind(this.ram),
-        ReadMemory8 : this.ram.ReadMemory8.bind(this.ram),
-        WriteMemory8 : this.ram.WriteMemory8.bind(this.ram)
-    };
-    this.fastcpu = FastCPU(stdlib, foreign, this.heap);
-    this.fastcpu.Init();
-
-    this.smpcpu = SMPCPU(stdlib, foreign, this.heap);
-    this.smpcpu.Init(system.ncores);
-
-    this.CreateCPU(system.cpu);
+    this.CreateCPU(system.cpu, this.ram, this.heap, system.ncores);
 
     this.irqdev = new IRQDev(this);
     this.timerdev = new TimerDev();
@@ -295,63 +203,8 @@ System.prototype.ClearSoftInterrupt = function (line, cpuid) {
     this.cpu.ClearInterrupt(line, cpuid);
 };
 
-
-
 System.prototype.PrintState = function() {
-    var r = new Uint32Array(this.heap);
-    message.Debug("Current state of the machine");
-    //message.Debug("clock: " + utils.ToHex(cpu.clock));
-    message.Debug("PC: " + utils.ToHex(this.cpu.pc<<2));
-    message.Debug("next PC: " + utils.ToHex(this.cpu.nextpc<<2));
-    //message.Debug("ins: " + utils.ToHex(cpu.ins));
-    //message.Debug("main opcode: " + utils.ToHex(cpu.ins>>>26));
-    //message.Debug("sf... opcode: " + utils.ToHex((cpu.ins>>>21)&0x1F));
-    //message.Debug("op38. opcode: " + utils.ToHex((cpu.ins>>>0)&0x3CF));
-
-    for (var i = 0; i < 32; i += 4) {
-        message.Debug("   r" + (i + 0) + ": " +
-            utils.ToHex(r[i + 0]) + "   r" + (i + 1) + ": " +
-            utils.ToHex(r[i + 1]) + "   r" + (i + 2) + ": " +
-            utils.ToHex(r[i + 2]) + "   r" + (i + 3) + ": " +
-            utils.ToHex(r[i + 3]));
-    }
-    
-    if (this.cpu.delayedins) {
-        message.Debug("delayed instruction");
-    }
-    if (this.cpu.SR_SM) {
-        message.Debug("Supervisor mode");
-    }
-    else {
-        message.Debug("User mode");
-    }
-    if (this.cpu.SR_TEE) {
-        message.Debug("tick timer exception enabled");
-    }
-    if (this.cpu.SR_IEE) {
-        message.Debug("interrupt exception enabled");
-    }
-    if (this.cpu.SR_DME) {
-        message.Debug("data mmu enabled");
-    }
-    if (this.cpu.SR_IME) {
-        message.Debug("instruction mmu enabled");
-    }
-    if (this.cpu.SR_LEE) {
-        message.Debug("little endian enabled");
-    }
-    if (this.cpu.SR_CID) {
-        message.Debug("context id enabled");
-    }
-    if (this.cpu.SR_F) {
-        message.Debug("flag set");
-    }
-    if (this.cpu.SR_CY) {
-        message.Debug("carry set");
-    }
-    if (this.cpu.SR_OV) {
-        message.Debug("overflow set");
-    }
+    message.Debug(this.cpu.toString());
 };
 
 System.prototype.SendStringToTerminal = function(str)
