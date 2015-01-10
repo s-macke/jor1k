@@ -7,7 +7,7 @@ var message = require('../messagehandler'); // global variable
 var imul = require('../imul.js');
 var toHex = require('../utils').ToHex;
 
-// TODO: do we actually need to path the global Math object?
+// TODO: do we actually need to patch the global Math object?
 if (typeof Math.imul == "undefined") {
     Math.imul = imul;
 }
