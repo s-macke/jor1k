@@ -74,10 +74,10 @@ function FS() {
 FS.prototype.LoadFilesystem = function(userinfo)
 {
     this.userinfo = userinfo;
-    this.fsloader.LoadXML(this.userinfo.basefsURL);
+    this.fsloader.LoadJSON(this.userinfo.basefsURL);
     this.OnLoaded = function() { // the basic filesystem is loaded, so download the rest
         if (this.userinfo.extendedfsURL) {
-            this.fsloader.LoadXML(this.userinfo.extendedfsURL);
+            this.fsloader.LoadJSON(this.userinfo.extendedfsURL);
         }
         for(var i=0; i<this.userinfo.lazyloadimages.length; i++) {
             this.LoadImage(this.userinfo.lazyloadimages[i]);

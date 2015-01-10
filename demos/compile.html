@@ -133,8 +133,8 @@ function Start() {
         },
 
         fs: {
-            basefsURL: "basefs-compile.xml", // xml file with the basic filesystem configuration.
-            extendedfsURL: "../../jor1k-sysroot/fs.xml", // xml file with extended filesystem informations. Loaded after the basic filesystem has been loaded.
+            basefsURL: "basefs-compile.json", // json file with the basic filesystem configuration.
+            extendedfsURL: "../../jor1k-sysroot/fs.json", // json file with extended filesystem informations. Loaded after the basic filesystem has been loaded.
             earlyload: [
                 "usr/bin/gcc", 
                 "usr/libexec/gcc/or1k-linux-musl/4.9.0/cc1",

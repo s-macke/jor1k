@@ -181,8 +181,8 @@ function Start() {
             ncores: 1,
         },
         fs: {
-            basefsURL: "basefs.xml", // xml file with the basic filesystem configuration.
-            extendedfsURL: "../../jor1k-sysroot/fs.xml", // xml file with extended filesystem informations. Loaded after the basic filesystem has been loaded.
+            basefsURL: "basefs.json", // json file with the basic filesystem configuration.
+            extendedfsURL: "../../jor1k-sysroot/fs.json", // json file with extended filesystem informations. Loaded after the basic filesystem has been loaded.
             earlyload: [], // list of files which should be loaded immediately after they appear in the filesystem
             lazyloadimages: [
             ] // list of automatically loaded images after the basic filesystem has been loaded
