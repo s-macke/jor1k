@@ -23,6 +23,14 @@ function Abort() {
     throw new Error('Kill worker');
 }
 
+function Error(message) {
+    Send("Debug", "Error: " + message);
+    Abort();
+}
+
+function Warn(message) {
+    Send("Debug", "Warning: " + message);
+}
 
 var messagemap = new Object();
 function Register(message, OnReceive) {
@@ -39,6 +47,7 @@ onmessage = function(e) {
 
 module.exports.Register = Register;
 module.exports.Debug = Debug;
+module.exports.Error = Error;
 module.exports.Abort = Abort;
 module.exports.Send = Send;
  
