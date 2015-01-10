@@ -94,7 +94,7 @@ function jor1kGUI(parameters)
    this.IgnoreKeys = function() {
       return (
           (this.lastMouseDownTarget != TERMINAL) &&
-          (this.lastMouseDownTarget != this.framebuffer.fbcanvas) &&
+          (this.framebuffer && this.lastMouseDownTarget != this.framebuffer.fbcanvas) &&
           (this.lastMouseDownTarget != this.clipboard)
       );
     }

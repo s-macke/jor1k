@@ -1,0 +1,16 @@
+{
+  "globals"   : {
+    "setTimeout": false,
+    "clearTimeout": false,
+    "require"   : false,
+    "ArrayBuffer": false,
+    "Uint8Array": false,
+    "Int8Array": false,
+    "Uint16Array": false,
+    "Int16Array": false,
+    "Uint32Array": false,
+    "Int32Array": false,
+    "Float32Array": false,
+    "module": false
+  }
+}
