@@ -1,6 +1,7 @@
 // -------------------------------------------------
 // --------------- Terminal Emulator ---------------
 // -------------------------------------------------
+// http://lxr.free-electrons.com/source/drivers/tty/vt/vt.c
 
 "use strict";
 
@@ -48,7 +49,12 @@ function Terminal(nrows, ncolumns, elemId) {
     this.cursory = 0;
     this.scrolltop = 0;
     this.scrollbottom = this.nrows-1;
-    this.currentcolor = 0x7;
+
+    this.attr_color = 0x7;
+    this.attr_reverse = false;
+    this.attr_italic = false;
+    this.attr_intensity = 0x1;
+
     this.pauseblink = false;
     this.OnCharReceived = function (){};
 
@@ -68,7 +74,7 @@ function Terminal(nrows, ncolumns, elemId) {
 
         for (var j = 0; j < this.ncolumns; j++) {
             this.screen[i][j] = 0x20;
-            this.color[i][j] = this.currentcolor;
+            this.color[i][j] = this.attr_color;
         }
     }
     this.UpdateScreen();
@@ -83,6 +89,20 @@ Terminal.prototype.PauseBlink = function(pause) {
     this.PrepareUpdateRow(this.cursory, this.cursorx);
 }
 
+Terminal.prototype.GetColor = function() {
+    var c = this.attr_color;
+    if (this.attr_reverse) {
+        c = ((c & 0x7) << 8) | ((c >> 8)) & 0x7;
+    }
+    if (this.attr_intensity == 2) {
+        c = c | 0x8;
+    } else
+    if (this.attr_intensity == 0) {
+        c = c | 0x10;
+    }
+    return c;
+}
+
 Terminal.prototype.Blink = function() {
     this.cursorvisible = !this.cursorvisible;
     if(!this.pauseblink) this.PrepareUpdateRow(this.cursory, this.cursorx);
@@ -92,7 +112,7 @@ Terminal.prototype.Blink = function() {
 Terminal.prototype.DeleteRow = function(row) {
     for (var j = 0; j < this.ncolumns; j++) {
         this.screen[row][j] = 0x20;
-        this.color[row][j] = this.currentcolor;
+        this.color[row][j] = this.attr_color;
     }
     this.PrepareUpdateRow(row);
 };
@@ -101,7 +121,7 @@ Terminal.prototype.DeleteArea = function(row, column, row2, column2) {
     for (var i = row; i <= row2; i++) {
         for (var j = column; j <= column2; j++) {
             this.screen[i][j] = 0x20;
-            this.color[i][j] = this.currentcolor;
+            this.color[i][j] = this.attr_color;
         }
         this.PrepareUpdateRow(i);
     }
@@ -311,38 +331,61 @@ Terminal.prototype.ChangeCursor = function(Numbers) {
 Terminal.prototype.ChangeColor = function(Numbers) {
 
     if (Numbers.length == 0) { // reset;
-         this.currentcolor = 0x7;
-         return;
+        this.attr_color = 0x7;
+        this.attr_reverse = false;
+        this.attr_italic = false;
+        this.attr_intensity = 1;
+        return;
     }
 
-    var c = this.currentcolor;
+    var c = this.attr_color;
 
     for (var i = 0; i < Numbers.length; i++) {
         switch (Number(Numbers[i])) {
-        case 30: case 31: case 32: case 33: case 34: case 35: case 36: case 37:
-            c = c & (0xFFF8) | (Numbers[i] - 30) & 0x7;
-            break;
-        case 40: case 41: case 42: case 43: case 44: case 45: case 46: case 47:
-            c = c & (0x00FF) | (((Numbers[i] - 40) & 0x7) << 8);
-            break;
-        case 0:
-            c = 0x7; // reset
+
+        case 0: // reset
+            c = 0x7;
+            this.attr_reverse = false;
+            this.attr_italic = false;
+            this.attr_intensity = 1;
             break;
         case 1: // brighter foreground color
-            c = c | 0x8;
+            this.attr_intensity = 2;
             break;
         case 2: // dimmed foreground color
-            c = c | 0x10;
+            this.attr_intensity = 0;
+            break;
+        case 3: // italic
+            this.attr_italic = true;
             break;
         case 4: // underline ignored
             break;
         case 5: // extended colors or blink ignored
              //i++;
              break;
-        case 7: // inverted
-            c = ((c & 0x7) << 8) | ((c >> 8)) & 0x7; 
+        case 7: // reversed
+            this.attr_reverse = true;
             break;
         case 8: // hidden ignored
+            break;
+        case 10: // reset mapping ?
+            break;
+        case 21:
+        case 22:
+            this.attr_intensity = 1;
+            break;
+        case 23:
+            this.attr_italic = false;
+            break;
+        case 27: // no reverse
+            this.attr_reverse = false;
+            break;
+
+        case 30: case 31: case 32: case 33: case 34: case 35: case 36: case 37:
+            c = c & (0xFFF8) | (Numbers[i] - 30) & 0x7;
+            break;
+        case 40: case 41: case 42: case 43: case 44: case 45: case 46: case 47:
+            c = c & (0x00FF) | (((Numbers[i] - 40) & 0x7) << 8);
             break;
         case 39:
             c = c & (0xFF00) | 0x7; // set standard foreground color
@@ -350,16 +393,12 @@ Terminal.prototype.ChangeColor = function(Numbers) {
         case 49:
             c = c & 0x00FF; // set standard background color
             break;
-        case 10:
-            // reset mapping ?
-            break;
         default:
             message.Debug("Color " + Numbers[i] + " not found");
             break;
         }
     }
-    this.currentcolor = c|0;
-
+    this.attr_color = c|0;
 };
 
 Terminal.prototype.HandleEscapeSequence = function() {
@@ -572,7 +611,7 @@ Terminal.prototype.HandleEscapeSequence = function() {
             if (count == 0) count = 1;
             for (var j = 0; j < count; j++) {
                 this.screen[this.cursory][this.cursorx+j] = 0x20;
-                this.color[this.cursory][this.cursorx+j] = this.currentcolor;
+                this.color[this.cursory][this.cursorx+j] = this.GetColor();
             }
             this.PrepareUpdateRow(this.cursory);
             break;    
@@ -656,8 +695,8 @@ Terminal.prototype.PutChar = function(c) {
                 this.LineFeed();
                 this.cursorx = 0;
             }
-            this.screen[this.cursory][this.cursorx] = 32;
-            this.color[this.cursory][this.cursorx] = this.currentcolor;	
+            this.screen[this.cursory][this.cursorx] = 0x20;
+            this.color[this.cursory][this.cursorx] = this.attr_color;	
             this.cursorx++;
         } while(spaces--);
         this.PrepareUpdateRow(this.cursory);
@@ -685,7 +724,7 @@ Terminal.prototype.PutChar = function(c) {
     var cy = this.cursory;
     this.screen[cy][cx] = c;
 
-    this.color[cy][cx] = this.currentcolor;
+    this.color[cy][cx] = this.GetColor();
     this.cursorx++;
     //message.Debug("Write: " + String.fromCharCode(c));
     this.PrepareUpdateRow(cy);
