@@ -26,16 +26,6 @@ var KeyboardDev = require('./dev/keyboard.js');
 var SoundDev = require('./dev/sound.js');
 var VirtIODev = require('./dev/virtio.js');
 var Virtio9p = require('./dev/virtio/9p.js');
-
-//require('./dev/virtio/marshall.js');
-
-
-/*
-require('./system.js');
-require('../lib/utf8.js');
-require('./filesystem/tar.js');
-*/
-
 var FS = require('./filesystem/filesystem.js');
 
 
@@ -78,9 +68,10 @@ function System() {
     message.Register("ChangeCore", this.ChangeCPU.bind(this) );
 
     message.Register("GetIPS", function(data) {
-            message.Send("GetIPS", this.ips);
-            this.ips=0;
-        }.bind(this)
+        message.Send("GetIPS", this.ips);
+        this.ips=0;
+    }.bind(this)
+
     );
 }
 
@@ -279,13 +270,13 @@ System.prototype.HandleHalt = function() {
         this.idletime = utils.GetMilliseconds();
         this.status = SYSTEM_HALT;
         this.idletimeouthandle = setTimeout(function() {
-                if (this.status == SYSTEM_HALT) {
-                    this.status = SYSTEM_RUN;
-                    this.cpu.ProgressTime(delta);
-                    //this.snddev.Progress();
-                    this.MainLoop();
-                }
-            }.bind(this), mswait);
+            if (this.status == SYSTEM_HALT) {
+                this.status = SYSTEM_RUN;
+                this.cpu.ProgressTime(delta);
+                //this.snddev.Progress();
+                this.MainLoop();
+            }
+        }.bind(this), mswait);
 };
 
 System.prototype.MainLoop = function() {
