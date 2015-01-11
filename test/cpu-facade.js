@@ -1,9 +1,9 @@
 // this needs to bre present in the global scope
 // for the message module
 global.onmessage = null;
-global.postMessage = function() {
+/*global.postMessage = function() {
     console.log(arguments);
-}
+}*/
 var RAM = require('../js/worker/ram');
 var CPU = require('../js/worker/cpu');
 
@@ -22,16 +22,16 @@ var expect = require('expect');
 
         var registers = new Uint32Array(heap);
         var ram = new RAM(heap, ramOffset);
-        console.log('creating ' + cpuname + ' CPU');
+        //console.log('creating ' + cpuname + ' CPU');
         var cpu = new CPU(cpuname, ram, heap, 1); // 1 core
-        console.log('done');
-        console.log('reset');
+        //console.log('done');
+        //console.log('reset');
         cpu.Reset();
-        console.log('done');
+        //console.log('done');
 
         registers[0] = 0x00100000;
         registers[1] = 0x000AAAA0;
-        console.log(cpu.toString());
+        //console.log(cpu.toString());
 
         var add = 0x3 << 30 | 0x8 << 26 |
             0x2 << 21 | // rD
@@ -45,10 +45,9 @@ var expect = require('expect');
             h[initialPC + i+1] = nop;
         }
         //console.log(cpu.toString());
-        console.log('adding');
-        debugger;
+        //console.log('adding');
         cpu.Step(64, 0);
-        console.log('done');
+        //console.log('done');
         //console.log(cpu.toString());
 
         expect(registers[2]).toEqual(0x001AAAA0);
