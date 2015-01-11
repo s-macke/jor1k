@@ -12,6 +12,7 @@ var bzip2 = require('../bzip2.js');
 var marshall = require('../dev/virtio/marshall.js');
 var UTF8 = require('../../lib/utf8.js');
 var message = require('../messagehandler');
+var LazyUint8Array = require("./lazyUint8Array.js");
 
 var S_IRWXUGO = 0x1FF;
 var S_IFMT = 0xF000;
@@ -200,9 +201,22 @@ FS.prototype.LoadFile = function(idx) {
         return;
     }
 
+    if (inode.lazy) {
+        message.Debug("Using lazy file for " + inode.url);
+        inode.data = new LazyUint8Array(inode.url, inode.size);
+        var old = inode.size;
+        inode.size = inode.data.length;
+        if (old != inode.size) message.Warn("Size wrong for lazy loaded file: " + inode.name);
+        inode.status = STATUS_OK;
+        this.filesinloadingqueue--;
+        this.HandleEvent(idx);
+        return;
+    }
+
     utils.LoadBinaryResource(inode.url, 
         function(buffer){
             inode.data = new Uint8Array(buffer);
+            if (inode.size != this.inodes[idx].data.length) message.Warn("Size wrong for uncompressed non-lazily loaded file: " + inode.name);
             inode.size = this.inodes[idx].data.length; // correct size if the previous was wrong. 
             inode.status = STATUS_OK;
             if (inode.name == "rcS") {
@@ -416,8 +430,12 @@ FS.prototype.Write = function(id, offset, count, GetByte) {
     if (inode.size < (offset+count)) {
         inode.size = offset + count;
     }
-    for(var i=0; i<count; i++)
-        inode.data[offset+i] = GetByte();
+    if (inode.data instanceof Uint8Array)
+        for(var i=0; i<count; i++)
+            inode.data[offset+i] = GetByte();
+    else
+        for(var i=0; i<count; i++)
+            inode.data.Set(offset+i, GetByte());
 }
 
 FS.prototype.Search = function(parentid, name) {
@@ -508,14 +526,22 @@ FS.prototype.GetInode = function(idx)
 FS.prototype.ChangeSize = function(idx, newsize)
 {
     var inode = this.GetInode(idx);
-    var temp = inode.data;
     //message.Debug("change size to: " + newsize);
     if (newsize == inode.size) return;
-    inode.data = new Uint8Array(newsize);
+    var temp = new Uint8Array(newsize);
     inode.size = newsize;
-    var size = Math.min(temp.length, inode.size);
+    var size = Math.min(inode.data.length, inode.size);
     for(var i=0; i<size; i++) {
-        inode.data[i] = temp[i];
+        temp[i] = this.ReadByte(inode, i);
+    }
+    inode.data = temp;
+}
+
+FS.prototype.ReadByte = function(inode, idx) {
+    if (inode.data instanceof Uint8Array) {
+        return inode.data[idx];
+    } else {
+        return inode.data.Get(idx);
     }
 }
 
