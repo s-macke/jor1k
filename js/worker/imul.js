@@ -1,4 +1,4 @@
-module.exports = function(a, b) {
+module.exports = Math.imul || function(a, b) {
     var ah  = (a >>> 16) & 0xffff;
     var al = a & 0xffff;
     var bh  = (b >>> 16) & 0xffff;

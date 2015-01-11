@@ -4,13 +4,7 @@
 
 "use strict";
 var message = require('../messagehandler'); // global variable
-var imul = require('../imul.js');
 var toHex = require('../utils').ToHex;
-
-// TODO: do we actually need to patch the global Math object?
-if (typeof Math.imul == "undefined") {
-    Math.imul = imul;
-}
 
 // CPUs
 var FastCPU = require('./fastcpu.js');
@@ -34,7 +28,6 @@ function createCPUSingleton(cpuname, ram, heap, ncores) {
     var foreign = {
         DebugMessage: message.Debug,
         abort : message.Abort,
-        imul : Math.imul ? Math.imul : imul,
         ReadMemory32 : ram.ReadMemory32.bind(ram),
         WriteMemory32 : ram.WriteMemory32.bind(ram),
         ReadMemory16 : ram.ReadMemory16.bind(ram),
