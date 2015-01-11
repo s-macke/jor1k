@@ -163,7 +163,7 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             inode.symlink = inodetarget.symlink;
             inode.data = new Uint8Array(inode.size);
             for(var i=0; i<inode.size; i++) {
-                inode.data[i] = inodetarget.data[i];
+                inode.data[i] = this.fs.ReadByte(inodetarget, i);
             }
             inode.name = name;
             inode.parentid = this.fids[dfid].inodeid;
@@ -382,7 +382,7 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             } else {
                 if (inode.size < offset+count) count = inode.size - offset;
                 for(var i=0; i<count; i++)
-                    this.replybuffer[7+4+i] = inode.data[offset+i];
+                    this.replybuffer[7+4+i] = this.fs.ReadByte(inode, offset+i);
             }
             marshall.Marshall(["w"], [count], this.replybuffer, 7);
             this.BuildReply(id, tag, 4 + count);

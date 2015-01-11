@@ -59,6 +59,7 @@ FSLoader.prototype.HandleDirContents = function(list, parentid) {
              if (tag.child)
                  this.HandleDirContents(tag.child, id != -1 ? id : this.fs.inodes.length-1);
          } else { // file
+             if (tag.lazy) inode.lazy = tag.lazy;
              inode.mode |= S_IFREG;
              var idx = this.fs.inodes.length;
              inode.status = STATUS_ON_SERVER;
