@@ -1,17 +1,29 @@
-/*
-bzip2.js - a small bzip2 decompression implementation
+/* 
+  bzip2.js - a small bzip2 decompression implementation
+  
+  Copyright 2011 by antimatter15 (antimatter15@gmail.com)
+  
+  Based on micro-bunzip by Rob Landley (rob@landley.net).
 
-Copyright 2011 by antimatter15 (antimatter15@gmail.com)
+  Copyright (c) 2011 by antimatter15 (antimatter15@gmail.com).
 
-Based on micro-bunzip by Rob Landley (rob@landley.net).
-
-Based on bzip2 decompression code by Julian R Seward (jseward@acm.org),
-which also acknowledges contributions by Mike Burrows, David Wheeler,
-Peter Fenwick, Alistair Moffat, Radford Neal, Ian H. Witten,
-Robert Sedgewick, and Jon L. Bentley.
-
-I hereby release this code under the GNU Library General Public License
-(LGPL) version 2, available at http://www.gnu.org/copyleft/lgpl.html
+  Permission is hereby granted, free of charge, to any person obtaining a
+  copy of this software and associated documentation files (the "Software"),
+  to deal in the Software without restriction, including without limitation
+  the rights to use, copy, modify, merge, publish, distribute, sublicense,
+  and/or sell copies of the Software, and to permit persons to whom the
+  Software is furnished to do so, subject to the following conditions:
+  
+  The above copyright notice and this permission notice shall be included
+  in all copies or substantial portions of the Software.
+  
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+  EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+  MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+  IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+  DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+  TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH
+  THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
 var message = require('./messagehandler');
@@ -86,53 +98,6 @@ bzip2.crcTable =
    0xbcb4666d, 0xb8757bda, 0xb5365d03, 0xb1f740b4
 ];
 
-function LoadBinaryResource(url, OnSuccess, OnError) {
-    var req = new XMLHttpRequest();
-    req.open('GET', url, true);
-    req.responseType = "arraybuffer";
-    req.onreadystatechange = function () {
-        if (req.readyState != 4) {
-            return;
-        }
-        if ((req.status != 200) && (req.status != 0)) {
-            OnError("Error: Could not load file " + url);
-            return;
-        }
-        var arrayBuffer = req.response;
-        if (arrayBuffer) {
-            OnSuccess(arrayBuffer);
-        } else {
-            OnError("Error: No data received from: " + url);
-        }
-    };
-    req.send(null);
-}
-
-/*
-onmessage = function(e) {
-    LoadBinaryResource(e.data, function(buffer) {
-        var buffer8 = new Uint8Array(buffer);
-        var unpacked = new Uint8Array(buffer8.length*3); // this should be enough for most cases
-        var length = 0;
-        bzip2.simple(buffer8, function(x){
-
-            unpacked[length++] = x;
-            if (length >= unpacked.length) {
-               var newdata = new Uint8Array(Math.floor(unpacked.length*4/3));
-               for(var j=0; j<unpacked.length; j++) {
-                    newdata[j] = unpacked[j];
-               }
-               unpacked = newdata;
-            }
-            
-            }.bind(this)
-            );
-        postMessage({size: length, data: unpacked});
-    }, function(e){}
-    );
-}
-*/
-
 bzip2.array = function(bytes) {
     var bit = 0, byte = 0;
     var BITMASK = [0, 0x01, 0x03, 0x07, 0x0F, 0x1F, 0x3F, 0x7F, 0xFF ];
@@ -175,9 +140,9 @@ bzip2.simple = function(srcbuffer, stream) {
 }
 
 bzip2.header = function(bits) {
-    if (bits(8*3) != 4348520) throw "No magic number found";
+    if (bits(8*3) != 4348520) message.Error("No magic number found");
     var i = bits(8) - 48;
-    if (i < 1 || i > 9) throw "Not a BZIP archive";
+    if (i < 1 || i > 9) message.Error("Not a BZIP archive");
     return i;
 };
 
@@ -195,11 +160,11 @@ bzip2.decompress = function(bits, stream, buf, bufsize) {
     
     for(var h = '', i = 0; i < 6; i++) h += bits(8).toString(16);
     if (h == "177245385090") return true; //last block
-    if (h != "314159265359") throw "eek not valid bzip data";
+    if (h != "314159265359") message.Error("eek not valid bzip data");
     var crcblock = bits(32)|0; // CRC code
-    if (bits(1)) throw "unsupported obsolete version";
+    if (bits(1)) message.Error("unsupported obsolete version");
     var origPtr = bits(24);
-    if (origPtr > bufsize) throw "Initial position larger than buffer size";
+    if (origPtr > bufsize) message.Error("Initial position larger than buffer size");
     var t = bits(16);
     var symTotal = 0;
     for (i = 0; i < 16; i++) {
@@ -214,13 +179,13 @@ bzip2.decompress = function(bits, stream, buf, bufsize) {
     }
 
     var groupCount = bits(3);
-    if (groupCount < 2 || groupCount > 6) throw "another error";
+    if (groupCount < 2 || groupCount > 6) message.Error("another error");
     var nSelectors = bits(15);
-    if (nSelectors == 0) throw "meh";
+    if (nSelectors == 0) message.Error("meh");
     for(var i = 0; i < groupCount; i++) this.mtfSymbol[i] = i;
 
     for(var i = 0; i < nSelectors; i++) {
-        for(var j = 0; bits(1); j++) if (j >= groupCount) throw "whoops another error";
+        for(var j = 0; bits(1); j++) if (j >= groupCount) message.Error("whoops another error");
         var uc = this.mtfSymbol[j];
         for(var k = j-1; k>=0; k--) {
             this.mtfSymbol[k+1] = this.mtfSymbol[k];
@@ -240,7 +205,7 @@ bzip2.decompress = function(bits, stream, buf, bufsize) {
         t = bits(5); //lengths
         for(var i = 0; i < symCount; i++) {
             while(true){
-                if (t < 1 || t > MAX_HUFCODE_BITS) throw "I gave up a while ago on writing error messages";
+                if (t < 1 || t > MAX_HUFCODE_BITS) message.Error("I gave up a while ago on writing error messages");
                 if (!bits(1)) break;
                 if (!bits(1)) t++;
                 else t--;
@@ -288,7 +253,7 @@ bzip2.decompress = function(bits, stream, buf, bufsize) {
     while(true) {
         if (!(symCount--)) {
             symCount = GROUP_SIZE - 1;
-            if (selector >= nSelectors) throw "meow i'm a kitty, that's an error";
+            if (selector >= nSelectors) message.Error("meow i'm a kitty, that's an error");
             hufGroup = groups[this.selectors[selector++]];
             base = hufGroup.base.subarray(1);
             limit = hufGroup.limit.subarray(1);
@@ -296,13 +261,13 @@ bzip2.decompress = function(bits, stream, buf, bufsize) {
         i = hufGroup.minLen;
         j = bits(i);
         while(true) {
-            if (i > hufGroup.maxLen) throw "rawr i'm a dinosaur";
+            if (i > hufGroup.maxLen) message.Error("rawr i'm a dinosaur");
             if (j <= limit[i]) break;
             i++;
             j = (j << 1) | bits(1);
         }
         j -= base[i];
-        if (j < 0 || j >= MAX_SYMBOLS) throw "moo i'm a cow";
+        if (j < 0 || j >= MAX_SYMBOLS) message.Error("moo i'm a cow");
         var nextSym = hufGroup.permute[j];
         if (nextSym == SYMBOL_RUNA || nextSym == SYMBOL_RUNB) {
             if (!runPos){
@@ -316,13 +281,13 @@ bzip2.decompress = function(bits, stream, buf, bufsize) {
         }
         if (runPos) {
             runPos = 0;
-            if (count + t >= bufsize) throw "Boom.";
+            if (count + t >= bufsize) message.Error("Boom.");
             uc = this.symToByte[this.mtfSymbol[0]];
             this.byteCount[uc] += t;
             while(t--) buf[count++] = uc;
         }
         if (nextSym > symTotal) break;
-        if (count >= bufsize) throw "I can't think of anything. Error";
+        if (count >= bufsize) message.Error("I can't think of anything. Error");
         i = nextSym - 1;
         uc = this.mtfSymbol[i];
         for(var k = i-1; k>=0; k--) {
@@ -333,7 +298,7 @@ bzip2.decompress = function(bits, stream, buf, bufsize) {
         this.byteCount[uc]++;
         buf[count++] = uc;
     }
-    if (origPtr < 0 || origPtr >= count) throw "I'm a monkey and I'm throwing something at someone, namely you";
+    if (origPtr < 0 || origPtr >= count) message.Error("I'm a monkey and I'm throwing something at someone, namely you");
     var j = 0;
     for(var i = 0; i < 256; i++) {
         k = j + this.byteCount[i];
@@ -376,7 +341,7 @@ bzip2.decompress = function(bits, stream, buf, bufsize) {
     }
 
     crc = (crc ^ (-1)) >>> 0;
-    if ((crc|0) != (crcblock|0)) throw "Error in bzip2: crc32 do not match";
+    if ((crc|0) != (crcblock|0)) message.Error("Error in bzip2: crc32 do not match");
     return false;
 }
 
