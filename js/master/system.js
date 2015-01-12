@@ -32,7 +32,7 @@ function jor1kGUI(parameters)
     this.params.system.ncores = this.params.system.ncores || 1;
 
     this.params.fs = this.params.fs  || {};
-    this.params.fs.basefsURL = this.params.fs.basefsURL  || "basefs.xml";
+    this.params.fs.basefsURL = this.params.fs.basefsURL  || "basefs.json";
     // this.params.fs.extendedfsURL = this.params.fs.extendedfsURL  || "";
     this.params.fs.earlyload = this.params.fs.earlyload  || [];
     this.params.fs.lazyloadimages = this.params.fs.lazyloadimages  || [];
