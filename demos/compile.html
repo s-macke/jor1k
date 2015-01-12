@@ -196,7 +196,7 @@ function Start() {
     var Jor1k = require("Jor1k");
 
     jor1kgui = new Jor1k(jor1kparameters);
-    jor1kgui.term.OnCharReceived = terminalPutCharListener;
+    jor1kgui.term.term.OnCharReceived = terminalPutCharListener;
 }
 
 var term_output = "";
