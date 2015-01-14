@@ -23,7 +23,16 @@ function Debug(message) {
 function Abort() {
     Debug("Abort execution.");
     Send("Stop", {});
-    throw new Error('Kill worker');
+    throw new Error('Kill master');
+}
+
+function Error(message) {
+    Send("Debug", "Error: " + message);
+    Abort();
+}
+
+function Warning(message) {
+    Send("Debug", "Warning: " + message);
 }
 
 
@@ -49,11 +58,11 @@ function SetWorker(_worker) {
     }
 }
 
-
-
 module.exports.SetWorker = SetWorker;
 module.exports.Register = Register;
 module.exports.Debug = Debug;
+module.exports.Warning = Warning;
+module.exports.Error = Error;
 module.exports.Abort = Abort;
 module.exports.Send = Send;
  

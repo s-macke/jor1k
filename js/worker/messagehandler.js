@@ -31,7 +31,7 @@ function Error(message) {
     Abort();
 }
 
-function Warn(message) {
+function Warning(message) {
     Send("Debug", "Warning: " + message);
 }
 
@@ -58,7 +58,7 @@ onmessage = function(e) {
 module.exports.Register = Register;
 module.exports.Debug = Debug;
 module.exports.Error = Error;
-module.exports.Warn = Warn;
+module.exports.Warning = Warning;
 module.exports.Abort = Abort;
 module.exports.Send = Send;
  
