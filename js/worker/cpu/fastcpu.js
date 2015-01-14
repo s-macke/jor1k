@@ -1,9 +1,10 @@
-var imul = require('../imul');
+var message = require('../messagehandler');
 
 function FastCPU(stdlib, foreign, heap) {
 "use asm";
 
 var floor = stdlib.Math.floor;
+var imul = foreign.imul;
 var DebugMessage = foreign.DebugMessage;
 var abort = foreign.abort;
 var ReadMemory32 = foreign.ReadMemory32;
@@ -12,6 +13,7 @@ var ReadMemory16 = foreign.ReadMemory16;
 var WriteMemory16 = foreign.WriteMemory16;
 var ReadMemory8 = foreign.ReadMemory8;
 var WriteMemory8 = foreign.WriteMemory8;
+
 
 var ERROR_SETFLAGS_LITTLE_ENDIAN = 0; // "Little endian is not supported"
 var ERROR_SETFLAGS_CONTEXT_ID = 1; // "Context ID is not supported"

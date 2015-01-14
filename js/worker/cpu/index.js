@@ -5,6 +5,7 @@
 "use strict";
 var message = require('../messagehandler'); // global variable
 var toHex = require('../utils').ToHex;
+var imul = require('../imul');
 
 // CPUs
 var FastCPU = require('./fastcpu.js');
@@ -28,6 +29,7 @@ function createCPUSingleton(cpuname, ram, heap, ncores) {
     var foreign = {
         DebugMessage: message.Debug,
         abort : message.Abort,
+        imul : imul,
         ReadMemory32 : ram.ReadMemory32.bind(ram),
         WriteMemory32 : ram.WriteMemory32.bind(ram),
         ReadMemory16 : ram.ReadMemory16.bind(ram),
