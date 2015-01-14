@@ -1008,13 +1008,13 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                 // mul signed (specification seems to be wrong)
                 {
                     // this is a hack to do 32 bit signed multiply. Seems to work but needs to be tested. 
-                    r[rindex] = int32(rA >> 0) * int32(rB);
+                    r[rindex] = utils.int32(rA >> 0) * utils.int32(rB);
                     var rAl = rA & 0xFFFF;
                     var rBl = rB & 0xFFFF;
                     r[rindex] = r[rindex] & 0xFFFF0000 | ((rAl * rBl) & 0xFFFF);
-                    var result = Number(int32(rA)) * Number(int32(rB));
+                    var result = Number(utils.int32(rA)) * Number(utils.int32(rB));
                     this.SR_OV = (result < (-2147483647 - 1)) || (result > (2147483647));
-                    var uresult = uint32(rA) * uint32(rB);
+                    var uresult = utils.uint32(rA) * utils.uint32(rB);
                     this.SR_CY = (uresult > (4294967295));
                 }
                 break;
