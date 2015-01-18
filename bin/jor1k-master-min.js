@@ -698,6 +698,7 @@ module.exports = TerminalInput;
 // -------------------------------------------------
 // --------------- Terminal Emulator ---------------
 // -------------------------------------------------
+// http://lxr.free-electrons.com/source/drivers/tty/vt/vt.c
 
 "use strict";
 
@@ -744,8 +745,14 @@ function Terminal(nrows, ncolumns, elemId) {
     this.cursorx = 0;
     this.cursory = 0;
     this.scrolltop = 0;
+    this.cursortype = 1;
     this.scrollbottom = this.nrows-1;
-    this.currentcolor = 0x7;
+
+    this.attr_color = 0x7;
+    this.attr_reverse = false;
+    this.attr_italic = false;
+    this.attr_intensity = 0x1;
+
     this.pauseblink = false;
     this.OnCharReceived = function (){};
 
@@ -765,7 +772,7 @@ function Terminal(nrows, ncolumns, elemId) {
 
         for (var j = 0; j < this.ncolumns; j++) {
             this.screen[i][j] = 0x20;
-            this.color[i][j] = this.currentcolor;
+            this.color[i][j] = this.attr_color;
         }
     }
     this.UpdateScreen();
@@ -776,8 +783,24 @@ function Terminal(nrows, ncolumns, elemId) {
 Terminal.prototype.PauseBlink = function(pause) {
     pause = !! pause;
     this.pauseblink = pause;
-    this.cursorvisible = ! pause;
+    if (this.cursortype) {
+        this.cursorvisible = ! pause;
+    }
     this.PrepareUpdateRow(this.cursory, this.cursorx);
+}
+
+Terminal.prototype.GetColor = function() {
+    var c = this.attr_color;
+    if (this.attr_reverse) {
+        c = ((c & 0x7) << 8) | ((c >> 8)) & 0x7;
+    }
+    if (this.attr_intensity == 2) {
+        c = c | 0x8;
+    } else
+    if (this.attr_intensity == 0) {
+        c = c | 0x10;
+    }
+    return c;
 }
 
 Terminal.prototype.Blink = function() {
@@ -789,7 +812,7 @@ Terminal.prototype.Blink = function() {
 Terminal.prototype.DeleteRow = function(row) {
     for (var j = 0; j < this.ncolumns; j++) {
         this.screen[row][j] = 0x20;
-        this.color[row][j] = this.currentcolor;
+        this.color[row][j] = this.attr_color;
     }
     this.PrepareUpdateRow(row);
 };
@@ -798,7 +821,7 @@ Terminal.prototype.DeleteArea = function(row, column, row2, column2) {
     for (var i = row; i <= row2; i++) {
         for (var j = column; j <= column2; j++) {
             this.screen[i][j] = 0x20;
-            this.color[i][j] = this.currentcolor;
+            this.color[i][j] = this.attr_color;
         }
         this.PrepareUpdateRow(i);
     }
@@ -1008,38 +1031,61 @@ Terminal.prototype.ChangeCursor = function(Numbers) {
 Terminal.prototype.ChangeColor = function(Numbers) {
 
     if (Numbers.length == 0) { // reset;
-         this.currentcolor = 0x7;
-         return;
+        this.attr_color = 0x7;
+        this.attr_reverse = false;
+        this.attr_italic = false;
+        this.attr_intensity = 1;
+        return;
     }
 
-    var c = this.currentcolor;
+    var c = this.attr_color;
 
     for (var i = 0; i < Numbers.length; i++) {
         switch (Number(Numbers[i])) {
-        case 30: case 31: case 32: case 33: case 34: case 35: case 36: case 37:
-            c = c & (0xFFF8) | (Numbers[i] - 30) & 0x7;
-            break;
-        case 40: case 41: case 42: case 43: case 44: case 45: case 46: case 47:
-            c = c & (0x00FF) | (((Numbers[i] - 40) & 0x7) << 8);
-            break;
-        case 0:
-            c = 0x7; // reset
+
+        case 0: // reset
+            c = 0x7;
+            this.attr_reverse = false;
+            this.attr_italic = false;
+            this.attr_intensity = 1;
             break;
         case 1: // brighter foreground color
-            c = c | 0x8;
+            this.attr_intensity = 2;
             break;
         case 2: // dimmed foreground color
-            c = c | 0x10;
+            this.attr_intensity = 0;
+            break;
+        case 3: // italic
+            this.attr_italic = true;
             break;
         case 4: // underline ignored
             break;
         case 5: // extended colors or blink ignored
              //i++;
              break;
-        case 7: // inverted
-            c = ((c & 0x7) << 8) | ((c >> 8)) & 0x7; 
+        case 7: // reversed
+            this.attr_reverse = true;
             break;
         case 8: // hidden ignored
+            break;
+        case 10: // reset mapping ?
+            break;
+        case 21:
+        case 22:
+            this.attr_intensity = 1;
+            break;
+        case 23:
+            this.attr_italic = false;
+            break;
+        case 27: // no reverse
+            this.attr_reverse = false;
+            break;
+
+        case 30: case 31: case 32: case 33: case 34: case 35: case 36: case 37:
+            c = c & (0xFFF8) | (Numbers[i] - 30) & 0x7;
+            break;
+        case 40: case 41: case 42: case 43: case 44: case 45: case 46: case 47:
+            c = c & (0x00FF) | (((Numbers[i] - 40) & 0x7) << 8);
             break;
         case 39:
             c = c & (0xFF00) | 0x7; // set standard foreground color
@@ -1047,17 +1093,66 @@ Terminal.prototype.ChangeColor = function(Numbers) {
         case 49:
             c = c & 0x00FF; // set standard background color
             break;
-        case 10:
-            // reset mapping ?
-            break;
         default:
-            message.Debug("Color " + Numbers[i] + " not found");
+            message.Warning("Color " + Numbers[i] + " not found");
             break;
         }
     }
-    this.currentcolor = c|0;
-
+    this.attr_color = c|0;
 };
+
+Terminal.prototype.ChangeMode = function(numbers, question, onoff) {
+
+    for(var i=0; i<numbers.length; i++) {
+        switch(numbers[i]) {
+            case 4: // insert mode
+                break;
+
+            case 7: // auto wrap on off
+                break;
+
+            case 25: // cursor on/off
+                this.cursortype = onoff;
+                break;
+
+            case 1000: // 
+                break;
+
+            case 1006: // 
+                break;
+
+            case 1005: // 
+                break;
+            
+            default:
+                message.Warning("Mode term parameter " + this.escapestring + " unknown");
+                break;
+        }
+    }
+}
+
+Terminal.prototype.ChangeCursorType = function(numbers, question) {
+    if (!question) {
+        message.Warning("cursor parameter unknown");
+        return;
+    }
+ 
+    for(var i=0; i<numbers.length; i++) {
+        switch(numbers[i]) {
+            case 0:
+                //this.cursorvisible = false;
+                //this.cursortype = 0;
+                break; 
+            case 1:
+                //this.cursortype = 1;
+                break;
+            default:
+                message.Warning("Term parameter " + this.escapestring + " unknown");
+                break;
+        }
+    }
+}
+
 
 Terminal.prototype.HandleEscapeSequence = function() {
     //message.Debug("Escape sequence:'" + this.escapestring+"'");
@@ -1075,22 +1170,30 @@ Terminal.prototype.HandleEscapeSequence = function() {
     var s = this.escapestring;
 
     if (s.charAt(0) != "[") {
-        message.Debug("Escape sequence unknown:'" + this.escapestring + "'");
+        message.Warning("Short escape sequence unknown:'" + this.escapestring + "'");
         return; // the short escape sequences must be handled earlier
     }
 
     s = s.substr(1); // delete first sign
+
     var lastsign = s.substr(s.length - 1); // extract command
     s = s.substr(0, s.length - 1); // remove command
+
+    var question = false;
+    if (s.charAt(0) == '?') {
+        question = true;
+        s = s.substr(1); // delete question mark
+    }
+
     var numbers = s.split(";"); // if there are multiple numbers, split them
     if (numbers[0].length == 0) {
         numbers = [];
     }
+
+
     // the array must contain of numbers and not strings. Make this sure
-    if (s.charAt(0) != '?') {
-        for (i=0; i<numbers.length; i++) {
-            numbers[i] = Number(numbers[i]);
-        }
+    for (i=0; i<numbers.length; i++) {
+        numbers[i] = Number(numbers[i]);
     }
 
     var oldcursory = this.cursory; // save current cursor position
@@ -1098,48 +1201,24 @@ Terminal.prototype.HandleEscapeSequence = function() {
     switch(lastsign) {
 
         case 'l':
-            if (this.escapestring)
-            for(var i=0; i<numbers.length; i++) {
-                switch(numbers[i]) {
-                    case '7': // disable line wrap
-                    break;
-                    case '?25': // disable cursor
-                    break;
-                    case '?7': // reset auto-wrap mode 
-                    break;
-                    default:
-                        message.Debug("Term Parameter " + this.escapestring + " unknown");
-                    break;
-                }
-            }
-            break;
+            this.ChangeMode(numbers, question, true);
+            return;
 
         case 'h':
-            for(var i=0; i<numbers.length; i++) {
-                switch(numbers[i]) {
-                    case '7': // enable line wrap
-                    break;
-                    case '?25': // enable cursor
-                    break;
-                    case '?7': // Set auto-wrap mode 
-                    break;
-                    default:
-                        message.Debug("Term Parameter " + this.escapestring + " unknown");
-                    break;
-                }
-            }
-            break;
+            this.ChangeMode(numbers, question, false);
+            return;
 
         case 'c':
-            for(var i=0; i<numbers.length; i++) {
-                switch(numbers[i]) {
-                    default:
-                        message.Debug("Term Parameter " + this.escapestring + " unknown");
-                    break;
-                }
-            }
-            break;
+            this.ChangeCursorType(numbers, question);
+            return;
+    }
 
+    if (question) {
+        message.Warning("Escape sequence unknown:'" + this.escapestring + "'");
+        return;
+    }
+
+    switch(lastsign) {
         case 'm': // colors
             this.ChangeColor(numbers);
             return;
@@ -1269,13 +1348,13 @@ Terminal.prototype.HandleEscapeSequence = function() {
             if (count == 0) count = 1;
             for (var j = 0; j < count; j++) {
                 this.screen[this.cursory][this.cursorx+j] = 0x20;
-                this.color[this.cursory][this.cursorx+j] = this.currentcolor;
+                this.color[this.cursory][this.cursorx+j] = this.GetColor();
             }
             this.PrepareUpdateRow(this.cursory);
             break;    
 
         default:
-            message.Debug("Escape sequence unknown:'" + this.escapestring + "'");
+            message.Warning("Escape sequence unknown:'" + this.escapestring + "'");
         break;
     }
 
@@ -1353,8 +1432,8 @@ Terminal.prototype.PutChar = function(c) {
                 this.LineFeed();
                 this.cursorx = 0;
             }
-            this.screen[this.cursory][this.cursorx] = 32;
-            this.color[this.cursory][this.cursorx] = this.currentcolor;	
+            this.screen[this.cursory][this.cursorx] = 0x20;
+            this.color[this.cursory][this.cursorx] = this.attr_color;	
             this.cursorx++;
         } while(spaces--);
         this.PrepareUpdateRow(this.cursory);
@@ -1367,7 +1446,7 @@ Terminal.prototype.PutChar = function(c) {
     case 0x14:  case 0x15:  case 0x16:  case 0x17:
     case 0x18:  case 0x19:  case 0x1A:  case 0x1B:
     case 0x1C:  case 0x1D:  case 0x1E:  case 0x1F:
-        message.Debug("unknown character " + c);
+        message.Warning("unknown character " + c);
         return;
     }
 
@@ -1382,7 +1461,7 @@ Terminal.prototype.PutChar = function(c) {
     var cy = this.cursory;
     this.screen[cy][cx] = c;
 
-    this.color[cy][cx] = this.currentcolor;
+    this.color[cy][cx] = this.GetColor();
     this.cursorx++;
     //message.Debug("Write: " + String.fromCharCode(c));
     this.PrepareUpdateRow(cy);
@@ -1418,7 +1497,16 @@ function Debug(message) {
 function Abort() {
     Debug("Abort execution.");
     Send("Stop", {});
-    throw new Error('Kill worker');
+    throw new Error('Kill master');
+}
+
+function Error(message) {
+    Send("Debug", "Error: " + message);
+    Abort();
+}
+
+function Warning(message) {
+    Send("Debug", "Warning: " + message);
 }
 
 
@@ -1444,11 +1532,11 @@ function SetWorker(_worker) {
     }
 }
 
-
-
 module.exports.SetWorker = SetWorker;
 module.exports.Register = Register;
 module.exports.Debug = Debug;
+module.exports.Warning = Warning;
+module.exports.Error = Error;
 module.exports.Abort = Abort;
 module.exports.Send = Send;
  
@@ -1488,7 +1576,7 @@ function jor1kGUI(parameters)
     this.params.system.ncores = this.params.system.ncores || 1;
 
     this.params.fs = this.params.fs  || {};
-    this.params.fs.basefsURL = this.params.fs.basefsURL  || "basefs.xml";
+    this.params.fs.basefsURL = this.params.fs.basefsURL  || "basefs.json";
     // this.params.fs.extendedfsURL = this.params.fs.extendedfsURL  || "";
     this.params.fs.earlyload = this.params.fs.earlyload  || [];
     this.params.fs.lazyloadimages = this.params.fs.lazyloadimages  || [];
@@ -1498,7 +1586,7 @@ function jor1kGUI(parameters)
 
     // ----------------------
 
-    this.worker = new Worker(this.params.path + "jor1k-worker-min.js");
+    this.worker = new Worker(this.params.path + "../bin/jor1k-worker-min.js");
     message.SetWorker(this.worker);
 
     // ----
@@ -1550,7 +1638,7 @@ function jor1kGUI(parameters)
    this.IgnoreKeys = function() {
       return (
           (this.lastMouseDownTarget != TERMINAL) &&
-          (this.lastMouseDownTarget != this.framebuffer.fbcanvas) &&
+          (this.framebuffer && this.lastMouseDownTarget != this.framebuffer.fbcanvas) &&
           (this.lastMouseDownTarget != this.clipboard)
       );
     }

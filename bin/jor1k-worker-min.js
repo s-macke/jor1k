@@ -124,20 +124,32 @@ module.exports.UTF8Length = UTF8Length;
 module.exports.UnicodeToUTF8Stream = UnicodeToUTF8Stream;
 
 },{}],2:[function(require,module,exports){
-/*
-bzip2.js - a small bzip2 decompression implementation
+/* 
+  bzip2.js - a small bzip2 decompression implementation
+  
+  Copyright 2011 by antimatter15 (antimatter15@gmail.com)
+  
+  Based on micro-bunzip by Rob Landley (rob@landley.net).
 
-Copyright 2011 by antimatter15 (antimatter15@gmail.com)
+  Copyright (c) 2011 by antimatter15 (antimatter15@gmail.com).
 
-Based on micro-bunzip by Rob Landley (rob@landley.net).
-
-Based on bzip2 decompression code by Julian R Seward (jseward@acm.org),
-which also acknowledges contributions by Mike Burrows, David Wheeler,
-Peter Fenwick, Alistair Moffat, Radford Neal, Ian H. Witten,
-Robert Sedgewick, and Jon L. Bentley.
-
-I hereby release this code under the GNU Library General Public License
-(LGPL) version 2, available at http://www.gnu.org/copyleft/lgpl.html
+  Permission is hereby granted, free of charge, to any person obtaining a
+  copy of this software and associated documentation files (the "Software"),
+  to deal in the Software without restriction, including without limitation
+  the rights to use, copy, modify, merge, publish, distribute, sublicense,
+  and/or sell copies of the Software, and to permit persons to whom the
+  Software is furnished to do so, subject to the following conditions:
+  
+  The above copyright notice and this permission notice shall be included
+  in all copies or substantial portions of the Software.
+  
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+  EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+  MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+  IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+  DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+  TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH
+  THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
 var message = require('./messagehandler');
@@ -212,53 +224,6 @@ bzip2.crcTable =
    0xbcb4666d, 0xb8757bda, 0xb5365d03, 0xb1f740b4
 ];
 
-function LoadBinaryResource(url, OnSuccess, OnError) {
-    var req = new XMLHttpRequest();
-    req.open('GET', url, true);
-    req.responseType = "arraybuffer";
-    req.onreadystatechange = function () {
-        if (req.readyState != 4) {
-            return;
-        }
-        if ((req.status != 200) && (req.status != 0)) {
-            OnError("Error: Could not load file " + url);
-            return;
-        }
-        var arrayBuffer = req.response;
-        if (arrayBuffer) {
-            OnSuccess(arrayBuffer);
-        } else {
-            OnError("Error: No data received from: " + url);
-        }
-    };
-    req.send(null);
-}
-
-/*
-onmessage = function(e) {
-    LoadBinaryResource(e.data, function(buffer) {
-        var buffer8 = new Uint8Array(buffer);
-        var unpacked = new Uint8Array(buffer8.length*3); // this should be enough for most cases
-        var length = 0;
-        bzip2.simple(buffer8, function(x){
-
-            unpacked[length++] = x;
-            if (length >= unpacked.length) {
-               var newdata = new Uint8Array(Math.floor(unpacked.length*4/3));
-               for(var j=0; j<unpacked.length; j++) {
-                    newdata[j] = unpacked[j];
-               }
-               unpacked = newdata;
-            }
-            
-            }.bind(this)
-            );
-        postMessage({size: length, data: unpacked});
-    }, function(e){}
-    );
-}
-*/
-
 bzip2.array = function(bytes) {
     var bit = 0, byte = 0;
     var BITMASK = [0, 0x01, 0x03, 0x07, 0x0F, 0x1F, 0x3F, 0x7F, 0xFF ];
@@ -301,9 +266,9 @@ bzip2.simple = function(srcbuffer, stream) {
 }
 
 bzip2.header = function(bits) {
-    if (bits(8*3) != 4348520) throw "No magic number found";
+    if (bits(8*3) != 4348520) message.Error("No magic number found");
     var i = bits(8) - 48;
-    if (i < 1 || i > 9) throw "Not a BZIP archive";
+    if (i < 1 || i > 9) message.Error("Not a BZIP archive");
     return i;
 };
 
@@ -321,11 +286,11 @@ bzip2.decompress = function(bits, stream, buf, bufsize) {
     
     for(var h = '', i = 0; i < 6; i++) h += bits(8).toString(16);
     if (h == "177245385090") return true; //last block
-    if (h != "314159265359") throw "eek not valid bzip data";
+    if (h != "314159265359") message.Error("eek not valid bzip data");
     var crcblock = bits(32)|0; // CRC code
-    if (bits(1)) throw "unsupported obsolete version";
+    if (bits(1)) message.Error("unsupported obsolete version");
     var origPtr = bits(24);
-    if (origPtr > bufsize) throw "Initial position larger than buffer size";
+    if (origPtr > bufsize) message.Error("Initial position larger than buffer size");
     var t = bits(16);
     var symTotal = 0;
     for (i = 0; i < 16; i++) {
@@ -340,13 +305,13 @@ bzip2.decompress = function(bits, stream, buf, bufsize) {
     }
 
     var groupCount = bits(3);
-    if (groupCount < 2 || groupCount > 6) throw "another error";
+    if (groupCount < 2 || groupCount > 6) message.Error("another error");
     var nSelectors = bits(15);
-    if (nSelectors == 0) throw "meh";
+    if (nSelectors == 0) message.Error("meh");
     for(var i = 0; i < groupCount; i++) this.mtfSymbol[i] = i;
 
     for(var i = 0; i < nSelectors; i++) {
-        for(var j = 0; bits(1); j++) if (j >= groupCount) throw "whoops another error";
+        for(var j = 0; bits(1); j++) if (j >= groupCount) message.Error("whoops another error");
         var uc = this.mtfSymbol[j];
         for(var k = j-1; k>=0; k--) {
             this.mtfSymbol[k+1] = this.mtfSymbol[k];
@@ -366,7 +331,7 @@ bzip2.decompress = function(bits, stream, buf, bufsize) {
         t = bits(5); //lengths
         for(var i = 0; i < symCount; i++) {
             while(true){
-                if (t < 1 || t > MAX_HUFCODE_BITS) throw "I gave up a while ago on writing error messages";
+                if (t < 1 || t > MAX_HUFCODE_BITS) message.Error("I gave up a while ago on writing error messages");
                 if (!bits(1)) break;
                 if (!bits(1)) t++;
                 else t--;
@@ -414,7 +379,7 @@ bzip2.decompress = function(bits, stream, buf, bufsize) {
     while(true) {
         if (!(symCount--)) {
             symCount = GROUP_SIZE - 1;
-            if (selector >= nSelectors) throw "meow i'm a kitty, that's an error";
+            if (selector >= nSelectors) message.Error("meow i'm a kitty, that's an error");
             hufGroup = groups[this.selectors[selector++]];
             base = hufGroup.base.subarray(1);
             limit = hufGroup.limit.subarray(1);
@@ -422,13 +387,13 @@ bzip2.decompress = function(bits, stream, buf, bufsize) {
         i = hufGroup.minLen;
         j = bits(i);
         while(true) {
-            if (i > hufGroup.maxLen) throw "rawr i'm a dinosaur";
+            if (i > hufGroup.maxLen) message.Error("rawr i'm a dinosaur");
             if (j <= limit[i]) break;
             i++;
             j = (j << 1) | bits(1);
         }
         j -= base[i];
-        if (j < 0 || j >= MAX_SYMBOLS) throw "moo i'm a cow";
+        if (j < 0 || j >= MAX_SYMBOLS) message.Error("moo i'm a cow");
         var nextSym = hufGroup.permute[j];
         if (nextSym == SYMBOL_RUNA || nextSym == SYMBOL_RUNB) {
             if (!runPos){
@@ -442,13 +407,13 @@ bzip2.decompress = function(bits, stream, buf, bufsize) {
         }
         if (runPos) {
             runPos = 0;
-            if (count + t >= bufsize) throw "Boom.";
+            if (count + t >= bufsize) message.Error("Boom.");
             uc = this.symToByte[this.mtfSymbol[0]];
             this.byteCount[uc] += t;
             while(t--) buf[count++] = uc;
         }
         if (nextSym > symTotal) break;
-        if (count >= bufsize) throw "I can't think of anything. Error";
+        if (count >= bufsize) message.Error("I can't think of anything. Error");
         i = nextSym - 1;
         uc = this.mtfSymbol[i];
         for(var k = i-1; k>=0; k--) {
@@ -459,7 +424,7 @@ bzip2.decompress = function(bits, stream, buf, bufsize) {
         this.byteCount[uc]++;
         buf[count++] = uc;
     }
-    if (origPtr < 0 || origPtr >= count) throw "I'm a monkey and I'm throwing something at someone, namely you";
+    if (origPtr < 0 || origPtr >= count) message.Error("I'm a monkey and I'm throwing something at someone, namely you");
     var j = 0;
     for(var i = 0; i < 256; i++) {
         k = j + this.byteCount[i];
@@ -502,21 +467,21 @@ bzip2.decompress = function(bits, stream, buf, bufsize) {
     }
 
     crc = (crc ^ (-1)) >>> 0;
-    if ((crc|0) != (crcblock|0)) throw "Error in bzip2: crc32 do not match";
+    if ((crc|0) != (crcblock|0)) message.Error("Error in bzip2: crc32 do not match");
     return false;
 }
 
 module.exports = bzip2;
 
-},{"./messagehandler":23}],3:[function(require,module,exports){
+},{"./messagehandler":25}],3:[function(require,module,exports){
+var message = require('../messagehandler');
+var utils = require('../utils');
 
 function FastCPU(stdlib, foreign, heap) {
 "use asm";
 
-
-//var imul = stdlib.Math.imul;
-var imul = foreign.imul;
 var floor = stdlib.Math.floor;
+var imul = foreign.imul;
 var DebugMessage = foreign.DebugMessage;
 var abort = foreign.abort;
 var ReadMemory32 = foreign.ReadMemory32;
@@ -525,6 +490,7 @@ var ReadMemory16 = foreign.ReadMemory16;
 var WriteMemory16 = foreign.WriteMemory16;
 var ReadMemory8 = foreign.ReadMemory8;
 var WriteMemory8 = foreign.WriteMemory8;
+
 
 var ERROR_SETFLAGS_LITTLE_ENDIAN = 0; // "Little endian is not supported"
 var ERROR_SETFLAGS_CONTEXT_ID = 1; // "Context ID is not supported"
@@ -1335,6 +1301,7 @@ function Step(steps, clockspeed) {
     for(;;) {
 
         if ((ppc|0) == (fence|0)) {
+            //if (nextpc == 0x3002f674) message.Debug(utils.ToHex(pc));
             pc = nextpc;
 
             if ((!delayedins_at_page_boundary|0)) {
@@ -2144,7 +2111,221 @@ return {
 
 module.exports = FastCPU;
 
-},{}],4:[function(require,module,exports){
+},{"../messagehandler":25,"../utils":29}],4:[function(require,module,exports){
+/* this is a unified, abstract interface (a facade) to the different
+ * CPU implementations
+ */
+
+"use strict";
+var message = require('../messagehandler'); // global variable
+var toHex = require('../utils').ToHex;
+var imul = require('../imul');
+
+// CPUs
+var FastCPU = require('./fastcpu.js');
+var SafeCPU = require('./safecpu.js');
+var SMPCPU = require('./smpcpu.js');
+
+// The asm.js ("Fast") and SMP cores must be singletons
+//  because of Firefox limitations.
+var fastcpu = null;
+var smpcpu = null;
+
+var stdlib = {
+    Int32Array : Int32Array,
+    Float32Array : Float32Array,
+    Uint8Array : Uint8Array,
+    Uint16Array : Uint16Array,
+    Math : Math
+};
+
+function createCPUSingleton(cpuname, ram, heap, ncores) {
+    var foreign = {
+        DebugMessage: message.Debug,
+        abort : message.Abort,
+        imul : imul,
+        ReadMemory32 : ram.ReadMemory32.bind(ram),
+        WriteMemory32 : ram.WriteMemory32.bind(ram),
+        ReadMemory16 : ram.ReadMemory16.bind(ram),
+        WriteMemory16 : ram.WriteMemory16.bind(ram),
+        ReadMemory8 : ram.ReadMemory8.bind(ram),
+        WriteMemory8 : ram.WriteMemory8.bind(ram)
+    };
+    if (cpuname === 'asm') {
+        if (fastcpu === null) {
+            fastcpu = FastCPU(stdlib, foreign, heap);
+            fastcpu.Init();
+        }
+        return fastcpu;
+    } else if (cpuname === 'smp') {
+        if (smpcpu === null) {
+            smpcpu = SMPCPU(stdlib, foreign, heap);
+            smpcpu.Init(ncores);
+        }
+        return smpcpu;
+    }
+}
+
+function createCPU(cpuname, ram, heap, ncores) {
+    var cpu = null;
+
+    if (cpuname === "safe") {
+        return new SafeCPU(ram);
+    }
+    if (cpuname === "asm") {
+        cpu = createCPUSingleton(cpuname, ram, heap, ncores);
+        cpu.Init();
+        return cpu;
+    }
+    if (cpuname === "smp") {
+        cpu = createCPUSingleton(cpuname, ram, heap, ncores);
+        cpu.Init(ncores);
+        return cpu;
+    }
+    throw new Error("invalid CPU name:" + cpuname);
+}
+
+function CPU(cpuname, ram, heap, ncores) {
+    this.cpu = createCPU(cpuname, ram, heap, ncores);
+    this.name = cpuname;
+    this.ncores = ncores;
+    this.ram = ram;
+    this.heap = heap;
+
+    return this;
+}
+
+CPU.prototype.switchImplementation = function(cpuname) {
+    var oldcpu = this.cpu;
+    var oldcpuname = this.name;
+    if (oldcpuname == "smp") return;
+
+    this.cpu = createCPU(cpuname, this.ram, this.heap, this.ncores);
+
+    this.cpu.InvalidateTLB(); // reset TLB
+    var f = oldcpu.GetFlags();
+    this.cpu.SetFlags(f|0);
+    var h;
+    if (oldcpuname === "asm") {
+        h = new Int32Array(this.heap);
+        oldcpu.GetState();
+        this.cpu.pc = h[(0x40 + 0)];
+        this.cpu.nextpc = h[(0x40 + 1)];
+        this.cpu.delayedins = h[(0x40 + 2)]?true:false;
+        this.cpu.TTMR = h[(0x40 + 4)];
+        this.cpu.TTCR = h[(0x40 + 5)];
+        this.cpu.PICMR = h[(0x40 + 6)];
+        this.cpu.PICSR = h[(0x40 + 7)];
+        this.cpu.boot_dtlb_misshandler_address = h[(0x40 + 8)];
+        this.cpu.boot_itlb_misshandler_address = h[(0x40 + 9)];
+        this.cpu.current_pgd = h[(0x40 + 10)];
+    } else if (cpuname === "asm") {
+        h = new Int32Array(this.heap);
+        h[(0x40 + 0)] = oldcpu.pc;
+        h[(0x40 + 1)] = oldcpu.nextpc;
+        h[(0x40 + 2)] = oldcpu.delayedins;
+        h[(0x40 + 3)] = 0x0;
+        h[(0x40 + 4)] = oldcpu.TTMR;
+        h[(0x40 + 5)] = oldcpu.TTCR;
+        h[(0x40 + 6)] = oldcpu.PICMR;
+        h[(0x40 + 7)] = oldcpu.PICSR;
+        h[(0x40 + 8)] = oldcpu.boot_dtlb_misshandler_address;
+        h[(0x40 + 9)] = oldcpu.boot_itlb_misshandler_address;
+        h[(0x40 + 10)] = oldcpu.current_pgd;
+        this.cpu.PutState();
+    } else {
+        this.cpu.pc = oldcpu.pc;
+        this.cpu.nextpc = oldcpu.nextpc;
+        this.cpu.delayedins = oldcpu.delayedins;
+        this.cpu.TTMR = oldcpu.TTMR;
+        this.cpu.TTCR = oldcpu.TTCR;
+        this.cpu.PICMR = oldcpu.PICMR;
+        this.cpu.PICSR = oldcpu.PICSR;
+        this.cpu.boot_dtlb_misshandler_address = oldcpu.boot_dtlb_misshandler_address;
+        this.cpu.boot_itlb_misshandler_address = oldcpu.itlb_misshandler_address;
+        this.cpu.current_pgd = oldcpu.current_pgd;
+    }
+};
+
+CPU.prototype.toString = function() {
+    var r = new Uint32Array(this.heap);
+    var str = '';
+    str += "Current state of the machine\n";
+    //str += "clock: " + toHex(cpu.clock) + "\n";
+    str += "PC: " + toHex(this.cpu.pc<<2) + "\n";
+    str += "next PC: " + toHex(this.cpu.nextpc<<2) + "\n";
+    //str += "ins: " + toHex(cpu.ins) + "\n";
+    //str += "main opcode: " + toHex(cpu.ins>>>26) + "\n";
+    //str += "sf... opcode: " + toHex((cpu.ins>>>21)&0x1F) + "\n";
+    //str += "op38. opcode: " + toHex((cpu.ins>>>0)&0x3CF) + "\n";
+
+    for (var i = 0; i < 32; i += 4) {
+        str += "   r" + (i + 0) + ": " +
+            toHex(r[i + 0]) + "   r" + (i + 1) + ": " +
+            toHex(r[i + 1]) + "   r" + (i + 2) + ": " +
+            toHex(r[i + 2]) + "   r" + (i + 3) + ": " +
+            toHex(r[i + 3]) + "\n";
+    }
+    
+    if (this.cpu.delayedins) {
+        str += "delayed instruction\n";
+    }
+    if (this.cpu.SR_SM) {
+        str += "Supervisor mode\n";
+    }
+    else {
+        str += "User mode\n";
+    }
+    if (this.cpu.SR_TEE) {
+        str += "tick timer exception enabled\n";
+    }
+    if (this.cpu.SR_IEE) {
+        str += "interrupt exception enabled\n";
+    }
+    if (this.cpu.SR_DME) {
+        str += "data mmu enabled\n";
+    }
+    if (this.cpu.SR_IME) {
+        str += "instruction mmu enabled\n";
+    }
+    if (this.cpu.SR_LEE) {
+        str += "little endian enabled\n";
+    }
+    if (this.cpu.SR_CID) {
+        str += "context id enabled\n";
+    }
+    if (this.cpu.SR_F) {
+        str += "flag set\n";
+    }
+    if (this.cpu.SR_CY) {
+        str += "carry set\n";
+    }
+    if (this.cpu.SR_OV) {
+        str += "overflow set\n";
+    }
+    return str;
+};
+
+// forward a couple of methods to the CPU implementation
+var forwardedMethods = [
+    "Reset", 
+    "Step",
+    "RaiseInterrupt", 
+    "Step",
+    "AnalyzeImage",
+    "GetTicks",
+    "GetTimeToNextInterrupt",
+    "ProgressTime", 
+    "ClearInterrupt"];
+forwardedMethods.forEach(function(m) {
+    CPU.prototype[m] = function() {
+        return this.cpu[m].apply(this.cpu, arguments);        
+    };
+});
+
+module.exports = CPU;
+
+},{"../imul":24,"../messagehandler":25,"../utils":29,"./fastcpu.js":3,"./safecpu.js":5,"./smpcpu.js":6}],5:[function(require,module,exports){
 // -------------------------------------------------
 // -------------------- CPU ------------------------
 // -------------------------------------------------
@@ -3155,13 +3336,13 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                 // mul signed (specification seems to be wrong)
                 {
                     // this is a hack to do 32 bit signed multiply. Seems to work but needs to be tested. 
-                    r[rindex] = int32(rA >> 0) * int32(rB);
+                    r[rindex] = utils.int32(rA >> 0) * utils.int32(rB);
                     var rAl = rA & 0xFFFF;
                     var rBl = rB & 0xFFFF;
                     r[rindex] = r[rindex] & 0xFFFF0000 | ((rAl * rBl) & 0xFFFF);
-                    var result = Number(int32(rA)) * Number(int32(rB));
+                    var result = Number(utils.int32(rA)) * Number(utils.int32(rB));
                     this.SR_OV = (result < (-2147483647 - 1)) || (result > (2147483647));
-                    var uresult = uint32(rA) * uint32(rB);
+                    var uresult = utils.uint32(rA) * utils.uint32(rB);
                     this.SR_CY = (uresult > (4294967295));
                 }
                 break;
@@ -3254,15 +3435,15 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
 
 module.exports = SafeCPU;
 
-},{"../messagehandler":23,"../utils":27}],5:[function(require,module,exports){
+},{"../messagehandler":25,"../utils":29}],6:[function(require,module,exports){
+var message = require('../messagehandler');
 
 function SMPCPU(stdlib, foreign, heap) {
 
 "use asm";
 
-//var imul = stdlib.Math.imul;
-var imul = foreign.imul;
 var floor = stdlib.Math.floor;
+var imul = foreign.imul;
 var DebugMessage = foreign.DebugMessage;
 var abort = foreign.abort;
 var ReadMemory32 = foreign.ReadMemory32;
@@ -5072,7 +5253,7 @@ return {
 
 module.exports = SMPCPU;
 
-},{}],6:[function(require,module,exports){
+},{"../messagehandler":25}],7:[function(require,module,exports){
 // -------------------------------------------------
 // --------------------- ATA -----------------------
 // -------------------------------------------------
@@ -5507,7 +5688,7 @@ ATADev.prototype.WriteReg32 = function(addr, x) {
 
 module.exports = ATADev;
 
-},{"../messagehandler":23,"../utils":27}],7:[function(require,module,exports){
+},{"../messagehandler":25,"../utils":29}],8:[function(require,module,exports){
 // -------------------------------------------------
 // ----------------- Ethernet ----------------------
 // -------------------------------------------------
@@ -6263,7 +6444,7 @@ function EthDev(ram, intdev, mac) {
 
 module.exports = EthDev;
 
-},{"../messagehandler":23,"../utils":27}],8:[function(require,module,exports){
+},{"../messagehandler":25,"../utils":29}],9:[function(require,module,exports){
 // -------------------------------------------------
 // ---------------- Framebuffer --------------------
 // -------------------------------------------------
@@ -6323,7 +6504,7 @@ FBDev.prototype.GetBuffer = function () {
 
 module.exports = FBDev;
 
-},{"../messagehandler":23,"../utils":27}],9:[function(require,module,exports){
+},{"../messagehandler":25,"../utils":29}],10:[function(require,module,exports){
 // -------------------------------------------------
 // ---------------------- IRQ ----------------------
 // -------------------------------------------------
@@ -6429,7 +6610,7 @@ IRQDev.prototype.WriteReg32 = function (addr, value) {
 
 module.exports = IRQDev;
 
-},{"../messagehandler":23,"../utils":27}],10:[function(require,module,exports){
+},{"../messagehandler":25,"../utils":29}],11:[function(require,module,exports){
 // -------------------------------------------------
 // ------------------ KEYBOARD ---------------------
 // -------------------------------------------------
@@ -6758,7 +6939,7 @@ KeyboardDev.prototype.ReadReg8 = function (addr) {
 
 module.exports = KeyboardDev;
 
-},{"../messagehandler":23}],11:[function(require,module,exports){
+},{"../messagehandler":25}],12:[function(require,module,exports){
 // -------------------------------------------------
 // ---------------------- RTC ----------------------
 // -------------------------------------------------
@@ -6839,7 +7020,7 @@ RTCDev.prototype.WriteReg32 = function (addr, value) {
 
 module.exports = RTCDev;
 
-},{"../messagehandler":23,"../utils":27}],12:[function(require,module,exports){
+},{"../messagehandler":25,"../utils":29}],13:[function(require,module,exports){
 // -------------------------------------------------
 // --------------------- SOUND ---------------------
 // -------------------------------------------------
@@ -7011,7 +7192,7 @@ SoundDev.prototype.WriteReg32 = function (addr, value) {
 
 module.exports = SoundDev;
 
-},{"../messagehandler":23,"../utils":27}],13:[function(require,module,exports){
+},{"../messagehandler":25,"../utils":29}],14:[function(require,module,exports){
 // -------------------------------------------------
 // -------------------- Timer ----------------------
 // -------------------------------------------------
@@ -7041,7 +7222,7 @@ TimerDev.prototype.WriteReg32 = function (addr, value) {
 
 module.exports = TimerDev;
 
-},{"../messagehandler":23}],14:[function(require,module,exports){
+},{"../messagehandler":25}],15:[function(require,module,exports){
 // -------------------------------------------------
 // ---------------- TOUCHSCREEN --------------------
 // -------------------------------------------------
@@ -7184,7 +7365,7 @@ TouchscreenDev.prototype.WriteReg32 = function (addr, value) {
 
 module.exports = TouchscreenDev;
 
-},{"../messagehandler":23,"../utils":27}],15:[function(require,module,exports){
+},{"../messagehandler":25,"../utils":29}],16:[function(require,module,exports){
 // -------------------------------------------------
 // -------------------- UART -----------------------
 // -------------------------------------------------
@@ -7481,7 +7662,7 @@ UARTDev.prototype.WriteReg8 = function(addr, x) {
 
 module.exports = UARTDev;
 
-},{"../messagehandler":23,"../utils":27}],16:[function(require,module,exports){
+},{"../messagehandler":25,"../utils":29}],17:[function(require,module,exports){
 // -------------------------------------------------
 // ------------------- VIRTIO ----------------------
 // -------------------------------------------------
@@ -7815,7 +7996,7 @@ VirtIODev.prototype.WriteReg32 = function (addr, val) {
 
 module.exports = VirtIODev;
 
-},{"../messagehandler":23,"../utils":27,"./virtio/marshall":18}],17:[function(require,module,exports){
+},{"../messagehandler":25,"../utils":29,"./virtio/marshall":19}],18:[function(require,module,exports){
 // -------------------------------------------------
 // --------------------- 9P ------------------------
 // -------------------------------------------------
@@ -7981,7 +8162,7 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             inode.symlink = inodetarget.symlink;
             inode.data = new Uint8Array(inode.size);
             for(var i=0; i<inode.size; i++) {
-                inode.data[i] = inodetarget.data[i];
+                inode.data[i] = this.fs.ReadByte(inodetarget, i);
             }
             inode.name = name;
             inode.parentid = this.fids[dfid].inodeid;
@@ -8200,7 +8381,7 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             } else {
                 if (inode.size < offset+count) count = inode.size - offset;
                 for(var i=0; i<count; i++)
-                    this.replybuffer[7+4+i] = inode.data[offset+i];
+                    this.replybuffer[7+4+i] = this.fs.ReadByte(inode, offset+i);
             }
             marshall.Marshall(["w"], [count], this.replybuffer, 7);
             this.BuildReply(id, tag, 4 + count);
@@ -8377,7 +8558,7 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
 
 module.exports = Virtio9p;
 
-},{"../../messagehandler":23,"../../utils":27,"./marshall":18}],18:[function(require,module,exports){
+},{"../../messagehandler":25,"../../utils":29,"./marshall":19}],19:[function(require,module,exports){
 // -------------------------------------------------
 // ------------------ Marshall ---------------------
 // -------------------------------------------------
@@ -8551,7 +8732,7 @@ module.exports.Marshall = Marshall;
 module.exports.Unmarshall = Unmarshall;
 module.exports.Unmarshall2 = Unmarshall2;
 
-},{"../../../lib/utf8":1,"../../messagehandler":23}],19:[function(require,module,exports){
+},{"../../../lib/utf8":1,"../../messagehandler":25}],20:[function(require,module,exports){
 // -------------------------------------------------
 // ----------------- FILESYSTEM---------------------
 // -------------------------------------------------
@@ -8566,6 +8747,7 @@ var bzip2 = require('../bzip2.js');
 var marshall = require('../dev/virtio/marshall.js');
 var UTF8 = require('../../lib/utf8.js');
 var message = require('../messagehandler');
+var LazyUint8Array = require("./lazyUint8Array.js");
 
 var S_IRWXUGO = 0x1FF;
 var S_IFMT = 0xF000;
@@ -8628,10 +8810,10 @@ function FS() {
 FS.prototype.LoadFilesystem = function(userinfo)
 {
     this.userinfo = userinfo;
-    this.fsloader.LoadXML(this.userinfo.basefsURL);
+    this.fsloader.LoadJSON(this.userinfo.basefsURL);
     this.OnLoaded = function() { // the basic filesystem is loaded, so download the rest
         if (this.userinfo.extendedfsURL) {
-            this.fsloader.LoadXML(this.userinfo.extendedfsURL);
+            this.fsloader.LoadJSON(this.userinfo.extendedfsURL);
         }
         for(var i=0; i<this.userinfo.lazyloadimages.length; i++) {
             this.LoadImage(this.userinfo.lazyloadimages[i]);
@@ -8754,9 +8936,22 @@ FS.prototype.LoadFile = function(idx) {
         return;
     }
 
+    if (inode.lazy) {
+        message.Debug("Using lazy file for " + inode.url);
+        inode.data = new LazyUint8Array(inode.url, inode.size);
+        var old = inode.size;
+        inode.size = inode.data.length;
+        if (old != inode.size) message.Warn("Size wrong for lazy loaded file: " + inode.name);
+        inode.status = STATUS_OK;
+        this.filesinloadingqueue--;
+        this.HandleEvent(idx);
+        return;
+    }
+
     utils.LoadBinaryResource(inode.url, 
         function(buffer){
             inode.data = new Uint8Array(buffer);
+            if (inode.size != this.inodes[idx].data.length) message.Warn("Size wrong for uncompressed non-lazily loaded file: " + inode.name);
             inode.size = this.inodes[idx].data.length; // correct size if the previous was wrong. 
             inode.status = STATUS_OK;
             if (inode.name == "rcS") {
@@ -8970,8 +9165,12 @@ FS.prototype.Write = function(id, offset, count, GetByte) {
     if (inode.size < (offset+count)) {
         inode.size = offset + count;
     }
-    for(var i=0; i<count; i++)
-        inode.data[offset+i] = GetByte();
+    if (inode.data instanceof Uint8Array)
+        for(var i=0; i<count; i++)
+            inode.data[offset+i] = GetByte();
+    else
+        for(var i=0; i<count; i++)
+            inode.data.Set(offset+i, GetByte());
 }
 
 FS.prototype.Search = function(parentid, name) {
@@ -9062,14 +9261,22 @@ FS.prototype.GetInode = function(idx)
 FS.prototype.ChangeSize = function(idx, newsize)
 {
     var inode = this.GetInode(idx);
-    var temp = inode.data;
     //message.Debug("change size to: " + newsize);
     if (newsize == inode.size) return;
-    inode.data = new Uint8Array(newsize);
+    var temp = new Uint8Array(newsize);
     inode.size = newsize;
-    var size = Math.min(temp.length, inode.size);
+    var size = Math.min(inode.data.length, inode.size);
     for(var i=0; i<size; i++) {
-        inode.data[i] = temp[i];
+        temp[i] = this.ReadByte(inode, i);
+    }
+    inode.data = temp;
+}
+
+FS.prototype.ReadByte = function(inode, idx) {
+    if (inode.data instanceof Uint8Array) {
+        return inode.data[idx];
+    } else {
+        return inode.data.Get(idx);
     }
 }
 
@@ -9238,7 +9445,7 @@ FS.prototype.PrepareCAPs = function(id) {
 
 module.exports = FS;
 
-},{"../../lib/utf8.js":1,"../bzip2.js":2,"../dev/virtio/marshall.js":18,"../messagehandler":23,"../utils.js":27,"./fsloader.js":20,"./tar.js":21}],20:[function(require,module,exports){
+},{"../../lib/utf8.js":1,"../bzip2.js":2,"../dev/virtio/marshall.js":19,"../messagehandler":25,"../utils.js":29,"./fsloader.js":21,"./lazyUint8Array.js":22,"./tar.js":23}],21:[function(require,module,exports){
 // -------------------------------------------------
 // ------------- FILESYSTEM LOADER -----------------
 // -------------------------------------------------
@@ -9268,155 +9475,173 @@ function FSLoader(filesystem) {
     this.fs = filesystem;
 }
 
-FSLoader.prototype.ReadVariable = function(buffer, offset) {
-    var variable = [];
-    variable.name = "";
-    variable.value = "";
+FSLoader.prototype.HandleDirContents = function(list, parentid) {
+    for (var tag of list) {
+         var inode;
 
-    // read blanks
-    for(var i=offset; i<buffer.length; i++) {
-        if (buffer[i] == '>') return variable;
-        if (buffer[i] == '/') return variable;
-        if (buffer[i] != ' ') break;
-    }
-    offset = i;
-    if (buffer[i] == '>') return variable;
+         var id = this.fs.Search(parentid, tag.name);
+         if (id != -1) {
+             if (!tag.path && !tag.size) {
+                 if (tag.child) this.HandleDirContents(tag.child, id);
+                 continue;
+             } else {
+                 message.Debug("Overwriting non-directory!");
+             }
+         }
 
-    // read variable name
-    for(var i=offset; i<buffer.length; i++) {
-        if (buffer[i] == '>') break;
-        if (buffer[i] == '=') break;
-        variable.name = variable.name + buffer[i]; 
+         inode = this.fs.CreateInode();
+         inode.name = tag.name;
+         inode.uid = tag.uid|0;
+         inode.gid = tag.gid|0;
+         inode.parentid = parentid;
+         inode.mode = parseInt(tag.mode, 8);
+
+         if (tag.path) { // link
+             inode.mode = S_IFLNK | S_IRWXUGO;
+             inode.symlink = tag.path;
+             this.fs.PushInode(inode);
+         } else if (!tag.size) { // dir
+             inode.mode |= S_IFDIR;
+             inode.updatedir = true;
+             this.fs.PushInode(inode);
+             if (tag.child)
+                 this.HandleDirContents(tag.child, id != -1 ? id : this.fs.inodes.length-1);
+         } else { // file
+             if (tag.lazy) inode.lazy = tag.lazy;
+             inode.mode |= S_IFREG;
+             var idx = this.fs.inodes.length;
+             inode.status = STATUS_ON_SERVER;
+             inode.compressed = !!tag.c;
+             inode.size = tag.size|0;
+             this.fs.PushInode(inode);
+             var url = this.sysrootdir + (!tag.src?this.fs.GetFullPath(idx):tag.src);
+             inode.url = url;
+             //message.Debug("Load id=" + (idx) + " " + url);
+             if (tag.load || this.fs.CheckEarlyload(this.fs.GetFullPath(idx)) ) {
+                 this.fs.LoadFile(idx);
+             }
+         }
     }
-    offset = i+1;
-    if (variable.name.length == 0) return variable;
-    // read variable value
-    for(var i=offset+1; i<buffer.length; i++) {
-        if (buffer[i] == '>') break;
-        if (buffer[i] == '\'') break;
-        variable.value = variable.value + buffer[i]; 
-    }
-    offset = i+1;
-    variable.offset = offset;
-    //message.Debug("read " + variable.name + "=" + variable.value);
-    return variable;
 }
 
-FSLoader.prototype.ReadTag = function(buffer, offset) {
-    var tag = [];
-    tag.type = "";
-    tag.name = "";
-    tag.mode = 0x0;
-    tag.uid = 0x0;
-    tag.gid = 0x0;
-    tag.path = "";
-    tag.src = "";
-    tag.compressed = false;
-    tag.load = false;
-
-    if (buffer[offset] != '<') return tag;
-    for(var i=offset+1; i<buffer.length; i++) {
-        if (buffer[i] ==  ' ') break;
-        if (buffer[i] == '\n') break;
-        if (buffer[i] == '>') break;
-        tag.type = tag.type + buffer[i]; 
-    }
-    offset = i;
-    // read variables
-    do {
-        var variable = this.ReadVariable(buffer, offset);
-        if (variable.name == "name") tag.name = variable.value;
-        if (variable.name == "mode") tag.mode = parseInt(variable.value, 8);
-        if (variable.name == "uid") tag.uid = parseInt(variable.value, 10);
-        if (variable.name == "gid") tag.gid = parseInt(variable.value, 10);
-        if (variable.name == "path") tag.path = variable.value;
-        if (variable.name == "size") tag.size = parseInt(variable.value, 10);
-        if (variable.name == "src") tag.src = variable.value;
-        if (variable.name == "compressed") tag.compressed = true;
-        if (variable.name == "load") tag.load = true;
-        offset = variable.offset;
-    } while(variable.name.length != 0);
-    return tag;
-};
-
-
-FSLoader.prototype.OnXMLLoaded = function(fsxml)
+FSLoader.prototype.OnJSONLoaded = function(fsxml)
 {
-    // At this point I realized, that the dom is not available in worker threads and that I cannot get the xml information directly.
-    // So let's analyze ourself
-    var sysrootdir = "";
+    var t = JSON.parse(fsxml);
 
-    var parentid = 0;
-    for(var i=0; i<fsxml.length; i++)
-    {
-        if (fsxml[i] != '<') continue;
-        var tag = this.ReadTag(fsxml, i, ' ');
-        var id = this.fs.Search(parentid, tag.name);
-        if (id != -1) {
-            if (tag.type == "Dir") parentid = id;             
-            continue;
-        }
-        var inode = this.fs.CreateInode();
-        inode.name = tag.name;
-        inode.uid = tag.uid;
-        inode.gid = tag.gid;
-        inode.parentid = parentid;
-        inode.mode = tag.mode;
-        
-        var size = tag.size;
+    this.sysrootdir = t.src;
+    if (String(this.sysrootdir) !== this.sysrootdir) message.Debug("No sysroot (src tag)!");
+    this.sysrootdir += "/";
 
-    switch(tag.type) {
-    case "FS":
-        sysrootdir = "" + tag.src + "/";
-        break;
+    this.HandleDirContents(t.fs, 0);
 
-    case "Dir":
-        inode.mode |= S_IFDIR;
-        inode.updatedir = true;
-        parentid = this.fs.inodes.length;
-        this.fs.PushInode(inode);
-        break;
-
-   case "/Dir":
-        parentid = this.fs.inodes[parentid].parentid;
-        break;
-
-   case "File":
-        inode.mode |= S_IFREG;
-        var idx = this.fs.inodes.length;
-        inode.status = STATUS_ON_SERVER;
-        inode.compressed = tag.compressed;
-        inode.size = size;
-        this.fs.PushInode(inode);
-        var url = sysrootdir + (tag.src.length==0?this.fs.GetFullPath(idx):tag.src);
-        inode.url = url;
-        //message.Debug("Load id=" + (idx) + " " + url);
-        if (tag.load || this.fs.CheckEarlyload(this.fs.GetFullPath(idx)) ) {
-            this.fs.LoadFile(idx);
-        }
-        break;
-
-    case "Link":
-        inode.mode = S_IFLNK | S_IRWXUGO;
-        inode.symlink = tag.path;
-        this.fs.PushInode(inode);
-        break;
-        }
-    }
     message.Debug("processed " + this.fs.inodes.length + " inodes");
     this.fs.Check();
 }
 
-FSLoader.prototype.LoadXML = function(url)
+FSLoader.prototype.LoadJSON = function(url)
 {
     message.Debug("Load filesystem information from " + url);
-    utils.LoadXMLResource(url, this.OnXMLLoaded.bind(this), function(error){throw error;});
+    utils.LoadTextResource(url, this.OnJSONLoaded.bind(this), function(error){throw error;});
 }
-
 
 module.exports = FSLoader;
 
-},{"../messagehandler":23,"../utils":27}],21:[function(require,module,exports){
+},{"../messagehandler":25,"../utils":29}],22:[function(require,module,exports){
+"use strict";
+
+var message = require("../messagehandler");
+
+function LazyUint8Array_length_getter() {
+    if (!this.lengthKnown) {
+        this.CacheLength();
+    }
+    return this._length;
+}
+
+function LazyUint8Array_chunkSize_getter() {
+    if (!this.lengthKnown) {
+        this.CacheLength();
+    }
+    return this._chunkSize;
+}
+
+function LazyUint8Array(url, fallbackLength) {
+    this.fallbackLength = fallbackLength;
+    this.overlay = [];
+    this.url = url;
+    this.lengthKnown = false;
+    this.chunks = []; // Loaded chunks. Index is the chunk number
+    Object.defineProperty(this, "length", { get: LazyUint8Array_length_getter });
+    Object.defineProperty(this, "chunkSize", { get: LazyUint8Array_chunkSize_getter });
+}
+
+LazyUint8Array.prototype.Set = function LazyUint8Array_Set(idx, data) {
+    if (idx > this.length-1 || idx < 0) {
+        return undefined;
+    }
+    this.overlay[idx] = data;
+}
+
+LazyUint8Array.prototype.Get = function LazyUint8Array_Get(idx) {
+    if (idx > this.length-1 || idx < 0) {
+        return undefined;
+    }
+    if (typeof(this.overlay[idx]) !== "undefined") return this.overlay[idx];
+    var chunkOffset = idx % this.chunkSize;
+    var chunkNum = (idx / this.chunkSize)|0;
+    return this.GetChunk(chunkNum)[chunkOffset];
+}
+
+LazyUint8Array.prototype.DoXHR = function LazyUint8Array_DoXHR(from, to) {
+    if (from > to) message.Error("Invalid range (" + from + ", " + to + ") or no bytes requested!");
+    if (to > this._length-1) message.Error("Only " + this._length + " bytes available! programmer error!");
+
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', this.url, false);
+    if (this._length !== this._chunkSize) xhr.setRequestHeader("Range", "bytes=" + from + "-" + to);
+
+    xhr.responseType = 'arraybuffer';
+
+    xhr.send(null);
+    if (!(xhr.status >= 200 && xhr.status < 300 || xhr.status === 304)) throw new Error("Couldn't load " + this.url + ". Status: " + xhr.status);
+    return new Uint8Array(xhr.response || []);
+}
+
+LazyUint8Array.prototype.GetChunk = function LazyUint8Array_GetChunk(chunkNum) {
+    var start = chunkNum * this._chunkSize;
+    var end = (chunkNum+1) * this._chunkSize - 1; // including this byte
+    end = Math.min(end, this._length-1); // if length-1 is selected, this is the last block
+    if (typeof(this.chunks[chunkNum]) === "undefined") {
+      this.chunks[chunkNum] = this.DoXHR(start, end);
+    }
+    return this.chunks[chunkNum];
+}
+
+LazyUint8Array.prototype.CacheLength = function LazyUint8Array_CacheLength() {
+    // Find length
+    var xhr = new XMLHttpRequest();
+    xhr.open('HEAD', this.url + "?" + new Date().getTime(), false);
+    xhr.send(null);
+
+    if (!(xhr.status >= 200 && xhr.status < 300 || xhr.status === 304)) throw new Error("Couldn't load " + this.url + ". Status: " + xhr.status);
+    this._length = Number(xhr.getResponseHeader("Content-length"));
+    if (this._length === 0) {
+        message.Warn("Server doesn't return Content-length, even though we have a cache defeating URL query-string appended");
+        this._length = this.fallbackLength;
+    }
+
+    this._chunkSize = 1024*1024; // Chunk size in bytes
+
+    var header;
+    var hasByteServing = (header = xhr.getResponseHeader("Accept-Ranges")) && header === "bytes";
+    if (!hasByteServing) this._chunkSize = this._length;
+
+    this.lengthKnown = true;
+}
+
+module.exports = LazyUint8Array;
+
+},{"../messagehandler":25}],23:[function(require,module,exports){
 // -------------------------------------------------
 // -------------------- TAR ------------------------
 // -------------------------------------------------
@@ -9631,8 +9856,8 @@ TAR.prototype.Pack = function(path) {
 
 module.exports = TAR;
 
-},{"../messagehandler":23}],22:[function(require,module,exports){
-module.exports = function(a, b) {
+},{"../messagehandler":25}],24:[function(require,module,exports){
+module.exports = Math.imul || function(a, b) {
     var ah  = (a >>> 16) & 0xffff;
     var al = a & 0xffff;
     var bh  = (b >>> 16) & 0xffff;
@@ -9642,12 +9867,14 @@ module.exports = function(a, b) {
     return ((al * bl) + (((ah * bl + al * bh) << 16) >>> 0)|0);
 };
 
-},{}],23:[function(require,module,exports){
+},{}],25:[function(require,module,exports){
 // -------------------------------------------------
 // ------------- MessageHandler --------------------
 // -------------------------------------------------
 
 "use strict";
+
+var run = true;
 
 function Send(command, data) {
     postMessage(
@@ -9664,31 +9891,49 @@ function Debug(message) {
 
 function Abort() {
     Debug("Abort execution.");
+    run = false;
     Send("Stop", {});
     throw new Error('Kill worker');
 }
 
+function Error(message) {
+    Send("Debug", "Error: " + message);
+    Abort();
+}
+
+function Warning(message) {
+    Send("Debug", "Warning: " + message);
+}
 
 var messagemap = new Object();
+
 function Register(message, OnReceive) {
     messagemap[message] = OnReceive;
 }
 
 // this is a global object of the worker
 onmessage = function(e) {
+    if (!run) return; // ignore all messages after an error
+
     if (typeof messagemap[e.data.command] == 'function') {
+        try {
             messagemap[e.data.command](e.data.data);
-            return;
+        } catch (e) {
+            run = false;
+        }
+        return;
     }
 }
 
 module.exports.Register = Register;
 module.exports.Debug = Debug;
+module.exports.Error = Error;
+module.exports.Warning = Warning;
 module.exports.Abort = Abort;
 module.exports.Send = Send;
  
 
-},{}],24:[function(require,module,exports){
+},{}],26:[function(require,module,exports){
 // -------------------------------------------------
 // -------------------- RAM ------------------------
 // -------------------------------------------------
@@ -9786,7 +10031,7 @@ RAM.prototype.WriteMemory16 = function(addr, x) {
 
 module.exports = RAM;
 
-},{"./messagehandler":23,"./utils":27}],25:[function(require,module,exports){
+},{"./messagehandler":25,"./utils":29}],27:[function(require,module,exports){
 // -------------------------------------------------
 // ------------------- SYSTEM ----------------------
 // -------------------------------------------------
@@ -9798,12 +10043,9 @@ var utils = require('./utils.js');
 var RAM = require('./ram.js');
 var bzip2 = require('./bzip2.js');
 var Timer = require('./timer.js');
-var imul = require('./imul.js');
 
-// CPUs
-var FastCPU = require('./cpu/fastcpu.js');
-var SafeCPU = require('./cpu/safecpu.js');
-var SMPCPU = require('./cpu/smpcpu.js');
+// CPU
+var CPU = require('./cpu');
 
 // Devices
 var UARTDev = require('./dev/uart.js');
@@ -9818,16 +10060,6 @@ var KeyboardDev = require('./dev/keyboard.js');
 var SoundDev = require('./dev/sound.js');
 var VirtIODev = require('./dev/virtio.js');
 var Virtio9p = require('./dev/virtio/9p.js');
-
-//require('./dev/virtio/marshall.js');
-
-
-/*
-require('./system.js');
-require('../lib/utf8.js');
-require('./filesystem/tar.js');
-*/
-
 var FS = require('./filesystem/filesystem.js');
 
 
@@ -9870,83 +10102,24 @@ function System() {
     message.Register("ChangeCore", this.ChangeCPU.bind(this) );
 
     message.Register("GetIPS", function(data) {
-            message.Send("GetIPS", this.ips);
-            this.ips=0;
-        }.bind(this)
+        message.Send("GetIPS", this.ips);
+        this.ips=0;
+    }.bind(this)
+
     );
 }
 
 System.prototype.CreateCPU = function(cpuname) {
-    if (cpuname == "safe") {
-        this.cpu = new SafeCPU(this.ram);
-    } else 
-    if (cpuname == "asm") {
-        this.cpu = this.fastcpu;
-        this.cpu.Init();
-    } else
-    if (cpuname == "smp") {
-        this.cpu = this.smpcpu;
-        this.cpu.Init(this.ncores);
-    } else {
-        message.Debug("Error: CPU name unknown");
-        return;
+    try {
+        this.cpu = new CPU(cpuname, this.ram, this.heap, this.ncores);
+    } catch (e) {
+        message.Debug("Error: failed to create CPU:" + e);
     }
-    this.currentcpuname = cpuname;
 };
 
 
 System.prototype.ChangeCPU = function(cpuname) {
-
-    var oldcpu = this.cpu;
-    var oldcpuname = this.currentcpuname;
-    if (oldcpuname == "smp") return;
-
-    this.CreateCPU(cpuname);
-
-    this.cpu.InvalidateTLB(); // reset TLB
-    var f = oldcpu.GetFlags();
-    this.cpu.SetFlags(f|0);
-    var h;
-    if (oldcpuname == "asm") {
-        h = new Int32Array(this.heap);
-        oldcpu.GetState();
-        this.cpu.pc = h[(0x40 + 0)];
-        this.cpu.nextpc = h[(0x40 + 1)];
-        this.cpu.delayedins = h[(0x40 + 2)]?true:false;
-        this.cpu.TTMR = h[(0x40 + 4)];
-        this.cpu.TTCR = h[(0x40 + 5)];
-        this.cpu.PICMR = h[(0x40 + 6)];
-        this.cpu.PICSR = h[(0x40 + 7)];
-        this.cpu.boot_dtlb_misshandler_address = h[(0x40 + 8)];
-        this.cpu.boot_itlb_misshandler_address = h[(0x40 + 9)];
-        this.cpu.current_pgd = h[(0x40 + 10)];
-    } else
-    if (cpuname == "asm") {
-        h = new Int32Array(this.heap);
-        h[(0x40 + 0)] = oldcpu.pc;
-        h[(0x40 + 1)] = oldcpu.nextpc;
-        h[(0x40 + 2)] = oldcpu.delayedins;
-        h[(0x40 + 3)] = 0x0;
-        h[(0x40 + 4)] = oldcpu.TTMR;
-        h[(0x40 + 5)] = oldcpu.TTCR;
-        h[(0x40 + 6)] = oldcpu.PICMR;
-        h[(0x40 + 7)] = oldcpu.PICSR;
-        h[(0x40 + 8)] = oldcpu.boot_dtlb_misshandler_address;
-        h[(0x40 + 9)] = oldcpu.boot_itlb_misshandler_address;
-        h[(0x40 + 10)] = oldcpu.current_pgd;
-        this.cpu.PutState();
-    } else {
-        this.cpu.pc = oldcpu.pc;
-        this.cpu.nextpc = oldcpu.nextpc;
-        this.cpu.delayedins = oldcpu.delayedins;
-        this.cpu.TTMR = oldcpu.TTMR;
-        this.cpu.TTCR = oldcpu.TTCR;
-        this.cpu.PICMR = oldcpu.PICMR;
-        this.cpu.PICSR = oldcpu.PICSR;
-        this.cpu.boot_dtlb_misshandler_address = oldcpu.boot_dtlb_misshandler_address;
-        this.cpu.boot_itlb_misshandler_address = oldcpu.itlb_misshandler_address;
-        this.cpu.current_pgd = oldcpu.current_pgd;
-    }
+    this.cpu.switchImplementation(cpuname);
 };
 
 System.prototype.Reset = function() {
@@ -9981,37 +10154,8 @@ System.prototype.Init = function(system) {
     this.memorysize--; // - the lower 1 MB are used for the cpu cores
     this.ram = new RAM(this.heap, ramoffset);
 
-    if (typeof Math.imul == "undefined") {
-        Math.imul = imul;
-    }
 
-    // Create the asm.js core. Because of Firefox limitations it can only be created once.
-    var stdlib = {
-        Int32Array : Int32Array,
-        Float32Array : Float32Array,
-        Uint8Array : Uint8Array,
-        Uint16Array : Uint16Array,
-        Math : Math
-    };
-    var foreign = 
-    {
-        DebugMessage: message.Debug,
-        abort : message.Abort,
-        imul : Math.imul,
-        ReadMemory32 : this.ram.ReadMemory32.bind(this.ram),
-        WriteMemory32 : this.ram.WriteMemory32.bind(this.ram),
-        ReadMemory16 : this.ram.ReadMemory16.bind(this.ram),
-        WriteMemory16 : this.ram.WriteMemory16.bind(this.ram),
-        ReadMemory8 : this.ram.ReadMemory8.bind(this.ram),
-        WriteMemory8 : this.ram.WriteMemory8.bind(this.ram)
-    };
-    this.fastcpu = FastCPU(stdlib, foreign, this.heap);
-    this.fastcpu.Init();
-
-    this.smpcpu = SMPCPU(stdlib, foreign, this.heap);
-    this.smpcpu.Init(system.ncores);
-
-    this.CreateCPU(system.cpu);
+    this.CreateCPU(system.cpu, this.ram, this.heap, system.ncores);
 
     this.irqdev = new IRQDev(this);
     this.timerdev = new TimerDev();
@@ -10084,63 +10228,8 @@ System.prototype.ClearSoftInterrupt = function (line, cpuid) {
     this.cpu.ClearInterrupt(line, cpuid);
 };
 
-
-
 System.prototype.PrintState = function() {
-    var r = new Uint32Array(this.heap);
-    message.Debug("Current state of the machine");
-    //message.Debug("clock: " + utils.ToHex(cpu.clock));
-    message.Debug("PC: " + utils.ToHex(this.cpu.pc<<2));
-    message.Debug("next PC: " + utils.ToHex(this.cpu.nextpc<<2));
-    //message.Debug("ins: " + utils.ToHex(cpu.ins));
-    //message.Debug("main opcode: " + utils.ToHex(cpu.ins>>>26));
-    //message.Debug("sf... opcode: " + utils.ToHex((cpu.ins>>>21)&0x1F));
-    //message.Debug("op38. opcode: " + utils.ToHex((cpu.ins>>>0)&0x3CF));
-
-    for (var i = 0; i < 32; i += 4) {
-        message.Debug("   r" + (i + 0) + ": " +
-            utils.ToHex(r[i + 0]) + "   r" + (i + 1) + ": " +
-            utils.ToHex(r[i + 1]) + "   r" + (i + 2) + ": " +
-            utils.ToHex(r[i + 2]) + "   r" + (i + 3) + ": " +
-            utils.ToHex(r[i + 3]));
-    }
-    
-    if (this.cpu.delayedins) {
-        message.Debug("delayed instruction");
-    }
-    if (this.cpu.SR_SM) {
-        message.Debug("Supervisor mode");
-    }
-    else {
-        message.Debug("User mode");
-    }
-    if (this.cpu.SR_TEE) {
-        message.Debug("tick timer exception enabled");
-    }
-    if (this.cpu.SR_IEE) {
-        message.Debug("interrupt exception enabled");
-    }
-    if (this.cpu.SR_DME) {
-        message.Debug("data mmu enabled");
-    }
-    if (this.cpu.SR_IME) {
-        message.Debug("instruction mmu enabled");
-    }
-    if (this.cpu.SR_LEE) {
-        message.Debug("little endian enabled");
-    }
-    if (this.cpu.SR_CID) {
-        message.Debug("context id enabled");
-    }
-    if (this.cpu.SR_F) {
-        message.Debug("flag set");
-    }
-    if (this.cpu.SR_CY) {
-        message.Debug("carry set");
-    }
-    if (this.cpu.SR_OV) {
-        message.Debug("overflow set");
-    }
+    message.Debug(this.cpu.toString());
 };
 
 System.prototype.SendStringToTerminal = function(str)
@@ -10215,13 +10304,13 @@ System.prototype.HandleHalt = function() {
         this.idletime = utils.GetMilliseconds();
         this.status = SYSTEM_HALT;
         this.idletimeouthandle = setTimeout(function() {
-                if (this.status == SYSTEM_HALT) {
-                    this.status = SYSTEM_RUN;
-                    this.cpu.ProgressTime(delta);
-                    //this.snddev.Progress();
-                    this.MainLoop();
-                }
-            }.bind(this), mswait);
+            if (this.status == SYSTEM_HALT) {
+                this.status = SYSTEM_RUN;
+                this.cpu.ProgressTime(delta);
+                //this.snddev.Progress();
+                this.MainLoop();
+            }
+        }.bind(this), mswait);
 };
 
 System.prototype.MainLoop = function() {
@@ -10253,7 +10342,7 @@ System.prototype.MainLoop = function() {
 
 module.exports = System;
 
-},{"./bzip2.js":2,"./cpu/fastcpu.js":3,"./cpu/safecpu.js":4,"./cpu/smpcpu.js":5,"./dev/ata.js":6,"./dev/ethmac.js":7,"./dev/framebuffer.js":8,"./dev/irq.js":9,"./dev/keyboard.js":10,"./dev/rtc.js":11,"./dev/sound.js":12,"./dev/timer.js":13,"./dev/touchscreen.js":14,"./dev/uart.js":15,"./dev/virtio.js":16,"./dev/virtio/9p.js":17,"./filesystem/filesystem.js":19,"./imul.js":22,"./messagehandler.js":23,"./ram.js":24,"./timer.js":26,"./utils.js":27}],26:[function(require,module,exports){
+},{"./bzip2.js":2,"./cpu":4,"./dev/ata.js":7,"./dev/ethmac.js":8,"./dev/framebuffer.js":9,"./dev/irq.js":10,"./dev/keyboard.js":11,"./dev/rtc.js":12,"./dev/sound.js":13,"./dev/timer.js":14,"./dev/touchscreen.js":15,"./dev/uart.js":16,"./dev/virtio.js":17,"./dev/virtio/9p.js":18,"./filesystem/filesystem.js":20,"./messagehandler.js":25,"./ram.js":26,"./timer.js":28,"./utils.js":29}],28:[function(require,module,exports){
 // -------------------------------------------------
 // ------------------- TIMER -----------------------
 // -------------------------------------------------
@@ -10306,8 +10395,8 @@ Timer.prototype.UpdateTimings = function(_nins, gotoidle) {
     this.instructionsperloop = this.instructionsperloop>4000000?4000000:this.instructionsperloop;
 
     this.timercyclesperinstruction = Math.floor(this.ticksperms * 64 / this.ipms * this.correction);
-    this.timercyclesperinstruction  = this.timercyclesperinstruction<=1?1:this.timercyclesperinstruction;
-    this.timercyclesperinstruction  = this.timercyclesperinstruction>=1000?1000:this.timercyclesperinstruction
+    this.timercyclesperinstruction = this.timercyclesperinstruction<=1?1:this.timercyclesperinstruction;
+    this.timercyclesperinstruction = this.timercyclesperinstruction>=1000?1000:this.timercyclesperinstruction;
 }
 
 
@@ -10393,7 +10482,7 @@ Timer.prototype.GlobalUpdate = function(ticks) {
 
 module.exports = Timer;
 
-},{"./messagehandler.js":23,"./utils.js":27}],27:[function(require,module,exports){
+},{"./messagehandler.js":25,"./utils.js":29}],29:[function(require,module,exports){
 // -------------------------------------------------
 // ------------------ Utils ------------------------
 // -------------------------------------------------
@@ -10464,7 +10553,7 @@ function LoadBinaryResource(url, OnSuccess, OnError) {
     req.send(null);
 }
 
-function LoadXMLResource(url, OnSuccess, OnError) {
+function LoadTextResource(url, OnSuccess, OnError) {
     var req = new XMLHttpRequest();
     req.open('GET', url, true);
     //req.overrideMimeType('text/xml');
@@ -10473,10 +10562,10 @@ function LoadXMLResource(url, OnSuccess, OnError) {
             return;
         }
         if ((req.status != 200) && (req.status != 0)) {
-            OnError("Error: Could not load XML file " + url);
+            OnError("Error: Could not load text file " + url);
             return;
-        }        
-        OnSuccess(req.responseText);        
+        }
+        OnSuccess(req.responseText);
     };
     req.send(null);
 }
@@ -10573,10 +10662,10 @@ module.exports.int32 = int32;
 module.exports.uint32 = uint32;
 module.exports.ToHex = ToHex;
 module.exports.LoadBinaryResource = LoadBinaryResource;
-module.exports.LoadXMLResource = LoadXMLResource;
+module.exports.LoadTextResource = LoadTextResource;
 
 
-},{}],28:[function(require,module,exports){
+},{}],30:[function(require,module,exports){
 // -------------------------------------------------
 // -------------------- Worker ---------------------
 // -------------------------------------------------
@@ -10584,4 +10673,4 @@ module.exports.LoadXMLResource = LoadXMLResource;
 var System = require('./system.js');
 var sys = new System();
 
-},{"./system.js":25}]},{},[28]);
+},{"./system.js":27}]},{},[30]);
