@@ -475,7 +475,6 @@ module.exports = bzip2;
 
 },{"./messagehandler":25}],3:[function(require,module,exports){
 var message = require('../messagehandler');
-var utils = require('../utils');
 
 function FastCPU(stdlib, foreign, heap) {
 "use asm";
@@ -1301,7 +1300,6 @@ function Step(steps, clockspeed) {
     for(;;) {
 
         if ((ppc|0) == (fence|0)) {
-            //if (nextpc == 0x3002f674) message.Debug(utils.ToHex(pc));
             pc = nextpc;
 
             if ((!delayedins_at_page_boundary|0)) {
@@ -2111,7 +2109,7 @@ return {
 
 module.exports = FastCPU;
 
-},{"../messagehandler":25,"../utils":29}],4:[function(require,module,exports){
+},{"../messagehandler":25}],4:[function(require,module,exports){
 /* this is a unified, abstract interface (a facade) to the different
  * CPU implementations
  */
@@ -8788,8 +8786,22 @@ function FS() {
     this.fsloader = new FSLoader(this);
     this.userinfo = [];
 
+    this.watchFiles = {};
+
     message.Register("LoadFilesystem", this.LoadFilesystem.bind(this) );
     message.Register("MergeFile", this.MergeFile.bind(this) );
+    message.Register("WatchFile",
+        function(file) {
+            //message.Debug("watching file: " + file.name);
+            this.watchFiles[file.name] = true;
+        }.bind(this)
+    );
+    //message.Debug("registering readfile on worker");
+    message.Register("ReadFile",
+        function(file) {
+            message.Send("ReadFile", (this.ReadFile.bind(this))(file));
+        }.bind(this)
+    );
     message.Register("tar",
         function(data) {
             message.Send("tar", this.tar.Pack(data));
@@ -9095,7 +9107,7 @@ FS.prototype.OpenInode = function(id, mode) {
         case S_IFCHR: type = "Character Device"; break;
     }
     */
-    //message.Debug("open:" + this.GetFullPath(id) +  " type: " + type + " status:" + inode.status);
+    //message.Debug("open:" + this.GetFullPath(id) +  " type: " + inode.mode + " status:" + inode.status);
     if (inode.status == STATUS_ON_SERVER) {
         this.LoadFile(id);
         return false;
@@ -9156,6 +9168,11 @@ FS.prototype.Rename = function(olddirid, oldname, newdirid, newname) {
 }
 
 FS.prototype.Write = function(id, offset, count, GetByte) {
+    var path = this.GetFullPath(id);
+    if (this.watchFiles[path] == true) {
+      //message.Debug("sending WatchFileEvent for " + path);
+      message.Send("WatchFileEvent", path);
+    }
     var inode = this.inodes[id];
 
     if (inode.data.length < (offset+count)) {
@@ -9312,6 +9329,18 @@ FS.prototype.GetRecursiveList = function(dirid, list) {
         }
         id = this.inodes[id].nextid;
     }
+}
+
+FS.prototype.ReadFile = function(file) {
+    //message.Debug("Read path:" + file.name);
+    var ids = this.SearchPath(file.name);
+    if (ids.parentid == -1) return; // not even the path seems to exist
+    if (ids.id == -1) {
+      return null;
+    }
+    file.data = this.inodes[ids.id].data;
+    file.size = this.inodes[ids.id].size;
+    return file;
 }
 
 FS.prototype.MergeFile = function(file) {

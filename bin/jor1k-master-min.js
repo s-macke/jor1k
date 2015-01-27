@@ -1801,6 +1801,33 @@ jor1kGUI.prototype.UploadExternalFile = function(f) {
     reader.readAsArrayBuffer(f);
 }
 
+jor1kGUI.prototype.MergeFile = function(fileName, data) {
+  //console.log("registering callback");
+  function stringToUint(string) {
+    var charList = string.split(''),
+        uintArray = [];
+    for (var i = 0; i < charList.length; i++) {
+        uintArray.push(charList[i].charCodeAt(0));
+    }
+    return new Uint8Array(uintArray);
+  }
+  message.Send("MergeFile", {name: fileName, data: stringToUint(data)});
+}
+
+jor1kGUI.prototype.ReadFile = function(fileName, callback) {
+  //console.log("registering callback");
+  message.Register("ReadFile", callback);
+  //console.log("sending read msg");
+  message.Send("ReadFile", { name: fileName });
+}
+
+jor1kGUI.prototype.WatchFile = function(fileName, callback) {
+  //console.log("registering watch callback");
+  message.Register("WatchFileEvent", callback);
+  //console.log("sending watch msg");
+  message.Send("WatchFile", { name: fileName });
+}
+
 module.exports = jor1kGUI;
 
 },{"../lib/download":1,"./dev/ethernet":3,"./dev/framebuffer":4,"./dev/sound":5,"./dev/terminal":7,"./dev/terminal-input":6,"./messagehandler":8,"./utils":10}],10:[function(require,module,exports){
