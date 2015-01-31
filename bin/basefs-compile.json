@@ -27,6 +27,7 @@
 		]}
 	]},
 	{ "name":"usr", "mode":"40755", "child":[
+		{ "name":"sbin", "mode":"40755" },
 		{ "name":"share", "mode":"40755", "child":[
 			{ "name":"udhcpc", "mode":"40755", "child":[
 				{ "name":"default.script", "mode":"100755", "size":1285,"load":1}
