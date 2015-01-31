@@ -38,8 +38,8 @@
                         <img src="images/upload.png" width="20px" height="20px" title="Upload to home folder" />
                         <input type="file" id="files" style="visibility:hidden;width:0; height:0;" name="files[]" onchange='OnUploadFiles(this.files)' multiple />
                     </label>
-                    <img src="images/tar.png" width="20px" height="20px"  onclick='jor1kgui.TAR("home/user")' title="Download of home folder" />
-                    <img src="images/sync.png" width="20px" height="20px"  onclick='jor1kgui.Sync("home/user")' title="Sync with server" />
+                    <img src="images/tar.png" width="20px" height="20px"  onclick='jor1kgui.fs.TAR("home/user")' title="Download of home folder" />
+                    <img src="images/sync.png" width="20px" height="20px"  onclick='jor1kgui.fs.Sync("home/user")' title="Sync with server" />
                     <textarea style="display:none;" id="clipboard">clipb</textarea>
                     </span>
                     <span id="stats" style="float: right"></span>
@@ -106,7 +106,7 @@ Theme<select onchange='editor.setTheme("ace/theme/"+this.options[this.selectedIn
 function OnUploadFiles(files)
 {
     for (var i = 0, f; f = files[i]; i++) {
-        jor1kgui.UploadExternalFile(f);
+        jor1kgui.fs.UploadExternalFile(f);
     }
 }
 

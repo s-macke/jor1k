@@ -315,7 +315,75 @@ Ethernet.prototype.Close = function() {
 
 module.exports = Ethernet;
 
-},{"../messagehandler":8}],4:[function(require,module,exports){
+},{"../messagehandler":9}],4:[function(require,module,exports){
+var message = require('../messagehandler.js');
+var download = require('../../lib/download');
+
+"use strict";
+
+function Filesystem() {
+}
+
+Filesystem.prototype.TAR = function(path) {
+    message.Register("tar", function(d){download(d, "user.tar", "application/x-tar");} );
+    message.Send("tar", path);
+}
+
+Filesystem.prototype.Sync = function(path) {
+    message.Register("sync", this.OnSync.bind(this));
+    message.Send("sync", path);
+}
+
+Filesystem.prototype.OnSync = function(d) {
+    utils.UploadBinaryResource(this.params.syncURL, this.params.userid + ".tar", d,
+        function(response) {
+            alert(
+                "Message from Server:" + response + "\n" +
+                "The home folder '/home/user' has been synced with the server\n" +
+                "In order to access the data at a later date,\n" +
+                "start the next session with the current url with the user id\n" +
+                "The folder size is currently limited to 1MB. Note that the feature is experimental.\n" +
+                "The content can be downloaded under http://jor1k.com/sync/tarballs/" + this.params.userid+".tar.bz2"
+            );
+            }.bind(this),
+        function(msg) {alert(msg);}
+    );
+}
+
+Filesystem.prototype.UploadExternalFile = function(f) {
+    var reader = new FileReader();
+    reader.onload = function(e) {
+        message.Send("MergeFile",
+        {name: "home/user/"+f.name, data: new Uint8Array(reader.result)});
+    }.bind(this);
+    reader.readAsArrayBuffer(f);
+}
+
+Filesystem.prototype.MergeFile = function(fileName, data) {
+  function stringToUint(string) {
+    var charList = string.split(''),
+        uintArray = [];
+    for (var i = 0; i < charList.length; i++) {
+        uintArray.push(charList[i].charCodeAt(0));
+    }
+    return new Uint8Array(uintArray);
+  }
+  message.Send("MergeFile", {name: fileName, data: stringToUint(data)});
+}
+
+Filesystem.prototype.ReadFile = function(fileName, callback) {
+  message.Register("ReadFile", callback);
+  message.Send("ReadFile", { name: fileName });
+}
+
+Filesystem.prototype.WatchFile = function(fileName, callback) {
+  message.Register("WatchFileEvent", callback);
+  message.Send("WatchFile", { name: fileName });
+}
+
+module.exports = Filesystem;
+
+},{"../../lib/download":1,"../messagehandler.js":9}],5:[function(require,module,exports){
 var message = require('../messagehandler.js');
 
 
@@ -404,7 +472,7 @@ Framebuffer.prototype.Update = function(buffer) {
 
 module.exports = Framebuffer;
 
-},{"../messagehandler.js":8}],5:[function(require,module,exports){
+},{"../messagehandler.js":9}],6:[function(require,module,exports){
 // Provides a loop sound buffer.
 
 var message = require('../messagehandler');
@@ -501,7 +569,7 @@ LoopSoundBuffer.prototype.AddBuffer = function(addbuffer)
 
 module.exports = LoopSoundBuffer;
 
-},{"../messagehandler":8}],6:[function(require,module,exports){
+},{"../messagehandler":9}],7:[function(require,module,exports){
 // -------------------------------------------------
 // -------------- Terminal Input -------------------
 // -------------------------------------------------
@@ -694,7 +762,7 @@ TerminalInput.prototype.OnKeyDown = function(e) {
 
 module.exports = TerminalInput;
 
-},{"../../lib/utf8":2}],7:[function(require,module,exports){
+},{"../../lib/utf8":2}],8:[function(require,module,exports){
 // -------------------------------------------------
 // --------------- Terminal Emulator ---------------
 // -------------------------------------------------
@@ -1471,7 +1539,7 @@ Terminal.prototype.PutChar = function(c) {
 
 module.exports = Terminal;
 
-},{"../../lib/utf8":2,"../messagehandler":8}],8:[function(require,module,exports){
+},{"../../lib/utf8":2,"../messagehandler":9}],9:[function(require,module,exports){
 // -------------------------------------------------
 // ------------- MessageHandler --------------------
 // -------------------------------------------------
@@ -1541,7 +1609,7 @@ module.exports.Abort = Abort;
 module.exports.Send = Send;
  
 
-},{}],9:[function(require,module,exports){
+},{}],10:[function(require,module,exports){
 // -------------------------------------------------
 // -------------------- Master ---------------------
 // -------------------------------------------------
@@ -1551,7 +1619,7 @@ var TerminalInput = require('./dev/terminal-input');
 var Framebuffer = require('./dev/framebuffer');
 var Ethernet = require('./dev/ethernet');
 var LoopSoundBuffer = require('./dev/sound');
-var download = require('../lib/download');
+var Filesystem = require('./dev/filesystem');
 var utils = require('./utils');
 var message = require('./messagehandler');
 
@@ -1610,6 +1678,8 @@ function jor1kGUI(parameters)
     }
 
     this.terminput = new TerminalInput(this.SendChars.bind(this));
+
+    this.fs = new Filesystem();
 
     this.sound = new LoopSoundBuffer(22050);
     message.Register("sound",      this.sound.AddBuffer.bind(this.sound));
@@ -1765,72 +1835,9 @@ jor1kGUI.prototype.SendChars = function(chars) {
     message.Send("tty0", chars);
 }
 
-
-jor1kGUI.prototype.TAR = function(path) {
-    message.Register("tar", function(d){download(d, "user.tar", "application/x-tar");} );
-    message.Send("tar", path);
-}
-
-jor1kGUI.prototype.Sync = function(path) {
-    message.Register("sync", this.OnSync.bind(this));
-    message.Send("sync", path);
-}
-
-jor1kGUI.prototype.OnSync = function(d) {
-    utils.UploadBinaryResource(this.params.syncURL, this.params.userid + ".tar", d, 
-        function(response) {
-            alert(
-                "Message from Server:" + response + "\n" +
-                "The home folder '/home/user' has been synced with the server\n" +
-                "In order to access the data at a later date,\n" +
-                "start the next session with the current url with the user id\n" +
-                "The folder size is currently limited to 1MB. Note that the feature is experimental.\n" +
-                "The content can be downloaded under http://jor1k.com/sync/tarballs/" + this.params.userid+".tar.bz2"
-            );
-            }.bind(this),
-        function(msg) {alert(msg);}
-    );
-}
-
-jor1kGUI.prototype.UploadExternalFile = function(f) {
-    var reader = new FileReader();
-    reader.onload = function(e) {
-        message.Send("MergeFile", 
-        {name: "home/user/"+f.name, data: new Uint8Array(reader.result)});
-    }.bind(this);
-    reader.readAsArrayBuffer(f);
-}
-
-jor1kGUI.prototype.MergeFile = function(fileName, data) {
-  //console.log("registering callback");
-  function stringToUint(string) {
-    var charList = string.split(''),
-        uintArray = [];
-    for (var i = 0; i < charList.length; i++) {
-        uintArray.push(charList[i].charCodeAt(0));
-    }
-    return new Uint8Array(uintArray);
-  }
-  message.Send("MergeFile", {name: fileName, data: stringToUint(data)});
-}
-
-jor1kGUI.prototype.ReadFile = function(fileName, callback) {
-  //console.log("registering callback");
-  message.Register("ReadFile", callback);
-  //console.log("sending read msg");
-  message.Send("ReadFile", { name: fileName });
-}
-
-jor1kGUI.prototype.WatchFile = function(fileName, callback) {
-  //console.log("registering watch callback");
-  message.Register("WatchFileEvent", callback);
-  //console.log("sending watch msg");
-  message.Send("WatchFile", { name: fileName });
-}
-
 module.exports = jor1kGUI;
 
-},{"../lib/download":1,"./dev/ethernet":3,"./dev/framebuffer":4,"./dev/sound":5,"./dev/terminal":7,"./dev/terminal-input":6,"./messagehandler":8,"./utils":10}],10:[function(require,module,exports){
+},{"./dev/ethernet":3,"./dev/filesystem":4,"./dev/framebuffer":5,"./dev/sound":6,"./dev/terminal":8,"./dev/terminal-input":7,"./messagehandler":9,"./utils":11}],11:[function(require,module,exports){
 // -------------------------------------------------
 // --------------------- Utils ---------------------
 // -------------------------------------------------
@@ -1884,7 +1891,7 @@ var Jor1k = require('./system');
 
 module.exports = Jor1k;
 
-},{"./system":9}],"MackeTerm":[function(require,module,exports){
+},{"./system":10}],"MackeTerm":[function(require,module,exports){
 var Terminal = require("../master/dev/terminal");
 
 function MackeTerm(termid) {
@@ -1916,4 +1923,4 @@ MackeTerm.prototype.PauseBlink = function(pause) {
 
 module.exports = MackeTerm;
 
-},{"../master/dev/terminal":7}]},{},[]);
+},{"../master/dev/terminal":8}]},{},[]);

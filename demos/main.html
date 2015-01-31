@@ -44,8 +44,8 @@
                         <img src="images/upload.png" width="20px" height="20px" title="Upload to home folder" />
                         <input type="file" id="files" style="visibility:hidden;width:0; height:0;" name="files[]" onchange='OnUploadFiles(this.files)' multiple />
                     </label>
-                    <img src="images/tar.png" width="20px" height="20px"  onclick='jor1kgui.TAR("home/user")' title="Download of home folder" />
-                    <img src="images/sync.png" width="20px" height="20px"  onclick='jor1kgui.Sync("home/user")' title="Sync with server" />
+                    <img src="images/tar.png" width="20px" height="20px"  onclick='jor1kgui.fs.TAR("home/user")' title="Download of home folder" />
+                    <img src="images/sync.png" width="20px" height="20px"  onclick='jor1kgui.fs.Sync("home/user")' title="Sync with server" />
                     <img src="images/fullscreen.png" width="20px" height="20px"  onclick='Fullscreen()' title="Windowed fullscreen of framebuffer" />
                     <textarea style="height: 20px;" type=text cols="5" rows="1" id="clipboard">clipb</textarea>
                     <input type="checkbox" onclick='jor1kgui.sound.Enabled(this.checked)'>Sound
@@ -156,7 +156,7 @@ function Fullscreen()
 function OnUploadFiles(files)
 {
     for (var i = 0, f; f = files[i]; i++) {
-        jor1kgui.UploadExternalFile(f);
+        jor1kgui.fs.UploadExternalFile(f);
     }
 }
 
