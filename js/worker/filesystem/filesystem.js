@@ -142,6 +142,7 @@ FS.prototype.LoadImage = function(url)
     utils.LoadBinaryResource(url,
     function(buffer){
         var buffer8 = new Uint8Array(buffer);
+        if (buffer.byteLength == 0) return;
         bzip2.simple(buffer8, this.tar.Unpack.bind(this.tar));
     }.bind(this),
     function(error){

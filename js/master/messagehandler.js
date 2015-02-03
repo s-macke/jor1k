@@ -44,6 +44,13 @@ function Register(message, OnReceive) {
 
 // this is a global object of the worker
 function OnMessage(e) {
+
+    // Debug Message are always allowed
+    if (e.data.command == "Debug") {
+        messagemap[e.data.command](e.data.data);
+        return;
+    }
+
     if (!run) return;
     if (typeof messagemap[e.data.command] == 'function') {
         try {
@@ -64,6 +71,7 @@ function SetWorker(_worker) {
         Abort();
     }
     Register("Abort", function(){Debug("Master: Received abort signal from worker"); run=false;});
+    Register("Debug", function(d){Debug(d);});
 }
 
 module.exports.SetWorker = SetWorker;

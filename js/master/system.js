@@ -151,7 +151,6 @@ function jor1kGUI(parameters)
 
     message.Register("GetIPS", this.ShowIPS.bind(this));
     message.Register("execute", this.Execute.bind(this));
-    message.Register("Debug", function(d){message.Debug(d);}.bind(this));
 
     this.Reset();
 
