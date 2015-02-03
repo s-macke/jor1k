@@ -9956,13 +9956,15 @@ onmessage = function(e) {
     }
 }
 
+Register("Abort", function(){run = false;});
+
 module.exports.Register = Register;
 module.exports.Debug = Debug;
 module.exports.Error = Error;
 module.exports.Warning = Warning;
 module.exports.Abort = Abort;
 module.exports.Send = Send;
- 
+
 
 },{}],26:[function(require,module,exports){
 // -------------------------------------------------

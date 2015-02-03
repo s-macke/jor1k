@@ -24,7 +24,7 @@ function Debug(message) {
 function Abort() {
     Debug("Master: Abort execution.");
     run = false;
-    Send("Stop", {});
+    Send("Abort", {});
     throw new Error('Kill master');
 }
 
@@ -46,8 +46,13 @@ function Register(message, OnReceive) {
 function OnMessage(e) {
     if (!run) return;
     if (typeof messagemap[e.data.command] == 'function') {
+        try {
             messagemap[e.data.command](e.data.data);
-            return;
+        } catch (e) {
+            message.Debug("Master: Unhandled exception in command: " + e.data.command);
+            message.Debug(e);
+            run = false;
+        }
     }
 }
 
@@ -58,6 +63,7 @@ function SetWorker(_worker) {
         Debug("Error at " + e.filename + ":" + e.lineno + ": " + e.message);
         Abort();
     }
+    Register("Abort", function(){Debug("Master: Received abort signal from worker"); run=false;});
 }
 
 module.exports.SetWorker = SetWorker;

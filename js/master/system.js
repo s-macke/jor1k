@@ -149,8 +149,6 @@ function jor1kGUI(parameters)
         message.Register("ethmac", this.ethernet.SendFrame.bind(this.ethernet));
     }
 
-
-    message.Register("Stop", function(){message.Abort(); this.stop = true}.bind(this));
     message.Register("GetIPS", this.ShowIPS.bind(this));
     message.Register("execute", this.Execute.bind(this));
     message.Register("Debug", function(d){message.Debug(d);}.bind(this));
