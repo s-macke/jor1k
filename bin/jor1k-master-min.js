@@ -1564,7 +1564,7 @@ function Debug(message) {
 }
 
 function Abort() {
-    Debug("Abort execution.");
+    Debug("Master: Abort execution.");
     run = false;
     Send("Stop", {});
     throw new Error('Kill master');
@@ -1764,7 +1764,7 @@ function jor1kGUI(parameters)
     }
 
 
-    message.Register("Stop", function(){message.Debug("Received stop signal"); this.stop = true}.bind(this));
+    message.Register("Stop", function(){message.Abort(); this.stop = true}.bind(this));
     message.Register("GetIPS", this.ShowIPS.bind(this));
     message.Register("execute", this.Execute.bind(this));
     message.Register("Debug", function(d){message.Debug(d);}.bind(this));

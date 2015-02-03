@@ -22,7 +22,7 @@ function Debug(message) {
 }
 
 function Abort() {
-    Debug("Abort execution.");
+    Debug("Master: Abort execution.");
     run = false;
     Send("Stop", {});
     throw new Error('Kill master');

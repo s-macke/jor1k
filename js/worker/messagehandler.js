@@ -20,10 +20,10 @@ function Debug(message) {
 }
 
 function Abort() {
-    Debug("Abort execution.");
-    run = false;
+    Debug("Worker: Abort execution.");
     Send("Stop", {});
-    throw new Error('Kill worker');
+    run = false;
+    throw new Error('Kill worker'); // Don't return
 }
 
 function Error(message) {
@@ -49,6 +49,8 @@ onmessage = function(e) {
         try {
             messagemap[e.data.command](e.data.data);
         } catch (e) {
+            message.Debug("worker: Unknown exception:");            
+            message.Debug(e);
             run = false;
         }
         return;
