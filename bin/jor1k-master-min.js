@@ -1548,6 +1548,7 @@ module.exports = Terminal;
 
 var worker;
 
+var run = true;
 
 function Send(command, data) {
     worker.postMessage(
@@ -1564,6 +1565,7 @@ function Debug(message) {
 
 function Abort() {
     Debug("Abort execution.");
+    run = false;
     Send("Stop", {});
     throw new Error('Kill master');
 }
@@ -1577,7 +1579,6 @@ function Warning(message) {
     Send("Debug", "Warning: " + message);
 }
 
-
 var messagemap = new Object();
 function Register(message, OnReceive) {
     messagemap[message] = OnReceive;
@@ -1585,6 +1586,7 @@ function Register(message, OnReceive) {
 
 // this is a global object of the worker
 function OnMessage(e) {
+    if (!run) return;
     if (typeof messagemap[e.data.command] == 'function') {
             messagemap[e.data.command](e.data.data);
             return;
