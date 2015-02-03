@@ -9920,7 +9920,7 @@ function Debug(message) {
 
 function Abort() {
     Debug("Worker: Abort execution.");
-    Send("Stop", {});
+    Send("Abort", {});
     run = false;
     throw new Error('Kill worker'); // Don't return
 }
