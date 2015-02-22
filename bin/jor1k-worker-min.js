@@ -247,6 +247,11 @@ bzip2.array = function(bytes) {
     }
 }
 
+bzip2.IsBZIP2 = function(buffer) {
+    if ((buffer[0] == 0x42) && (buffer[1] == 0x5A) && (buffer[2] == 0x68)) return true;
+    return false;
+}
+
     
 bzip2.simple = function(srcbuffer, stream) {
     var bits = bzip2.array(srcbuffer);
@@ -2606,8 +2611,8 @@ SafeCPU.prototype.SetSPR = function (idx, x) {
         case 0:
             this.TTMR = x;
             if (((this.TTMR >> 30)&3) != 0x3) {
-                message.Debug("Error in SetSPR: Timer mode other than continuous not supported");
-                message.Abort();
+                //message.Debug("Error in SetSPR: Timer mode other than continuous not supported");
+                //message.Abort();
             }
             break;
         case 1:
@@ -10277,8 +10282,14 @@ System.prototype.SendStringToTerminal = function(str)
 
 System.prototype.LoadImageAndStart = function(url) {
     this.SendStringToTerminal("\r================================================================================");
-    this.SendStringToTerminal("\r\nLoading kernel and hard and basic file system from web server. Please wait ...\r\n");
-    utils.LoadBinaryResource(url, this.OnKernelLoaded.bind(this), function(error){throw error;});
+    
+    if (typeof url  == 'string') {
+        this.SendStringToTerminal("\r\nLoading kernel and hard and basic file system from web server. Please wait ...\r\n");
+        utils.LoadBinaryResource(url, this.OnKernelLoaded.bind(this), function(error){throw error;});
+    } else {
+        this.OnKernelLoaded(url);
+    }
+
 };
 
 System.prototype.PatchKernel = function(length)
@@ -10309,7 +10320,12 @@ System.prototype.OnKernelLoaded = function(buffer) {
     this.SendStringToTerminal("Decompressing kernel...\r\n");
     var buffer8 = new Uint8Array(buffer);
     var length = 0;
-    bzip2.simple(buffer8, function(x){this.ram.uint8mem[length++] = x;}.bind(this));
+    if (bzip2.IsBZIP2(buffer8)) {
+        bzip2.simple(buffer8, function(x){this.ram.uint8mem[length++] = x;}.bind(this));
+    } else {
+        length = buffer8.length;
+        for(var i=0; i<length; i++) this.ram.uint8mem[i] = buffer8[i];
+    }
     this.PatchKernel(length);
     for (var i = 0; i < length >> 2; i++) this.ram.int32mem[i] = utils.Swap32(this.ram.int32mem[i]); // big endian to little endian
     message.Debug("Kernel loaded: " + length + " bytes");

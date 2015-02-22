@@ -1514,6 +1514,7 @@ Terminal.prototype.PutChar = function(c) {
     case 0x14:  case 0x15:  case 0x16:  case 0x17:
     case 0x18:  case 0x19:  case 0x1A:  case 0x1B:
     case 0x1C:  case 0x1D:  case 0x1E:  case 0x1F:
+    case 0x7F:
         message.Warning("unknown character " + c);
         return;
     }
