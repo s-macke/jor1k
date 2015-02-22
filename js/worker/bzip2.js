@@ -121,6 +121,11 @@ bzip2.array = function(bytes) {
     }
 }
 
+bzip2.IsBZIP2 = function(buffer) {
+    if ((buffer[0] == 0x42) && (buffer[1] == 0x5A) && (buffer[2] == 0x68)) return true;
+    return false;
+}
+
     
 bzip2.simple = function(srcbuffer, stream) {
     var bits = bzip2.array(srcbuffer);

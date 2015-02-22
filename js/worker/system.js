@@ -209,8 +209,14 @@ System.prototype.SendStringToTerminal = function(str)
 
 System.prototype.LoadImageAndStart = function(url) {
     this.SendStringToTerminal("\r================================================================================");
-    this.SendStringToTerminal("\r\nLoading kernel and hard and basic file system from web server. Please wait ...\r\n");
-    utils.LoadBinaryResource(url, this.OnKernelLoaded.bind(this), function(error){throw error;});
+    
+    if (typeof url  == 'string') {
+        this.SendStringToTerminal("\r\nLoading kernel and hard and basic file system from web server. Please wait ...\r\n");
+        utils.LoadBinaryResource(url, this.OnKernelLoaded.bind(this), function(error){throw error;});
+    } else {
+        this.OnKernelLoaded(url);
+    }
+
 };
 
 System.prototype.PatchKernel = function(length)
@@ -241,7 +247,12 @@ System.prototype.OnKernelLoaded = function(buffer) {
     this.SendStringToTerminal("Decompressing kernel...\r\n");
     var buffer8 = new Uint8Array(buffer);
     var length = 0;
-    bzip2.simple(buffer8, function(x){this.ram.uint8mem[length++] = x;}.bind(this));
+    if (bzip2.IsBZIP2(buffer8)) {
+        bzip2.simple(buffer8, function(x){this.ram.uint8mem[length++] = x;}.bind(this));
+    } else {
+        length = buffer8.length;
+        for(var i=0; i<length; i++) this.ram.uint8mem[i] = buffer8[i];
+    }
     this.PatchKernel(length);
     for (var i = 0; i < length >> 2; i++) this.ram.int32mem[i] = utils.Swap32(this.ram.int32mem[i]); // big endian to little endian
     message.Debug("Kernel loaded: " + length + " bytes");
