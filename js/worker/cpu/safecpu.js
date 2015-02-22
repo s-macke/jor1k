@@ -280,8 +280,8 @@ SafeCPU.prototype.SetSPR = function (idx, x) {
         case 0:
             this.TTMR = x;
             if (((this.TTMR >> 30)&3) != 0x3) {
-                message.Debug("Error in SetSPR: Timer mode other than continuous not supported");
-                message.Abort();
+                //message.Debug("Error in SetSPR: Timer mode other than continuous not supported");
+                //message.Abort();
             }
             break;
         case 1:
