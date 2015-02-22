@@ -1,0 +1,54 @@
+<!doctype html>
+
+<h1><a href="http://github.com/s-macke/jor1k/">jor1k </a> RTEMS demo</h1>
+
+<label>
+Restart with new binary image:
+<img src="images/upload.png" width="20px" height="20px" title="Restart with new binary image" />
+<input type="file" id="files" style="visibility:hidden;width:0; height:0;" name="files[]" onchange='OnNewImage(this.files)' />
+</label>
+
+<br>
+
+<canvas id="tty" class="screen" width="640" height="384">
+                        Terminal uses canvas
+</canvas>
+
+<script src="../bin/jor1k-master-min.js"></script>
+
+<script>
+
+var Jor1k = require("Jor1k");
+var MackeTerm = require("MackeTerm");
+
+
+function Start(image)
+{
+}
+
+function OnNewImage(files)
+{
+    var reader = new FileReader();
+    reader.onload = function(e) {
+        jor1kgui.message.Send("Reset");
+        jor1kgui.message.Send("LoadAndStart", reader.result);
+    }.bind(this);
+    reader.readAsArrayBuffer(files[0]);
+}
+
+jor1kgui = new Jor1k(
+	{
+	system: {
+            memorysize: 32,
+            cpu: "safe",
+            kernelURL : "rtems.bin.bz2",
+	 },
+         fs: {
+            basefsURL: ""
+         },
+         term: new MackeTerm("tty"),
+	 path: "../bin/"
+	});
+
+</script>
+
