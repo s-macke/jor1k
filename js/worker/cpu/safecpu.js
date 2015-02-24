@@ -391,6 +391,12 @@ SafeCPU.prototype.Exception = function (excepttype, addr) {
         message.Debug("Error in Exception: exception type not supported");
         message.Abort();
     }
+
+    // Handle restart mode timer
+    if (excepttype == EXCEPT_TICK && (this.TTMR >> 30) == 0x1) {
+	this.TTCR = 0;
+    }
+
     this.delayedins = false;
     this.SR_IME = false;
 };
