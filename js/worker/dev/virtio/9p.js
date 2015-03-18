@@ -532,8 +532,7 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             var newfid = req[1];
             var name = req[2];
             //message.Debug("[xattrwalk]: fid=" + req[0] + " newfid=" + req[1] + " name=" + req[2]);
-            this.fids[newfid].inodeid = this.fids[fid].inodeid;
-            this.fids[newfid].type = FID_NONE;
+            this.fids[newfid] = this.Createfid(this.fids[fid].inodeid, FID_NONE, this.fids[fid].uid);
             var length = 0;
             if (name == "security.capability") {
                 length = this.fs.PrepareCAPs(this.fids[fid].inodeid);
