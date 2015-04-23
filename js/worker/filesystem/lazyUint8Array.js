@@ -77,7 +77,7 @@ LazyUint8Array.prototype.CacheLength = function LazyUint8Array_CacheLength() {
     if (!(xhr.status >= 200 && xhr.status < 300 || xhr.status === 304)) throw new Error("Couldn't load " + this.url + ". Status: " + xhr.status);
     this._length = Number(xhr.getResponseHeader("Content-length"));
     if (this._length === 0) {
-        message.Warn("Server doesn't return Content-length, even though we have a cache defeating URL query-string appended");
+        message.Warning("Server doesn't return Content-length, even though we have a cache defeating URL query-string appended");
         this._length = this.fallbackLength;
     }
 

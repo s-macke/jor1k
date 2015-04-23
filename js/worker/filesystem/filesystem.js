@@ -221,7 +221,7 @@ FS.prototype.LoadFile = function(idx) {
         inode.data = new LazyUint8Array(inode.url, inode.size);
         var old = inode.size;
         inode.size = inode.data.length;
-        if (old != inode.size) message.Warn("Size wrong for lazy loaded file: " + inode.name);
+        if (old != inode.size) message.Warning("Size wrong for lazy loaded file: " + inode.name);
         inode.status = STATUS_OK;
         this.filesinloadingqueue--;
         this.HandleEvent(idx);
@@ -231,7 +231,7 @@ FS.prototype.LoadFile = function(idx) {
     utils.LoadBinaryResource(inode.url, 
         function(buffer){
             inode.data = new Uint8Array(buffer);
-            if (inode.size != this.inodes[idx].data.length) message.Warn("Size wrong for uncompressed non-lazily loaded file: " + inode.name);
+            if (inode.size != this.inodes[idx].data.length) message.Warning("Size wrong for uncompressed non-lazily loaded file: " + inode.name);
             inode.size = this.inodes[idx].data.length; // correct size if the previous was wrong. 
             inode.status = STATUS_OK;
             if (inode.name == "rcS") {

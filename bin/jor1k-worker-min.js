@@ -8540,8 +8540,7 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             var newfid = req[1];
             var name = req[2];
             //message.Debug("[xattrwalk]: fid=" + req[0] + " newfid=" + req[1] + " name=" + req[2]);
-            this.fids[newfid].inodeid = this.fids[fid].inodeid;
-            this.fids[newfid].type = FID_NONE;
+            this.fids[newfid] = this.Createfid(this.fids[fid].inodeid, FID_NONE, this.fids[fid].uid);
             var length = 0;
             if (name == "security.capability") {
                 length = this.fs.PrepareCAPs(this.fids[fid].inodeid);
@@ -8965,7 +8964,7 @@ FS.prototype.LoadFile = function(idx) {
         inode.data = new LazyUint8Array(inode.url, inode.size);
         var old = inode.size;
         inode.size = inode.data.length;
-        if (old != inode.size) message.Warn("Size wrong for lazy loaded file: " + inode.name);
+        if (old != inode.size) message.Warning("Size wrong for lazy loaded file: " + inode.name);
         inode.status = STATUS_OK;
         this.filesinloadingqueue--;
         this.HandleEvent(idx);
@@ -8975,7 +8974,7 @@ FS.prototype.LoadFile = function(idx) {
     utils.LoadBinaryResource(inode.url, 
         function(buffer){
             inode.data = new Uint8Array(buffer);
-            if (inode.size != this.inodes[idx].data.length) message.Warn("Size wrong for uncompressed non-lazily loaded file: " + inode.name);
+            if (inode.size != this.inodes[idx].data.length) message.Warning("Size wrong for uncompressed non-lazily loaded file: " + inode.name);
             inode.size = this.inodes[idx].data.length; // correct size if the previous was wrong. 
             inode.status = STATUS_OK;
             if (inode.name == "rcS") {
@@ -9667,7 +9666,7 @@ LazyUint8Array.prototype.CacheLength = function LazyUint8Array_CacheLength() {
     if (!(xhr.status >= 200 && xhr.status < 300 || xhr.status === 304)) throw new Error("Couldn't load " + this.url + ". Status: " + xhr.status);
     this._length = Number(xhr.getResponseHeader("Content-length"));
     if (this._length === 0) {
-        message.Warn("Server doesn't return Content-length, even though we have a cache defeating URL query-string appended");
+        message.Warning("Server doesn't return Content-length, even though we have a cache defeating URL query-string appended");
         this._length = this.fallbackLength;
     }
 
