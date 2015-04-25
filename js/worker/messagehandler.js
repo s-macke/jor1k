@@ -26,7 +26,7 @@ function Abort() {
     throw new Error('Kill worker'); // Don't return
 }
 
-function Error(message) {
+function DoError(message) {
     Send("Debug", "Error: " + message);
     Abort();
 }
@@ -61,7 +61,7 @@ Register("Abort", function(){run = false;});
 
 module.exports.Register = Register;
 module.exports.Debug = Debug;
-module.exports.Error = Error;
+module.exports.Error = DoError;
 module.exports.Warning = Warning;
 module.exports.Abort = Abort;
 module.exports.Send = Send;

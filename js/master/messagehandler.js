@@ -28,7 +28,7 @@ function Abort() {
     throw new Error('Kill master');
 }
 
-function Error(message) {
+function DoError(message) {
     Send("Debug", "Error: " + message);
     Abort();
 }
@@ -78,7 +78,7 @@ module.exports.SetWorker = SetWorker;
 module.exports.Register = Register;
 module.exports.Debug = Debug;
 module.exports.Warning = Warning;
-module.exports.Error = Error;
+module.exports.Error = DoError;
 module.exports.Abort = Abort;
 module.exports.Send = Send;
  
