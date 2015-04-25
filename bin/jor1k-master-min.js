@@ -1874,6 +1874,11 @@ jor1kGUI.prototype.GetTerm = function(tty) {
     return this.terms[index];
 }
 
+jor1kGUI.prototype.FocusTerm = function(tty) {
+    this.activeTTY = tty;
+    this.lastMouseDownTarget = TERMINAL;
+}
+
 module.exports = jor1kGUI;
 
 },{"./dev/ethernet":3,"./dev/filesystem":4,"./dev/framebuffer":5,"./dev/sound":6,"./dev/terminal":8,"./dev/terminal-input":7,"./messagehandler":9,"./utils":11}],11:[function(require,module,exports){
