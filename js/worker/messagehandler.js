@@ -48,9 +48,8 @@ onmessage = function(e) {
     if (typeof messagemap[e.data.command] == 'function') {
         try {
             messagemap[e.data.command](e.data.data);
-        } catch (e) {
-            message.Debug("worker: Unknown exception:");            
-            message.Debug(e);
+        } catch (error) {
+            message.Debug("worker: Unknown exception: " + error.message);
             run = false;
         }
         return;
