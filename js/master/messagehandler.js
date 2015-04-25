@@ -44,20 +44,20 @@ function Register(message, OnReceive) {
 
 // this is a global object of the worker
 function OnMessage(e) {
+    var command = e.data.command;
 
-    // Debug Message are always allowed
-    if (e.data.command == "Debug") {
-        messagemap[e.data.command](e.data.data);
+    // Debug Messages are always allowed
+    if (command == "Debug") {
+        messagemap[command](e.data.data);
         return;
     }
 
     if (!run) return;
-    if (typeof messagemap[e.data.command] == 'function') {
+    if (typeof messagemap[command] == 'function') {
         try {
-            messagemap[e.data.command](e.data.data);
+            messagemap[command](e.data.data);
         } catch (error) {
-            Debug("Master: Unhandled exception in command: " + e.data.command);
-            Debug("Error message: " + error.message);
+            Debug("Master: Unhandled exception in command \"" + command + "\": " + error.message);
             run = false;
         }
     }

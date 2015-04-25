@@ -45,11 +45,12 @@ function Register(message, OnReceive) {
 onmessage = function(e) {
     if (!run) return; // ignore all messages after an error
 
-    if (typeof messagemap[e.data.command] == 'function') {
+    var command = e.data.command;
+    if (typeof messagemap[command] == 'function') {
         try {
-            messagemap[e.data.command](e.data.data);
+            messagemap[command](e.data.data);
         } catch (error) {
-            Debug("worker: Unknown exception: " + error.message);
+            Debug("Worker: Unhandled exception in command \"" + command + "\": " + error.message);
             run = false;
         }
         return;
