@@ -238,4 +238,11 @@ jor1kGUI.prototype.SendChars = function(chars) {
     message.Send(this.activeTTY, chars);
 }
 
+// Returns the terminal attached to tty
+// tty is the tty string, for example, tty0
+jor1kGUI.prototype.GetTerm = function(tty) {
+    var index = parseInt(tty.slice(3));
+    return this.terms[index];
+}
+
 module.exports = jor1kGUI;

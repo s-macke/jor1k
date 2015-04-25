@@ -123,6 +123,7 @@ function Start() {
     var userid = RandomString(10);
 
     var MackeTerm = require("MackeTerm");
+    var term = new MackeTerm("tty");   // canvas id for the terminal
 
     jor1kparameters = {
         system: {
@@ -147,7 +148,7 @@ function Start() {
             lazyloadimages: [
             ] // list of automatically loaded images after the basic filesystem has been loaded
         },
-        term: new MackeTerm("tty"),   // canvas id for the terminal
+        term: term,
         fbid: "fb",     // canvas id for the framebuffer
         clipboardid: "clipboard",  // input id for the clipboard
         statsid: "stats",  // object id for the statistics test
@@ -196,7 +197,7 @@ function Start() {
     var Jor1k = require("Jor1k");
 
     jor1kgui = new Jor1k(jor1kparameters);
-    jor1kgui.term.term.OnCharReceived = terminalPutCharListener;
+    term.SetCharReceiveListener(terminalPutCharListener);
 }
 
 var term_output = "";

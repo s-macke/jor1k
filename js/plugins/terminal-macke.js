@@ -27,4 +27,12 @@ MackeTerm.prototype.PauseBlink = function(pause) {
     this.term.PauseBlink(pause);
 }
 
+MackeTerm.prototype.SetCharReceiveListener = function (callback) {
+    this.term.OnCharReceived = callback;
+}
+
+MackeTerm.prototype.RemoveCharReceiveListener = function () {
+    this.term.OnCharReceived = function (){};
+}
+
 module.exports = MackeTerm;

@@ -1867,6 +1867,13 @@ jor1kGUI.prototype.SendChars = function(chars) {
     message.Send(this.activeTTY, chars);
 }
 
+// Returns the terminal attached to tty
+// tty is the tty string, for example, tty0
+jor1kGUI.prototype.GetTerm = function(tty) {
+    var index = parseInt(tty.slice(3));
+    return this.terms[index];
+}
+
 module.exports = jor1kGUI;
 
 },{"./dev/ethernet":3,"./dev/filesystem":4,"./dev/framebuffer":5,"./dev/sound":6,"./dev/terminal":8,"./dev/terminal-input":7,"./messagehandler":9,"./utils":11}],11:[function(require,module,exports){
@@ -1951,6 +1958,14 @@ MackeTerm.prototype.WasHitByEvent = function(evt) {
 
 MackeTerm.prototype.PauseBlink = function(pause) {
     this.term.PauseBlink(pause);
+}
+
+MackeTerm.prototype.SetCharReceiveListener = function (callback) {
+    this.term.OnCharReceived = callback;
+}
+
+MackeTerm.prototype.RemoveCharReceiveListener = function () {
+    this.term.OnCharReceived = function (){};
 }
 
 module.exports = MackeTerm;
