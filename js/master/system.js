@@ -245,4 +245,9 @@ jor1kGUI.prototype.GetTerm = function(tty) {
     return this.terms[index];
 }
 
+jor1kGUI.prototype.FocusTerm = function(tty) {
+    this.activeTTY = tty;
+    this.lastMouseDownTarget = TERMINAL;
+}
+
 module.exports = jor1kGUI;
