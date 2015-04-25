@@ -56,8 +56,8 @@ function OnMessage(e) {
         try {
             messagemap[e.data.command](e.data.data);
         } catch (error) {
-            message.Debug("Master: Unhandled exception in command: " + error.data.command);
-            message.Debug("Error message: " + error.message);
+            Debug("Master: Unhandled exception in command: " + e.data.command);
+            Debug("Error message: " + error.message);
             run = false;
         }
     }
