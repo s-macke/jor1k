@@ -89,11 +89,11 @@ Theme<select onchange='editor.setTheme("ace/theme/"+this.options[this.selectedIn
        <ul>This interactive compile demo is by Neelabh Gupta and Lawrence Angrave from UIUC. It uses the ACE editor and jor1k's' gcc to compile the student's C program.</ul>
        <ul>The output of gcc is used to highlight errors in the student's program. </ul>
        <br>
-       <ul>This compiler demo is dual licensed under the GPL v3 and Illinoi/NCSA Open Source license.</ul>
+       <ul>This compiler demo is dual licensed under the GPL v3 and Illinois/NCSA Open Source license.</ul>
        <ul>The ACE editor is licensed under the BSD license.</ul>
        <br>
     
-       <ul>Lawrence and UIUC students are building a more complete learning environment to playfully learn C and system programming at <a href='http://angrave.github.io/sys'>angrave.github.io/sys</a>.</ul>
+       <ul>Lawrence and UIUC students are building a more complete learning environment to playfully learn C and system programming at <a href='http://cs-education.github.io/sys'>cs-education.github.io/sys</a>.</ul>
        <br>
         </div>
 
@@ -123,6 +123,7 @@ function Start() {
     var userid = RandomString(10);
 
     var MackeTerm = require("MackeTerm");
+    var term = new MackeTerm("tty");   // canvas id for the terminal
 
     jor1kparameters = {
         system: {
@@ -147,7 +148,7 @@ function Start() {
             lazyloadimages: [
             ] // list of automatically loaded images after the basic filesystem has been loaded
         },
-        term: new MackeTerm("tty"),   // canvas id for the terminal
+        term: term,
         fbid: "fb",     // canvas id for the framebuffer
         clipboardid: "clipboard",  // input id for the clipboard
         statsid: "stats",  // object id for the statistics test
@@ -196,7 +197,7 @@ function Start() {
     var Jor1k = require("Jor1k");
 
     jor1kgui = new Jor1k(jor1kparameters);
-    jor1kgui.term.term.OnCharReceived = terminalPutCharListener;
+    term.SetCharReceiveListener(terminalPutCharListener);
 }
 
 var term_output = "";

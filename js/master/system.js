@@ -60,11 +60,17 @@ function jor1kGUI(parameters)
         message.Register("GetFB", this.framebuffer.Update.bind(this.framebuffer));
     }
 
+    this.terms = [];
     if (this.params.term) {
-        this.term = this.params.term;
-        this.term.Init(this);
+        this.terms = [this.params.term];
+    } else if (this.params.terms) {
+        this.terms = this.params.terms.slice(0, 2); // support up to 2 terminals
+    }
+    for (var i = 0; i < this.terms.length; i++) {
+        this.terms[i].Init(this, "tty" + i);
     }
 
+    this.activeTTY = "tty0";
     this.terminput = new TerminalInput(this.SendChars.bind(this));
 
     this.fs = new Filesystem();
@@ -96,13 +102,21 @@ function jor1kGUI(parameters)
    this.IgnoreKeys = function() {
       return (
           (this.lastMouseDownTarget != TERMINAL) &&
-          (this.framebuffer && this.lastMouseDownTarget != this.framebuffer.fbcanvas) &&
+          (this.framebuffer ? this.lastMouseDownTarget != this.framebuffer.fbcanvas : true) &&
           (this.lastMouseDownTarget != this.clipboard)
       );
     }
 
     var recordTarget = function(event) {
-        if (this.term.WasHitByEvent(event))
+        var termHitByEvent = false;
+        for (var i = 0; i < this.terms.length; i++) {
+            if (this.terms[i].WasHitByEvent(event)) {
+                termHitByEvent = true;
+                this.activeTTY = "tty" + i;
+                break;
+            }
+        }
+        if (termHitByEvent)
             this.lastMouseDownTarget = TERMINAL;
         else
             this.lastMouseDownTarget = event.target;
@@ -195,9 +209,13 @@ jor1kGUI.prototype.Reset = function () {
       
     message.Send("LoadAndStart", this.params.system.kernelURL);
     message.Send("LoadFilesystem", this.params.fs);
-    if (this.term) {
-        this.term.PauseBlink(false);
-        message.lastMouseDownTarget = TERMINAL;
+    if (this.terms.length > 0) {
+        this.terms.forEach(function (term) {
+            term.PauseBlink(false);
+        });
+        this.lastMouseDownTarget = TERMINAL;
+        // activeTTY remains the same, so the user can start typing into the terminal last used
+        // or the default terminal initialized in the constructor
     }
 }
 
@@ -209,15 +227,27 @@ jor1kGUI.prototype.Pause = function(pause) {
       this.executepending = false;
        message.Send("execute", 0);
     }
-    if (this.term) {
-        this.term.PauseBlink(pause);
-    }
+    this.terms.forEach(function (term) {
+        term.PauseBlink(pause);
+    });
 }
 
 // sends the input characters for the terminal
 jor1kGUI.prototype.SendChars = function(chars) {
     if (this.lastMouseDownTarget == this.fbcanvas) return;
-    message.Send("tty0", chars);
+    message.Send(this.activeTTY, chars);
+}
+
+// Returns the terminal attached to tty
+// tty is the tty string, for example, tty0
+jor1kGUI.prototype.GetTerm = function(tty) {
+    var index = parseInt(tty.slice(3));
+    return this.terms[index];
+}
+
+jor1kGUI.prototype.FocusTerm = function(tty) {
+    this.activeTTY = tty;
+    this.lastMouseDownTarget = TERMINAL;
 }
 
 module.exports = jor1kGUI;
