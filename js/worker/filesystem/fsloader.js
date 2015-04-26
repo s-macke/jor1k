@@ -28,8 +28,8 @@ function FSLoader(filesystem) {
 }
 
 FSLoader.prototype.HandleDirContents = function(list, parentid) {
-    for (var tag of list) {
-         var inode;
+    for (var i in list) {
+         var tag = list[i];
 
          var id = this.fs.Search(parentid, tag.name);
          if (id != -1) {
@@ -41,7 +41,7 @@ FSLoader.prototype.HandleDirContents = function(list, parentid) {
              }
          }
 
-         inode = this.fs.CreateInode();
+         var inode = this.fs.CreateInode();
          inode.name = tag.name;
          inode.uid = tag.uid|0;
          inode.gid = tag.gid|0;
