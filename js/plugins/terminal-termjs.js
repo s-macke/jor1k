@@ -20,8 +20,8 @@ TermJSTerm.prototype.Init = function(jor1kGUI, tty) {
     this.term.open(this.termElement);
     jor1kGUI.message.Register(tty, function(d) {
         //this.term.write(String.fromCharCode.apply(null, d)); // TODO Unicode
-        for (var i of d) {
-            var c = this.utf8converter.Put(i);
+        for (var i in d) {
+            var c = this.utf8converter.Put(d[i]);
             if (c != -1) {
                 c = String.fromCharCode(c);
                 this.term.write(c);
