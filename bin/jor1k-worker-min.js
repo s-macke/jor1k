@@ -10584,6 +10584,7 @@ function LoadBinaryResource(url, OnSuccess, OnError) {
         req.open('GET', url, true);
     } catch(err) {
         OnError(err);
+        return;
     }
     req.responseType = "arraybuffer";
     req.onreadystatechange = function () {
@@ -10601,15 +10602,6 @@ function LoadBinaryResource(url, OnSuccess, OnError) {
             OnError("Error: No data received from: " + url);
         }
     };
-    /*
-        req.onload = function(e)
-        {
-                var arrayBuffer = req.response;
-                if (arrayBuffer) {
-                    OnLoadFunction(arrayBuffer);
-                }
-        };
-    */
     req.send(null);
 }
 
