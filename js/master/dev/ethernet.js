@@ -7,6 +7,7 @@ var message = require('../messagehandler');
 function Ethernet(relayURL) {
     this.url = relayURL;
     this.onmessage = function(e) { };
+    this.ntries = 0;
     this.OpenSocket();
 }
 
@@ -23,8 +24,17 @@ function EthernetMessageHandler(e) {
     }
 }
 
+function EthernetOpenHandler(e) {
+    this.ntries = 0;
+}
+
 function EthernetCloseHandler(e) {
     // reopen websocket if it closes
+    if (this.ntries > 3) {
+        message.Debug("Websocket error: Connection failed");
+        return;
+    }
+    this.ntries++;
     message.Debug("Websocket closed. Reopening.");
     this.OpenSocket();
 }
@@ -36,22 +46,23 @@ function EthernetErrorHandler(e) {
     message.Debug(e);
 }
 
-Ethernet.prototype.OpenSocket = function() {
-    if (this.url) {
+Ethernet.prototype.OpenSocket = function() {        
+    try {
         this.socket = new WebSocket(this.url);
-        this.socket.binaryType = 'arraybuffer';
-
-        this.socket.onmessage = EthernetMessageHandler.bind(this);
-        this.socket.onclose = EthernetCloseHandler.bind(this);
-        this.socket.onerror = EthernetErrorHandler.bind(this);
-    } else {
-        this.socket = {
-            send : function(){}
-        };
+    } catch(err) {
+        delete this.socket;
+        EthernetErrorHandler(err);
+        return;
     }
+    this.socket.binaryType = 'arraybuffer';
+    this.socket.onmessage = EthernetMessageHandler.bind(this);
+    this.socket.onclose = EthernetCloseHandler.bind(this);
+    this.socket.onopen = EthernetOpenHandler.bind(this);
+    this.socket.onerror = EthernetErrorHandler.bind(this);
 }
 
 Ethernet.prototype.SendFrame = function(data) {
+    if (!this.socket) return;
     this.socket.send(data);
 }
 
@@ -59,6 +70,5 @@ Ethernet.prototype.Close = function() {
     this.socket.onclose = undefined;
     this.socket.close();
 }
-
 
 module.exports = Ethernet;
