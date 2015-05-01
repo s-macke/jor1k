@@ -12,6 +12,7 @@ var Timer = require('./timer.js');
 
 // CPU
 var OR1KCPU = require('./or1k');
+var RISCVCPU = require('./riscv');
 
 // Devices
 var UARTDev = require('./dev/uart.js');
