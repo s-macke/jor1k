@@ -76,9 +76,15 @@ function System() {
     );
 }
 
-System.prototype.CreateCPU = function(cpuname) {
+System.prototype.CreateCPU = function(cpuname, arch) {
     try {
-        this.cpu = new OR1KCPU(cpuname, this.ram, this.heap, this.ncores);
+        if (arch == "or1k") {
+            this.cpu = new OR1KCPU(cpuname, this.ram, this.heap, this.ncores);
+        } else
+        if (arch == "riscv") {
+            this.cpu = new RISCVCPU(cpuname, this.ram, this.heap, this.ncores);
+        } else
+            throw "Architecture " + arch + " not supported";
     } catch (e) {
         message.Debug("Error: failed to create CPU:" + e);
     }
@@ -120,9 +126,7 @@ System.prototype.Init = function(system) {
     this.heap = new ArrayBuffer(this.memorysize*0x100000); 
     this.memorysize--; // - the lower 1 MB are used for the cpu cores
     this.ram = new RAM(this.heap, ramoffset);
-
-
-    this.CreateCPU(system.cpu, this.ram, this.heap, system.ncores);
+    this.CreateCPU(system.cpu, system.arch);
 
     this.irqdev = new IRQDev(this);
     this.timerdev = new TimerDev();
@@ -255,7 +259,9 @@ System.prototype.OnKernelLoaded = function(buffer) {
         for(var i=0; i<length; i++) this.ram.uint8mem[i] = buffer8[i];
     }
     this.PatchKernel(length);
-    for (var i = 0; i < length >> 2; i++) this.ram.int32mem[i] = utils.Swap32(this.ram.int32mem[i]); // big endian to little endian
+    if (this.cpu.littleendian == false) {
+        for (var i = 0; i < length >> 2; i++) this.ram.int32mem[i] = utils.Swap32(this.ram.int32mem[i]); // big endian to little endian
+    }
     message.Debug("Kernel loaded: " + length + " bytes");
     this.SendStringToTerminal("Booting\r\n");
     this.SendStringToTerminal("================================================================================");

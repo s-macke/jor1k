@@ -1,0 +1,29 @@
+<!doctype html>
+
+<h1>riscv simple demo</h1>
+
+<canvas id="tty" class="screen" width="640" height="384">
+                        Terminal uses canvas
+</canvas>
+
+<script src="../bin/jor1k-master-min.js"></script>
+
+<script>
+
+var Jor1k = require("Jor1k");
+var MackeTerm = require("MackeTerm");
+
+jor1kgui = new Jor1k(
+    {
+        term: new MackeTerm("tty"), 
+        path: "../bin/",
+        system: {
+            kernelURL: "riscv_test.bin",
+            arch: "riscv",
+            cpu: "safe"
+        }
+    }
+);
+
+</script>
+

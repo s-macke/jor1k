@@ -25,6 +25,7 @@ function CPU(cpuname, ram, heap, ncores) {
     this.ncores = ncores;
     this.ram = ram;
     this.heap = heap;
+    this.littleendian = true;
 
     return this;
 }

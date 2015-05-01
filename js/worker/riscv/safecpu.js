@@ -8,8 +8,9 @@ var utils = require('../utils');
 
 // constructor
 function SafeCPU(ram) {
-    this.ram = ram;
+    message.Debug("Initialize RISCV CPU");
 
+    this.ram = ram;
     // registers
     // r[32] and r[33] are used to calculate the virtual address and physical address
     // to make sure that they are not transformed accidently into a floating point number
@@ -18,31 +19,27 @@ function SafeCPU(ram) {
 }
 
 SafeCPU.prototype.Reset = function() {
+    this.ticks = 0;
 }
 
 SafeCPU.prototype.InvalidateTLB = function() {
 }
 
 SafeCPU.prototype.GetTimeToNextInterrupt = function () {
-    return 0;
+    return 10;
 }
 
 SafeCPU.prototype.GetTicks = function () {
-    return 0;
+    return this.ticks;
 }
 
 SafeCPU.prototype.ProgressTime = function (delta) {
+    this.ticks += delta;
 }
 
 
 SafeCPU.prototype.AnalyzeImage = function() // we haveto define these to copy the cpus
 {
-}
-
-SafeCPU.prototype.SetFlags = function (x) {
-};
-
-SafeCPU.prototype.GetFlags = function () {
 }
 
 SafeCPU.prototype.CheckForInterrupt = function () {
@@ -54,7 +51,12 @@ SafeCPU.prototype.RaiseInterrupt = function (line, cpuid) {
 SafeCPU.prototype.ClearInterrupt = function (line, cpuid) {
 };
 
+
 SafeCPU.prototype.Step = function (steps, clockspeed) {
+    // this is the way to write to the terminal
+    this.ram.WriteMemory8(0x90000000 >> 0, (this.ticks&63)+32);
+    this.ticks++;
+    return 0;
 };
 
 module.exports = SafeCPU;

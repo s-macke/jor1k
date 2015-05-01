@@ -28,6 +28,7 @@ function jor1kGUI(parameters)
 
     this.params.system.kernelURL = this.params.system.kernelURL || "vmlinux.bin.bz2";
     this.params.system.memorysize = this.params.system.memorysize || 32;
+    this.params.system.arch = this.params.system.arch || "or1k";
     this.params.system.cpu = this.params.system.cpu || "asm";
     this.params.system.ncores = this.params.system.ncores || 1;
 
