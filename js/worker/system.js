@@ -11,7 +11,7 @@ var bzip2 = require('./bzip2.js');
 var Timer = require('./timer.js');
 
 // CPU
-var CPU = require('./cpu');
+var OR1KCPU = require('./or1k');
 
 // Devices
 var UARTDev = require('./dev/uart.js');
@@ -77,7 +77,7 @@ function System() {
 
 System.prototype.CreateCPU = function(cpuname) {
     try {
-        this.cpu = new CPU(cpuname, this.ram, this.heap, this.ncores);
+        this.cpu = new OR1KCPU(cpuname, this.ram, this.heap, this.ncores);
     } catch (e) {
         message.Debug("Error: failed to create CPU:" + e);
     }
