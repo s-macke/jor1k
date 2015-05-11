@@ -1030,11 +1030,7 @@ Terminal.prototype.UpdateScreen = function() {
 Terminal.prototype.PrepareUpdateRow = function(row) {
     this.updaterow[row] = 1;
     if (this.framerequested) return;
-    if (this.timeout <= 30) {
-        window.requestAnimationFrame(this.UpdateScreen.bind(this));
-    } else {
-        window.setTimeout(this.UpdateScreen.bind(this), this.timeout);
-    }
+    window.setTimeout(this.UpdateScreen.bind(this), this.timeout);
     this.framerequested = true;
 }
 
@@ -1667,6 +1663,7 @@ function jor1kGUI(parameters)
 
     this.params.system.kernelURL = this.params.system.kernelURL || "vmlinux.bin.bz2";
     this.params.system.memorysize = this.params.system.memorysize || 32;
+    this.params.system.arch = this.params.system.arch || "or1k";
     this.params.system.cpu = this.params.system.cpu || "asm";
     this.params.system.ncores = this.params.system.ncores || 1;
 
