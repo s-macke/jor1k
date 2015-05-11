@@ -255,11 +255,7 @@ Terminal.prototype.UpdateScreen = function() {
 Terminal.prototype.PrepareUpdateRow = function(row) {
     this.updaterow[row] = 1;
     if (this.framerequested) return;
-    if (this.timeout <= 30) {
-        window.requestAnimationFrame(this.UpdateScreen.bind(this));
-    } else {
-        window.setTimeout(this.UpdateScreen.bind(this), this.timeout);
-    }
+    window.setTimeout(this.UpdateScreen.bind(this), this.timeout);
     this.framerequested = true;
 }
 
