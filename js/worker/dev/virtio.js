@@ -45,12 +45,12 @@ var VRING_DESC_F_INDIRECT =  4; /* This means the buffer contains a list of buff
 // non aligned copy
 function CopyMemoryToBuffer(from, to, offset, size) {
     for(var i=0; i<size; i++)
-        to[i] = from.Read8Big(offset+i);
+        to[i] = from.Read8(offset+i);
 }
 
 function CopyBufferToMemory(from, to, offset, size) {
     for(var i=0; i<size; i++)
-        to.Write8Big(offset+i, from[i]);
+        to.Write8(offset+i, from[i]);
 }
 
 function VirtIODev(intdev, ramdev, device) {
@@ -167,27 +167,27 @@ VirtIODev.prototype.PrintRing = function() {
             desc = this.GetDescriptor(desc.next); else
         break;
     }
-    var availidx = this.ramdev.Read16Big(this.availaddr + 2) & (this.queuenum-1);
+    var availidx = this.ramdev.Read16(this.availaddr + 2) & (this.queuenum-1);
     message.Debug("avail idx: " + availidx);
-    message.Debug("avail buffer index: " + this.ramdev.Read16Big(this.availaddr + 4 + (availidx-4)*2));
-    message.Debug("avail buffer index: " + this.ramdev.Read16Big(this.availaddr + 4 + (availidx-3)*2));
-    message.Debug("avail buffer index: " + this.ramdev.Read16Big(this.availaddr + 4 + (availidx-2)*2));
-    message.Debug("avail buffer index: " + this.ramdev.Read16Big(this.availaddr + 4 + (availidx-1)*2));
-    //message.Debug("avail ring: " + this.ramdev.Read16Big(availaddr+4 + availidx*2 + -4) );
-    //message.Debug("avail ring: " + this.ramdev.Read16Big(availaddr+4 + availidx*2 + -2) );
-    //message.Debug("avail ring: " + this.ramdev.Read16Big(availaddr+4 + availidx*2 + 0) );
-    var usedidx = this.ramdev.Read16Big(this.usedaddr + 2) & (this.queuenum-1);
+    message.Debug("avail buffer index: " + this.ramdev.Read16(this.availaddr + 4 + (availidx-4)*2));
+    message.Debug("avail buffer index: " + this.ramdev.Read16(this.availaddr + 4 + (availidx-3)*2));
+    message.Debug("avail buffer index: " + this.ramdev.Read16(this.availaddr + 4 + (availidx-2)*2));
+    message.Debug("avail buffer index: " + this.ramdev.Read16(this.availaddr + 4 + (availidx-1)*2));
+    //message.Debug("avail ring: " + this.ramdev.Read16(availaddr+4 + availidx*2 + -4) );
+    //message.Debug("avail ring: " + this.ramdev.Read16(availaddr+4 + availidx*2 + -2) );
+    //message.Debug("avail ring: " + this.ramdev.Read16(availaddr+4 + availidx*2 + 0) );
+    var usedidx = this.ramdev.Read16(this.usedaddr + 2) & (this.queuenum-1);
     message.Debug("used idx: " + usedidx);
 }
 
 
 VirtIODev.prototype.ConsumeDescriptor = function(descindex, desclen) {
-    var index = this.ramdev.Read16Big(this.usedaddr + 2); // get used index
+    var index = this.ramdev.Read16(this.usedaddr + 2); // get used index
     //message.Debug("used index:" + index + " descindex=" + descindex);
     var usedaddr = this.usedaddr + 4 + (index & (this.queuenum-1)) * 8;
-    this.ramdev.Write32Big(usedaddr+0, descindex);
-    this.ramdev.Write32Big(usedaddr+4, desclen);
-    this.ramdev.Write16Big(this.usedaddr + 2, (index+1));
+    this.ramdev.Write32(usedaddr+0, descindex);
+    this.ramdev.Write32(usedaddr+4, desclen);
+    this.ramdev.Write16(this.usedaddr + 2, (index+1));
 }
 
 VirtIODev.prototype.SendReply = function (index) {
@@ -219,7 +219,7 @@ VirtIODev.prototype.SendReply = function (index) {
                 message.Abort();
             }
         }
-        this.ramdev.Write8Big(desc.addr+offset, this.dev.replybuffer[i]);
+        this.ramdev.Write8(desc.addr+offset, this.dev.replybuffer[i]);
         offset++;
     }
 
@@ -286,9 +286,9 @@ VirtIODev.prototype.WriteReg32 = function (addr, val) {
                 message.Abort();
                 return;
             }
-            var availidx = (this.ramdev.Read16Big(this.availaddr + 2)-1) & (this.queuenum-1);
-            //message.Debug((this.ramdev.Read16Big(this.availaddr + 2)-1));
-            val = this.ramdev.Read16Big(this.availaddr + 4 + (availidx)*2);
+            var availidx = (this.ramdev.Read16(this.availaddr + 2)-1) & (this.queuenum-1);
+            //message.Debug((this.ramdev.Read16(this.availaddr + 2)-1));
+            val = this.ramdev.Read16(this.availaddr + 4 + (availidx)*2);
             //message.Debug("write to index : " + utils.ToHex(val) + " availidx:" + availidx);
 
             var currentindex = val;
@@ -306,7 +306,7 @@ VirtIODev.prototype.WriteReg32 = function (addr, val) {
                         message.Abort();
                     }
                 }
-                var x = this.ramdev.Read8Big(desc.addr + offset);
+                var x = this.ramdev.Read8(desc.addr + offset);
                 offset++;
                 return x;
             }.bind(this);

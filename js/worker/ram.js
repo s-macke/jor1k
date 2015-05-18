@@ -22,6 +22,14 @@ function RAM(heap, ramoffset) {
     this.uint8mem = new Uint8Array(this.heap, ramoffset);
     this.sint8mem = new Int8Array(this.heap, ramoffset);
     this.devices = new Array(0x100);
+
+    // generic functions
+    this.Read32 = this.Read32Little;
+    this.Write32 = this.Write32Little;
+    this.Read16 = this.Read16Little;
+    this.Write16 = this.Write16Little;
+    this.Read8 = this.Read8Little;
+    this.Write8 = this.Write8Little;
 }
 
 RAM.prototype.AddDevice = function(device, devaddr, devsize) {
@@ -36,6 +44,12 @@ RAM.prototype.Little2Big = function(length) {
     for (var i = 0; i < length >> 2; i++) {
         this.int32mem[i] = utils.Swap32(this.int32mem[i]);
     }
+    this.Read32 = this.Read32Big;
+    this.Write32 = this.Write32Big;
+    this.Read16 = this.Read16Big;
+    this.Write16 = this.Write16Big;
+    this.Read8 = this.Read8Big;
+    this.Write8 = this.Write8Big;
 }
 
 RAM.prototype.Read32Big = function(addr) {
@@ -141,5 +155,7 @@ RAM.prototype.Write16Little = function(addr, x) {
     }
     this.devices[(addr>>24)&0xFF].WriteReg16(addr & 0xFFFFFF, x|0);
 };
+
+
 
 module.exports = RAM;
