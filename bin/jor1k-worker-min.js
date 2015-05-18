@@ -6473,7 +6473,8 @@ function Step(steps, clockspeed) {
             //pc = pcbase + ppc|0;
             SetSPR(r[((ins >> 14) & 0x7C)>>2] | imm, r[((ins >> 9) & 0x7C)>>2]|0); // can raise an interrupt
             if (doze) { // doze
-                doze = 0x0;               
+                doze = 0x0;
+                if (raise_interrupt == 0)
                 if (!(TTMR & (1 << 28))) {
                     return steps|0;
                 }
@@ -10443,6 +10444,7 @@ System.prototype.RaiseInterrupt = function(line) {
     this.cpu.RaiseInterrupt(line, -1); // raise all cores
     if (this.status == SYSTEM_HALT)
     {
+        message.Debug("Idle raise interrupt " + line);
         this.status = SYSTEM_RUN;
         clearTimeout(this.idletimeouthandle);
         var delta = (utils.GetMilliseconds() - this.idletime) * this.ticksperms;
