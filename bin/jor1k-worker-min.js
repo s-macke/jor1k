@@ -1263,7 +1263,7 @@ function EthDev(ram, intdev, mac) {
 
                     var ptr = this.BD[i+1];
                     for(var j=0;j<stat.LEN;j++) {
-                        ram.WriteMemory8(ptr+j, data[j]);
+                        ram.Write8(ptr+j, data[j]);
                     }
                     
                     //add the CRC back into the length field
@@ -1351,7 +1351,7 @@ function EthDev(ram, intdev, mac) {
         
         for(var i=0;i<frame.length;i++) {
             if (i<stat.LEN) {
-                frame[i] = ram.ReadMemory8(ptr+i);
+                frame[i] = ram.Read8(ptr+i);
             } else {
                 frame[i] = 0;
             }
@@ -2935,12 +2935,12 @@ var VRING_DESC_F_INDIRECT =  4; /* This means the buffer contains a list of buff
 // non aligned copy
 function CopyMemoryToBuffer(from, to, offset, size) {
     for(var i=0; i<size; i++)
-        to[i] = from.ReadMemory8(offset+i);
+        to[i] = from.Read8(offset+i);
 }
 
 function CopyBufferToMemory(from, to, offset, size) {
     for(var i=0; i<size; i++)
-        to.WriteMemory8(offset+i, from[i]);
+        to.Write8(offset+i, from[i]);
 }
 
 function VirtIODev(intdev, ramdev, device) {
@@ -3057,27 +3057,27 @@ VirtIODev.prototype.PrintRing = function() {
             desc = this.GetDescriptor(desc.next); else
         break;
     }
-    var availidx = this.ramdev.ReadMemory16(this.availaddr + 2) & (this.queuenum-1);
+    var availidx = this.ramdev.Read16(this.availaddr + 2) & (this.queuenum-1);
     message.Debug("avail idx: " + availidx);
-    message.Debug("avail buffer index: " + this.ramdev.ReadMemory16(this.availaddr + 4 + (availidx-4)*2));
-    message.Debug("avail buffer index: " + this.ramdev.ReadMemory16(this.availaddr + 4 + (availidx-3)*2));
-    message.Debug("avail buffer index: " + this.ramdev.ReadMemory16(this.availaddr + 4 + (availidx-2)*2));
-    message.Debug("avail buffer index: " + this.ramdev.ReadMemory16(this.availaddr + 4 + (availidx-1)*2));
-    //message.Debug("avail ring: " + this.ramdev.ReadMemory16(availaddr+4 + availidx*2 + -4) );
-    //message.Debug("avail ring: " + this.ramdev.ReadMemory16(availaddr+4 + availidx*2 + -2) );
-    //message.Debug("avail ring: " + this.ramdev.ReadMemory16(availaddr+4 + availidx*2 + 0) );
-    var usedidx = this.ramdev.ReadMemory16(this.usedaddr + 2) & (this.queuenum-1);
+    message.Debug("avail buffer index: " + this.ramdev.Read16(this.availaddr + 4 + (availidx-4)*2));
+    message.Debug("avail buffer index: " + this.ramdev.Read16(this.availaddr + 4 + (availidx-3)*2));
+    message.Debug("avail buffer index: " + this.ramdev.Read16(this.availaddr + 4 + (availidx-2)*2));
+    message.Debug("avail buffer index: " + this.ramdev.Read16(this.availaddr + 4 + (availidx-1)*2));
+    //message.Debug("avail ring: " + this.ramdev.Read16(availaddr+4 + availidx*2 + -4) );
+    //message.Debug("avail ring: " + this.ramdev.Read16(availaddr+4 + availidx*2 + -2) );
+    //message.Debug("avail ring: " + this.ramdev.Read16(availaddr+4 + availidx*2 + 0) );
+    var usedidx = this.ramdev.Read16(this.usedaddr + 2) & (this.queuenum-1);
     message.Debug("used idx: " + usedidx);
 }
 
 
 VirtIODev.prototype.ConsumeDescriptor = function(descindex, desclen) {
-    var index = this.ramdev.ReadMemory16(this.usedaddr + 2); // get used index
+    var index = this.ramdev.Read16(this.usedaddr + 2); // get used index
     //message.Debug("used index:" + index + " descindex=" + descindex);
     var usedaddr = this.usedaddr + 4 + (index & (this.queuenum-1)) * 8;
-    this.ramdev.WriteMemory32(usedaddr+0, descindex);
-    this.ramdev.WriteMemory32(usedaddr+4, desclen);
-    this.ramdev.WriteMemory16(this.usedaddr + 2, (index+1));
+    this.ramdev.Write32(usedaddr+0, descindex);
+    this.ramdev.Write32(usedaddr+4, desclen);
+    this.ramdev.Write16(this.usedaddr + 2, (index+1));
 }
 
 VirtIODev.prototype.SendReply = function (index) {
@@ -3109,7 +3109,7 @@ VirtIODev.prototype.SendReply = function (index) {
                 message.Abort();
             }
         }
-        this.ramdev.WriteMemory8(desc.addr+offset, this.dev.replybuffer[i]);
+        this.ramdev.Write8(desc.addr+offset, this.dev.replybuffer[i]);
         offset++;
     }
 
@@ -3176,9 +3176,9 @@ VirtIODev.prototype.WriteReg32 = function (addr, val) {
                 message.Abort();
                 return;
             }
-            var availidx = (this.ramdev.ReadMemory16(this.availaddr + 2)-1) & (this.queuenum-1);
-            //message.Debug((this.ramdev.ReadMemory16(this.availaddr + 2)-1));
-            val = this.ramdev.ReadMemory16(this.availaddr + 4 + (availidx)*2);
+            var availidx = (this.ramdev.Read16(this.availaddr + 2)-1) & (this.queuenum-1);
+            //message.Debug((this.ramdev.Read16(this.availaddr + 2)-1));
+            val = this.ramdev.Read16(this.availaddr + 4 + (availidx)*2);
             //message.Debug("write to index : " + utils.ToHex(val) + " availidx:" + availidx);
 
             var currentindex = val;
@@ -3196,7 +3196,7 @@ VirtIODev.prototype.WriteReg32 = function (addr, val) {
                         message.Abort();
                     }
                 }
-                var x = this.ramdev.ReadMemory8(desc.addr + offset);
+                var x = this.ramdev.Read8(desc.addr + offset);
                 offset++;
                 return x;
             }.bind(this);
@@ -5203,12 +5203,12 @@ var floor = stdlib.Math.floor;
 var imul = foreign.imul;
 var DebugMessage = foreign.DebugMessage;
 var abort = foreign.abort;
-var ReadMemory32 = foreign.ReadMemory32;
-var WriteMemory32 = foreign.WriteMemory32;
-var ReadMemory16 = foreign.ReadMemory16;
-var WriteMemory16 = foreign.WriteMemory16;
-var ReadMemory8 = foreign.ReadMemory8;
-var WriteMemory8 = foreign.WriteMemory8;
+var Read32 = foreign.Read32;
+var Write32 = foreign.Write32;
+var Read16 = foreign.Read16;
+var Write16 = foreign.Write16;
+var Read8 = foreign.Read8;
+var Write8 = foreign.Write8;
 
 
 var ERROR_SETFLAGS_LITTLE_ENDIAN = 0; // "Little endian is not supported"
@@ -6252,7 +6252,7 @@ function Step(steps, clockspeed) {
             }
             paddr = read32tlblookup ^ vaddr;
             EA = paddr;
-            r[((ins >> 19) & 0x7C)>>2] = (paddr|0)>0?h[ramp+paddr >> 2]|0:ReadMemory32(paddr|0)|0;
+            r[((ins >> 19) & 0x7C)>>2] = (paddr|0)>0?h[ramp+paddr >> 2]|0:Read32(paddr|0)|0;
             break;
 
         case 0x21:
@@ -6267,7 +6267,7 @@ function Step(steps, clockspeed) {
                 read32tlblookup = ((paddr^vaddr) >> 13) << 13;
             }
             paddr = read32tlblookup ^ vaddr;
-            r[((ins >> 19) & 0x7C)>>2] = (paddr|0)>0?h[ramp+paddr >> 2]|0:ReadMemory32(paddr|0)|0;
+            r[((ins >> 19) & 0x7C)>>2] = (paddr|0)>0?h[ramp+paddr >> 2]|0:Read32(paddr|0)|0;
             break;
 
         case 0x23:
@@ -6285,7 +6285,7 @@ function Step(steps, clockspeed) {
             if ((paddr|0) >= 0) {
                 r[((ins >> 19) & 0x7C)>>2] = b[ramp + (paddr ^ 3)|0]|0;
             } else {
-                r[((ins >> 19) & 0x7C)>>2] = ReadMemory8(paddr|0)|0;
+                r[((ins >> 19) & 0x7C)>>2] = Read8(paddr|0)|0;
             }
             break;
 
@@ -6304,7 +6304,7 @@ function Step(steps, clockspeed) {
             if ((paddr|0) >= 0) {
                 r[((ins >> 19) & 0x7C)>>2] = (b[ramp + (paddr ^ 3)|0] << 24) >> 24;
             } else {
-                r[((ins >> 19) & 0x7C)>>2] = ((ReadMemory8(paddr|0)|0) << 24) >> 24;
+                r[((ins >> 19) & 0x7C)>>2] = ((Read8(paddr|0)|0) << 24) >> 24;
             }
             break;
 
@@ -6329,7 +6329,7 @@ function Step(steps, clockspeed) {
             if ((paddr|0) >= 0) {
                 r[((ins >> 19) & 0x7C)>>2] = w[ramp + (paddr ^ 2) >> 1];
             } else {
-                r[((ins >> 19) & 0x7C)>>2] = (ReadMemory16(paddr|0)|0);
+                r[((ins >> 19) & 0x7C)>>2] = (Read16(paddr|0)|0);
             }
             break;
 
@@ -6354,7 +6354,7 @@ function Step(steps, clockspeed) {
             if ((paddr|0) >= 0) {
                 r[((ins >> 19) & 0x7C)>>2] =  (w[ramp + (paddr ^ 2) >> 1] << 16) >> 16;
             } else {
-                r[((ins >> 19) & 0x7C)>>2] = ((ReadMemory16(paddr|0)|0) << 16) >> 16;
+                r[((ins >> 19) & 0x7C)>>2] = ((Read16(paddr|0)|0) << 16) >> 16;
             }
             break;
 
@@ -6567,7 +6567,7 @@ function Step(steps, clockspeed) {
             if ((paddr|0) > 0) {
                 h[ramp + paddr >> 2] = r[((ins >> 9) & 0x7C)>>2]|0;
             } else {
-                WriteMemory32(paddr|0, r[((ins >> 9) & 0x7C)>>2]|0);
+                Write32(paddr|0, r[((ins >> 9) & 0x7C)>>2]|0);
             }
             break;
 
@@ -6587,7 +6587,7 @@ function Step(steps, clockspeed) {
             if ((paddr|0) > 0) {
                 h[ramp + paddr >> 2] = r[((ins >> 9) & 0x7C)>>2]|0;
             } else {
-                WriteMemory32(paddr|0, r[((ins >> 9) & 0x7C)>>2]|0);
+                Write32(paddr|0, r[((ins >> 9) & 0x7C)>>2]|0);
             }
             break;
 
@@ -6608,7 +6608,7 @@ function Step(steps, clockspeed) {
                 // consider that the data is saved in little endian
                 b[ramp + (paddr ^ 3)|0] = r[((ins >> 9) & 0x7C)>>2]|0;
             } else {
-                WriteMemory8(paddr|0, r[((ins >> 9) & 0x7C)>>2]|0);
+                Write8(paddr|0, r[((ins >> 9) & 0x7C)>>2]|0);
             }
             break;
 
@@ -6633,7 +6633,7 @@ function Step(steps, clockspeed) {
             if ((paddr|0) >= 0) {
                 w[ramp + (paddr ^ 2) >> 1] = r[((ins >> 9) & 0x7C)>>2];
             } else {
-                WriteMemory16(paddr|0, r[((ins >> 9) & 0x7C)>>2]|0);
+                Write16(paddr|0, r[((ins >> 9) & 0x7C)>>2]|0);
             }
             break;
 
@@ -6862,12 +6862,12 @@ function createCPUSingleton(cpuname, ram, heap, ncores) {
         DebugMessage: message.Debug,
         abort : message.Abort,
         imul : imul,
-        ReadMemory32 : ram.ReadMemory32.bind(ram),
-        WriteMemory32 : ram.WriteMemory32.bind(ram),
-        ReadMemory16 : ram.ReadMemory16.bind(ram),
-        WriteMemory16 : ram.WriteMemory16.bind(ram),
-        ReadMemory8 : ram.ReadMemory8.bind(ram),
-        WriteMemory8 : ram.WriteMemory8.bind(ram)
+        Read32 : ram.Read32Big.bind(ram),
+        Write32 : ram.Write32Big.bind(ram),
+        Read16 : ram.Read16Big.bind(ram),
+        Write16 : ram.Write16Big.bind(ram),
+        Read8 : ram.Read8Big.bind(ram),
+        Write8 : ram.Write8Big.bind(ram)
     };
     if (cpuname === 'asm') {
         if (fastcpu === null) {
@@ -7495,7 +7495,7 @@ SafeCPU.prototype.DTLBLookup = function (addr, write) {
 // the slow and safe version
 SafeCPU.prototype.GetInstruction = function (addr) {
     if (!this.SR_IME) {
-        return this.ram.ReadMemory32(addr);
+        return this.ram.Read32Big(addr);
     }
     // pagesize is 8192 bytes
     // nways are 1
@@ -7532,7 +7532,7 @@ SafeCPU.prototype.GetInstruction = function (addr) {
             return -1;
         }
     }
-    return this.ram.ReadMemory32((tlbtr & 0xFFFFE000) | (addr & 0x1FFF));
+    return this.ram.Read32Big((tlbtr & 0xFFFFE000) | (addr & 0x1FFF));
 };
 
 SafeCPU.prototype.Step = function (steps, clockspeed) {
@@ -7690,7 +7690,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                 break;
             }
             this.EA = r[33];
-            r[(ins >> 21) & 0x1F] = r[33]>0?ram.int32mem[r[33] >> 2]:ram.ReadMemory32(r[33]);
+            r[(ins >> 21) & 0x1F] = r[33]>0?ram.int32mem[r[33] >> 2]:ram.Read32Big(r[33]);
             break;
 
 
@@ -7705,7 +7705,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
             if (r[33] == -1) {
                 break;
             }
-            r[(ins >> 21) & 0x1F] = r[33]>0?ram.int32mem[r[33] >> 2]:ram.ReadMemory32(r[33]);
+            r[(ins >> 21) & 0x1F] = r[33]>0?ram.int32mem[r[33] >> 2]:ram.Read32Big(r[33]);
             break;
 
         case 0x23:
@@ -7715,7 +7715,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
             if (r[33] == -1) {
                 break;
             }
-            r[(ins >> 21) & 0x1F] = ram.ReadMemory8(r[33]);
+            r[(ins >> 21) & 0x1F] = ram.Read8Big(r[33]);
             break;
 
         case 0x24:
@@ -7725,7 +7725,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
             if (r[33] == -1) {
                 break;
             }
-            r[(ins >> 21) & 0x1F] = ((ram.ReadMemory8(r[33])) << 24) >> 24;
+            r[(ins >> 21) & 0x1F] = ((ram.Read8Big(r[33])) << 24) >> 24;
             break;
 
         case 0x25:
@@ -7735,7 +7735,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
             if (r[33] == -1) {
                 break;
             }
-            r[(ins >> 21) & 0x1F] = ram.ReadMemory16(r[33]);
+            r[(ins >> 21) & 0x1F] = ram.Read16Big(r[33]);
             break;
 
         case 0x26:
@@ -7745,7 +7745,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
             if (r[33] == -1) {
                 break;
             }
-            r[(ins >> 21) & 0x1F] = (ram.ReadMemory16(r[33]) << 16) >> 16;
+            r[(ins >> 21) & 0x1F] = (ram.Read16Big(r[33]) << 16) >> 16;
             break;
 
         case 0x27:
@@ -7947,7 +7947,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
             if (r[33] > 0) {
                 int32mem[r[33] >> 2] = r[(ins >> 11) & 0x1F];
             } else {
-                ram.WriteMemory32(r[33], r[(ins >> 11) & 0x1F]);
+                ram.Write32Big(r[33], r[(ins >> 11) & 0x1F]);
             }
             break;
             
@@ -7966,7 +7966,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
             if (r[33]>0) {
                 int32mem[r[33] >> 2] = r[(ins >> 11) & 0x1F];
             } else {
-                ram.WriteMemory32(r[33], r[(ins >> 11) & 0x1F]);
+                ram.Write32Big(r[33], r[(ins >> 11) & 0x1F]);
             }
             break;
 
@@ -7979,7 +7979,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
             if (r[33] == -1) {
                 break;
             }
-            ram.WriteMemory8(r[33], r[(ins >> 11) & 0x1F]);
+            ram.Write8Big(r[33], r[(ins >> 11) & 0x1F]);
             break;
 
         case 0x37:
@@ -7990,7 +7990,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
             if (r[33] == -1) {
                 break;
             }
-            ram.WriteMemory16(r[33], r[(ins >> 11) & 0x1F]);
+            ram.Write16Big(r[33], r[(ins >> 11) & 0x1F]);
             break;
 
         case 0x38:
@@ -8171,12 +8171,12 @@ var floor = stdlib.Math.floor;
 var imul = foreign.imul;
 var DebugMessage = foreign.DebugMessage;
 var abort = foreign.abort;
-var ReadMemory32 = foreign.ReadMemory32;
-var WriteMemory32 = foreign.WriteMemory32;
-var ReadMemory16 = foreign.ReadMemory16;
-var WriteMemory16 = foreign.WriteMemory16;
-var ReadMemory8 = foreign.ReadMemory8;
-var WriteMemory8 = foreign.WriteMemory8;
+var Read32 = foreign.Read32;
+var Write32 = foreign.Write32;
+var Read16 = foreign.Read16;
+var Write16 = foreign.Write16;
+var Read8 = foreign.Read8;
+var Write8 = foreign.Write8;
 
 var ERROR_SETFLAGS_LITTLE_ENDIAN = 0; // "Little endian is not supported"
 var ERROR_SETFLAGS_CONTEXT_ID = 1; // "Context ID is not supported"
@@ -9388,7 +9388,7 @@ function Step(steps, clockspeed) {
             paddr = read32tlblookup ^ vaddr;
             snoopbitfield = snoopbitfield | (1<<coreid);
             h[corep + linkedaddrp >>2] = paddr;
-            r[corep + ((ins >> 19) & 0x7C)>>2] = (paddr|0)>0?h[ramp+paddr >> 2]|0:ReadMemory32(paddr|0)|0;
+            r[corep + ((ins >> 19) & 0x7C)>>2] = (paddr|0)>0?h[ramp+paddr >> 2]|0:Read32(paddr|0)|0;
             break;
 
         case 0x21:
@@ -9403,7 +9403,7 @@ function Step(steps, clockspeed) {
                 read32tlblookup = ((paddr^vaddr) >> 13) << 13;
             }
             paddr = read32tlblookup ^ vaddr;
-            r[corep + ((ins >> 19) & 0x7C)>>2] = (paddr|0)>0?h[ramp+paddr >> 2]|0:ReadMemory32(paddr|0)|0;
+            r[corep + ((ins >> 19) & 0x7C)>>2] = (paddr|0)>0?h[ramp+paddr >> 2]|0:Read32(paddr|0)|0;
             break;
 
         case 0x23:
@@ -9421,7 +9421,7 @@ function Step(steps, clockspeed) {
             if ((paddr|0) >= 0) {
                 r[corep + ((ins >> 19) & 0x7C)>>2] = b[ramp + (paddr ^ 3)|0]|0;
             } else {
-                r[corep + ((ins >> 19) & 0x7C)>>2] = ReadMemory8(paddr|0)|0;
+                r[corep + ((ins >> 19) & 0x7C)>>2] = Read8(paddr|0)|0;
             }
             break;
 
@@ -9440,7 +9440,7 @@ function Step(steps, clockspeed) {
             if ((paddr|0) >= 0) {
                 r[corep + ((ins >> 19) & 0x7C)>>2] = (b[ramp + (paddr ^ 3)|0] << 24) >> 24;
             } else {
-                r[corep + ((ins >> 19) & 0x7C)>>2] = ((ReadMemory8(paddr|0)|0) << 24) >> 24;
+                r[corep + ((ins >> 19) & 0x7C)>>2] = ((Read8(paddr|0)|0) << 24) >> 24;
             }
             break;
 
@@ -9459,7 +9459,7 @@ function Step(steps, clockspeed) {
             if ((paddr|0) >= 0) {
                 r[corep + ((ins >> 19) & 0x7C)>>2] = w[ramp + (paddr ^ 2) >> 1];
             } else {
-                r[corep + ((ins >> 19) & 0x7C)>>2] = (ReadMemory16(paddr|0)|0);
+                r[corep + ((ins >> 19) & 0x7C)>>2] = (Read16(paddr|0)|0);
             }
             break;
 
@@ -9478,7 +9478,7 @@ function Step(steps, clockspeed) {
             if ((paddr|0) >= 0) {
                 r[corep + ((ins >> 19) & 0x7C)>>2] =  (w[ramp + (paddr ^ 2) >> 1] << 16) >> 16;
             } else {
-                r[corep + ((ins >> 19) & 0x7C)>>2] = ((ReadMemory16(paddr|0)|0) << 16) >> 16;
+                r[corep + ((ins >> 19) & 0x7C)>>2] = ((Read16(paddr|0)|0) << 16) >> 16;
             }
             break;
 
@@ -9705,7 +9705,7 @@ function Step(steps, clockspeed) {
             if ((paddr|0) > 0) {
                 h[ramp + paddr >> 2] = r[corep + ((ins >> 9) & 0x7C)>>2]|0;
             } else {
-                WriteMemory32(paddr|0, r[corep + ((ins >> 9) & 0x7C)>>2]|0);
+                Write32(paddr|0, r[corep + ((ins >> 9) & 0x7C)>>2]|0);
             }
             break;
 
@@ -9732,7 +9732,7 @@ function Step(steps, clockspeed) {
             if ((paddr|0) > 0) {
                 h[ramp + paddr >> 2] = r[corep + ((ins >> 9) & 0x7C)>>2]|0;
             } else {
-                WriteMemory32(paddr|0, r[corep + ((ins >> 9) & 0x7C)>>2]|0);
+                Write32(paddr|0, r[corep + ((ins >> 9) & 0x7C)>>2]|0);
             }
             break;
 
@@ -9760,7 +9760,7 @@ function Step(steps, clockspeed) {
                 // consider that the data is saved in little endian
                 b[ramp + (paddr ^ 3)|0] = r[corep + ((ins >> 9) & 0x7C)>>2]|0;
             } else {
-                WriteMemory8(paddr|0, r[corep + ((ins >> 9) & 0x7C)>>2]|0);
+                Write8(paddr|0, r[corep + ((ins >> 9) & 0x7C)>>2]|0);
             }
             break;
 
@@ -9787,7 +9787,7 @@ function Step(steps, clockspeed) {
             if ((paddr|0) >= 0) {
                 w[ramp + (paddr ^ 2) >> 1] = r[corep + ((ins >> 9) & 0x7C)>>2];
             } else {
-                WriteMemory16(paddr|0, r[corep + ((ins >> 9) & 0x7C)>>2]|0);
+                Write16(paddr|0, r[corep + ((ins >> 9) & 0x7C)>>2]|0);
             }
             break;
 
@@ -9983,7 +9983,11 @@ module.exports = SMPCPU;
 // -------------------- RAM ------------------------
 // -------------------------------------------------
 
-// consider that the data is saved in 32-Bit little endian format
+
+// The access is assumed to be aligned. A check is neither performed on the alignment nor on the
+// memory boundary, which would usually lead to a bus error. These checks have to be performed elsewere.
+// Consider that the data in Javascript is saved in 32-Bit little endian format
+// for big endian emulations we flip each 32-Bit for faster access
 
 // For faster access for the devices we limit the offset of the device to 
 // 0xyy000000 where yy is a number between 0x0 and 0xFF
@@ -9999,10 +10003,17 @@ function RAM(heap, ramoffset) {
     this.uint8mem = new Uint8Array(this.heap, ramoffset);
     this.sint8mem = new Int8Array(this.heap, ramoffset);
     this.devices = new Array(0x100);
+
+    // generic functions
+    this.Read32 = this.Read32Little;
+    this.Write32 = this.Write32Little;
+    this.Read16 = this.Read16Little;
+    this.Write16 = this.Write16Little;
+    this.Read8 = this.Read8Little;
+    this.Write8 = this.Write8Little;
 }
 
-RAM.prototype.AddDevice = function(device, devaddr, devsize)
-{
+RAM.prototype.AddDevice = function(device, devaddr, devsize) {
     if (devaddr & 0xFFFFFF) {
         message.Debug("Error: The device address not in the allowed memory region");
         message.Abort();
@@ -10010,69 +10021,123 @@ RAM.prototype.AddDevice = function(device, devaddr, devsize)
     this.devices[(devaddr>>24)&0xFF] = device;
 }
 
-RAM.prototype.ReadMemory32 = function(addr) {
+RAM.prototype.Little2Big = function(length) {
+    for (var i = 0; i < length >> 2; i++) {
+        this.int32mem[i] = utils.Swap32(this.int32mem[i]);
+    }
+    this.Read32 = this.Read32Big;
+    this.Write32 = this.Write32Big;
+    this.Read16 = this.Read16Big;
+    this.Write16 = this.Write16Big;
+    this.Read8 = this.Read8Big;
+    this.Write8 = this.Write8Big;
+}
+
+RAM.prototype.Read32Big = function(addr) {
+    addr = addr | 0;
     if (addr >= 0) {
         return this.int32mem[addr >> 2];
     }
     return this.devices[(addr>>24)&0xFF].ReadReg32(addr & 0xFFFFFF);
-    //message.Debug("Error in ReadMemory32: RAM region " + utils.ToHex(addr) + " is not accessible");
-    //message.Abort();
-    return 0x0;
 };
 
-RAM.prototype.WriteMemory32 = function(addr, x) {
+RAM.prototype.Read32Little = function(addr) {
+    addr = addr | 0;
     if (addr >= 0) {
-        this.int32mem[addr >> 2] = x;
+        return this.int32mem[addr >> 2];
+    }
+    return this.devices[(addr>>24)&0xFF].ReadReg32(addr & 0xFFFFFF);
+};
+
+RAM.prototype.Write32Big = function(addr, x) {
+    addr = addr | 0;
+    if (addr >= 0) {
+        this.int32mem[addr >> 2] = x|0;
         return;
     }
-    this.devices[(addr>>24)&0xFF].WriteReg32(addr & 0xFFFFFF, x);
-    //message.Debug("Error in WriteMemory32: RAM region " + utils.ToHex(addr) + " is not accessible");
-    //message.Abort();
+    this.devices[(addr>>24)&0xFF].WriteReg32(addr & 0xFFFFFF, x|0);
 };
 
-RAM.prototype.ReadMemory8 = function(addr) {
+RAM.prototype.Write32Little = function(addr, x) {
+    addr = addr | 0;
+    if (addr >= 0) {
+        this.int32mem[addr >> 2] = x|0;
+        return;
+    }
+    this.devices[(addr>>24)&0xFF].WriteReg32(addr & 0xFFFFFF, x|0);
+};
+
+RAM.prototype.Read8Big = function(addr) {
+    addr = addr | 0;
     if (addr >= 0) {
         return this.uint8mem[addr ^ 3];
     }
     return this.devices[(addr>>24)&0xFF].ReadReg8(addr & 0xFFFFFF);
-    //message.Debug("Error in ReadMemory8: RAM region " + utils.ToHex(addr) + " is not accessible");
-    //message.Abort();
-    return 0x0;
 };
 
-
-RAM.prototype.WriteMemory8 = function(addr, x) {
+RAM.prototype.Read8Little = function(addr) {
+    addr = addr | 0;
     if (addr >= 0) {
-        this.uint8mem[addr ^ 3] = x;
+        return this.uint8mem[addr];
+    }
+    return this.devices[(addr>>24)&0xFF].ReadReg8(addr & 0xFFFFFF);
+};
+
+RAM.prototype.Write8Big = function(addr, x) {
+    addr = addr | 0;
+    if (addr >= 0) {
+        this.uint8mem[addr ^ 3] = x|0;
         return;
     }
-    this.devices[(addr>>24)&0xFF].WriteReg8(addr & 0xFFFFFF, x);
-    //message.Debug("Error in WriteMemory8: RAM region " + utils.ToHex(addr) + " is not accessible");
-    //message.Abort();
-    // Exception(EXCEPT_BUSERR, addr);
+    this.devices[(addr>>24)&0xFF].WriteReg8(addr & 0xFFFFFF, x|0);
 };
 
-RAM.prototype.ReadMemory16 = function(addr) {
+RAM.prototype.Write8Little = function(addr, x) {
+    addr = addr | 0;
+    if (addr >= 0) {
+        this.uint8mem[addr] = x|0;
+        return;
+    }
+    this.devices[(addr>>24)&0xFF].WriteReg8(addr & 0xFFFFFF, x|0);
+};
 
+RAM.prototype.Read16Big = function(addr) {
+    addr = addr | 0;
     if (addr >= 0) {
         return (this.uint8mem[(addr ^ 2)+1] << 8) | this.uint8mem[(addr ^ 2)];
     }
     return this.devices[(addr>>24)&0xFF].ReadReg16(addr & 0xFFFFFF);
-    //message.Debug("Error in ReadMemory16: RAM region " + utils.ToHex(addr) + " is not accessible");
-    //message.Abort();
-    return 0x0;
 };
 
-RAM.prototype.WriteMemory16 = function(addr, x) {
+RAM.prototype.Read16Little = function(addr) {
+    addr = addr | 0;
+    if (addr >= 0) {
+        return (this.uint8mem[addr+1] << 8) | this.uint8mem[addr];
+    }
+    return this.devices[(addr>>24)&0xFF].ReadReg16(addr & 0xFFFFFF);
+};
+
+RAM.prototype.Write16Big = function(addr, x) {
+    addr = addr | 0;
     if (addr >= 0) {
         this.uint8mem[(addr ^ 2)+1] = (x >> 8) & 0xFF;
         this.uint8mem[(addr ^ 2)  ] = x & 0xFF;
         return;
     }
-    this.devices[(addr>>24)&0xFF].WriteReg16(addr & 0xFFFFFF, x);
-    //message.Debug("Error in WriteMemory16: RAM region " + utils.ToHex(addr) + " is not accessible");
-    //message.Abort();
+    this.devices[(addr>>24)&0xFF].WriteReg16(addr & 0xFFFFFF, x|0);
 };
+
+RAM.prototype.Write16Little = function(addr, x) {
+    addr = addr | 0;
+    if (addr >= 0) {
+        this.uint8mem[addr+1] = (x >> 8) & 0xFF;
+        this.uint8mem[addr  ] =  x & 0xFF;
+        return;
+    }
+    this.devices[(addr>>24)&0xFF].WriteReg16(addr & 0xFFFFFF, x|0);
+};
+
+
 
 module.exports = RAM;
 
@@ -10191,7 +10256,7 @@ SafeCPU.prototype.ClearInterrupt = function (line, cpuid) {
 
 SafeCPU.prototype.Step = function (steps, clockspeed) {
     // this is the way to write to the terminal
-    this.ram.WriteMemory8(0x90000000 >> 0, (this.ticks&63)+32);
+    this.ram.Write8Little(0x90000000 >> 0, (this.ticks&63)+32);
     this.ticks++;
     return 0;
 };
@@ -10461,7 +10526,7 @@ System.prototype.OnKernelLoaded = function(buffer) {
     }
     this.PatchKernel(length);
     if (this.cpu.littleendian == false) {
-        for (var i = 0; i < length >> 2; i++) this.ram.int32mem[i] = utils.Swap32(this.ram.int32mem[i]); // big endian to little endian
+        this.ram.Little2Big(length);
     }
     message.Debug("Kernel loaded: " + length + " bytes");
     this.SendStringToTerminal("Booting\r\n");
@@ -10504,7 +10569,7 @@ System.prototype.MainLoop = function() {
 
     // execute the cpu loop for "instructionsperloop" instructions.
     var stepsleft = this.cpu.Step(this.timer.instructionsperloop, this.timer.timercyclesperinstruction);
-
+    //message.Debug(stepsleft);
     var totalsteps = this.timer.instructionsperloop - stepsleft;
     totalsteps++; // at least one instruction
     this.ips += totalsteps;
