@@ -31,6 +31,9 @@ chmod a+rw /dev/fb0
 chmod a+rw /dev/dsp*
 chmod -R a+rw /dev/snd
 
+#set rows of terminal
+stty rows 24
+
 #echo "Configuring loopback device"
 #ifconfig lo 127.0.0.1
 
@@ -49,7 +52,6 @@ chmod -R a+rw /dev/snd
 #setup dhcp
 #echo "Launching udhcpc"
 #/sbin/udhcpc -n -q -s /usr/share/udhcpc/default.script
-
 
 # inetd startup
 /usr/sbin/inetd &
