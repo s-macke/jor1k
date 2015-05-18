@@ -10444,7 +10444,6 @@ System.prototype.RaiseInterrupt = function(line) {
     this.cpu.RaiseInterrupt(line, -1); // raise all cores
     if (this.status == SYSTEM_HALT)
     {
-        message.Debug("Idle raise interrupt " + line);
         this.status = SYSTEM_RUN;
         clearTimeout(this.idletimeouthandle);
         var delta = (utils.GetMilliseconds() - this.idletime) * this.ticksperms;
