@@ -347,7 +347,7 @@ function EthDev(ram, intdev, mac) {
 
                     var ptr = this.BD[i+1];
                     for(var j=0;j<stat.LEN;j++) {
-                        ram.WriteMemory8(ptr+j, data[j]);
+                        ram.Write8Big(ptr+j, data[j]);
                     }
                     
                     //add the CRC back into the length field
@@ -435,7 +435,7 @@ function EthDev(ram, intdev, mac) {
         
         for(var i=0;i<frame.length;i++) {
             if (i<stat.LEN) {
-                frame[i] = ram.ReadMemory8(ptr+i);
+                frame[i] = ram.Read8Big(ptr+i);
             } else {
                 frame[i] = 0;
             }

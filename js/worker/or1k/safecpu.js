@@ -448,7 +448,7 @@ SafeCPU.prototype.DTLBLookup = function (addr, write) {
 // the slow and safe version
 SafeCPU.prototype.GetInstruction = function (addr) {
     if (!this.SR_IME) {
-        return this.ram.ReadMemory32(addr);
+        return this.ram.Read32Big(addr);
     }
     // pagesize is 8192 bytes
     // nways are 1
@@ -485,7 +485,7 @@ SafeCPU.prototype.GetInstruction = function (addr) {
             return -1;
         }
     }
-    return this.ram.ReadMemory32((tlbtr & 0xFFFFE000) | (addr & 0x1FFF));
+    return this.ram.Read32Big((tlbtr & 0xFFFFE000) | (addr & 0x1FFF));
 };
 
 SafeCPU.prototype.Step = function (steps, clockspeed) {
@@ -643,7 +643,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                 break;
             }
             this.EA = r[33];
-            r[(ins >> 21) & 0x1F] = r[33]>0?ram.int32mem[r[33] >> 2]:ram.ReadMemory32(r[33]);
+            r[(ins >> 21) & 0x1F] = r[33]>0?ram.int32mem[r[33] >> 2]:ram.Read32Big(r[33]);
             break;
 
 
@@ -658,7 +658,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
             if (r[33] == -1) {
                 break;
             }
-            r[(ins >> 21) & 0x1F] = r[33]>0?ram.int32mem[r[33] >> 2]:ram.ReadMemory32(r[33]);
+            r[(ins >> 21) & 0x1F] = r[33]>0?ram.int32mem[r[33] >> 2]:ram.Read32Big(r[33]);
             break;
 
         case 0x23:
@@ -668,7 +668,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
             if (r[33] == -1) {
                 break;
             }
-            r[(ins >> 21) & 0x1F] = ram.ReadMemory8(r[33]);
+            r[(ins >> 21) & 0x1F] = ram.Read8Big(r[33]);
             break;
 
         case 0x24:
@@ -678,7 +678,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
             if (r[33] == -1) {
                 break;
             }
-            r[(ins >> 21) & 0x1F] = ((ram.ReadMemory8(r[33])) << 24) >> 24;
+            r[(ins >> 21) & 0x1F] = ((ram.Read8Big(r[33])) << 24) >> 24;
             break;
 
         case 0x25:
@@ -688,7 +688,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
             if (r[33] == -1) {
                 break;
             }
-            r[(ins >> 21) & 0x1F] = ram.ReadMemory16(r[33]);
+            r[(ins >> 21) & 0x1F] = ram.Read16Big(r[33]);
             break;
 
         case 0x26:
@@ -698,7 +698,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
             if (r[33] == -1) {
                 break;
             }
-            r[(ins >> 21) & 0x1F] = (ram.ReadMemory16(r[33]) << 16) >> 16;
+            r[(ins >> 21) & 0x1F] = (ram.Read16Big(r[33]) << 16) >> 16;
             break;
 
         case 0x27:
@@ -900,7 +900,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
             if (r[33] > 0) {
                 int32mem[r[33] >> 2] = r[(ins >> 11) & 0x1F];
             } else {
-                ram.WriteMemory32(r[33], r[(ins >> 11) & 0x1F]);
+                ram.Write32Big(r[33], r[(ins >> 11) & 0x1F]);
             }
             break;
             
@@ -919,7 +919,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
             if (r[33]>0) {
                 int32mem[r[33] >> 2] = r[(ins >> 11) & 0x1F];
             } else {
-                ram.WriteMemory32(r[33], r[(ins >> 11) & 0x1F]);
+                ram.Write32Big(r[33], r[(ins >> 11) & 0x1F]);
             }
             break;
 
@@ -932,7 +932,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
             if (r[33] == -1) {
                 break;
             }
-            ram.WriteMemory8(r[33], r[(ins >> 11) & 0x1F]);
+            ram.Write8Big(r[33], r[(ins >> 11) & 0x1F]);
             break;
 
         case 0x37:
@@ -943,7 +943,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
             if (r[33] == -1) {
                 break;
             }
-            ram.WriteMemory16(r[33], r[(ins >> 11) & 0x1F]);
+            ram.Write16Big(r[33], r[(ins >> 11) & 0x1F]);
             break;
 
         case 0x38:

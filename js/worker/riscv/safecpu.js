@@ -54,7 +54,7 @@ SafeCPU.prototype.ClearInterrupt = function (line, cpuid) {
 
 SafeCPU.prototype.Step = function (steps, clockspeed) {
     // this is the way to write to the terminal
-    this.ram.WriteMemory8(0x90000000 >> 0, (this.ticks&63)+32);
+    this.ram.Write8Little(0x90000000 >> 0, (this.ticks&63)+32);
     this.ticks++;
     return 0;
 };

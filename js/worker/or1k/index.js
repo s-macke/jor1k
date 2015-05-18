@@ -30,12 +30,12 @@ function createCPUSingleton(cpuname, ram, heap, ncores) {
         DebugMessage: message.Debug,
         abort : message.Abort,
         imul : imul,
-        ReadMemory32 : ram.ReadMemory32.bind(ram),
-        WriteMemory32 : ram.WriteMemory32.bind(ram),
-        ReadMemory16 : ram.ReadMemory16.bind(ram),
-        WriteMemory16 : ram.WriteMemory16.bind(ram),
-        ReadMemory8 : ram.ReadMemory8.bind(ram),
-        WriteMemory8 : ram.WriteMemory8.bind(ram)
+        Read32 : ram.Read32Big.bind(ram),
+        Write32 : ram.Write32Big.bind(ram),
+        Read16 : ram.Read16Big.bind(ram),
+        Write16 : ram.Write16Big.bind(ram),
+        Read8 : ram.Read8Big.bind(ram),
+        Write8 : ram.Write8Big.bind(ram)
     };
     if (cpuname === 'asm') {
         if (fastcpu === null) {

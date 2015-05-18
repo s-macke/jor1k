@@ -320,13 +320,13 @@ RecompileCPU.prototype.Gen_lstore = function(ins) {
                 s += "int32mem[0x100000+(r[33]|0)>>2]=r[" + rB + "]|0;";
                 break;
             case 0x35: // l.sw
-                s += "if(r[33]>0)int32mem[0x100000+(r[33]|0)>>2]=r[" + rB + "];else;this.ram.WriteMemory32(r[33],r["+rB+"]|0);";
+                s += "if(r[33]>0)int32mem[0x100000+(r[33]|0)>>2]=r[" + rB + "];else;this.ram.Write32Big(r[33],r["+rB+"]|0);";
                 break;
             case 0x36: // l.sb
-                s += "if(r[33]>0)this.ram.uint8mem[r[33]^3]=r[" + rB + "]&0xFF;else;this.ram.WriteMemory8(r[33],r["+rB+"]|0);";
+                s += "if(r[33]>0)this.ram.uint8mem[r[33]^3]=r[" + rB + "]&0xFF;else;this.ram.Write8Big(r[33],r["+rB+"]|0);";
                 break;
             case 0x37: // l.sh
-                s += "this.ram.WriteMemory16(r[33],r["+rB+"]|0);";
+                s += "this.ram.Write16Big(r[33],r["+rB+"]|0);";
                 break;
         }
 
@@ -343,7 +343,7 @@ RecompileCPU.prototype.Gen_lstore = function(ins) {
                 s += "this.ram.uint8mem[r[33]^3]=r[" + rB + "]&0xFF;";
                 break;
             case 0x37: // l.sh
-                s += "this.ram.WriteMemory16(r[33],r[" + rB + "]|0);";
+                s += "this.ram.Write16Big(r[33],r[" + rB + "]|0);";
                 break;
         }
     }
@@ -376,23 +376,23 @@ RecompileCPU.prototype.Gen_lload = function(ins) {
             s += "r[" + rB +"] = int32mem[0x100000+r[33] >> 2];";
             break;
         case 0x21: // l.lwz
-            s += "r[" + rB +"] = r[33]>0?int32mem[0x100000+r[33] >> 2]:this.ram.ReadMemory32(r[33]);";
+            s += "r[" + rB +"] = r[33]>0?int32mem[0x100000+r[33] >> 2]:this.ram.Read32Big(r[33]);";
             break;
 
         case 0x23: // l.lbz
-            s += "r[" + rB +"] = r[33]>0?this.ram.uint8mem[r[33]^3]:this.ram.ReadMemory8(r[33]);";
+            s += "r[" + rB +"] = r[33]>0?this.ram.uint8mem[r[33]^3]:this.ram.Read8Big(r[33]);";
             break;
 
         case 0x24: // l.lbs
-            s += "r[" + rB +"] = r[33]>0?((this.ram.uint8mem[r[33]^3]<<24)>>24):((this.ram.ReadMemory8(r[33])<<24)>>24);";
+            s += "r[" + rB +"] = r[33]>0?((this.ram.uint8mem[r[33]^3]<<24)>>24):((this.ram.Read8Big(r[33])<<24)>>24);";
             break;
 
         case 0x25: // l.lhz
-            s += "r[" + rB +"] = this.ram.ReadMemory16(r[33]);";
+            s += "r[" + rB +"] = this.ram.Read16Big(r[33]);";
             break;
 
         case 0x26: // l.lhs
-            s += "r[" + rB +"] = ((this.ram.ReadMemory16(r[33])<<16)>>16);";
+            s += "r[" + rB +"] = ((this.ram.Read16Big(r[33])<<16)>>16);";
             break;
     }
     } else { //user mode
@@ -414,11 +414,11 @@ RecompileCPU.prototype.Gen_lload = function(ins) {
             break;
 
         case 0x25: // l.lhz
-            s += "r[" + rB +"] = this.ram.ReadMemory16(r[33]);";
+            s += "r[" + rB +"] = this.ram.Read16Big(r[33]);";
             break;
 
         case 0x26: // l.lhs
-            s += "r[" + rB +"] = ((this.ram.ReadMemory16(r[33])<<16)>>16);";
+            s += "r[" + rB +"] = ((this.ram.Read16Big(r[33])<<16)>>16);";
             break;
     }
 

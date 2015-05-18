@@ -8,12 +8,12 @@ var floor = stdlib.Math.floor;
 var imul = foreign.imul;
 var DebugMessage = foreign.DebugMessage;
 var abort = foreign.abort;
-var ReadMemory32 = foreign.ReadMemory32;
-var WriteMemory32 = foreign.WriteMemory32;
-var ReadMemory16 = foreign.ReadMemory16;
-var WriteMemory16 = foreign.WriteMemory16;
-var ReadMemory8 = foreign.ReadMemory8;
-var WriteMemory8 = foreign.WriteMemory8;
+var Read32 = foreign.Read32;
+var Write32 = foreign.Write32;
+var Read16 = foreign.Read16;
+var Write16 = foreign.Write16;
+var Read8 = foreign.Read8;
+var Write8 = foreign.Write8;
 
 var ERROR_SETFLAGS_LITTLE_ENDIAN = 0; // "Little endian is not supported"
 var ERROR_SETFLAGS_CONTEXT_ID = 1; // "Context ID is not supported"
@@ -1225,7 +1225,7 @@ function Step(steps, clockspeed) {
             paddr = read32tlblookup ^ vaddr;
             snoopbitfield = snoopbitfield | (1<<coreid);
             h[corep + linkedaddrp >>2] = paddr;
-            r[corep + ((ins >> 19) & 0x7C)>>2] = (paddr|0)>0?h[ramp+paddr >> 2]|0:ReadMemory32(paddr|0)|0;
+            r[corep + ((ins >> 19) & 0x7C)>>2] = (paddr|0)>0?h[ramp+paddr >> 2]|0:Read32(paddr|0)|0;
             break;
 
         case 0x21:
@@ -1240,7 +1240,7 @@ function Step(steps, clockspeed) {
                 read32tlblookup = ((paddr^vaddr) >> 13) << 13;
             }
             paddr = read32tlblookup ^ vaddr;
-            r[corep + ((ins >> 19) & 0x7C)>>2] = (paddr|0)>0?h[ramp+paddr >> 2]|0:ReadMemory32(paddr|0)|0;
+            r[corep + ((ins >> 19) & 0x7C)>>2] = (paddr|0)>0?h[ramp+paddr >> 2]|0:Read32(paddr|0)|0;
             break;
 
         case 0x23:
@@ -1258,7 +1258,7 @@ function Step(steps, clockspeed) {
             if ((paddr|0) >= 0) {
                 r[corep + ((ins >> 19) & 0x7C)>>2] = b[ramp + (paddr ^ 3)|0]|0;
             } else {
-                r[corep + ((ins >> 19) & 0x7C)>>2] = ReadMemory8(paddr|0)|0;
+                r[corep + ((ins >> 19) & 0x7C)>>2] = Read8(paddr|0)|0;
             }
             break;
 
@@ -1277,7 +1277,7 @@ function Step(steps, clockspeed) {
             if ((paddr|0) >= 0) {
                 r[corep + ((ins >> 19) & 0x7C)>>2] = (b[ramp + (paddr ^ 3)|0] << 24) >> 24;
             } else {
-                r[corep + ((ins >> 19) & 0x7C)>>2] = ((ReadMemory8(paddr|0)|0) << 24) >> 24;
+                r[corep + ((ins >> 19) & 0x7C)>>2] = ((Read8(paddr|0)|0) << 24) >> 24;
             }
             break;
 
@@ -1296,7 +1296,7 @@ function Step(steps, clockspeed) {
             if ((paddr|0) >= 0) {
                 r[corep + ((ins >> 19) & 0x7C)>>2] = w[ramp + (paddr ^ 2) >> 1];
             } else {
-                r[corep + ((ins >> 19) & 0x7C)>>2] = (ReadMemory16(paddr|0)|0);
+                r[corep + ((ins >> 19) & 0x7C)>>2] = (Read16(paddr|0)|0);
             }
             break;
 
@@ -1315,7 +1315,7 @@ function Step(steps, clockspeed) {
             if ((paddr|0) >= 0) {
                 r[corep + ((ins >> 19) & 0x7C)>>2] =  (w[ramp + (paddr ^ 2) >> 1] << 16) >> 16;
             } else {
-                r[corep + ((ins >> 19) & 0x7C)>>2] = ((ReadMemory16(paddr|0)|0) << 16) >> 16;
+                r[corep + ((ins >> 19) & 0x7C)>>2] = ((Read16(paddr|0)|0) << 16) >> 16;
             }
             break;
 
@@ -1542,7 +1542,7 @@ function Step(steps, clockspeed) {
             if ((paddr|0) > 0) {
                 h[ramp + paddr >> 2] = r[corep + ((ins >> 9) & 0x7C)>>2]|0;
             } else {
-                WriteMemory32(paddr|0, r[corep + ((ins >> 9) & 0x7C)>>2]|0);
+                Write32(paddr|0, r[corep + ((ins >> 9) & 0x7C)>>2]|0);
             }
             break;
 
@@ -1569,7 +1569,7 @@ function Step(steps, clockspeed) {
             if ((paddr|0) > 0) {
                 h[ramp + paddr >> 2] = r[corep + ((ins >> 9) & 0x7C)>>2]|0;
             } else {
-                WriteMemory32(paddr|0, r[corep + ((ins >> 9) & 0x7C)>>2]|0);
+                Write32(paddr|0, r[corep + ((ins >> 9) & 0x7C)>>2]|0);
             }
             break;
 
@@ -1597,7 +1597,7 @@ function Step(steps, clockspeed) {
                 // consider that the data is saved in little endian
                 b[ramp + (paddr ^ 3)|0] = r[corep + ((ins >> 9) & 0x7C)>>2]|0;
             } else {
-                WriteMemory8(paddr|0, r[corep + ((ins >> 9) & 0x7C)>>2]|0);
+                Write8(paddr|0, r[corep + ((ins >> 9) & 0x7C)>>2]|0);
             }
             break;
 
@@ -1624,7 +1624,7 @@ function Step(steps, clockspeed) {
             if ((paddr|0) >= 0) {
                 w[ramp + (paddr ^ 2) >> 1] = r[corep + ((ins >> 9) & 0x7C)>>2];
             } else {
-                WriteMemory16(paddr|0, r[corep + ((ins >> 9) & 0x7C)>>2]|0);
+                Write16(paddr|0, r[corep + ((ins >> 9) & 0x7C)>>2]|0);
             }
             break;
 

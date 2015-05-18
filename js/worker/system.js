@@ -260,7 +260,7 @@ System.prototype.OnKernelLoaded = function(buffer) {
     }
     this.PatchKernel(length);
     if (this.cpu.littleendian == false) {
-        for (var i = 0; i < length >> 2; i++) this.ram.int32mem[i] = utils.Swap32(this.ram.int32mem[i]); // big endian to little endian
+        this.ram.Little2Big(length);
     }
     message.Debug("Kernel loaded: " + length + " bytes");
     this.SendStringToTerminal("Booting\r\n");
@@ -303,7 +303,7 @@ System.prototype.MainLoop = function() {
 
     // execute the cpu loop for "instructionsperloop" instructions.
     var stepsleft = this.cpu.Step(this.timer.instructionsperloop, this.timer.timercyclesperinstruction);
-
+    //message.Debug(stepsleft);
     var totalsteps = this.timer.instructionsperloop - stepsleft;
     totalsteps++; // at least one instruction
     this.ips += totalsteps;
