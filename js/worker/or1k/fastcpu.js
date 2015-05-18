@@ -1277,7 +1277,8 @@ function Step(steps, clockspeed) {
             //pc = pcbase + ppc|0;
             SetSPR(r[((ins >> 14) & 0x7C)>>2] | imm, r[((ins >> 9) & 0x7C)>>2]|0); // can raise an interrupt
             if (doze) { // doze
-                doze = 0x0;               
+                doze = 0x0;
+                if (raise_interrupt == 0)
                 if (!(TTMR & (1 << 28))) {
                     return steps|0;
                 }
