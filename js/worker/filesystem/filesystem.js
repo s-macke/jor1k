@@ -113,16 +113,21 @@ FS.prototype.AddEvent = function(id, OnEvent) {
 }
 
 FS.prototype.HandleEvent = function(id) {
+
     if (this.filesinloadingqueue == 0) {
         this.OnLoaded();
         this.OnLoaded = function() {}
     }
     //message.Debug("number of events: " + this.events.length);
-    for(var i = this.events.length - 1; i >= 0; i--) {
-        if (this.events[i].id != id) continue;
-        this.events[i].OnEvent();
-        this.events.splice(i, 1);
+    var newevents = [];
+    for(var i=0; i<this.events.length; i++) {
+        if (this.events[i].id == id) {
+            this.events[i].OnEvent();
+        } else {
+            newevents.push(this.events[i]);
+        }
     }
+    this.events = newevents;
 }
 
 
