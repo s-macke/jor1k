@@ -27,6 +27,9 @@ var KeyboardDev = require('./dev/keyboard.js');
 var SoundDev = require('./dev/sound.js');
 var VirtIODev = require('./dev/virtio.js');
 var Virtio9p = require('./dev/virtio/9p.js');
+var VirtioDummy = require('./dev/virtio/dummy.js');
+var VirtioInput = require('./dev/virtio/input.js');
+var VirtioNET = require('./dev/virtio/net.js');
 var FS = require('./filesystem/filesystem.js');
 
 
@@ -108,8 +111,13 @@ System.prototype.Reset = function() {
     this.snddev.Reset();
     this.rtcdev.Reset();
     this.kbddev.Reset();
-    this.virtiodev.Reset();
+    this.virtiodev1.Reset();
+    this.virtiodev2.Reset();
+    this.virtiodev3.Reset();
     this.virtio9pdev.Reset();
+    this.virtiodummydev.Reset();
+    this.virtioinputdev.Reset();
+    this.virtionetdev.Reset();
     this.cpu.Reset();
     this.ips = 0;
 };
@@ -146,20 +154,28 @@ System.prototype.Init = function(system) {
 
     this.filesystem = new FS();
     this.virtio9pdev = new Virtio9p(this.ram, this.filesystem);
-    this.virtiodev = new VirtIODev(this, this.ram, this.virtio9pdev);
+    this.virtiodev1 = new VirtIODev(this, 0x6, this.ram, this.virtio9pdev);
 
-    this.ram.AddDevice(this.atadev,    0x9e000000, 0x1000);
-    this.ram.AddDevice(this.uartdev0,  0x90000000, 0x7);
-    this.ram.AddDevice(this.uartdev1,  0x96000000, 0x7);
-    this.ram.AddDevice(this.snddev,    0x98000000, 0x400);
-    this.ram.AddDevice(this.ethdev,    0x92000000, 0x1000);
-    this.ram.AddDevice(this.virtiodev, 0x97000000, 0x1000);
-    this.ram.AddDevice(this.fbdev,     0x91000000, 0x1000);
-    this.ram.AddDevice(this.tsdev,     0x93000000, 0x1000);
-    this.ram.AddDevice(this.kbddev,    0x94000000, 0x100);
-    this.ram.AddDevice(this.rtcdev,    0x99000000, 0x1000);
-    this.ram.AddDevice(this.irqdev,    0x9A000000, 0x1000);
-    this.ram.AddDevice(this.timerdev,  0x9B000000, 0x1000);
+    this.virtioinputdev = new VirtioInput(this.ram);
+    this.virtionetdev = new VirtioNET(this.ram);
+    this.virtiodummydev = new VirtioDummy(this.ram);
+    this.virtiodev2 = new VirtIODev(this, 0xB, this.ram, this.virtiodummydev);
+    this.virtiodev3 = new VirtIODev(this, 0xC, this.ram, this.virtiodummydev);
+
+    this.ram.AddDevice(this.uartdev0,   0x90000000, 0x7);
+    this.ram.AddDevice(this.fbdev,      0x91000000, 0x1000);
+    this.ram.AddDevice(this.ethdev,     0x92000000, 0x1000);
+    this.ram.AddDevice(this.tsdev,      0x93000000, 0x1000);
+    this.ram.AddDevice(this.kbddev,     0x94000000, 0x100);
+    this.ram.AddDevice(this.uartdev1,   0x96000000, 0x7);
+    this.ram.AddDevice(this.virtiodev1, 0x97000000, 0x1000);
+    this.ram.AddDevice(this.snddev,     0x98000000, 0x400);
+    this.ram.AddDevice(this.rtcdev,     0x99000000, 0x1000);
+    this.ram.AddDevice(this.irqdev,     0x9A000000, 0x1000);
+    this.ram.AddDevice(this.timerdev,   0x9B000000, 0x1000);
+    this.ram.AddDevice(this.virtiodev2, 0x9C000000, 0x1000);
+    this.ram.AddDevice(this.virtiodev3, 0x9D000000, 0x1000);
+    this.ram.AddDevice(this.atadev,     0x9E000000, 0x1000);
 
     this.ips = 0; // external instruction per second counter
     this.idletime = 0; // start time of the idle routine
