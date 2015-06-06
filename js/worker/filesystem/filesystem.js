@@ -104,7 +104,7 @@ FS.prototype.LoadFilesystem = function(userinfo)
 // -----------------------------------------------------
 
 FS.prototype.AddEvent = function(id, OnEvent) {
-    var inode = this.inodes[id];
+    var inode = this.GetInode(id);
     if (inode.status == STATUS_OK) {
         OnEvent();
         return;
@@ -202,17 +202,23 @@ FS.prototype.LoadFile = function(idx) {
 
     if (inode.compressed) {
         inode.data = new Uint8Array(inode.size);
-        utils.LoadBinaryResource(inode.url + ".bz2",
-        function(buffer){
-            var buffer8 = new Uint8Array(buffer);
-            var ofs = 0;
-            bzip2.simple(buffer8, function(x){inode.data[ofs++] = x;}.bind(this) );    
-            inode.status = STATUS_OK;
-            this.filesinloadingqueue--;
-            this.HandleEvent(idx);            
-        }.bind(this), 
-        function(error){throw error;});
 
+        var succfunction = 
+        (function(idx){
+            return function(buffer){
+                var inode = this.GetInode(idx);
+                var buffer8 = new Uint8Array(buffer);
+                var ofs = 0;
+                bzip2.simple(buffer8, function(x){inode.data[ofs++] = x;}.bind(this) );
+                inode.status = STATUS_OK;
+                this.filesinloadingqueue--;
+                this.HandleEvent(idx);
+            }.bind(this) 
+        }.bind(this))(idx);
+
+        utils.LoadBinaryResource(inode.url + ".bz2", 
+        succfunction,
+        function(error){throw error;});
         return;
     }
 
@@ -228,18 +234,24 @@ FS.prototype.LoadFile = function(idx) {
         return;
     }
 
-    utils.LoadBinaryResource(inode.url, 
-        function(buffer){
+    var succfunction = 
+    (function(idx){
+        return function(buffer){
+            var inode = this.GetInode(idx);
             inode.data = new Uint8Array(buffer);
-            if (inode.size != this.inodes[idx].data.length) message.Warning("Size wrong for uncompressed non-lazily loaded file: " + inode.name);
-            inode.size = this.inodes[idx].data.length; // correct size if the previous was wrong. 
+            if (inode.size != inode.data.length) message.Warning("Size wrong for uncompressed non-lazily loaded file: " + inode.name);
+            inode.size = inode.data.length; // correct size if the previous was wrong. 
             inode.status = STATUS_OK;
             if (inode.name == "rcS") {
                 this.AppendDateHack(idx);
             }
             this.filesinloadingqueue--;
             this.HandleEvent(idx);            
-        }.bind(this), 
+        }.bind(this);
+    }.bind(this))(idx);
+
+    utils.LoadBinaryResource(inode.url, 
+        succfunction,
         function(error){throw error;});
 
 }

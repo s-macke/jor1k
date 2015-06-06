@@ -59,7 +59,6 @@ function Virtio9p(ramdev, filesystem) {
     this.SendReply = function() {};
     this.deviceid = 0x9; // 9p filesystem
     this.hostfeature = 0x1; // mountpoint
-    //this.configspace = [0x0, 0x4, 0x68, 0x6F, 0x73, 0x74]; // length of string and "host" string
     this.configspace = [0x0, 0x9, 0x2F, 0x64, 0x65, 0x76, 0x2F, 0x72, 0x6F, 0x6F, 0x74 ]; // length of string and "/dev/root" string
     this.VERSION = "9P2000.L";
     this.BLOCKSIZE = 8192; // Let's define one page.
@@ -76,7 +75,6 @@ Virtio9p.prototype.Createfid = function(inode, type, uid) {
 Virtio9p.prototype.Reset = function() {
     this.fids = [];
 }
-
 
 
 Virtio9p.prototype.BuildReply = function(id, tag, payloadsize) {
@@ -128,25 +126,26 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             var req = marshall.Unmarshall2(["w", "w"], GetByte);
             var fid = req[0];
             var mode = req[1];
-            //message.Debug("[open] fid=" + fid + ", mode=" + mode);
-            var inode = this.fs.GetInode(this.fids[fid].inodeid);
-            req[0] = inode.qid;
-            req[1] = this.msize - 24;
-            marshall.Marshall(["Q", "w"], req, this.replybuffer, 7);
-            this.BuildReply(id, tag, 13+4);
+            //message.Debug("[open] fid=" + fid + ", mode=" + mode + ", tag=" + tag);
+            var idx = this.fids[fid].inodeid;
+            var inode = this.fs.GetInode(idx);
             //message.Debug("file open " + inode.name);
-            //if (inode.status == STATUS_LOADING) return;
-            var ret = this.fs.OpenInode(this.fids[fid].inodeid, mode);
-            this.fs.AddEvent(this.fids[fid].inodeid, 
-                function() {
-                    //message.Debug("file opened " + inode.name + " tag:"+tag);
-                    req[0] = inode.qid;
-                    req[1] = this.msize - 24;
-                    marshall.Marshall(["Q", "w"], req, this.replybuffer, 7);
-                    this.BuildReply(id, tag, 13+4);
-                    this.SendReply(index);
-                }.bind(this)
-            );
+            var ret = this.fs.OpenInode(idx, mode);
+
+            var evfunction = 
+                (function(idx, id, tag, index){
+                    return function() {
+                        var inode = this.fs.GetInode(idx);
+                        //message.Debug("file opened " + inode.name + " tag:"+tag);
+                        req[0] = inode.qid;
+                        req[1] = this.msize - 24;
+                        marshall.Marshall(["Q", "w"], req, this.replybuffer, 7);
+                        this.BuildReply(id, tag, 13+4);
+                        this.SendReply(index);
+                    }.bind(this);
+                }.bind(this))(idx, id, tag, index);
+
+            this.fs.AddEvent(idx, evfunction);
             break;
 
         case 70: // link (just copying)
