@@ -8,6 +8,7 @@ var message = require('./messagehandler.js'); // global variable
 var utils = require('./utils.js');
 var RAM = require('./ram.js');
 var bzip2 = require('./bzip2.js');
+var elf = require('./elf.js');
 var Timer = require('./timer.js');
 
 // CPU
@@ -268,6 +269,10 @@ System.prototype.OnKernelLoaded = function(buffer) {
     this.SendStringToTerminal("Decompressing kernel...\r\n");
     var buffer8 = new Uint8Array(buffer);
     var length = 0;
+
+    if (elf.IsELF(buffer8)) {
+        elf.Extract(buffer8, this.ram.uint8mem);
+    } else 
     if (bzip2.IsBZIP2(buffer8)) {
         bzip2.simple(buffer8, function(x){this.ram.uint8mem[length++] = x;}.bind(this));
     } else {
