@@ -4,7 +4,7 @@
 
 "use strict";
 var message = require('../messagehandler'); // global variable
-var toHex = require('../utils').ToHex;
+var utils = require('../utils');
 var imul = require('../imul');
 
 // CPUs
@@ -34,6 +34,20 @@ CPU.prototype.switchImplementation = function(cpuname) {
 };
 
 CPU.prototype.toString = function() {
+    var r = new Uint32Array(this.heap);
+    var str = '';
+    str += "Current state of the machine\n";
+    str += "PC: " + utils.ToHex(this.cpu.pc) + "\n";
+
+    for (var i = 0; i < 32; i += 4) {
+        str += "   r" + (i + 0) + ": " +
+            utils.ToHex(r[i + 0]) + "   r" + (i + 1) + ": " +
+            utils.ToHex(r[i + 1]) + "   r" + (i + 2) + ": " +
+            utils.ToHex(r[i + 2]) + "   r" + (i + 3) + ": " +
+            utils.ToHex(r[i + 3]) + "\n";
+    }
+    str += "mstatus: " + utils.ToBin(this.cpu.csr[0x300]) + "\n";
+    return str;
 };
 
 // forward a couple of methods to the CPU implementation

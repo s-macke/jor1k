@@ -21,6 +21,9 @@ function Debug(message) {
 
 function Abort() {
     Debug("Worker: Abort execution.");
+    if (typeof messagemap["PrintOnAbort"] == 'function') {
+            messagemap["PrintOnAbort"]();
+    }    
     Send("Abort", {});
     run = false;
     throw new Error('Kill worker'); // Don't return

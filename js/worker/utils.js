@@ -30,6 +30,12 @@ function ToHex(x) {
     return ("0x" + ("00000000" + val.toString(16)).substr(-8).toUpperCase());
 }
 
+function ToBin(x) {
+    var val = uint32(x);
+    var s = ("00000000000000000000000000000000" + val.toString(2)).substr(-32) + "b";
+    return s.replace(/./g, function (v, i) {return ((i&3)==3)?v + " ": v;});
+}
+
 function CopyBinary(to, from, size, buffersrc, bufferdest) {
     var i = 0;
     for (i = 0; i < size; i++) {
@@ -173,6 +179,7 @@ module.exports.Swap16 = Swap16;
 module.exports.int32 = int32;
 module.exports.uint32 = uint32;
 module.exports.ToHex = ToHex;
+module.exports.ToBin = ToBin;
 module.exports.LoadBinaryResource = LoadBinaryResource;
 module.exports.LoadTextResource = LoadTextResource;
 

@@ -71,6 +71,7 @@ function System() {
     message.Register("Init", this.Init.bind(this) );
     message.Register("Reset", this.Reset.bind(this) );
     message.Register("ChangeCore", this.ChangeCPU.bind(this) );
+    message.Register("PrintOnAbort", this.PrintState.bind(this) );
 
     message.Register("GetIPS", function(data) {
         message.Send("GetIPS", this.ips);
