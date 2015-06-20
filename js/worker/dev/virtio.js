@@ -11,6 +11,7 @@
 // https://lists.gnu.org/archive/html/qemu-devel/2011-12/msg02712.html
 // http://www-numi.fnal.gov/offline_software/srt_public_context/WebDocs/Errors/unix_system_errors.html
 // https://github.com/ozaki-r/arm-js/tree/master/js
+// the memory layout can be found here: include/uapi/linux/virtio_ring.h
 
 "use strict";
 
@@ -111,7 +112,7 @@ VirtIODev.prototype.UpdateAddr = function() {
         var mask = ~(this.align - 1);
         this.usedaddr[i] = (this.usedaddr[i] & mask) + this.align;
     }
-    this.lastavailidx[i] = (this.ramdev.Read16(this.availaddr[i] + 2));
+    this.lastavailidx[i] = utils.Swap16(this.ramdev.Read16(this.availaddr[i] + 2));
 }
 
 VirtIODev.prototype.ReadReg8 = function (addr) {
@@ -132,7 +133,7 @@ VirtIODev.prototype.WriteReg8 = function (addr, value) {
 
 VirtIODev.prototype.ReadReg32 = function (addr) {
     var val = 0x0;
-    message.Debug("VirtIODev: read register of int "  + this.intno + " : " + utils.ToHex(addr));
+    //message.Debug("VirtIODev: read register of int "  + this.intno + " : " + utils.ToHex(addr));
 
     switch(addr)
     {
@@ -160,8 +161,7 @@ VirtIODev.prototype.ReadReg32 = function (addr) {
                 val = this.dev.hostfeature;
             } else
             if (this.hostfeaturewordselect == 1) {
-                //val = 0x1; // VIRTIO_F_VERSION_1
-                val = 0x0;
+                val = 0x1; // VIRTIO_F_VERSION_1
             }
             break;
 
@@ -203,39 +203,15 @@ VirtIODev.prototype.GetDescriptor = function(queueidx, index) {
     var buffer = new Uint8Array(16);
     CopyMemoryToBuffer(this.ramdev, buffer, addr, 16);
 
-    var desc = marshall.Unmarshall(["w", "w", "w", "h", "h"], buffer, 0);
-    //var desc = marshall.Unmarshall(["d", "w", "h", "h"], buffer, 0); // for Linux > 4
+    var desc = marshall.Unmarshall(["d", "w", "h", "h"], buffer, 0);
     //message.Debug("GetDescriptor: index=" + index + " addr=" + utils.ToHex(desc[1]) + " len=" + desc[2] + " flags=" + desc[3]  + " next=" + desc[4]);
 
     return {
-        addr: utils.Swap32(desc[1]),
-        len: utils.Swap32(desc[2]),
-        flags: utils.Swap16(desc[3]),
-        next: utils.Swap16(desc[4])
+        addr: desc[0],
+        len: desc[1],
+        flags: desc[2],
+        next: desc[3]
     };
-}
-
-// the memory layout can be found here: include/uapi/linux/virtio_ring.h
-
-VirtIODev.prototype.PrintRing = function(queue) {
-    var desc = this.GetDescriptor(queueidx, 0);
-    for(var i=0; i<10; i++) {
-        message.Debug("next: " + desc.next + " flags:" + desc.flags + " addr:" + utils.ToHex(desc.addr));
-        if (desc.flags & 1)
-            desc = this.GetDescriptor(queueidx, desc.next); else
-        break;
-    }
-    var availidx = this.ramdev.Read16(this.availaddr[queueidx] + 2) & (this.queuenum[queueidx]-1);
-    message.Debug("avail idx: " + availidx);
-    message.Debug("avail buffer index: " + this.ramdev.Read16(this.availaddr[queueidx] + 4 + (availidx-4)*2));
-    message.Debug("avail buffer index: " + this.ramdev.Read16(this.availaddr[queueidx] + 4 + (availidx-3)*2));
-    message.Debug("avail buffer index: " + this.ramdev.Read16(this.availaddr[queueidx] + 4 + (availidx-2)*2));
-    message.Debug("avail buffer index: " + this.ramdev.Read16(this.availaddr[queueidx] + 4 + (availidx-1)*2));
-    //message.Debug("avail ring: " + this.ramdev.Read16(this.availaddr[queueidx]+4 + availidx*2 + -4) );
-    //message.Debug("avail ring: " + this.ramdev.Read16(this.availaddr[queueidx]+4 + availidx*2 + -2) );
-    //message.Debug("avail ring: " + this.ramdev.Read16(this.availaddr[queueidx]+4 + availidx*2 + 0) );
-    var usedidx = this.ramdev.Read16(this.usedaddr[queueidx] + 2) & (this.queuenum[queueidx]-1);
-    message.Debug("used idx: " + usedidx);
 }
 
 
@@ -243,21 +219,21 @@ VirtIODev.prototype.ConsumeDescriptor = function(queueidx, descindex, desclen) {
 
     // update used index
     var usedidxaddr = this.usedaddr[queueidx] + 2;
-    var index = (this.ramdev.Read16(usedidxaddr));
-    this.ramdev.Write16(usedidxaddr, (index+1) );
+    var index = utils.Swap16(this.ramdev.Read16(usedidxaddr));
+    this.ramdev.Write16(usedidxaddr, utils.Swap16(index+1) );
 
     //message.Debug("used index:" + index + " descindex=" + descindex);
 
     var usedaddr = this.usedaddr[queueidx] + 4 + (index & (this.queuenum[queueidx]-1)) * 8;
-    this.ramdev.Write32(usedaddr+0, (descindex));
-    this.ramdev.Write32(usedaddr+4, (desclen));
+    this.ramdev.Write32(usedaddr+0, utils.Swap32(descindex));
+    this.ramdev.Write32(usedaddr+4, utils.Swap32(desclen));
 }
 
 VirtIODev.prototype.SendReply = function (queueidx, index) {
     //message.Debug("Send Reply index="+index + " size=" + this.dev.replybuffersize);
     this.ConsumeDescriptor(queueidx, index, this.dev.replybuffersize);
 
-    var availflag = this.ramdev.Read16(this.availaddr[queueidx]);
+    var availflag = utils.Swap16(this.ramdev.Read16(this.availaddr[queueidx]));
 
     // no data? So skip the rest
     if (this.dev.replybuffersize == 0) {
@@ -385,13 +361,13 @@ VirtIODev.prototype.WriteReg32 = function (addr, val) {
         case VIRTIO_QUEUENOTIFY_REG:
             var queueidx = val;
 
-            var availidx = (this.ramdev.Read16(this.availaddr[queueidx] + 2));
+            var availidx = utils.Swap16(this.ramdev.Read16(this.availaddr[queueidx] + 2));
             //message.Debug("write queuenotify reg : " + utils.ToHex(queueidx) + " " + availidx);
             
             while(this.lastavailidx[queueidx] != availidx)
             {
                 var currentavailidx = this.lastavailidx[queueidx] & (this.queuenum[queueidx]-1);
-                var currentdescindex = (this.ramdev.Read16(this.availaddr[val] + 4 + currentavailidx*2));
+                var currentdescindex = utils.Swap16(this.ramdev.Read16(this.availaddr[val] + 4 + currentavailidx*2));
 
                 //message.Debug("" + queueidx + " " + availidx + " " + currentavailidx + " " + currentdescindex);
 

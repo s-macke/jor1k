@@ -59,7 +59,7 @@ function Virtio9p(ramdev, filesystem) {
     this.SendReply = function() {};
     this.deviceid = 0x9; // 9p filesystem
     this.hostfeature = 0x1; // mountpoint
-    this.configspace = [0x0, 0x9, 0x2F, 0x64, 0x65, 0x76, 0x2F, 0x72, 0x6F, 0x6F, 0x74 ]; // length of string and "/dev/root" string
+    this.configspace = [0x9, 0x0, 0x2F, 0x64, 0x65, 0x76, 0x2F, 0x72, 0x6F, 0x6F, 0x74 ]; // length of string and "/dev/root" string
     this.VERSION = "9P2000.L";
     this.BLOCKSIZE = 8192; // Let's define one page.
     this.msize = 8192; // maximum message size
