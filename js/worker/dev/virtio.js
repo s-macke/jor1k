@@ -77,6 +77,9 @@ function VirtIODev(intdev, intno, ramdev, device) {
     this.availaddr = new Uint32Array(0x10);
     this.lastavailidx = new Uint32Array(0x10);
 
+    //this.version = 1;
+    this.version = 2; // for Linux > 4.0
+
     this.Reset();
 }
 
@@ -103,7 +106,7 @@ VirtIODev.prototype.Reset = function() {
 
 // Ring buffer addresses
 VirtIODev.prototype.UpdateAddr = function() {
-
+    if (this.version != 1) return;
     var i = this.queuesel;
     this.descaddr[i] = this.queuepfn[i] * this.pagesize;
     this.availaddr[i] = this.descaddr[i] + this.queuenum[i]*16;
@@ -130,10 +133,17 @@ VirtIODev.prototype.WriteReg8 = function (addr, value) {
     this.dev.WriteConfig(addr-0x100, value);
 }
 
-
 VirtIODev.prototype.ReadReg32 = function (addr) {
     var val = 0x0;
     //message.Debug("VirtIODev: read register of int "  + this.intno + " : " + utils.ToHex(addr));
+    if (addr >= 0x100) {
+        //message.Debug("read configspace32 of int " + this.intno + " : " + (addr-0x100));
+        return (
+            (this.dev.configspace[addr-0x100+0]<<24) | 
+            (this.dev.configspace[addr-0x100+1]<<16) |
+            (this.dev.configspace[addr-0x100+2]<<8) |
+            (this.dev.configspace[addr-0x100+3]<<0) );
+    }
 
     switch(addr)
     {
@@ -142,8 +152,7 @@ VirtIODev.prototype.ReadReg32 = function (addr) {
             break;
 
         case VIRTIO_VERSION_REG:
-            val = 0x1;
-            //val = 0x2; // for Linux >= 4.0
+            val = this.version;
             break;
 
         case VIRTIO_DEVICE_REG:
@@ -455,6 +464,7 @@ VirtIODev.prototype.WriteReg32 = function (addr, val) {
 
             case VIRTIO_QUEUE_AVAIL_LOW:
                 this.availaddr[this.queuesel] = val;
+                this.lastavailidx[this.queuesel] = utils.Swap16(this.ramdev.Read16(this.availaddr[this.queuesel] + 2));
                 break;
 
             case VIRTIO_QUEUE_AVAIL_HIGH:
