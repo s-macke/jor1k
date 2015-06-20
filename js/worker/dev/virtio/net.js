@@ -22,7 +22,7 @@ function VirtioNET(ramdev) {
     }
 
     // TODO: As long as the old ethernet driver is active we can't overwrite the message
-    message.Register("ethmac", this.Receive.bind(this) );
+    //message.Register("ethmac", this.Receive.bind(this) );
 
     this.Reset();
 }
@@ -76,7 +76,6 @@ VirtioNET.prototype.HandleReceive = function() {
 
 VirtioNET.prototype.ReceiveRequest = function (queueidx, index, GetByte, size) {
     //message.Debug("Virtio network request of ringbuffer " + queueidx + " " + index + " " + size.read + " " + size.write);
-    message.Register("ethmac", this.Receive.bind(this) );
 
     if (queueidx > 1) {
         message.Debug("Error in VirtioNET: Unsupported ringbuffer");
