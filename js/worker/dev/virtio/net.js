@@ -9,20 +9,20 @@ var utils = require('../../utils');
 var marshall = require('./marshall');
 
 function VirtioNET(ramdev) {
-    this.configspace = [0x0, 0x0, 0x0, 0x0, 0x0, 0x0]; // mac address
+    this.configspace = [0x00, 0x0, 0x0, 0x0, 0x0, 0x0]; // mac address
     this.deviceid = 1;
-    this.hostfeature = (1<<5); // Device has given MAC address.  and partial checksums
+    this.hostfeature = (1<<5); // Device has given MAC address
 
     this.replybuffer = new Uint8Array(65550); // the maximum size of a TCP or UDP packet, plus the 14 byte ethernet header
     this.replybuffersize = 0;
 
     // TODO: not all networks addresses are valid
-    for(var i=0; i<6; i++) {
-        this.configspace[1] = Math.floor(Math.random()*256);
+    for(var i=1; i<6; i++) {
+        this.configspace[i] = Math.floor(Math.random()*256);
     }
 
     // TODO: As long as the old ethernet driver is active we can't overwrite the message
-    //message.Register("ethmac", this.Receive.bind(this) );
+    message.Register("ethmac", this.Receive.bind(this) );
 
     this.Reset();
 }
@@ -62,10 +62,10 @@ VirtioNET.prototype.HandleReceive = function() {
 
     // both buffers are valid so copy
 
-    this.replybuffersize = buffer.length + 10;
-    marshall.Marshall(["b", "b", "h", "h", "h", "h"], [0, 0, 0, 0, 0, 0], this.replybuffer, 0);
+    this.replybuffersize = buffer.length + 12;
+    marshall.Marshall(["b", "b", "h", "h", "h", "h", "h"], [0, 0, 0, 0, 0, 0, 0], this.replybuffer, 0);
     for(var i=0; i<buffer.length; i++) {
-        this.replybuffer[i+10] = buffer[i];
+        this.replybuffer[i+12] = buffer[i];
     }
     //this.replybuffersize = desc.size.write;
 
@@ -74,9 +74,9 @@ VirtioNET.prototype.HandleReceive = function() {
 }
 
 
-
 VirtioNET.prototype.ReceiveRequest = function (queueidx, index, GetByte, size) {
     //message.Debug("Virtio network request of ringbuffer " + queueidx + " " + index + " " + size.read + " " + size.write);
+    message.Register("ethmac", this.Receive.bind(this) );
 
     if (queueidx > 1) {
         message.Debug("Error in VirtioNET: Unsupported ringbuffer");
@@ -95,10 +95,10 @@ VirtioNET.prototype.ReceiveRequest = function (queueidx, index, GetByte, size) {
         return;
     }
 
-    var hdr = marshall.Unmarshall2(["b", "b", "h", "h", "h", "h"], GetByte);
+    var hdr = marshall.Unmarshall2(["b", "b", "h", "h", "h", "h", "h"], GetByte);
     //message.Debug(hdr);
-    var frame = new Uint8Array(size.read - 10);
-    for(var i=0; i<size.read-10; i++) {
+    var frame = new Uint8Array(size.read - 12);
+    for(var i=0; i<size.read-12; i++) {
         frame[i] = GetByte();
     }
     message.Send("ethmac", frame.buffer);
