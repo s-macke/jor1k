@@ -115,18 +115,24 @@ VirtIODev.prototype.UpdateAddr = function() {
 }
 
 VirtIODev.prototype.ReadReg8 = function (addr) {
-    //message.Debug("configspace of int " + this.intno + " : " + (addr-0x100));
+    //message.Debug("read configspace of int " + this.intno + " : " + (addr-0x100));
     return this.dev.configspace[addr-0x100];
 }
+
 VirtIODev.prototype.ReadReg16 = function (addr) {
-    //message.Debug("configspace16 of int " + this.intno + " : " + (addr-0x100));
+    //message.Debug("read configspace16 of int " + this.intno + " : " + (addr-0x100));
     return (this.dev.configspace[addr-0x100]<<8) | (this.dev.configspace[addr-0x100+1]);
+}
+
+VirtIODev.prototype.WriteReg8 = function (addr, value) {
+    //message.Debug("write configspace of int " + this.intno + " : " + (addr-0x100) + " " + value);
+    this.dev.WriteConfig(addr-0x100, value);
 }
 
 
 VirtIODev.prototype.ReadReg32 = function (addr) {
     var val = 0x0;
-    //message.Debug("VirtIODev: read register of int "  + this.intno + " : " + utils.ToHex(addr));
+    message.Debug("VirtIODev: read register of int "  + this.intno + " : " + utils.ToHex(addr));
 
     switch(addr)
     {
@@ -152,6 +158,10 @@ VirtIODev.prototype.ReadReg32 = function (addr) {
             val = 0x0;
             if (this.hostfeaturewordselect == 0) {
                 val = this.dev.hostfeature;
+            } else
+            if (this.hostfeaturewordselect == 1) {
+                //val = 0x1; // VIRTIO_F_VERSION_1
+                val = 0x0;
             }
             break;
 
@@ -294,7 +304,6 @@ VirtIODev.prototype.SendReply = function (queueidx, index) {
         this.intdev.RaiseInterrupt(this.intno);
     //}
 }
-
 
 
 VirtIODev.prototype.GetDescriptorBufferSize = function (queueidx, index) {
