@@ -67,33 +67,48 @@ function VirtIODev(intdev, intno, ramdev, device) {
     this.intdev = intdev;
     this.intno = intno;
     this.ramdev = ramdev;
+
+    this.queuenum = new Uint32Array(0x10);
+    this.queueready = new Uint32Array(0x10);
+    this.queuepfn = new Uint32Array(0x10);
+    this.descaddr = new Uint32Array(0x10);
+    this.usedaddr = new Uint32Array(0x10);
+    this.availaddr = new Uint32Array(0x10);
+
     this.Reset();
 }
 
 VirtIODev.prototype.Reset = function() {
     this.status = 0x0;
-    this.queuepfn = 0x0;
     this.intstatus = 0x0;
     this.pagesize = 0x0;
-    this.queuenum = 0x100;
     this.align = 0x2000;
-    this.queueready = 0x0;
     this.availidx = 0x0;
+    this.hostfeaturewordselect = 0x0;
 
-    this.descaddr = 0x0;
-    this.usedaddr = 0x0;
-    this.availaddr = 0x0;
+    this.queuesel = 0x0;
+    
+
+    for(var i=0; i<0x10; i++) {
+        this.queueready[i] = 0x0;
+        this.queuenum[i] = 0x100;
+        this.queuepfn[i] = 0x0;
+        this.descaddr[i] = 0x0;
+        this.usedaddr[i] = 0x0;
+        this.availaddr[i] = 0x0;
+    }
 }
 
 // Ring buffer addresses
 VirtIODev.prototype.UpdateAddr = function() {
 
-    this.descaddr = this.queuepfn * this.pagesize;
-    this.availaddr = this.descaddr + this.queuenum*16;
-    this.usedaddr = this.availaddr + 2 + 2 + this.queuenum*2 + 2;
-    if (this.usedaddr & (this.align-1)) { // padding to next align boundary
+    var i = this.queuesel;
+    this.descaddr[i] = this.queuepfn[i] * this.pagesize;
+    this.availaddr[i] = this.descaddr[i] + this.queuenum[i]*16;
+    this.usedaddr[i] = this.availaddr[i] + 2 + 2 + this.queuenum[i]*2 + 2;
+    if (this.usedaddr[i] & (this.align-1)) { // padding to next align boundary
         var mask = ~(this.align - 1);
-        this.usedaddr = (this.usedaddr & mask) + this.align;
+        this.usedaddr[i] = (this.usedaddr[i] & mask) + this.align;
     }
 
 }
@@ -132,19 +147,23 @@ VirtIODev.prototype.ReadReg32 = function (addr) {
             break;
 
         case VIRTIO_HOSTFEATURES_REG:
-            val = this.dev.hostfeature;
+            //message.Debug("virtio: Read hostfeatures register");
+            val = 0x0;
+            if (this.hostfeaturewordselect == 0) {
+                val = this.dev.hostfeature;
+            }
             break;
 
         case VIRTIO_QUEUENUMMAX_REG:
-            val = this.queuenum;
+            val = this.queuenum[this.queuesel];
             break;
 
         case VIRTIO_QUEUEPFN_REG:
-            val = this.queuepfn;
+            val = this.queuepfn[this.queuesel];
             break;
 
         case VIRTIO_QUEUE_READY:
-            val = this.queueready;
+            val = this.queueready[this.queuesel];
             break;
 
         case VIRTIO_INTERRUPTSTATUS_REG:
@@ -167,9 +186,9 @@ VirtIODev.prototype.ReadReg32 = function (addr) {
     return utils.Swap32(val);
 };
 
-VirtIODev.prototype.GetDescriptor = function(index) {
+VirtIODev.prototype.GetDescriptor = function(ringidx, index) {
 
-    var addr = this.descaddr + index * 16;
+    var addr = this.descaddr[ringidx] + index * 16;
     var buffer = new Uint8Array(16);
     CopyMemoryToBuffer(this.ramdev, buffer, addr, 16);
 
@@ -187,46 +206,46 @@ VirtIODev.prototype.GetDescriptor = function(index) {
 
 // the memory layout can be found here: include/uapi/linux/virtio_ring.h
 
-VirtIODev.prototype.PrintRing = function() {
-    var desc = this.GetDescriptor(0);
+VirtIODev.prototype.PrintRing = function(ringidx) {
+    var desc = this.GetDescriptor(ringidx, 0);
     for(var i=0; i<10; i++) {
         message.Debug("next: " + desc.next + " flags:" + desc.flags + " addr:" + utils.ToHex(desc.addr));
         if (desc.flags & 1)
-            desc = this.GetDescriptor(desc.next); else
+            desc = this.GetDescriptor(ringidx, desc.next); else
         break;
     }
-    var availidx = this.ramdev.Read16(this.availaddr + 2) & (this.queuenum-1);
+    var availidx = this.ramdev.Read16(this.availaddr[ringidx] + 2) & (this.queuenum[ringidx]-1);
     message.Debug("avail idx: " + availidx);
-    message.Debug("avail buffer index: " + this.ramdev.Read16(this.availaddr + 4 + (availidx-4)*2));
-    message.Debug("avail buffer index: " + this.ramdev.Read16(this.availaddr + 4 + (availidx-3)*2));
-    message.Debug("avail buffer index: " + this.ramdev.Read16(this.availaddr + 4 + (availidx-2)*2));
-    message.Debug("avail buffer index: " + this.ramdev.Read16(this.availaddr + 4 + (availidx-1)*2));
-    //message.Debug("avail ring: " + this.ramdev.Read16(availaddr+4 + availidx*2 + -4) );
-    //message.Debug("avail ring: " + this.ramdev.Read16(availaddr+4 + availidx*2 + -2) );
-    //message.Debug("avail ring: " + this.ramdev.Read16(availaddr+4 + availidx*2 + 0) );
-    var usedidx = this.ramdev.Read16(this.usedaddr + 2) & (this.queuenum-1);
+    message.Debug("avail buffer index: " + this.ramdev.Read16(this.availaddr[ringidx] + 4 + (availidx-4)*2));
+    message.Debug("avail buffer index: " + this.ramdev.Read16(this.availaddr[ringidx] + 4 + (availidx-3)*2));
+    message.Debug("avail buffer index: " + this.ramdev.Read16(this.availaddr[ringidx] + 4 + (availidx-2)*2));
+    message.Debug("avail buffer index: " + this.ramdev.Read16(this.availaddr[ringidx] + 4 + (availidx-1)*2));
+    //message.Debug("avail ring: " + this.ramdev.Read16(this.availaddr[ringidx]+4 + availidx*2 + -4) );
+    //message.Debug("avail ring: " + this.ramdev.Read16(this.availaddr[ringidx]+4 + availidx*2 + -2) );
+    //message.Debug("avail ring: " + this.ramdev.Read16(this.availaddr[ringidx]+4 + availidx*2 + 0) );
+    var usedidx = this.ramdev.Read16(this.usedaddr[ringidx] + 2) & (this.queuenum[ringidx]-1);
     message.Debug("used idx: " + usedidx);
 }
 
 
-VirtIODev.prototype.ConsumeDescriptor = function(descindex, desclen) {
-    var index = (this.ramdev.Read16(this.usedaddr + 2)); // get used index
+VirtIODev.prototype.ConsumeDescriptor = function(ringidx, descindex, desclen) {
+    var index = (this.ramdev.Read16(this.usedaddr[ringidx] + 2)); // get used index
     //message.Debug("used index:" + index + " descindex=" + descindex);
-    var usedaddr = this.usedaddr + 4 + (index & (this.queuenum-1)) * 8;
+    var usedaddr = this.usedaddr[ringidx] + 4 + (index & (this.queuenum[ringidx]-1)) * 8;
 
     this.ramdev.Write32(usedaddr+0, (descindex));
     this.ramdev.Write32(usedaddr+4, (desclen));
-    this.ramdev.Write16(this.usedaddr + 2, ((index+1)));
+    this.ramdev.Write16(this.usedaddr[ringidx] + 2, ((index+1)));
 }
 
-VirtIODev.prototype.SendReply = function (index) {
+VirtIODev.prototype.SendReply = function (ringidx, index) {
     //message.Debug("Send Reply index="+index + " size=" + this.dev.replybuffersize);
-    this.ConsumeDescriptor(index, this.dev.replybuffersize);
+    this.ConsumeDescriptor(ringidx, index, this.dev.replybuffersize);
 
-    var desc = this.GetDescriptor(index);
+    var desc = this.GetDescriptor(ringidx, index);
     while ((desc.flags & VRING_DESC_F_WRITE) == 0) {
         if (desc.flags & 1) { // continuing buffer
-            desc = this.GetDescriptor(desc.next);
+            desc = this.GetDescriptor(ringidx, desc.next);
         } else {
             message.Debug("Error in virtiodev: Descriptor is not continuing");
             message.Abort();
@@ -241,7 +260,7 @@ VirtIODev.prototype.SendReply = function (index) {
     var offset = 0;
     for(var i=0; i<this.dev.replybuffersize; i++) {
         if (offset >= desc.len) {
-            desc = this.GetDescriptor(desc.next);
+            desc = this.GetDescriptor(0, desc.next);
             offset = 0;            
             if ((desc.flags & VRING_DESC_F_WRITE) == 0) {
                 message.Debug("Error in virtiodev: Descriptor is not allowed to write");
@@ -261,6 +280,7 @@ VirtIODev.prototype.SendReply = function (index) {
 VirtIODev.prototype.WriteReg32 = function (addr, val) {
     val = utils.Swap32(val);
     //message.Debug("VirtIODev: write register of int "  + this.intno + " : " + utils.ToHex(addr) + " = " + val);
+
     switch(addr)
     {
         case VIRTIO_GUEST_PAGE_SIZE_REG:
@@ -270,6 +290,7 @@ VirtIODev.prototype.WriteReg32 = function (addr, val) {
             break;
 
         case VIRTIO_HOSTFEATURESSEL_REG:
+            this.hostfeaturewordselect = val;
             //message.Debug("write hostfeaturesel reg : " + utils.ToHex(val));
             break;
 
@@ -282,11 +303,12 @@ VirtIODev.prototype.WriteReg32 = function (addr, val) {
             break;
 
         case VIRTIO_QUEUESEL_REG:
+            this.queuesel = val;
             //message.Debug("write queuesel reg : " + utils.ToHex(val));
             break;
 
         case VIRTIO_QUEUENUM_REG:
-            this.queuenum = val;
+            this.queuenum[this.queuesel] = val;
             this.UpdateAddr();
             //message.Debug("write queuenum reg : " + utils.ToHex(val));
             break;
@@ -298,54 +320,48 @@ VirtIODev.prototype.WriteReg32 = function (addr, val) {
             break;
 
         case VIRTIO_QUEUEPFN_REG:
-            this.queuepfn = val;
+            this.queuepfn[this.queuesel] = val;
             this.UpdateAddr();
             //message.Debug("write queuepfn reg : " + utils.ToHex(val));
             break;
 
         case VIRTIO_QUEUENOTIFY_REG:
             //message.Debug("write queuenotify reg : " + utils.ToHex(val));
-            if (val != 0) {
-                message.Debug("Error in virtiodev: Untested case of queuenotify " + val);
-                message.Abort();
-                return;
-            }
-	    /*
-            var buffer = new Uint8Array(4);
-            CopyMemoryToBuffer(this.ramdev, buffer, this.availaddr + 2, 4);
-            var desc = marshall.Unmarshall(["h", "h"], buffer, 0);
-            */
-            var availidx = ((this.ramdev.Read16(this.availaddr + 2))-1) & (this.queuenum-1);
-            val = (this.ramdev.Read16(this.availaddr + 4 + (availidx)*2));
+            var ringidx = val;
 
-            //message.Debug((this.ramdev.Read16(this.availaddr + 2)-1));
+            var availidx = ((this.ramdev.Read16(this.availaddr[val] + 2))-1) & (this.queuenum[val]-1);
+            var currentindex = (this.ramdev.Read16(this.availaddr[val] + 4 + (availidx)*2));
+
+            //message.Debug((this.ramdev.Read16(this.availaddr[0] + 2)-1));
             //message.Debug("write to index : " + utils.ToHex(val) + " availidx:" + availidx);
 
-            var currentindex = val;
             // build stream function
             var offset = 0;
-            var desc = this.GetDescriptor(currentindex);
-            
-            this.GetByte = function() {
-                if (offset >= desc.len) {
-                    offset = 0;
-                    if (desc.flags & 1) { // continuing buffer
-                        desc = this.GetDescriptor(desc.next);
-                    } else {
-                        message.Debug("Error in virtiodev: Descriptor is not continuing");
-                        message.Abort();
-                    }
-                }
-                var x = this.ramdev.Read8(desc.addr + offset);
-                offset++;
-                return x;
-            }.bind(this);
+            var desc = this.GetDescriptor(ringidx, currentindex);
 
-            this.dev.ReceiveRequest(currentindex, this.GetByte);
+            var GetByte = 
+            (function(ringidx, offset, desc) {
+                return function() {
+                    if (offset >= desc.len) {
+                        offset = 0;
+                        if (desc.flags & 1) { // continuing buffer
+                            desc = this.GetDescriptor(ringidx, desc.next);
+                        } else {
+                            message.Debug("Error in virtiodev: Descriptor is not continuing");
+                            message.Abort();
+                        }
+                    }
+                    var x = this.ramdev.Read8(desc.addr + offset);
+                    offset++;
+                    return x;
+                }.bind(this);
+            }.bind(this))(ringidx, offset, desc);
+
+            this.dev.ReceiveRequest(ringidx, currentindex, GetByte);
             break;
 
         case VIRTIO_QUEUE_READY:
-            this.queueready = val;
+            this.queueready[this.queuesel] = val;
             break;
 
 
@@ -374,10 +390,10 @@ VirtIODev.prototype.WriteReg32 = function (addr, val) {
                 case 15: //acknowledge + driver + features Ok + driver_ok (Let's start)
                     break;
                 case 131: // acknowledge + driver + failed
-                    message.Debug("virtio device initialization failed with status " + this.status);
+                    message.Debug("Error: virtio device initialization failed with status " + this.status);
                     message.Abort();
                 case 139: // acknowledge + driver + features Ok + failed
-                    message.Debug("virtio device initialization failed with status " + this.status);
+                    message.Debug("Error: virtio device initialization failed with status " + this.status);
                     message.Abort();
                     break;
                 default:
@@ -388,21 +404,21 @@ VirtIODev.prototype.WriteReg32 = function (addr, val) {
             break;
 
             case VIRTIO_QUEUE_DESC_LOW:
-                this.descaddr = val;
+                this.descaddr[this.queuesel] = val;
                 break;
 
             case VIRTIO_QUEUE_DESC_HIGH:
                 break;
 
             case VIRTIO_QUEUE_AVAIL_LOW:
-                this.availaddr = val;
+                this.availaddr[this.queuesel] = val;
                 break;
 
             case VIRTIO_QUEUE_AVAIL_HIGH:
                 break;
 
             case VIRTIO_QUEUE_USED_LOW:
-                this.usedaddr = val;
+                this.usedaddr[this.queuesel] = val;
                 break;
 
             case VIRTIO_QUEUE_USED_HIGH:
