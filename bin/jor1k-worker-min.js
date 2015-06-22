@@ -10509,6 +10509,7 @@ var CSR_MSTATUS = 0x300;
 var CSR_CYCLES = 0xC00;
 var CSR_CYCLEW = 0x900;
 var CSR_MTOHOST =  0x780;
+var CSR_MTOHOST_TEMP =  0x345; //only temporary for the patched pk.
 var CSR_MFROMHOST =  0x781;
 var CSR_MCPUID = 0xF00;
 var CSR_MIMPID = 0xF01;
@@ -10532,6 +10533,8 @@ var PRV_S = 0x01;
 var PRV_H = 0x02;
 var PRV_M = 0x03;
 
+var CAUSE_TIMER_INTERRUPT = (1<<31) | 0x01;
+var CAUSE_SOFTWARE_INTERRUPT = (1<<31);
 var CAUSE_ILLEGAL_INSTRUCTION = 0x02;
 var CAUSE_BREAKPOINT = 0x03;
 var CAUSE_ENVCALL_UMODE = 0x08;
@@ -10677,13 +10680,13 @@ SafeCPU.prototype.TranslateVM = function (addr) {
         var offset = addr & 0x3FFFFF;
         var page_num = (addr >>> 22);
 
-        var frame_num = this.ram.Read32(csr[CSR_SPTBR] + (page_num << 2));
+        var frame_num = this.ram.Read32(this.csr[CSR_SPTBR] + (page_num << 2));
         if(((frame_num >> 1) & 0xF) == 7 && (frame_num & 0x01) == 1){
             var physical_addr = (frame_num & 0xFFC00000) + offset;
             return physical_addr;
         }
         else{
-            message.Debug("Unsupported type field or invalid entry in PTE at PC "+utils.ToHex(this.pc));
+            message.Debug("Unsupported type field "+((frame_num >> 1) & 0xF)+" or invalid entry in PTE at PC "+utils.ToHex(this.pc));
             message.Abort();
         }
     }
@@ -10737,6 +10740,10 @@ SafeCPU.prototype.SetCSR = function (addr,value) {
                 this.ram.Write8Little(0x90000000 >> 0, value+0x30);
             break;
 
+        case CSR_MTOHOST_TEMP: //only temporary for the patched pk.
+            this.ram.Write8Little(0x90000000 >> 0, value);
+            break;
+
         case CSR_MFROMHOST:
             csr[addr] = value;
             break;
@@ -10763,8 +10770,16 @@ SafeCPU.prototype.SetCSR = function (addr,value) {
             csr[addr] = value;
             break;
 
+        case CSR_MIP:
+            //csr[addr] = value;
+            var mask = 0x2 | 0x08; //mask = MIP_SSIP | MIP_MSIP
+            csr[CSR_MIP] = (csr[CSR_MIP] & ~mask) | (value & mask);
+            break;
+
         case CSR_MIE:
-            csr[addr] = value;
+            //csr[addr] = value;
+            var mask = 0x2 | 0x08 | 0x20; //mask = MIP_SSIP | MIP_MSIP | MIP_STIP
+             csr[CSR_MIE] = (csr[CSR_MIE] & ~mask) | (value & mask);
             break;
 
         case CSR_SEPC:
@@ -10776,20 +10791,38 @@ SafeCPU.prototype.SetCSR = function (addr,value) {
             csr[addr] = value;
             break;
 
+        case CSR_SCAUSE:
+            csr[addr] = value;
+            break;
+
         case CSR_MBADADDR:
             csr[addr] = value;
             break;
 
         case CSR_SSTATUS:
             csr[addr] = value;
-            break;
+            csr[CSR_MSTATUS] &= ~0x1F039; 
+            csr[CSR_MSTATUS] |= (csr[CSR_SSTATUS] & 0x01); //IE0
+            csr[CSR_MSTATUS] |= (csr[CSR_SSTATUS] & 0x08); //IE1
+            csr[CSR_MSTATUS] |= (csr[CSR_SSTATUS] & 0x10); //PRV1
+            csr[CSR_MSTATUS] |= (csr[CSR_SSTATUS] & 0xF000); //FS,XS
+            csr[CSR_MSTATUS] |= (csr[CSR_SSTATUS] & 0x10000); //MPRV
+            break; 
 
         case CSR_STVEC:
             csr[addr] = value;
             break;
 
+        case CSR_SIP:
+            //csr[addr] = value;
+            var mask = 0x2; //mask = MIP_SSIP
+            csr[CSR_MIP] = (csr[CSR_MIP] & ~mask) | (value & mask);
+            break;
+
         case CSR_SIE:
-            csr[addr] = value;
+            //csr[addr] = value;
+            var mask = 0x2 | 0x20; //mask = MIP_SSIP | MIP_STIP
+             csr[CSR_MIE] = (csr[CSR_MIE] & ~mask) | (value & mask);
             break;
 
         case CSR_MSCRATCH:
@@ -10829,6 +10862,7 @@ SafeCPU.prototype.SetCSR = function (addr,value) {
 
         case CSR_MTIMECMP:
         case CSR_STIMECMP:
+            csr[CSR_MIP] &= ~(0x20); //csr[CSR_MIP] &= ~MIP_STIP
             csr[addr] = value;
             break;
 
@@ -10852,6 +10886,10 @@ SafeCPU.prototype.GetCSR = function (addr) {
     switch(addr)
     {
         case CSR_MTOHOST:
+            return 0x0;
+            break;
+
+        case CSR_MTOHOST_TEMP: //only temporary for the patched pk.
             return 0x0;
             break;
 
@@ -10893,25 +10931,31 @@ SafeCPU.prototype.GetCSR = function (addr) {
             return csr[addr];
             break;
 
+        case CSR_SCAUSE:
+            return csr[addr];
+            break;
+
         case CSR_MBADADDR:
             return csr[addr];
             break;
 
         case CSR_SSTATUS:
-            if (current_privilege_level == 0) this.Trap(CAUSE_ILLEGAL_INSTRUCTION);
-            var csr = this.csr;
-            var mstatus = csr[CSR_MSTATUS];
-            var privilage_level_stack =  (mstatus & 0xFFF);
-            return (((csr[CSR_SSTATUS] >> 12) << 12) + privilage_level_stack) | (0x00010000 & mstatus);
+            //if (current_privilege_level == 0) this.Trap(CAUSE_ILLEGAL_INSTRUCTION);
+            csr[CSR_SSTATUS] = 0x00; 
+            csr[CSR_SSTATUS] |= (csr[CSR_MSTATUS] & 0x01); //IE0
+            csr[CSR_SSTATUS] |= (csr[CSR_MSTATUS] & 0x08); //IE1
+            csr[CSR_SSTATUS] |= (csr[CSR_MSTATUS] & 0x10); //PRV1
+            csr[CSR_SSTATUS] |= (csr[CSR_MSTATUS] & 0xF000); //FS,XS
+            csr[CSR_SSTATUS] |= (csr[CSR_MSTATUS] & 0x10000); //MPRV
+            return csr[CSR_SSTATUS];
             break;
 
         case CSR_STVEC:
             return csr[addr];
             break;
 
-        case CSR_SIE:
-            return csr[addr];
-            break;
+        case CSR_SIP: return csr[CSR_MIP] & (0x2 | 0x20);//(MIP_SSIP | MIP_STIP)
+        case CSR_SIE: return csr[CSR_MIE] & (0x2 | 0x20);//(MIP_SSIP | MIP_STIP)
 
         case CSR_MSCRATCH:
             return csr[addr];
@@ -10932,18 +10976,18 @@ SafeCPU.prototype.GetCSR = function (addr) {
         case CSR_MTIME:
         case CSR_STIME:
         case CSR_STIMEW:
-            return this.ticks*2*Math.pow(10, 7);
+            return this.ticks;//*2*Math.pow(10, 7);
             break;
 
         case CSR_MTIMEH:
         case CSR_STIMEH:
         case CSR_STIMEHW:
-            return (this.ticks*2*Math.pow(10, 7)) >> 32;
+            return (this.ticks) >> 32;
             break;
 
         case CSR_TIME:
         case CSR_TIMEW:
-            return this.ticks*2*Math.pow(10, 7);
+            return this.ticks;//*2*Math.pow(10, 7);
             break;
 
         case CSR_MTIMECMP:
@@ -11108,6 +11152,32 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
     // this is the way to write to the terminal
     //this.ram.Write8Little(0x90000000 >> 0, (this.ticks&63)+32);
        
+
+    var current_privilege_level = (this.csr[CSR_MSTATUS] & 0x06) >> 1;
+    if (this.ticks == csr[CSR_STIMECMP]) {
+        csr[CSR_MIP] = csr[CSR_MIP] | 0x20;
+    }
+    var interrupts = csr[CSR_MIE] & csr[CSR_MIP];
+    var ie = csr[CSR_MSTATUS] & 0x01;
+    if (interrupts) {
+        if ((current_privilege_level < 3) || ((current_privilege_level == 3) && ie)) {
+            if (interrupts & 0x8) {
+                this.Trap(CAUSE_SOFTWARE_INTERRUPT);
+                this.pc = this.pc + 4|0;
+            }
+        }
+        if ((current_privilege_level < 1) || ((current_privilege_level == 1) && ie)) {
+            if (interrupts & 0x2) {
+                this.Trap(CAUSE_SOFTWARE_INTERRUPT);
+                this.pc = this.pc + 4|0;
+            }
+            if (interrupts & 0x20) {
+                 this.Trap(CAUSE_TIMER_INTERRUPT);
+                 this.pc = this.pc + 4|0;
+            }
+        }
+    }
+
     var ins = this.ram.Read32(this.TranslateVM(this.pc));
 
     switch(ins&0x7F) {
@@ -11164,6 +11234,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
 
                 default:
                     message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + "not found");
+                    message.Abort();
                     break;
 
             }
@@ -11208,6 +11279,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
 
                 default:
                     message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + "not found");
+                    message.Abort();
                     break;
 
             }
@@ -11303,6 +11375,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
 
                 default:
                     message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + "not found");
+                    message.Abort();
                     break;
 
             }
@@ -11515,6 +11588,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
 
                 default:
                     message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + "not found");
+                    message.Abort();
                     break;
 
             }
@@ -11642,13 +11716,14 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
 
                 default:
                     message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + "not found");
+                    message.Abort();
                     break;
 
             }
             break;
 
         case 0x73:
-            //csrrw,csrrs,csrrc,csrrwi,csrrsi,csrrci
+            //csrrw,csrrs,csrrc,csrrwi,csrrsi,csrrci,ecall,eret,ebreak,mrts
             switch((ins >> 12)&0x7) {
                 
                 case 0x01:
@@ -11713,7 +11788,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                     break;
                 
                 case 0x00:
-                    //ecall,eret
+                    //ecall,eret,ebreak,mrts
                     switch((ins >> 20)&0xFFF) {
                         case 0x00:
                             //ecall
@@ -11797,6 +11872,20 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                                     message.Abort();
                                     break;
                             }
+                            break;
+
+                        case 0x305:
+                            //mrts     
+                            if(current_privilege_level != PRV_M) {
+                                message.Debug("Error in mrts: current_privilege_level isn't allowed access");
+                                message.Abort();
+                                break;   
+                            }
+                            csr[CSR_MSTATUS] = (csr[CSR_MSTATUS] & ~0x6) | 0x02; //Setting the Privilage level to Supervisor
+                            csr[CSR_SBADADDR] = csr[CSR_MBADADDR];
+                            csr[CSR_SCAUSE] = csr[CSR_MCAUSE];
+                            csr[CSR_SEPC] = csr[CSR_MEPC];
+                            this.pc = csr[CSR_STVEC] - 4|0;
                             break;
 
                         default:
@@ -12067,7 +12156,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
 
     message.Debug(utils.ToHex(this.pc));
     this.pc = this.pc + 4|0;
-    this.ticks++;
+    this.ticks = this.ticks + 1|0;
     return 0;
 };
 
