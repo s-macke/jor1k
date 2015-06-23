@@ -31,6 +31,7 @@ var Virtio9p = require('./dev/virtio/9p.js');
 var VirtioDummy = require('./dev/virtio/dummy.js');
 var VirtioInput = require('./dev/virtio/input.js');
 var VirtioNET = require('./dev/virtio/net.js');
+var VirtioBlock = require('./dev/virtio/block.js');
 var FS = require('./filesystem/filesystem.js');
 
 
@@ -120,6 +121,7 @@ System.prototype.Reset = function() {
     this.virtiodummydev.Reset();
     this.virtioinputdev.Reset();
     this.virtionetdev.Reset();
+    this.virtioblockdev.Reset();
     this.cpu.Reset();
     this.ips = 0;
 };
@@ -160,6 +162,7 @@ System.prototype.Init = function(system) {
 
     this.virtioinputdev = new VirtioInput(this.ram);
     this.virtionetdev = new VirtioNET(this.ram);
+    this.virtioblockdev = new VirtioBlock(this.ram);
     this.virtiodummydev = new VirtioDummy(this.ram);
     this.virtiodev2 = new VirtIODev(this, 0xB, this.ram, this.virtiodummydev);
     this.virtiodev3 = new VirtIODev(this, 0xC, this.ram, this.virtiodummydev);
