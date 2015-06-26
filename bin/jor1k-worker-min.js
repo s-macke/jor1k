@@ -10896,10 +10896,20 @@ var VM_READ = 0;
 var VM_WRITE = 1;
 var VM_FETCH = 2;
 
+var SYS_OPENAT = 56;
+var SYS_CLOSE = 57;
+var SYS_PREAD = 67;
+var SYS_WRITE = 64;
+var SYS_EXIT = 93;
+var SYS_GETMAINVARS = 2011;
+
 var CAUSE_TIMER_INTERRUPT = (1<<31) | 0x01;
 var CAUSE_SOFTWARE_INTERRUPT = (1<<31);
+var CAUSE_INSTRUCTION_ACCESS_FAULT = 0x01;
 var CAUSE_ILLEGAL_INSTRUCTION = 0x02;
 var CAUSE_BREAKPOINT = 0x03;
+var CAUSE_LOAD_ACCESS_FAULT = 0x05;
+var CAUSE_STORE_ACCESS_FAULT = 0x07;
 var CAUSE_ENVCALL_UMODE = 0x08;
 var CAUSE_ENVCALL_SMODE = 0x09;
 var CAUSE_ENVCALL_HMODE = 0x0A;
@@ -10979,6 +10989,12 @@ function SafeCPU(ram) {
     this.ff = new Float32Array(this.ram.heap, 0, 1); // the zero register is used to convert to single precision
     this.csr = new Int32Array(this.ram.heap, 0x2000, 4096 << 2);
     this.page_table = new Int32Array(this.ram.heap, 0x40000, 0x10000);
+    this.elf8mem = [];
+    this.file_descriptor_table = [];
+    this.file_size = []; //file descriptor is the index
+    this.file_pointer = []; //file descriptor is the index
+    this.file_descriptor_offset = 9;
+    this.elf8mem_offset = 0x00;
     this.pc = 0x200;
     this.Reset();
 }
@@ -11003,7 +11019,7 @@ SafeCPU.prototype.Reset = function() {
 
     this.amoaddr = 0x00; 
     this.amovalue = 0x00;
-    this.ram.Write32(this.TranslateVM(0x00,VM_WRITE),31*1024*1024); //Writing the amount of free memory available into the first memory location
+    this.ram.Write32(0x00,31*1024*1024); //Writing the amount of free memory available into the first memory location
 
 }
 
@@ -11036,77 +11052,218 @@ SafeCPU.prototype.RaiseInterrupt = function (line, cpuid) {
 SafeCPU.prototype.ClearInterrupt = function (line, cpuid) {
 };
 
+SafeCPU.prototype.CheckVMPrivilege = function (type,op) {
+
+    //message.Debug("Inside CheckVMPrivilege for PC "+this.pc);
+    //if(type > 11) {
+    //    message.Debug("Unsupported PTE type "+type+" at "+this.pc);
+    //    message.Abort();
+    //}
+    var priv = (this.csr[CSR_MSTATUS] & 0x06) >> 1;
+    if(type > 7 && priv == PRV_U){
+        if(op == VM_READ)
+            return false; //this.Trap(CAUSE_LOAD_ACCESS_FAULT); //All reads are handled by this point
+        else
+            return false; //this.Trap(CAUSE_STORE_ACCESS_FAULT);
+    }
+    else if((type == 8 || type == 10) && op == VM_WRITE) return false; //this.Trap(CAUSE_STORE_ACCESS_FAULT);
+    else if((type == 2 || type == 4 || type == 6) && op == VM_WRITE) return false; //this.Trap(CAUSE_STORE_ACCESS_FAULT);
+    else if((type ==2 || type == 3) && op == VM_FETCH && priv == PRV_S) return false; //Supervisor Fetch
+    else if((type ==8 || type == 9) && op == VM_FETCH && priv == PRV_S) return false; //Supervisor Fetch
+    else if ((type ==4 || type == 5) && op == VM_FETCH) return false;
+    return true;
+};
+
 SafeCPU.prototype.TranslateVM = function (addr,op) {
 
     var vm = (this.csr[CSR_MSTATUS] >> 17) & 0x1F;
     var current_privilege_level = (this.csr[CSR_MSTATUS] & 0x06) >> 1;
-    var i = 2; //i = LEVELS -1 and LEVELS = 2 in a 32 bit System
+    var i = 1; //i = LEVELS -1 and LEVELS = 2 in a 32 bit System
 
+    // vm bare mode
     if(vm == 0 || current_privilege_level == PRV_M) return addr;
-    else if(vm == 8){
-        var offset = addr & 0x3FFFFF;
-        var page_num = (addr >>> 22);
 
-        var frame_num = this.ram.Read32(this.csr[CSR_SPTBR] + (page_num << 2));
-        var type = ((frame_num >> 1) & 0xF);
-        var valid = (frame_num & 0x01);
-        if( type == 7 && valid == 1){
-            var physical_addr = (frame_num & 0xFFC00000) + offset;
-            return physical_addr;
-        }
-        else if(type < 2 && valid == 1){
-            i = i-1;
-            var offset = addr & 0xFFF;
-            var new_sptbr = frame_num & 0xFFFFF000;
-            var new_page_num = (addr >> 12) & 0x3FF;
-            var new_frame_num = this.ram.Read32(new_sptbr + (new_page_num << 2));
-            var new_type = ((new_frame_num >> 1) & 0xF);
-            var new_valid = (new_frame_num & 0x01);
-            if(new_type == 7 && new_valid == 1){
-                var physical_addr = (new_frame_num & 0xFFFFF000) | offset;
-                return physical_addr;
-            }
-            else{
-                message.Debug("Unsupported new_type field "+new_type+" or invalid entry in PTE at PC "+utils.ToHex(this.pc));
-                message.Abort();
-            }
-        }
-        else{
-            message.Debug("Unsupported type field "+type+" or invalid entry in PTE at PC "+utils.ToHex(this.pc));
-            message.Abort();
-        }
-    }
-    else{
-        message.Debug("unkown VM Mode "+vm+" at PC "+utils.ToHex(this.pc));
+    // only RV32 supported
+    if(vm != 8) {
+        message.Debug("unkown VM Mode " + vm + " at PC " + utils.ToHex(this.pc));
         message.Abort();
     }
 
+    // LEVEL 1
+    var offset = addr & 0x3FFFFF;
+    var page_num = (addr >>> 22);
+
+    var frame_num = this.ram.Read32(this.csr[CSR_SPTBR] + (page_num << 2));
+    var type = ((frame_num >> 1) & 0xF);
+    var valid = (frame_num & 0x01);
+
+    if(valid == 0) {
+        message.Debug("Unsupported valid field " + valid + " or invalid entry in PTE at PC "+utils.ToHex(this.pc));
+        message.Abort();
+    }
+    if (type >= 2) {
+        if (!this.CheckVMPrivilege(type,op)) {
+            message.Debug("Error in TranslateVM: Unhandled trap");
+            message.Abort();
+        }
+
+        var updated_frame_num = frame_num;
+        if(op == VM_READ)
+            updated_frame_num = (frame_num | 0x20);
+        else if(op == VM_WRITE)
+            updated_frame_num = (frame_num | 0x60);
+        this.ram.Write32(this.csr[CSR_SPTBR] + (page_num << 2),updated_frame_num);
+
+        //var physical_addr = (frame_num & 0xFFC00000) + offset;
+        var physical_addr = (((frame_num >> 10) | ((addr >> 12) & 0xCFF)) << 12) + offset;
+        return physical_addr;
+    }
+
+    // LEVEL 2
+    message.Debug("Second level MMU");
+    i = i - 1;
+    var offset = addr & 0xFFF;
+    var new_sptbr = (frame_num & 0xFFFFFC00) << 2;
+    var new_page_num = (addr >> 12) & 0x3FF;
+    var new_frame_num = this.ram.Read32(new_sptbr + (new_page_num << 2));
+    var new_type = ((new_frame_num >> 1) & 0xF);
+    var new_valid = (new_frame_num & 0x01);
+
+    if (new_valid == 0) {
+        this.csr[CSR_MBADADDR] = addr;
+        if(op == VM_READ) this.Trap(CAUSE_LOAD_ACCESS_FAULT);
+            else if(op == VM_WRITE) this.Trap(CAUSE_STORE_ACCESS_FAULT);
+            else this.Trap(CAUSE_INSTRUCTION_ACCESS_FAULT);
+            return -1;
+    }
+
+    if (!this.CheckVMPrivilege(new_type, op)) {
+        message.Debug("Error in TranslateVM: Unhandled trap");
+        message.Abort();
+    }
+
+    var updated_frame_num = new_frame_num;
+    if(op == VM_READ)
+        updated_frame_num = (new_frame_num | 0x20);
+    else if(op == VM_WRITE)
+        updated_frame_num = (new_frame_num | 0x60);
+    this.ram.Write32(new_sptbr + (new_page_num << 2),updated_frame_num);
+
+
+    //var physical_addr = (new_frame_num & 0xFFFFF000) | offset;
+    var physical_addr = ((new_frame_num & 0xFFFFFC00) << 2) | offset;
+    return physical_addr;
+};
+
+SafeCPU.prototype.OnFileLoaded = function(buffer) {
+
+    var buffer8 = new Uint8Array(buffer);
+    var length = buffer8.length;
+    for(var i=0; i<length; i++) this.elf8mem[i+this.elf8mem_offset] = buffer8[i];
+    this.file_descriptor_table[++this.file_descriptor_offset] = this.elf8mem_offset;
+    this.elf8mem_offset += length;
+    this.file_size[this.file_descriptor_offset] = length;
+    this.file_pointer[this.file_descriptor_offset] = 0;
+    
 };
 
 SafeCPU.prototype.SysCall = function () {
 
     var syscall_id = this.ram.Read32(this.csr[CSR_MTOHOST]);
+    var argv = ["spike", "-m31", "-p1", "hello"];
     switch(syscall_id){
 
-        case 64:
+        case SYS_OPENAT:
+            //sys_openat
+            var filename_pointer = this.ram.Read32(this.csr[CSR_MTOHOST] + 16);
+            var filename = "";
+            for(var i=0,c;;i++){
+                c = this.ram.Read8(filename_pointer+i);
+                if(c == 0)
+                    break;
+                else
+                    filename += String.fromCharCode(c);
+            }
+            var url = filename;
+            utils.LoadBinaryResourceII(url, this.OnFileLoaded.bind(this), false, function(error){message.Abort();});
+            this.ram.Write32(this.csr[CSR_MTOHOST], this.file_descriptor_offset);
+            this.csr[CSR_MFROMHOST] = 1;
+            break;
+
+        case SYS_PREAD:
+            //sys_pread
+            var file_descriptor = this.ram.Read32(this.csr[CSR_MTOHOST] + 8);
+            var file_address = this.file_descriptor_table[file_descriptor];
+            var buffer_address = this.ram.Read32(this.csr[CSR_MTOHOST] + 16);
+            var number_bytes = this.ram.Read32(this.csr[CSR_MTOHOST] + 24);
+            //var file_offset = this.file_pointer[file_descriptor];
+            var file_offset = this.ram.Read32(this.csr[CSR_MTOHOST] + 32);
+            var file_length = this.file_size[file_descriptor];
+            var i = 0;
+            for(var b;i < number_bytes;i++){
+                if((i + file_offset) >= file_length) break;
+                b = this.elf8mem[file_address + i + file_offset];
+                this.ram.Write8(buffer_address + i, b);
+            }
+            this.file_pointer[file_descriptor] += i;
+            this.ram.Write32(this.csr[CSR_MTOHOST], i);
+            this.csr[CSR_MFROMHOST] = 1;
+            break;
+
+        case SYS_CLOSE:
+            //sys_close
+            break;
+
+        case SYS_WRITE:
             //sys_write
             var length = this.ram.Read32(this.csr[CSR_MTOHOST] + 8*3), i =0;
             var string_address = this.ram.Read32(this.csr[CSR_MTOHOST] + 8*2);
             while(i < length)
                 this.ram.Write8Little(0x90000000 >> 0, this.ram.Read8(string_address + (i++)));
-            this.csr[CSR_MFROMHOST] = i;
+            this.ram.Write32(this.csr[CSR_MTOHOST], i);
+            this.csr[CSR_MFROMHOST] = 1;
             break;
 
-        case 93:
-            //sys_exit 
+        case SYS_EXIT:
+            //sys_exit
             message.Debug("Program exited with sys_exit for inst at PC "+utils.ToHex(this.pc));
             message.Abort();
+            break;
+
+        case SYS_GETMAINVARS:
+            //sys_getmainvars
+            var address = this.ram.Read32(this.csr[CSR_MTOHOST] + 8);
+            var length = this.ram.Read32(this.csr[CSR_MTOHOST] + 16);
+
+           // write argc
+            this.ram.Write32(address, argv.length);
+            // argv[argc] = NULL
+            // envp[0] = NULL
+
+            // generate list of pointers to string
+            var ofs = argv.length*8 + 8*4; // offset of first string entry
+            for(var i=0; i<argv.length; i++) {
+                this.ram.Write32(address+8+i*8, address + ofs);
+                ofs += argv[i].length+1;
+            }
+
+            ofs = argv.length*8 + 8*4;
+            for(var i=0; i<argv.length; i++) {
+                for (var j=0; j<argv[i].length; j++) {
+                    this.ram.Write8(address + ofs, argv[i].charCodeAt(j));
+                    ofs++;
+                }
+                ofs++; // terminating "\0"
+            }
+
+            this.csr[CSR_MFROMHOST] = 1;
+            this.ram.Write32(this.csr[CSR_MTOHOST], 0);
             break;
 
         default:
             message.Debug("unkown SysCall "+utils.ToHex(syscall_id)+" at PC "+utils.ToHex(this.pc));
             message.Abort();
-            break;
+           break;
     }
 
 };
@@ -11128,6 +11285,7 @@ SafeCPU.prototype.SetCSR = function (addr,value) {
 
         case CSR_MTOHOST_TEMP: //only temporary for the patched pk.
             this.ram.Write8Little(0x90000000 >> 0, value);
+            if (value == 0xA) this.ram.Write8(0x90000000 >> 0, 0xD);
             break;
 
         case CSR_MFROMHOST:
@@ -11182,6 +11340,10 @@ SafeCPU.prototype.SetCSR = function (addr,value) {
             break;
 
         case CSR_MBADADDR:
+            csr[addr] = value;
+            break;
+
+        case CSR_SBADADDR:
             csr[addr] = value;
             break;
 
@@ -11322,6 +11484,10 @@ SafeCPU.prototype.GetCSR = function (addr) {
             break;
 
         case CSR_MBADADDR:
+            return csr[addr];
+            break;
+
+        case CSR_SBADADDR:
             return csr[addr];
             break;
 
@@ -11569,8 +11735,12 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
             }
         }
     }
-
-    var ins = this.ram.Read32(this.TranslateVM(this.pc,VM_READ));
+    var paddr = this.TranslateVM(this.pc,VM_FETCH);
+    if(paddr == -1) {
+        this.pc = this.pc + 4|0;
+        return 0;
+    }
+    var ins = this.ram.Read32(paddr);
 
     switch(ins&0x7F) {
 
@@ -11583,7 +11753,9 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                     imm = (ins >> 20);
                     rs1 = r[(ins >> 15) & 0x1F];
                     rindex = (ins >> 7) & 0x1F;
-                    r[rindex] = (this.ram.Read8(this.TranslateVM(rs1 + imm,VM_READ)) << 24) >> 24;
+                    paddr = this.TranslateVM(rs1 + imm,VM_READ);
+                    if(paddr == -1) break;
+                    r[rindex] = (this.ram.Read8(paddr) << 24) >> 24;
                     message.Debug("lb - "+ utils.ToHex(ins)+" register " + r[rindex]);
                     break;
 
@@ -11592,7 +11764,9 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                     imm = (ins >> 20);
                     rs1 = r[(ins >> 15) & 0x1F];
                     rindex = (ins >> 7) & 0x1F;
-                    r[rindex] = (this.ram.Read16(this.TranslateVM(rs1 + imm,VM_READ)) << 16) >> 16;
+                    paddr = this.TranslateVM(rs1 + imm,VM_READ);
+                    if(paddr == -1) break;
+                    r[rindex] = (this.ram.Read16(paddr) << 16) >> 16;
                     message.Debug("lh - "+ utils.ToHex(ins)+" register " + r[rindex]);
                     break;
 
@@ -11601,7 +11775,9 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                     imm = (ins >> 20);
                     rs1 = r[(ins >> 15) & 0x1F];
                     rindex = (ins >> 7) & 0x1F;
-                    r[rindex] = this.ram.Read32(this.TranslateVM(rs1 + imm,VM_READ));
+                    paddr = this.TranslateVM(rs1 + imm,VM_READ);
+                    if(paddr == -1) break;
+                    r[rindex] = this.ram.Read32(paddr);
                     message.Debug("lw - "+ utils.ToHex(ins)+" register " + r[rindex]);
                     break;
 
@@ -11610,7 +11786,9 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                     imm = (ins >> 20);
                     rs1 = r[(ins >> 15) & 0x1F];
                     rindex = (ins >> 7) & 0x1F;
-                    r[rindex] = (this.ram.Read8(this.TranslateVM(rs1 + imm,VM_READ)) >>> 0);
+                    paddr = this.TranslateVM(rs1 + imm,VM_READ);
+                    if(paddr == -1) break;
+                    r[rindex] = (this.ram.Read8(paddr) >>> 0);
                     message.Debug("lbu - "+ utils.ToHex(ins)+" register " + r[rindex]);
                     //if(rs1 + imm > 0x8b75) message.Abort();
                     break;
@@ -11620,7 +11798,9 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                     imm = (ins >> 20);
                     rs1 = r[(ins >> 15) & 0x1F];
                     rindex = (ins >> 7) & 0x1F;
-                    r[rindex] = (this.ram.Read16(this.TranslateVM(rs1 + imm,VM_READ)) >>> 0);
+                    paddr = this.TranslateVM(rs1 + imm,VM_READ);
+                    if(paddr == -1) break;
+                    r[rindex] = (this.ram.Read16(paddr) >>> 0);
                     message.Debug("lhu - "+ utils.ToHex(ins)+" register " + r[rindex]);
                     break;
 
@@ -11643,7 +11823,9 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                     imm = (imm1 << 5) + imm2;
                     rs1 = r[(ins >> 15) & 0x1F];
                     rindex = (ins >> 20) & 0x1F;
-                    this.ram.Write8(this.TranslateVM(rs1 + imm,VM_WRITE),(r[rindex] & 0xFF));
+                    paddr = this.TranslateVM(rs1 + imm,VM_WRITE);
+                    if(paddr == -1) break;
+                    this.ram.Write8(paddr,(r[rindex] & 0xFF));
                     message.Debug("sb - "+ utils.ToHex(ins)+" register " + r[rindex]);
                     break;
 
@@ -11654,7 +11836,9 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                     imm = (imm1 << 5) + imm2;
                     rs1 = r[(ins >> 15) & 0x1F];
                     rindex = (ins >> 20) & 0x1F;
-                    this.ram.Write16(this.TranslateVM(rs1 + imm,VM_WRITE),(r[rindex] & 0xFFFF));
+                    paddr = this.TranslateVM(rs1 + imm,VM_WRITE);
+                    if(paddr == -1) break;
+                    this.ram.Write16(paddr,(r[rindex] & 0xFFFF));
                     message.Debug("sh - "+ utils.ToHex(ins)+" register " + r[rindex]);
                     break;
 
@@ -11665,7 +11849,9 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                     imm = (imm1 << 5) + imm2;
                     rs1 = r[(ins >> 15) & 0x1F];
                     rindex = (ins >> 20) & 0x1F;
-                    this.ram.Write32(this.TranslateVM(rs1 + imm,VM_WRITE),r[rindex]);
+                    paddr = this.TranslateVM(rs1 + imm,VM_WRITE);
+                    if(paddr == -1) break;
+                    this.ram.Write32(paddr,r[rindex]);
                     message.Debug("sw - "+ utils.ToHex(ins)+" register " + r[rindex]);
                     break;
 
@@ -12189,14 +12375,14 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                             {
                                 case PRV_U:
                                     message.Debug("ecall PRV_U -"+ utils.ToHex(ins));
-                                    this.PushPrivilegeStack(PRV_S);
+                                    this.PushPrivilegeStack(PRV_M);
                                     csr[CSR_MEPC] = this.pc;
                                     csr[CSR_MCAUSE] = 0x08;
                                     break;
 
                                 case PRV_S:
                                     message.Debug("ecall PRV_S -"+ utils.ToHex(ins));
-                                    this.PushPrivilegeStack(PRV_H);
+                                    this.PushPrivilegeStack(PRV_M);
                                     csr[CSR_MEPC] = this.pc;
                                     csr[CSR_MCAUSE] = 0x09;
                                     break;
@@ -12280,6 +12466,10 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                             this.pc = csr[CSR_STVEC] - 4|0;
                             break;
 
+                        case 0x101:
+                            //sfence.vm
+                            break;
+
                         default:
                             message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + "not found");
                             message.Abort();
@@ -12305,6 +12495,8 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                     imm = (ins >> 20);
                     fs1 = r[(ins >> 15) & 0x1F];
                     findex = ((ins >> 7) & 0x1F);
+                    paddr = this.TranslateVM(fs1 + imm,VM_READ);
+                    if(paddr == -1) break;
                     r[0] = this.ram.Read32(fs1 + imm);
                     f[findex] = ff[0];
                     message.Debug("flw - "+ utils.ToHex(ins)+" register " + f[findex]);
@@ -12315,8 +12507,12 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                     imm = (ins >> 20);
                     fs1 = r[(ins >> 15) & 0x1F];
                     findex = ((ins >> 7) & 0x1F) << 1;
-                    fi[findex + 0] = this.ram.Read32(fs1 + imm + 0);
-                    fi[findex + 1] = this.ram.Read32(fs1 + imm + 4);
+                    paddr = this.TranslateVM(fs1 + imm + 0,VM_READ);
+                    if(paddr == -1) break;
+                    fi[findex + 0] = this.ram.Read32(paddr);
+                    paddr = this.TranslateVM(fs1 + imm + 4,VM_READ);
+                    if(paddr == -1) break;
+                    fi[findex + 1] = this.ram.Read32(paddr);
                     message.Debug("fld - "+ utils.ToHex(ins)+" register " + fi[findex]);
                     break;
 
@@ -12340,7 +12536,9 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                     fs1 = r[(ins >> 15) & 0x1F];
                     findex = (ins >> 20) & 0x1F;
                     ff[0] = f[findex];
-                    this.ram.Write32(fs1 + imm,r[0]);
+                    paddr = this.TranslateVM(fs1 + imm,VM_WRITE);
+                    if(paddr == -1) break;
+                    this.ram.Write32(paddr,r[0]);
                     message.Debug("fsw - "+ utils.ToHex(ins)+" register " + f[findex]);
                     break;
 
@@ -12351,8 +12549,12 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                     imm = (imm1 << 5) + imm2;
                     fs1 = r[(ins >> 15) & 0x1F];
                     findex = ((ins >> 20) & 0x1F) << 1;
-                    this.ram.Write32(fs1 + imm + 0,fi[findex + 0]);
-                    this.ram.Write32(fs1 + imm + 4,fi[findex + 1]);
+                    paddr = this.TranslateVM(fs1 + imm + 0,VM_WRITE);
+                    if(paddr == -1) break;
+                    this.ram.Write32(paddr,fi[findex + 0]);
+                    paddr = this.TranslateVM(fs1 + imm + 4,VM_WRITE);
+                    if(paddr == -1) break;
+                    this.ram.Write32(paddr,fi[findex + 1]);
                     message.Debug("fsw - "+ utils.ToHex(ins)+" register " + fi[findex]);
                     break;
 
@@ -12444,8 +12646,12 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                     rs1 = r[(ins >> 15) & 0x1F];
                     rs2 = r[(ins >> 20) & 0x1F];
                     rindex = (ins >> 7) & 0x1F;
-                    r[rindex] = this.ram.Read32(this.TranslateVM(rs1,VM_READ));
-                    this.ram.Write32(this.TranslateVM(rs1,VM_WRITE),rs2);
+                    paddr = this.TranslateVM(rs1,VM_READ);
+                    if(paddr == -1) break;
+                    r[rindex] = this.ram.Read32(paddr);
+                    paddr = this.TranslateVM(rs1,VM_WRITE);
+                    if(paddr == -1) break;
+                    this.ram.Write32(paddr,rs2);
                     message.Debug("amoswap - "+ utils.ToHex(ins)+" register " + r[rindex]);
                     break;
 
@@ -12454,8 +12660,12 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                     rs1 = r[(ins >> 15) & 0x1F];
                     rs2 = r[(ins >> 20) & 0x1F];
                     rindex = (ins >> 7) & 0x1F;
-                    r[rindex] = this.ram.Read32(this.TranslateVM(rs1,VM_READ));
-                    this.ram.Write32(this.TranslateVM(rs1,VM_WRITE),r[rindex] + rs2);
+                    paddr = this.TranslateVM(rs1,VM_READ);
+                    if(paddr == -1) break;
+                    r[rindex] = this.ram.Read32(paddr);
+                    paddr = this.TranslateVM(rs1,VM_WRITE);
+                    if(paddr == -1) break;
+                    this.ram.Write32(paddr,r[rindex] + rs2);
                     message.Debug("amoadd - "+ utils.ToHex(ins)+" register " + r[rindex]);
                     break;
 
@@ -12464,8 +12674,12 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                     rs1 = r[(ins >> 15) & 0x1F];
                     rs2 = r[(ins >> 20) & 0x1F];
                     rindex = (ins >> 7) & 0x1F;
-                    r[rindex] = this.ram.Read32(this.TranslateVM(rs1,VM_READ));
-                    this.ram.Write32(this.TranslateVM(rs1,VM_WRITE),r[rindex] ^ rs2);
+                    paddr = this.TranslateVM(rs1,VM_READ);
+                    if(paddr == -1) break;
+                    r[rindex] = this.ram.Read32(paddr);
+                    paddr = this.TranslateVM(rs1,VM_WRITE);
+                    if(paddr == -1) break;
+                    this.ram.Write32(paddr,r[rindex] ^ rs2);
                     message.Debug("amoxor - "+ utils.ToHex(ins)+" register " + r[rindex]);
                     break;
 
@@ -12474,8 +12688,12 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                     rs1 = r[(ins >> 15) & 0x1F];
                     rs2 = r[(ins >> 20) & 0x1F];
                     rindex = (ins >> 7) & 0x1F;
-                    r[rindex] = this.ram.Read32(this.TranslateVM(rs1,VM_READ));
-                    this.ram.Write32(this.TranslateVM(rs1,VM_WRITE),r[rindex] & rs2);
+                    paddr = this.TranslateVM(rs1,VM_READ);
+                    if(paddr == -1) break;
+                    r[rindex] = this.ram.Read32(paddr);
+                    paddr = this.TranslateVM(rs1,VM_WRITE);
+                    if(paddr == -1) break;
+                    this.ram.Write32(paddr,r[rindex] & rs2);
                     message.Debug("amoand - "+ utils.ToHex(ins)+" register " + r[rindex]);
                     break;
 
@@ -12484,8 +12702,12 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                     rs1 = r[(ins >> 15) & 0x1F];
                     rs2 = r[(ins >> 20) & 0x1F];
                     rindex = (ins >> 7) & 0x1F;
-                    r[rindex] = this.ram.Read32(this.TranslateVM(rs1,VM_READ));
-                    this.ram.Write32(this.TranslateVM(rs1,VM_WRITE),r[rindex] | rs2);
+                    paddr = this.TranslateVM(rs1,VM_READ);
+                    if(paddr == -1) break;
+                    r[rindex] = this.ram.Read32(paddr);
+                    paddr = this.TranslateVM(rs1,VM_WRITE);
+                    if(paddr == -1) break;
+                    this.ram.Write32(paddr,r[rindex] | rs2);
                     message.Debug("amoor - "+ utils.ToHex(ins)+" register " + r[rindex]);
                     break;
 
@@ -12494,10 +12716,14 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                     rs1 = r[(ins >> 15) & 0x1F];
                     rs2 = r[(ins >> 20) & 0x1F];
                     rindex = (ins >> 7) & 0x1F;
-                    r[rindex] = this.ram.Read32(this.TranslateVM(rs1,VM_READ));
+                    paddr = this.TranslateVM(rs1,VM_READ);
+                    if(paddr == -1) break;
+                    r[rindex] = this.ram.Read32(paddr);
                     if((rs2 >> 0) > (r[rindex] >> 0)) r[0] = r[rindex];
                     else r[0] = rs2;
-                    this.ram.Write32(this.TranslateVM(rs1,VM_WRITE),r[0]);
+                    paddr = this.TranslateVM(rs1,VM_WRITE);
+                    if(paddr == -1) break;
+                    this.ram.Write32(paddr,r[0]);
                     message.Debug("amomin - "+ utils.ToHex(ins)+" register " + r[rindex]);
                     break;
 
@@ -12506,10 +12732,14 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                     rs1 = r[(ins >> 15) & 0x1F];
                     rs2 = r[(ins >> 20) & 0x1F];
                     rindex = (ins >> 7) & 0x1F;
-                    r[rindex] = this.ram.Read32(this.TranslateVM(rs1,VM_READ));
+                    paddr = this.TranslateVM(rs1,VM_READ);
+                    if(paddr == -1) break;
+                    r[rindex] = this.ram.Read32(paddr);
                     if((rs2 >> 0) < (r[rindex] >> 0)) r[0] = r[rindex];
                     else r[0] = rs2;
-                    this.ram.Write32(this.TranslateVM(rs1,VM_WRITE),r[0]);
+                    paddr = this.TranslateVM(rs1,VM_WRITE);
+                    if(paddr == -1) break;
+                    this.ram.Write32(paddr,r[0]);
                     message.Debug("amomax - "+ utils.ToHex(ins)+" register " + r[rindex]);
                     break;
 
@@ -12518,10 +12748,12 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                     rs1 = r[(ins >> 15) & 0x1F];
                     rs2 = r[(ins >> 20) & 0x1F];
                     rindex = (ins >> 7) & 0x1F;
-                    r[rindex] = this.ram.Read32(this.TranslateVM(rs1,VM_READ));
+                    r[rindex] = this.ram.Read32(paddr);
                     if((rs2 >>> 0) > (r[rindex] >>> 0)) r[0] = r[rindex];
                     else r[0] = rs2;
-                    this.ram.Write32(this.TranslateVM(rs1,VM_WRITE),r[0]);
+                    paddr = this.TranslateVM(rs1,VM_WRITE);
+                    if(paddr == -1) break;
+                    this.ram.Write32(paddr,r[0]);
                     message.Debug("amominu - "+ utils.ToHex(ins)+" register " + r[rindex]);
                     break;
 
@@ -12530,10 +12762,14 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                     rs1 = r[(ins >> 15) & 0x1F];
                     rs2 = r[(ins >> 20) & 0x1F];
                     rindex = (ins >> 7) & 0x1F;
-                    r[rindex] = this.ram.Read32(this.TranslateVM(rs1,VM_READ));
+                    paddr = this.TranslateVM(rs1,VM_READ);
+                    if(paddr == -1) break;
+                    r[rindex] = this.ram.Read32(paddr);
                     if((rs2 >>> 0) < (r[rindex] >>> 0)) r[0] = r[rindex];
                     else r[0] = rs2;
-                    this.ram.Write32(this.TranslateVM(rs1,VM_WRITE),r[0]);
+                    paddr = this.TranslateVM(rs1,VM_WRITE);
+                    if(paddr == -1) break;
+                    this.ram.Write32(paddr,r[0]);
                     message.Debug("amomaxu - "+ utils.ToHex(ins)+" register " + r[rindex]);
                     break;
 
@@ -12541,7 +12777,9 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                     //lr.d
                     rs1 = r[(ins >> 15) & 0x1F];
                     rindex = (ins >> 7) & 0x1F;
-                    r[rindex] = this.ram.Read32(this.TranslateVM(rs1,VM_READ));
+                    paddr = this.TranslateVM(rs1,VM_READ);
+                    if(paddr == -1) break;
+                    r[rindex] = this.ram.Read32(paddr);
                     this.amoaddr = rs1;
                     this.amovalue = r[rindex];
                     message.Debug("lr.d - "+ utils.ToHex(ins)+" register " + r[rindex]);
@@ -12556,12 +12794,15 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                         r[rindex] = 0x01;
                         break;
                     }
-                    var physical_addr = this.TranslateVM(rs1, VM_WRITE);
+                    var physical_addr = this.TranslateVM(rs1, VM_READ);
+                    if(physical_addr == -1) break;
                     if(this.ram.Read32(physical_addr) != this.amovalue) {
                         r[rindex] = 0x01;
                         break;
                     }
                     r[rindex] = 0x00;
+                    var physical_addr = this.TranslateVM(rs1, VM_WRITE);
+                    if(physical_addr == -1) break;
                     this.ram.Write32(physical_addr, r[rs2]);
                     message.Debug("sc.d - "+ utils.ToHex(ins)+" register " + r[rindex]);
                     break;
@@ -13160,6 +13401,34 @@ function LoadBinaryResource(url, OnSuccess, OnError) {
     req.send(null);
 }
 
+function LoadBinaryResourceII(url, OnSuccess, NonBlocking, OnError) {
+    var req = new XMLHttpRequest();
+    // open might fail, when we try to open an unsecure address, when the main page is secure
+    try {
+        req.open('GET', url, NonBlocking);
+    } catch(err) {
+        OnError(err);
+        return;
+    }
+    req.responseType = "arraybuffer";
+    req.onreadystatechange = function () {
+        if (req.readyState != 4) {
+            return;
+        }
+        if ((req.status != 200) && (req.status != 0)) {
+            OnError("Error: Could not load file " + url);
+            return;
+        }
+        var arrayBuffer = req.response;
+        if (arrayBuffer) {
+            OnSuccess(arrayBuffer);
+        } else {
+            OnError("Error: No data received from: " + url);
+        }
+    };
+    req.send(null);
+}
+
 function LoadTextResource(url, OnSuccess, OnError) {
     var req = new XMLHttpRequest();
     req.open('GET', url, true);
@@ -13270,6 +13539,7 @@ module.exports.uint32 = uint32;
 module.exports.ToHex = ToHex;
 module.exports.ToBin = ToBin;
 module.exports.LoadBinaryResource = LoadBinaryResource;
+module.exports.LoadBinaryResourceII = LoadBinaryResourceII;
 module.exports.LoadTextResource = LoadTextResource;
 
 
