@@ -913,7 +913,7 @@ ATADev.prototype.WriteReg32 = function(addr, x) {
 
 module.exports = ATADev;
 
-},{"../messagehandler":26,"../utils":36}],4:[function(require,module,exports){
+},{"../messagehandler":26,"../utils":37}],4:[function(require,module,exports){
 // -------------------------------------------------
 // ----------------- Ethernet ----------------------
 // -------------------------------------------------
@@ -1669,7 +1669,7 @@ function EthDev(ram, intdev, mac) {
 
 module.exports = EthDev;
 
-},{"../messagehandler":26,"../utils":36}],5:[function(require,module,exports){
+},{"../messagehandler":26,"../utils":37}],5:[function(require,module,exports){
 // -------------------------------------------------
 // ---------------- Framebuffer --------------------
 // -------------------------------------------------
@@ -1729,7 +1729,7 @@ FBDev.prototype.GetBuffer = function () {
 
 module.exports = FBDev;
 
-},{"../messagehandler":26,"../utils":36}],6:[function(require,module,exports){
+},{"../messagehandler":26,"../utils":37}],6:[function(require,module,exports){
 // -------------------------------------------------
 // ---------------------- IRQ ----------------------
 // -------------------------------------------------
@@ -1835,7 +1835,7 @@ IRQDev.prototype.WriteReg32 = function (addr, value) {
 
 module.exports = IRQDev;
 
-},{"../messagehandler":26,"../utils":36}],7:[function(require,module,exports){
+},{"../messagehandler":26,"../utils":37}],7:[function(require,module,exports){
 // -------------------------------------------------
 // ------------------ KEYBOARD ---------------------
 // -------------------------------------------------
@@ -2245,7 +2245,7 @@ RTCDev.prototype.WriteReg32 = function (addr, value) {
 
 module.exports = RTCDev;
 
-},{"../messagehandler":26,"../utils":36}],9:[function(require,module,exports){
+},{"../messagehandler":26,"../utils":37}],9:[function(require,module,exports){
 // -------------------------------------------------
 // --------------------- SOUND ---------------------
 // -------------------------------------------------
@@ -2417,7 +2417,7 @@ SoundDev.prototype.WriteReg32 = function (addr, value) {
 
 module.exports = SoundDev;
 
-},{"../messagehandler":26,"../utils":36}],10:[function(require,module,exports){
+},{"../messagehandler":26,"../utils":37}],10:[function(require,module,exports){
 // -------------------------------------------------
 // -------------------- Timer ----------------------
 // -------------------------------------------------
@@ -2590,7 +2590,7 @@ TouchscreenDev.prototype.WriteReg32 = function (addr, value) {
 
 module.exports = TouchscreenDev;
 
-},{"../messagehandler":26,"../utils":36}],12:[function(require,module,exports){
+},{"../messagehandler":26,"../utils":37}],12:[function(require,module,exports){
 // -------------------------------------------------
 // -------------------- UART -----------------------
 // -------------------------------------------------
@@ -2887,7 +2887,7 @@ UARTDev.prototype.WriteReg8 = function(addr, x) {
 
 module.exports = UARTDev;
 
-},{"../messagehandler":26,"../utils":36}],13:[function(require,module,exports){
+},{"../messagehandler":26,"../utils":37}],13:[function(require,module,exports){
 // -------------------------------------------------
 // ------------------- VIRTIO ----------------------
 // -------------------------------------------------
@@ -3393,7 +3393,7 @@ VirtIODev.prototype.WriteReg32 = function (addr, val) {
 
 module.exports = VirtIODev;
 
-},{"../messagehandler":26,"../utils":36,"./virtio/marshall":18}],14:[function(require,module,exports){
+},{"../messagehandler":26,"../utils":37,"./virtio/marshall":18}],14:[function(require,module,exports){
 // -------------------------------------------------
 // --------------------- 9P ------------------------
 // -------------------------------------------------
@@ -3953,7 +3953,7 @@ Virtio9p.prototype.ReceiveRequest = function (ringidx, index, GetByte) {
 
 module.exports = Virtio9p;
 
-},{"../../messagehandler":26,"../../utils":36,"./marshall":18}],15:[function(require,module,exports){
+},{"../../messagehandler":26,"../../utils":37,"./marshall":18}],15:[function(require,module,exports){
 // -------------------------------------------------
 // ------------- Block Virtio Device ---------------
 // -------------------------------------------------
@@ -4038,7 +4038,7 @@ VirtioBlock.prototype.ReceiveRequest = function (queueidx, index, GetByte, size)
 
 module.exports = VirtioBlock;
 
-},{"../../messagehandler":26,"../../utils":36,"./marshall":18}],16:[function(require,module,exports){
+},{"../../messagehandler":26,"../../utils":37,"./marshall":18}],16:[function(require,module,exports){
 // -------------------------------------------------
 // ------------- Dummy Virtio Device ---------------
 // -------------------------------------------------
@@ -4063,7 +4063,7 @@ VirtioDummy.prototype.ReceiveRequest = function (index, GetByte) {
 
 module.exports = VirtioDummy;
 
-},{"../../messagehandler":26,"../../utils":36}],17:[function(require,module,exports){
+},{"../../messagehandler":26,"../../utils":37}],17:[function(require,module,exports){
 // -------------------------------------------------
 // ------------- Input Virtio Device ---------------
 // -------------------------------------------------
@@ -4194,7 +4194,7 @@ VirtioInput.prototype.ReceiveRequest = function (queueidx, index, GetByte, size)
 
 module.exports = VirtioInput;
 
-},{"../../messagehandler":26,"../../utils":36}],18:[function(require,module,exports){
+},{"../../messagehandler":26,"../../utils":37}],18:[function(require,module,exports){
 // -------------------------------------------------
 // ------------------ Marshall ---------------------
 // -------------------------------------------------
@@ -4480,7 +4480,7 @@ VirtioNET.prototype.ReceiveRequest = function (queueidx, index, GetByte, size) {
 
 module.exports = VirtioNET;
 
-},{"../../messagehandler":26,"../../utils":36,"./marshall":18}],20:[function(require,module,exports){
+},{"../../messagehandler":26,"../../utils":37,"./marshall":18}],20:[function(require,module,exports){
 var message = require('./messagehandler');
 var utils = require('./utils');
 var marshall = require('./dev/virtio/marshall');
@@ -4577,7 +4577,7 @@ elf.Extract = function(srcbuffer, destbuffer) {
 
 module.exports = elf;
 
-},{"./dev/virtio/marshall":18,"./messagehandler":26,"./utils":36}],21:[function(require,module,exports){
+},{"./dev/virtio/marshall":18,"./messagehandler":26,"./utils":37}],21:[function(require,module,exports){
 // -------------------------------------------------
 // ----------------- FILESYSTEM---------------------
 // -------------------------------------------------
@@ -5339,7 +5339,7 @@ FS.prototype.PrepareCAPs = function(id) {
 
 module.exports = FS;
 
-},{"../../lib/utf8.js":1,"../bzip2.js":2,"../dev/virtio/marshall.js":18,"../messagehandler":26,"../utils.js":36,"./fsloader.js":22,"./lazyUint8Array.js":23,"./tar.js":24}],22:[function(require,module,exports){
+},{"../../lib/utf8.js":1,"../bzip2.js":2,"../dev/virtio/marshall.js":18,"../messagehandler":26,"../utils.js":37,"./fsloader.js":22,"./lazyUint8Array.js":23,"./tar.js":24}],22:[function(require,module,exports){
 // -------------------------------------------------
 // ------------- FILESYSTEM LOADER -----------------
 // -------------------------------------------------
@@ -5440,7 +5440,7 @@ FSLoader.prototype.LoadJSON = function(url)
 
 module.exports = FSLoader;
 
-},{"../messagehandler":26,"../utils":36}],23:[function(require,module,exports){
+},{"../messagehandler":26,"../utils":37}],23:[function(require,module,exports){
 "use strict";
 
 var message = require("../messagehandler");
@@ -7686,7 +7686,7 @@ forwardedMethods.forEach(function(m) {
 
 module.exports = CPU;
 
-},{"../imul":25,"../messagehandler":26,"../utils":36,"./fastcpu.js":27,"./safecpu.js":29,"./smpcpu.js":30}],29:[function(require,module,exports){
+},{"../imul":25,"../messagehandler":26,"../utils":37,"./fastcpu.js":27,"./safecpu.js":29,"./smpcpu.js":30}],29:[function(require,module,exports){
 // -------------------------------------------------
 // -------------------- CPU ------------------------
 // -------------------------------------------------
@@ -8802,7 +8802,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
 
 module.exports = SafeCPU;
 
-},{"../messagehandler":26,"../utils":36}],30:[function(require,module,exports){
+},{"../messagehandler":26,"../utils":37}],30:[function(require,module,exports){
 var message = require('../messagehandler');
 
 function SMPCPU(stdlib, foreign, heap) {
@@ -10783,7 +10783,7 @@ RAM.prototype.Write16Little = function(addr, x) {
 
 module.exports = RAM;
 
-},{"./messagehandler":26,"./utils":36}],32:[function(require,module,exports){
+},{"./messagehandler":26,"./utils":37}],32:[function(require,module,exports){
 /* this is a unified, abstract interface (a facade) to the different
  * CPU implementations
  */
@@ -10855,7 +10855,7 @@ forwardedMethods.forEach(function(m) {
 
 module.exports = CPU;
 
-},{"../imul":25,"../messagehandler":26,"../utils":36,"./safecpu.js":33}],33:[function(require,module,exports){
+},{"../imul":25,"../messagehandler":26,"../utils":37,"./safecpu.js":33}],33:[function(require,module,exports){
 // -------------------------------------------------
 // -------------------- CPU ------------------------
 // -------------------------------------------------
@@ -10863,6 +10863,7 @@ module.exports = CPU;
 "use strict";
 var message = require('../messagehandler');
 var utils = require('../utils');
+var syscalls = require('./syscalls.js');
 
 var CSR_MSTATUS = 0x300;
 var CSR_CYCLES = 0xC00;
@@ -10989,14 +10990,8 @@ function SafeCPU(ram) {
     this.fi = new Int32Array(this.ram.heap, 32<<2, 32<<1); // for copying operations
     this.ff = new Float32Array(this.ram.heap, 0, 1); // the zero register is used to convert to single precision
     this.csr = new Int32Array(this.ram.heap, 0x2000, 4096 << 2);
-    this.page_table = new Int32Array(this.ram.heap, 0x40000, 0x10000);
-    this.elf8mem = [];
-    this.file_descriptor_table = [];
-    this.file_size = []; //file descriptor is the index
-    this.file_pointer = []; //file descriptor is the index
-    this.file_descriptor_offset = 9;
-    this.elf8mem_offset = 0x00;
     this.pc = 0x200;
+
     this.Reset();
 }
 
@@ -11022,6 +11017,7 @@ SafeCPU.prototype.Reset = function() {
     this.amovalue = 0x00;
     this.ram.Write32(0x00,31*1024*1024); //Writing the amount of free memory available into the first memory location
 
+    this.syscallHandler = new syscalls(this.ram,this.csr);
 }
 
 SafeCPU.prototype.InvalidateTLB = function() {
@@ -11765,152 +11761,6 @@ SafeCPU.prototype.TranslateVM = function (addr,op) {
     return physical_addr;
 };
 
-SafeCPU.prototype.OnFileLoaded = function(buffer) {
-
-    var buffer8 = new Uint8Array(buffer);
-    var length = buffer8.length;
-    for(var i=0; i<length; i++) this.elf8mem[i+this.elf8mem_offset] = buffer8[i];
-    this.file_descriptor_table[++this.file_descriptor_offset] = this.elf8mem_offset;
-    this.elf8mem_offset += length;
-    this.file_size[this.file_descriptor_offset] = length;
-    this.file_pointer[this.file_descriptor_offset] = 0;
-    
-};
-
-SafeCPU.prototype.SysCall = function () {
-
-    var syscall_id = this.ram.Read32(this.csr[CSR_MTOHOST]);
-    var argv = ["spike", "-m31", "-p1", "vmlinux"];
-    switch(syscall_id){
-
-        case SYS_OPENAT:
-            //sys_openat
-            var filename_pointer = this.ram.Read32(this.csr[CSR_MTOHOST] + 16);
-            var filename = "";
-            for(var i=0,c;;i++){
-                c = this.ram.Read8(filename_pointer+i);
-                if(c == 0)
-                    break;
-                else
-                    filename += String.fromCharCode(c);
-            }
-            var url = filename;
-            utils.LoadBinaryResourceII(url, this.OnFileLoaded.bind(this), false, function(error){message.Abort();});
-            this.ram.Write32(this.csr[CSR_MTOHOST], this.file_descriptor_offset);
-            this.csr[CSR_MFROMHOST] = 1;
-            break;
-
-        case SYS_PREAD:
-            //sys_pread
-            var file_descriptor = this.ram.Read32(this.csr[CSR_MTOHOST] + 8);
-            var file_address = this.file_descriptor_table[file_descriptor];
-            var buffer_address = this.ram.Read32(this.csr[CSR_MTOHOST] + 16);
-            var number_bytes = this.ram.Read32(this.csr[CSR_MTOHOST] + 24);
-            //var file_offset = this.file_pointer[file_descriptor];
-            var file_offset = this.ram.Read32(this.csr[CSR_MTOHOST] + 32);
-            var file_length = this.file_size[file_descriptor];
-            var i = 0;
-            for(var b;i < number_bytes;i++){
-                if((i + file_offset) >= file_length) break;
-                b = this.elf8mem[file_address + i + file_offset];
-                this.ram.Write8(buffer_address + i, b);
-            }
-            this.file_pointer[file_descriptor] += i;
-            this.ram.Write32(this.csr[CSR_MTOHOST], i);
-            this.csr[CSR_MFROMHOST] = 1;
-            break;
-
-        case SYS_CLOSE:
-            //sys_close
-            this.ram.Write32(this.csr[CSR_MTOHOST], 0);
-            this.csr[CSR_MFROMHOST] = 1;
-            break;
-
-        case SYS_FSTAT:
-            //sys_fstat
-            var file_descriptor = this.ram.Read32(this.csr[CSR_MTOHOST] + 8);
-            var stat_buffer_address = this.ram.Read32(this.csr[CSR_MTOHOST] + 16);
-            this.ram.Write32(stat_buffer_address, 0); //unsigned long   Device. 
-            this.ram.Write32(stat_buffer_address + 4, 0); //unsigned long   File serial number
-            this.ram.Write16(stat_buffer_address + 8, 0x81FF); //unsigned int    File mode
-            this.ram.Write16(stat_buffer_address +10, 0); //unsigned int    Link count
-            this.ram.Write16(stat_buffer_address +12, 0); //unsigned int    User ID of the file's owner
-            this.ram.Write16(stat_buffer_address +14, 0); //unsigned int    Group ID of the file's group
-            this.ram.Write32(stat_buffer_address +16, 0); //unsigned long   Device number, if device
-            this.ram.Write32(stat_buffer_address +20, 0); //unsigned long   __pad1
-            this.ram.Write32(stat_buffer_address +24, this.file_size[file_descriptor]); //long Size of file, in bytes
-            this.ram.Write16(stat_buffer_address +28, 512); //int           Optimal block size for I/O
-            this.ram.Write16(stat_buffer_address +30, 0); //int             __pad2
-            this.ram.Write32(stat_buffer_address +32, 0); //long            Number 512-byte blocks allocated
-            this.ram.Write32(stat_buffer_address +36, 0); //long            Time of last access
-            this.ram.Write32(stat_buffer_address +40, 0); //unsigned long   st_atime_nsec
-            this.ram.Write32(stat_buffer_address +44, 0); //long            Time of last modification
-            this.ram.Write32(stat_buffer_address +48, 0); //unsigned long   st_mtime_nsec
-            this.ram.Write32(stat_buffer_address +52, 0); //long            Time of last status change
-            this.ram.Write32(stat_buffer_address +56, 0); //unsigned long   st_ctime_nsec
-            this.ram.Write16(stat_buffer_address +60, 0); //unsigned int    __unused4
-            this.ram.Write16(stat_buffer_address +62, 0); //unsigned int    __unused5
-            this.ram.Write32(this.csr[CSR_MTOHOST], 1);
-            this.csr[CSR_MFROMHOST] = 1;
-            break;
-
-        case SYS_WRITE:
-            //sys_write
-            var length = this.ram.Read32(this.csr[CSR_MTOHOST] + 8*3), i =0;
-            var string_address = this.ram.Read32(this.csr[CSR_MTOHOST] + 8*2);
-            while(i < length){
-                var c = this.ram.Read8(string_address + (i++));
-                this.ram.Write8Little(0x90000000 >> 0, c);
-                if (c == 0xA) this.ram.Write8(0x90000000 >> 0, 0xD);
-            }
-            this.ram.Write32(this.csr[CSR_MTOHOST], i);
-            this.csr[CSR_MFROMHOST] = 1;
-            break;
-
-        case SYS_EXIT:
-            //sys_exit
-            message.Debug("Program exited with sys_exit for inst at PC "+utils.ToHex(this.pc));
-            message.Abort();
-            break;
-
-        case SYS_GETMAINVARS:
-            //sys_getmainvars
-            var address = this.ram.Read32(this.csr[CSR_MTOHOST] + 8);
-            var length = this.ram.Read32(this.csr[CSR_MTOHOST] + 16);
-
-           // write argc
-            this.ram.Write32(address, argv.length);
-            // argv[argc] = NULL
-            // envp[0] = NULL
-
-            // generate list of pointers to string
-            var ofs = argv.length*8 + 8*4; // offset of first string entry
-            for(var i=0; i<argv.length; i++) {
-                this.ram.Write32(address+8+i*8, address + ofs);
-                ofs += argv[i].length+1;
-            }
-
-            ofs = argv.length*8 + 8*4;
-            for(var i=0; i<argv.length; i++) {
-                for (var j=0; j<argv[i].length; j++) {
-                    this.ram.Write8(address + ofs, argv[i].charCodeAt(j));
-                    ofs++;
-                }
-                ofs++; // terminating "\0"
-            }
-
-            this.csr[CSR_MFROMHOST] = 1;
-            this.ram.Write32(this.csr[CSR_MTOHOST], 0);
-            break;
-
-        default:
-            message.Debug("unkown SysCall "+utils.ToHex(syscall_id)+" at PC "+utils.ToHex(this.pc));
-            message.Abort();
-           break;
-    }
-
-};
-
 SafeCPU.prototype.SetCSR = function (addr,value) {
 
     var csr = this.csr;
@@ -11920,7 +11770,7 @@ SafeCPU.prototype.SetCSR = function (addr,value) {
         case CSR_MTOHOST:
             if(value > 0x100){
                 csr[addr] =  value;
-                this.SysCall();
+                this.syscallHandler.HandleSysCall();
             }
             else
                 this.ram.Write8Little(0x90000000 >> 0, value+0x30);
@@ -13479,7 +13329,188 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
 
 module.exports = SafeCPU;
 
-},{"../messagehandler":26,"../utils":36}],34:[function(require,module,exports){
+},{"../messagehandler":26,"../utils":37,"./syscalls.js":34}],34:[function(require,module,exports){
+
+"use strict";
+var message = require('../messagehandler');
+var utils = require('../utils');
+
+var SYS_OPENAT = 56;
+var SYS_CLOSE = 57;
+var SYS_PREAD = 67;
+var SYS_WRITE = 64;
+var SYS_FSTAT = 80;
+var SYS_EXIT = 93;
+var SYS_GETMAINVARS = 2011;
+
+var CSR_MTOHOST =  0x780;
+var CSR_MFROMHOST =  0x781;
+
+function SysCalls(ram,csr) {
+
+    message.Debug("Initialize SysCalls");
+
+    this.ram = ram;
+    this.csr = csr;
+    this.elf8mem = [];
+    this.file_descriptor_table = [];
+    this.file_size = []; //file descriptor is the index
+    this.file_pointer = []; //file descriptor is the index
+    this.file_descriptor_offset = 9;
+    this.elf8mem_offset = 0x00;
+    
+    
+}
+
+SysCalls.prototype.HandleSysCall = function () {
+
+    var ram = this.ram;
+    var csr = this.csr;
+    var syscall_id = this.ram.Read32(this.csr[CSR_MTOHOST]);
+    var argv = ["spike", "-m31", "-p1", "vmlinux"];
+    switch(syscall_id){
+
+        case SYS_OPENAT:
+            //sys_openat
+            var filename_pointer = this.ram.Read32(this.csr[CSR_MTOHOST] + 16);
+            var filename = "";
+            for(var i=0,c;;i++){
+                c = this.ram.Read8(filename_pointer+i);
+                if(c == 0)
+                    break;
+                else
+                    filename += String.fromCharCode(c);
+            }
+            var url = filename;
+            utils.LoadBinaryResourceII(url, this.OnFileLoaded.bind(this), false, function(error){message.Abort();});
+            this.ram.Write32(this.csr[CSR_MTOHOST], this.file_descriptor_offset);
+            this.csr[CSR_MFROMHOST] = 1;
+            break;
+
+        case SYS_PREAD:
+            //sys_pread
+            var file_descriptor = this.ram.Read32(this.csr[CSR_MTOHOST] + 8);
+            var file_address = this.file_descriptor_table[file_descriptor];
+            var buffer_address = this.ram.Read32(this.csr[CSR_MTOHOST] + 16);
+            var number_bytes = this.ram.Read32(this.csr[CSR_MTOHOST] + 24);
+            //var file_offset = this.file_pointer[file_descriptor];
+            var file_offset = this.ram.Read32(this.csr[CSR_MTOHOST] + 32);
+            var file_length = this.file_size[file_descriptor];
+            var i = 0;
+            for(var b;i < number_bytes;i++){
+                if((i + file_offset) >= file_length) break;
+                b = this.elf8mem[file_address + i + file_offset];
+                this.ram.Write8(buffer_address + i, b);
+            }
+            this.file_pointer[file_descriptor] += i;
+            this.ram.Write32(this.csr[CSR_MTOHOST], i);
+            this.csr[CSR_MFROMHOST] = 1;
+            break;
+
+        case SYS_CLOSE:
+            //sys_close
+            this.ram.Write32(this.csr[CSR_MTOHOST], 0);
+            this.csr[CSR_MFROMHOST] = 1;
+            break;
+
+        case SYS_FSTAT:
+            //sys_fstat
+            var file_descriptor = this.ram.Read32(this.csr[CSR_MTOHOST] + 8);
+            var stat_buffer_address = this.ram.Read32(this.csr[CSR_MTOHOST] + 16);
+            this.ram.Write32(stat_buffer_address, 0); //unsigned long   Device. 
+            this.ram.Write32(stat_buffer_address + 4, 0); //unsigned long   File serial number
+            this.ram.Write16(stat_buffer_address + 8, 0x81FF); //unsigned int    File mode
+            this.ram.Write16(stat_buffer_address +10, 0); //unsigned int    Link count
+            this.ram.Write16(stat_buffer_address +12, 0); //unsigned int    User ID of the file's owner
+            this.ram.Write16(stat_buffer_address +14, 0); //unsigned int    Group ID of the file's group
+            this.ram.Write32(stat_buffer_address +16, 0); //unsigned long   Device number, if device
+            this.ram.Write32(stat_buffer_address +20, 0); //unsigned long   __pad1
+            this.ram.Write32(stat_buffer_address +24, this.file_size[file_descriptor]); //long Size of file, in bytes
+            this.ram.Write16(stat_buffer_address +28, 512); //int           Optimal block size for I/O
+            this.ram.Write16(stat_buffer_address +30, 0); //int             __pad2
+            this.ram.Write32(stat_buffer_address +32, 0); //long            Number 512-byte blocks allocated
+            this.ram.Write32(stat_buffer_address +36, 0); //long            Time of last access
+            this.ram.Write32(stat_buffer_address +40, 0); //unsigned long   st_atime_nsec
+            this.ram.Write32(stat_buffer_address +44, 0); //long            Time of last modification
+            this.ram.Write32(stat_buffer_address +48, 0); //unsigned long   st_mtime_nsec
+            this.ram.Write32(stat_buffer_address +52, 0); //long            Time of last status change
+            this.ram.Write32(stat_buffer_address +56, 0); //unsigned long   st_ctime_nsec
+            this.ram.Write16(stat_buffer_address +60, 0); //unsigned int    __unused4
+            this.ram.Write16(stat_buffer_address +62, 0); //unsigned int    __unused5
+            this.ram.Write32(this.csr[CSR_MTOHOST], 1);
+            this.csr[CSR_MFROMHOST] = 1;
+            break;
+
+        case SYS_WRITE:
+            //sys_write
+            var length = this.ram.Read32(this.csr[CSR_MTOHOST] + 8*3), i =0;
+            var string_address = this.ram.Read32(this.csr[CSR_MTOHOST] + 8*2);
+            while(i < length){
+                var c = this.ram.Read8(string_address + (i++));
+                this.ram.Write8Little(0x90000000 >> 0, c);
+                if (c == 0xA) this.ram.Write8(0x90000000 >> 0, 0xD);
+            }
+            this.ram.Write32(this.csr[CSR_MTOHOST], i);
+            this.csr[CSR_MFROMHOST] = 1;
+            break;
+
+        case SYS_EXIT:
+            //sys_exit
+            message.Debug("Program exited with sys_exit for inst at PC "+utils.ToHex(this.pc));
+            message.Abort();
+            break;
+
+        case SYS_GETMAINVARS:
+            //sys_getmainvars
+            var address = this.ram.Read32(this.csr[CSR_MTOHOST] + 8);
+            var length = this.ram.Read32(this.csr[CSR_MTOHOST] + 16);
+
+           // write argc
+            this.ram.Write32(address, argv.length);
+            // argv[argc] = NULL
+            // envp[0] = NULL
+
+            // generate list of pointers to string
+            var ofs = argv.length*8 + 8*4; // offset of first string entry
+            for(var i=0; i<argv.length; i++) {
+                this.ram.Write32(address+8+i*8, address + ofs);
+                ofs += argv[i].length+1;
+            }
+
+            ofs = argv.length*8 + 8*4;
+            for(var i=0; i<argv.length; i++) {
+                for (var j=0; j<argv[i].length; j++) {
+                    this.ram.Write8(address + ofs, argv[i].charCodeAt(j));
+                    ofs++;
+                }
+                ofs++; // terminating "\0"
+            }
+
+            this.csr[CSR_MFROMHOST] = 1;
+            this.ram.Write32(this.csr[CSR_MTOHOST], 0);
+            break;
+
+        default:
+            message.Debug("unkown SysCall "+utils.ToHex(syscall_id)+" at PC "+utils.ToHex(this.pc));
+            message.Abort();
+           break;
+    }
+
+};
+
+SysCalls.prototype.OnFileLoaded = function(buffer) {
+
+    var buffer8 = new Uint8Array(buffer);
+    var length = buffer8.length;
+    for(var i=0; i<length; i++) this.elf8mem[i+this.elf8mem_offset] = buffer8[i];
+    this.file_descriptor_table[++this.file_descriptor_offset] = this.elf8mem_offset;
+    this.elf8mem_offset += length;
+    this.file_size[this.file_descriptor_offset] = length;
+    this.file_pointer[this.file_descriptor_offset] = 0;
+    
+};
+module.exports = SysCalls;
+},{"../messagehandler":26,"../utils":37}],35:[function(require,module,exports){
 // -------------------------------------------------
 // ------------------- SYSTEM ----------------------
 // -------------------------------------------------
@@ -13833,7 +13864,7 @@ System.prototype.MainLoop = function() {
 
 module.exports = System;
 
-},{"./bzip2.js":2,"./dev/ata.js":3,"./dev/ethmac.js":4,"./dev/framebuffer.js":5,"./dev/irq.js":6,"./dev/keyboard.js":7,"./dev/rtc.js":8,"./dev/sound.js":9,"./dev/timer.js":10,"./dev/touchscreen.js":11,"./dev/uart.js":12,"./dev/virtio.js":13,"./dev/virtio/9p.js":14,"./dev/virtio/block.js":15,"./dev/virtio/dummy.js":16,"./dev/virtio/input.js":17,"./dev/virtio/net.js":19,"./elf.js":20,"./filesystem/filesystem.js":21,"./messagehandler.js":26,"./or1k":28,"./ram.js":31,"./riscv":32,"./timer.js":35,"./utils.js":36}],35:[function(require,module,exports){
+},{"./bzip2.js":2,"./dev/ata.js":3,"./dev/ethmac.js":4,"./dev/framebuffer.js":5,"./dev/irq.js":6,"./dev/keyboard.js":7,"./dev/rtc.js":8,"./dev/sound.js":9,"./dev/timer.js":10,"./dev/touchscreen.js":11,"./dev/uart.js":12,"./dev/virtio.js":13,"./dev/virtio/9p.js":14,"./dev/virtio/block.js":15,"./dev/virtio/dummy.js":16,"./dev/virtio/input.js":17,"./dev/virtio/net.js":19,"./elf.js":20,"./filesystem/filesystem.js":21,"./messagehandler.js":26,"./or1k":28,"./ram.js":31,"./riscv":32,"./timer.js":36,"./utils.js":37}],36:[function(require,module,exports){
 // -------------------------------------------------
 // ------------------- TIMER -----------------------
 // -------------------------------------------------
@@ -13973,7 +14004,7 @@ Timer.prototype.GlobalUpdate = function(ticks) {
 
 module.exports = Timer;
 
-},{"./messagehandler.js":26,"./utils.js":36}],36:[function(require,module,exports){
+},{"./messagehandler.js":26,"./utils.js":37}],37:[function(require,module,exports){
 // -------------------------------------------------
 // ------------------ Utils ------------------------
 // -------------------------------------------------
@@ -14189,7 +14220,7 @@ module.exports.LoadBinaryResourceII = LoadBinaryResourceII;
 module.exports.LoadTextResource = LoadTextResource;
 
 
-},{}],37:[function(require,module,exports){
+},{}],38:[function(require,module,exports){
 // -------------------------------------------------
 // -------------------- Worker ---------------------
 // -------------------------------------------------
@@ -14197,4 +14228,4 @@ module.exports.LoadTextResource = LoadTextResource;
 var System = require('./system.js');
 var sys = new System();
 
-},{"./system.js":34}]},{},[37]);
+},{"./system.js":35}]},{},[38]);
