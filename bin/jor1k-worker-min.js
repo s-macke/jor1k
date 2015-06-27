@@ -478,7 +478,7 @@ bzip2.decompress = function(bits, stream, buf, bufsize) {
 
 module.exports = bzip2;
 
-},{"./messagehandler":25}],3:[function(require,module,exports){
+},{"./messagehandler":26}],3:[function(require,module,exports){
 // -------------------------------------------------
 // --------------------- ATA -----------------------
 // -------------------------------------------------
@@ -913,7 +913,7 @@ ATADev.prototype.WriteReg32 = function(addr, x) {
 
 module.exports = ATADev;
 
-},{"../messagehandler":25,"../utils":35}],4:[function(require,module,exports){
+},{"../messagehandler":26,"../utils":37}],4:[function(require,module,exports){
 // -------------------------------------------------
 // ----------------- Ethernet ----------------------
 // -------------------------------------------------
@@ -1669,7 +1669,7 @@ function EthDev(ram, intdev, mac) {
 
 module.exports = EthDev;
 
-},{"../messagehandler":25,"../utils":35}],5:[function(require,module,exports){
+},{"../messagehandler":26,"../utils":37}],5:[function(require,module,exports){
 // -------------------------------------------------
 // ---------------- Framebuffer --------------------
 // -------------------------------------------------
@@ -1729,7 +1729,7 @@ FBDev.prototype.GetBuffer = function () {
 
 module.exports = FBDev;
 
-},{"../messagehandler":25,"../utils":35}],6:[function(require,module,exports){
+},{"../messagehandler":26,"../utils":37}],6:[function(require,module,exports){
 // -------------------------------------------------
 // ---------------------- IRQ ----------------------
 // -------------------------------------------------
@@ -1835,7 +1835,7 @@ IRQDev.prototype.WriteReg32 = function (addr, value) {
 
 module.exports = IRQDev;
 
-},{"../messagehandler":25,"../utils":35}],7:[function(require,module,exports){
+},{"../messagehandler":26,"../utils":37}],7:[function(require,module,exports){
 // -------------------------------------------------
 // ------------------ KEYBOARD ---------------------
 // -------------------------------------------------
@@ -2164,7 +2164,7 @@ KeyboardDev.prototype.ReadReg8 = function (addr) {
 
 module.exports = KeyboardDev;
 
-},{"../messagehandler":25}],8:[function(require,module,exports){
+},{"../messagehandler":26}],8:[function(require,module,exports){
 // -------------------------------------------------
 // ---------------------- RTC ----------------------
 // -------------------------------------------------
@@ -2245,7 +2245,7 @@ RTCDev.prototype.WriteReg32 = function (addr, value) {
 
 module.exports = RTCDev;
 
-},{"../messagehandler":25,"../utils":35}],9:[function(require,module,exports){
+},{"../messagehandler":26,"../utils":37}],9:[function(require,module,exports){
 // -------------------------------------------------
 // --------------------- SOUND ---------------------
 // -------------------------------------------------
@@ -2417,7 +2417,7 @@ SoundDev.prototype.WriteReg32 = function (addr, value) {
 
 module.exports = SoundDev;
 
-},{"../messagehandler":25,"../utils":35}],10:[function(require,module,exports){
+},{"../messagehandler":26,"../utils":37}],10:[function(require,module,exports){
 // -------------------------------------------------
 // -------------------- Timer ----------------------
 // -------------------------------------------------
@@ -2447,7 +2447,7 @@ TimerDev.prototype.WriteReg32 = function (addr, value) {
 
 module.exports = TimerDev;
 
-},{"../messagehandler":25}],11:[function(require,module,exports){
+},{"../messagehandler":26}],11:[function(require,module,exports){
 // -------------------------------------------------
 // ---------------- TOUCHSCREEN --------------------
 // -------------------------------------------------
@@ -2590,7 +2590,7 @@ TouchscreenDev.prototype.WriteReg32 = function (addr, value) {
 
 module.exports = TouchscreenDev;
 
-},{"../messagehandler":25,"../utils":35}],12:[function(require,module,exports){
+},{"../messagehandler":26,"../utils":37}],12:[function(require,module,exports){
 // -------------------------------------------------
 // -------------------- UART -----------------------
 // -------------------------------------------------
@@ -2887,7 +2887,7 @@ UARTDev.prototype.WriteReg8 = function(addr, x) {
 
 module.exports = UARTDev;
 
-},{"../messagehandler":25,"../utils":35}],13:[function(require,module,exports){
+},{"../messagehandler":26,"../utils":37}],13:[function(require,module,exports){
 // -------------------------------------------------
 // ------------------- VIRTIO ----------------------
 // -------------------------------------------------
@@ -2957,50 +2957,72 @@ function VirtIODev(intdev, intno, ramdev, device) {
     this.intdev = intdev;
     this.intno = intno;
     this.ramdev = ramdev;
+
+    this.queuenum = new Uint32Array(0x10);
+    this.queueready = new Uint32Array(0x10);
+    this.queuepfn = new Uint32Array(0x10);
+    this.descaddr = new Uint32Array(0x10);
+    this.usedaddr = new Uint32Array(0x10);
+    this.availaddr = new Uint32Array(0x10);
+    this.lastavailidx = new Uint32Array(0x10);
+
     this.Reset();
 }
 
 VirtIODev.prototype.Reset = function() {
     this.status = 0x0;
-    this.queuepfn = 0x0;
     this.intstatus = 0x0;
-    this.pagesize = 0x0;
-    this.queuenum = 0x100;
+    this.pagesize = 0x2000;
     this.align = 0x2000;
-    this.queueready = 0x0;
     this.availidx = 0x0;
+    this.hostfeaturewordselect = 0x0;
 
-    this.descaddr = 0x0;
-    this.usedaddr = 0x0;
-    this.availaddr = 0x0;
+    this.queuesel = 0x0;
+
+    for(var i=0; i<0x10; i++) {
+        this.queueready[i] = 0x0;
+        this.queuenum[i] = 0x100;
+        this.queuepfn[i] = 0x0;
+        this.descaddr[i] = 0x0;
+        this.usedaddr[i] = 0x0;
+        this.availaddr[i] = 0x0;
+        this.lastavailidx[i] = 0x0;
+    }
 }
 
 // Ring buffer addresses
 VirtIODev.prototype.UpdateAddr = function() {
 
-    this.descaddr = this.queuepfn * this.pagesize;
-    this.availaddr = this.descaddr + this.queuenum*16;
-    this.usedaddr = this.availaddr + 2 + 2 + this.queuenum*2 + 2;
-    if (this.usedaddr & (this.align-1)) { // padding to next align boundary
+    var i = this.queuesel;
+    this.descaddr[i] = this.queuepfn[i] * this.pagesize;
+    this.availaddr[i] = this.descaddr[i] + this.queuenum[i]*16;
+    this.usedaddr[i] = this.availaddr[i] + 2 + 2 + this.queuenum[i]*2 + 2;
+    if (this.usedaddr[i] & (this.align-1)) { // padding to next align boundary
         var mask = ~(this.align - 1);
-        this.usedaddr = (this.usedaddr & mask) + this.align;
+        this.usedaddr[i] = (this.usedaddr[i] & mask) + this.align;
     }
-
+    this.lastavailidx[i] = (this.ramdev.Read16(this.availaddr[i] + 2));
 }
 
 VirtIODev.prototype.ReadReg8 = function (addr) {
-    //message.Debug("configspace of int " + this.intno + " : " + (addr-0x100));
+    //message.Debug("read configspace of int " + this.intno + " : " + (addr-0x100));
     return this.dev.configspace[addr-0x100];
 }
+
 VirtIODev.prototype.ReadReg16 = function (addr) {
-    //message.Debug("configspace16 of int " + this.intno + " : " + (addr-0x100));
+    //message.Debug("read configspace16 of int " + this.intno + " : " + (addr-0x100));
     return (this.dev.configspace[addr-0x100]<<8) | (this.dev.configspace[addr-0x100+1]);
+}
+
+VirtIODev.prototype.WriteReg8 = function (addr, value) {
+    //message.Debug("write configspace of int " + this.intno + " : " + (addr-0x100) + " " + value);
+    this.dev.WriteConfig(addr-0x100, value);
 }
 
 
 VirtIODev.prototype.ReadReg32 = function (addr) {
     var val = 0x0;
-    //message.Debug("VirtIODev: read register of int "  + this.intno + " : " + utils.ToHex(addr));
+    message.Debug("VirtIODev: read register of int "  + this.intno + " : " + utils.ToHex(addr));
 
     switch(addr)
     {
@@ -3022,19 +3044,27 @@ VirtIODev.prototype.ReadReg32 = function (addr) {
             break;
 
         case VIRTIO_HOSTFEATURES_REG:
-            val = this.dev.hostfeature;
+            //message.Debug("virtio: Read hostfeatures register");
+            val = 0x0;
+            if (this.hostfeaturewordselect == 0) {
+                val = this.dev.hostfeature;
+            } else
+            if (this.hostfeaturewordselect == 1) {
+                //val = 0x1; // VIRTIO_F_VERSION_1
+                val = 0x0;
+            }
             break;
 
         case VIRTIO_QUEUENUMMAX_REG:
-            val = this.queuenum;
+            val = this.queuenum[this.queuesel];
             break;
 
         case VIRTIO_QUEUEPFN_REG:
-            val = this.queuepfn;
+            val = this.queuepfn[this.queuesel];
             break;
 
         case VIRTIO_QUEUE_READY:
-            val = this.queueready;
+            val = this.queueready[this.queuesel];
             break;
 
         case VIRTIO_INTERRUPTSTATUS_REG:
@@ -3057,9 +3087,9 @@ VirtIODev.prototype.ReadReg32 = function (addr) {
     return utils.Swap32(val);
 };
 
-VirtIODev.prototype.GetDescriptor = function(index) {
+VirtIODev.prototype.GetDescriptor = function(queueidx, index) {
 
-    var addr = this.descaddr + index * 16;
+    var addr = this.descaddr[queueidx] + index * 16;
     var buffer = new Uint8Array(16);
     CopyMemoryToBuffer(this.ramdev, buffer, addr, 16);
 
@@ -3077,46 +3107,62 @@ VirtIODev.prototype.GetDescriptor = function(index) {
 
 // the memory layout can be found here: include/uapi/linux/virtio_ring.h
 
-VirtIODev.prototype.PrintRing = function() {
-    var desc = this.GetDescriptor(0);
+VirtIODev.prototype.PrintRing = function(queue) {
+    var desc = this.GetDescriptor(queueidx, 0);
     for(var i=0; i<10; i++) {
         message.Debug("next: " + desc.next + " flags:" + desc.flags + " addr:" + utils.ToHex(desc.addr));
         if (desc.flags & 1)
-            desc = this.GetDescriptor(desc.next); else
+            desc = this.GetDescriptor(queueidx, desc.next); else
         break;
     }
-    var availidx = this.ramdev.Read16(this.availaddr + 2) & (this.queuenum-1);
+    var availidx = this.ramdev.Read16(this.availaddr[queueidx] + 2) & (this.queuenum[queueidx]-1);
     message.Debug("avail idx: " + availidx);
-    message.Debug("avail buffer index: " + this.ramdev.Read16(this.availaddr + 4 + (availidx-4)*2));
-    message.Debug("avail buffer index: " + this.ramdev.Read16(this.availaddr + 4 + (availidx-3)*2));
-    message.Debug("avail buffer index: " + this.ramdev.Read16(this.availaddr + 4 + (availidx-2)*2));
-    message.Debug("avail buffer index: " + this.ramdev.Read16(this.availaddr + 4 + (availidx-1)*2));
-    //message.Debug("avail ring: " + this.ramdev.Read16(availaddr+4 + availidx*2 + -4) );
-    //message.Debug("avail ring: " + this.ramdev.Read16(availaddr+4 + availidx*2 + -2) );
-    //message.Debug("avail ring: " + this.ramdev.Read16(availaddr+4 + availidx*2 + 0) );
-    var usedidx = this.ramdev.Read16(this.usedaddr + 2) & (this.queuenum-1);
+    message.Debug("avail buffer index: " + this.ramdev.Read16(this.availaddr[queueidx] + 4 + (availidx-4)*2));
+    message.Debug("avail buffer index: " + this.ramdev.Read16(this.availaddr[queueidx] + 4 + (availidx-3)*2));
+    message.Debug("avail buffer index: " + this.ramdev.Read16(this.availaddr[queueidx] + 4 + (availidx-2)*2));
+    message.Debug("avail buffer index: " + this.ramdev.Read16(this.availaddr[queueidx] + 4 + (availidx-1)*2));
+    //message.Debug("avail ring: " + this.ramdev.Read16(this.availaddr[queueidx]+4 + availidx*2 + -4) );
+    //message.Debug("avail ring: " + this.ramdev.Read16(this.availaddr[queueidx]+4 + availidx*2 + -2) );
+    //message.Debug("avail ring: " + this.ramdev.Read16(this.availaddr[queueidx]+4 + availidx*2 + 0) );
+    var usedidx = this.ramdev.Read16(this.usedaddr[queueidx] + 2) & (this.queuenum[queueidx]-1);
     message.Debug("used idx: " + usedidx);
 }
 
 
-VirtIODev.prototype.ConsumeDescriptor = function(descindex, desclen) {
-    var index = (this.ramdev.Read16(this.usedaddr + 2)); // get used index
-    //message.Debug("used index:" + index + " descindex=" + descindex);
-    var usedaddr = this.usedaddr + 4 + (index & (this.queuenum-1)) * 8;
+VirtIODev.prototype.ConsumeDescriptor = function(queueidx, descindex, desclen) {
 
+    // update used index
+    var usedidxaddr = this.usedaddr[queueidx] + 2;
+    var index = (this.ramdev.Read16(usedidxaddr));
+    this.ramdev.Write16(usedidxaddr, (index+1) );
+
+    //message.Debug("used index:" + index + " descindex=" + descindex);
+
+    var usedaddr = this.usedaddr[queueidx] + 4 + (index & (this.queuenum[queueidx]-1)) * 8;
     this.ramdev.Write32(usedaddr+0, (descindex));
     this.ramdev.Write32(usedaddr+4, (desclen));
-    this.ramdev.Write16(this.usedaddr + 2, ((index+1)));
 }
 
-VirtIODev.prototype.SendReply = function (index) {
+VirtIODev.prototype.SendReply = function (queueidx, index) {
     //message.Debug("Send Reply index="+index + " size=" + this.dev.replybuffersize);
-    this.ConsumeDescriptor(index, this.dev.replybuffersize);
+    this.ConsumeDescriptor(queueidx, index, this.dev.replybuffersize);
 
-    var desc = this.GetDescriptor(index);
+    var availflag = this.ramdev.Read16(this.availaddr[queueidx]);
+
+    // no data? So skip the rest
+    if (this.dev.replybuffersize == 0) {
+        // interrupts disabled?
+        //if ((availflag&1) == 0) {
+            this.intstatus = 1;
+            this.intdev.RaiseInterrupt(this.intno);
+        //}
+        return;
+    }
+
+    var desc = this.GetDescriptor(queueidx, index);
     while ((desc.flags & VRING_DESC_F_WRITE) == 0) {
         if (desc.flags & 1) { // continuing buffer
-            desc = this.GetDescriptor(desc.next);
+            desc = this.GetDescriptor(queueidx, desc.next);
         } else {
             message.Debug("Error in virtiodev: Descriptor is not continuing");
             message.Abort();
@@ -3131,7 +3177,7 @@ VirtIODev.prototype.SendReply = function (index) {
     var offset = 0;
     for(var i=0; i<this.dev.replybuffersize; i++) {
         if (offset >= desc.len) {
-            desc = this.GetDescriptor(desc.next);
+            desc = this.GetDescriptor(0, desc.next);
             offset = 0;            
             if ((desc.flags & VRING_DESC_F_WRITE) == 0) {
                 message.Debug("Error in virtiodev: Descriptor is not allowed to write");
@@ -3142,15 +3188,45 @@ VirtIODev.prototype.SendReply = function (index) {
         offset++;
     }
 
-    this.intstatus = 1;
-    this.intdev.RaiseInterrupt(this.intno);
+    // interrupts disabled?
+    //if ((availflag&1) == 0) {
+        this.intstatus = 1;
+        this.intdev.RaiseInterrupt(this.intno);
+    //}
 }
 
+
+VirtIODev.prototype.GetDescriptorBufferSize = function (queueidx, index) {
+    
+    var wsize = 0x0;
+    var rsize = 0x0;
+
+    var desc = this.GetDescriptor(queueidx, index);
+
+    for(;;) {
+        if (desc.flags & VRING_DESC_F_INDIRECT) {
+            message.Debug("Error in VirtIO: Indirect descriptors not supported");
+            message.Abort();
+        }
+        if (desc.flags & VRING_DESC_F_WRITE) {
+            wsize += desc.len;
+        } else {
+            rsize += desc.len;
+        }
+        if ((desc.flags&1) == 0) { // continue?
+            break;
+        }
+        var desc = this.GetDescriptor(queueidx, desc.next);
+    }
+
+    return {write: wsize, read: rsize};
+}
 
 
 VirtIODev.prototype.WriteReg32 = function (addr, val) {
     val = utils.Swap32(val);
     //message.Debug("VirtIODev: write register of int "  + this.intno + " : " + utils.ToHex(addr) + " = " + val);
+
     switch(addr)
     {
         case VIRTIO_GUEST_PAGE_SIZE_REG:
@@ -3160,6 +3236,7 @@ VirtIODev.prototype.WriteReg32 = function (addr, val) {
             break;
 
         case VIRTIO_HOSTFEATURESSEL_REG:
+            this.hostfeaturewordselect = val;
             //message.Debug("write hostfeaturesel reg : " + utils.ToHex(val));
             break;
 
@@ -3172,11 +3249,12 @@ VirtIODev.prototype.WriteReg32 = function (addr, val) {
             break;
 
         case VIRTIO_QUEUESEL_REG:
+            this.queuesel = val;
             //message.Debug("write queuesel reg : " + utils.ToHex(val));
             break;
 
         case VIRTIO_QUEUENUM_REG:
-            this.queuenum = val;
+            this.queuenum[this.queuesel] = val;
             this.UpdateAddr();
             //message.Debug("write queuenum reg : " + utils.ToHex(val));
             break;
@@ -3184,58 +3262,62 @@ VirtIODev.prototype.WriteReg32 = function (addr, val) {
         case VIRTIO_QUEUEALIGN_REG:
             //message.Debug("write queuealign reg : " + utils.ToHex(val));
             this.align = val;
+            this.pagesize = val;
             this.UpdateAddr();
             break;
 
         case VIRTIO_QUEUEPFN_REG:
-            this.queuepfn = val;
+            this.queuepfn[this.queuesel] = val;
             this.UpdateAddr();
             //message.Debug("write queuepfn reg : " + utils.ToHex(val));
             break;
 
         case VIRTIO_QUEUENOTIFY_REG:
-            //message.Debug("write queuenotify reg : " + utils.ToHex(val));
-            if (val != 0) {
-                message.Debug("Error in virtiodev: Untested case of queuenotify " + val);
-                message.Abort();
-                return;
-            }
-	    /*
-            var buffer = new Uint8Array(4);
-            CopyMemoryToBuffer(this.ramdev, buffer, this.availaddr + 2, 4);
-            var desc = marshall.Unmarshall(["h", "h"], buffer, 0);
-            */
-            var availidx = ((this.ramdev.Read16(this.availaddr + 2))-1) & (this.queuenum-1);
-            val = (this.ramdev.Read16(this.availaddr + 4 + (availidx)*2));
+            var queueidx = val;
 
-            //message.Debug((this.ramdev.Read16(this.availaddr + 2)-1));
-            //message.Debug("write to index : " + utils.ToHex(val) + " availidx:" + availidx);
-
-            var currentindex = val;
-            // build stream function
-            var offset = 0;
-            var desc = this.GetDescriptor(currentindex);
+            var availidx = (this.ramdev.Read16(this.availaddr[queueidx] + 2));
+            //message.Debug("write queuenotify reg : " + utils.ToHex(queueidx) + " " + availidx);
             
-            this.GetByte = function() {
-                if (offset >= desc.len) {
-                    offset = 0;
-                    if (desc.flags & 1) { // continuing buffer
-                        desc = this.GetDescriptor(desc.next);
-                    } else {
-                        message.Debug("Error in virtiodev: Descriptor is not continuing");
-                        message.Abort();
-                    }
-                }
-                var x = this.ramdev.Read8(desc.addr + offset);
-                offset++;
-                return x;
-            }.bind(this);
+            while(this.lastavailidx[queueidx] != availidx)
+            {
+                var currentavailidx = this.lastavailidx[queueidx] & (this.queuenum[queueidx]-1);
+                var currentdescindex = (this.ramdev.Read16(this.availaddr[val] + 4 + currentavailidx*2));
 
-            this.dev.ReceiveRequest(currentindex, this.GetByte);
+                //message.Debug("" + queueidx + " " + availidx + " " + currentavailidx + " " + currentdescindex);
+
+                var size = this.GetDescriptorBufferSize(queueidx, currentdescindex);
+
+                // build stream function
+                var offset = 0;
+                var desc = this.GetDescriptor(queueidx, currentdescindex);
+
+                var GetByte = 
+                (function(queueidx, offset, desc) {
+                    return function() {
+                        if (offset >= desc.len) {
+                            offset = 0;
+                            if (desc.flags & 1) { // continuing buffer
+                                desc = this.GetDescriptor(queueidx, desc.next);
+                            } else {
+                                message.Debug("Error in virtiodev: Descriptor is not continuing");
+                                message.Abort();
+                            }
+                        }
+                        var x = this.ramdev.Read8(desc.addr + offset);
+                        offset++;
+                        return x;
+                    }.bind(this);
+                }.bind(this))(queueidx, offset, desc);
+
+                this.dev.ReceiveRequest(queueidx, currentdescindex, GetByte, size);
+                this.lastavailidx[queueidx]++;
+                this.lastavailidx[queueidx] &= 0xFFFF;
+            }
+
             break;
 
         case VIRTIO_QUEUE_READY:
-            this.queueready = val;
+            this.queueready[this.queuesel] = val;
             break;
 
 
@@ -3252,6 +3334,7 @@ VirtIODev.prototype.WriteReg32 = function (addr, val) {
                 case 0: // reset
                     this.intdev.ClearInterrupt(this.intno);
                     this.intstatus = 0;
+                    this.Reset();
                     break;
                 case 1: // acknowledge (found the device, valid virtio device)
                     break;
@@ -3264,10 +3347,10 @@ VirtIODev.prototype.WriteReg32 = function (addr, val) {
                 case 15: //acknowledge + driver + features Ok + driver_ok (Let's start)
                     break;
                 case 131: // acknowledge + driver + failed
-                    message.Debug("virtio device initialization failed with status " + this.status);
+                    message.Debug("Error: virtio device initialization failed with status " + this.status);
                     message.Abort();
                 case 139: // acknowledge + driver + features Ok + failed
-                    message.Debug("virtio device initialization failed with status " + this.status);
+                    message.Debug("Error: virtio device initialization failed with status " + this.status);
                     message.Abort();
                     break;
                 default:
@@ -3278,21 +3361,21 @@ VirtIODev.prototype.WriteReg32 = function (addr, val) {
             break;
 
             case VIRTIO_QUEUE_DESC_LOW:
-                this.descaddr = val;
+                this.descaddr[this.queuesel] = val;
                 break;
 
             case VIRTIO_QUEUE_DESC_HIGH:
                 break;
 
             case VIRTIO_QUEUE_AVAIL_LOW:
-                this.availaddr = val;
+                this.availaddr[this.queuesel] = val;
                 break;
 
             case VIRTIO_QUEUE_AVAIL_HIGH:
                 break;
 
             case VIRTIO_QUEUE_USED_LOW:
-                this.usedaddr = val;
+                this.usedaddr[this.queuesel] = val;
                 break;
 
             case VIRTIO_QUEUE_USED_HIGH:
@@ -3310,7 +3393,7 @@ VirtIODev.prototype.WriteReg32 = function (addr, val) {
 
 module.exports = VirtIODev;
 
-},{"../messagehandler":25,"../utils":35,"./virtio/marshall":17}],14:[function(require,module,exports){
+},{"../messagehandler":26,"../utils":37,"./virtio/marshall":18}],14:[function(require,module,exports){
 // -------------------------------------------------
 // --------------------- 9P ------------------------
 // -------------------------------------------------
@@ -3407,7 +3490,7 @@ Virtio9p.prototype.SendError = function (tag, errormsg, errorcode) {
     this.BuildReply(6, tag, size);
 }
 
-Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
+Virtio9p.prototype.ReceiveRequest = function (ringidx, index, GetByte) {
     var header = marshall.Unmarshall2(["w", "b", "h"], GetByte);
     var size = header[0];
     var id = header[1];
@@ -3431,7 +3514,7 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
 
             var size = marshall.Marshall(["w", "w", "d", "d", "d", "d", "d", "d", "w"], req, this.replybuffer, 7);
             this.BuildReply(id, tag, size);
-            this.SendReply(index);
+            this.SendReply(0, index);
             break;
 
         case 112: // topen
@@ -3454,7 +3537,7 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
                         req[1] = this.msize - 24;
                         marshall.Marshall(["Q", "w"], req, this.replybuffer, 7);
                         this.BuildReply(id, tag, 13+4);
-                        this.SendReply(index);
+                        this.SendReply(0, index);
                     }.bind(this);
                 }.bind(this))(idx, id, tag, index);
 
@@ -3485,7 +3568,7 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             //inode.gid = inodetarget.gid;
             //inode.mode = inodetarget.mode | S_IFLNK;
             this.BuildReply(id, tag, 0);
-            this.SendReply(index);       
+            this.SendReply(0, index);       
             break;
 
         case 16: // symlink
@@ -3501,7 +3584,7 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             inode.gid = gid;
             marshall.Marshall(["Q"], [inode.qid], this.replybuffer, 7);
             this.BuildReply(id, tag, 13);
-            this.SendReply(index);
+            this.SendReply(0, index);
             break;
 
         case 18: // mknod
@@ -3520,7 +3603,7 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             inode.gid = gid;
             marshall.Marshall(["Q"], [inode.qid], this.replybuffer, 7);
             this.BuildReply(id, tag, 13);
-            this.SendReply(index);
+            this.SendReply(0, index);
             break;
 
 
@@ -3531,7 +3614,7 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             var inode = this.fs.GetInode(this.fids[fid].inodeid);
             var size = marshall.Marshall(["s"], [inode.symlink], this.replybuffer, 7);
             this.BuildReply(id, tag, size);
-            this.SendReply(index);
+            this.SendReply(0, index);
             break;
 
 
@@ -3549,7 +3632,7 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             inode.gid = gid;
             marshall.Marshall(["Q"], [inode.qid], this.replybuffer, 7);
             this.BuildReply(id, tag, 13);
-            this.SendReply(index);
+            this.SendReply(0, index);
             break;
 
         case 14: // tlcreate
@@ -3569,14 +3652,14 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             inode.mode = mode;
             marshall.Marshall(["Q", "w"], [inode.qid, this.msize - 24], this.replybuffer, 7);
             this.BuildReply(id, tag, 13+4);
-            this.SendReply(index);
+            this.SendReply(0, index);
             break;
 
         case 52: // lock always suceed
             //message.Debug("lock file\n");
             marshall.Marshall(["w"], [0], this.replybuffer, 7);
             this.BuildReply(id, tag, 1);
-            this.SendReply(index);
+            this.SendReply(0, index);
             break;
 
         /*
@@ -3626,7 +3709,7 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             "d", "d",
             ], req, this.replybuffer, 7);
             this.BuildReply(id, tag, 8 + 13 + 4 + 4+ 4 + 8*15);
-            this.SendReply(index);
+            this.SendReply(0, index);
             break;
 
         case 26: // setattr
@@ -3668,14 +3751,14 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
                 this.fs.ChangeSize(this.fids[fid].inodeid, req[5]);
             }
             this.BuildReply(id, tag, 0);
-            this.SendReply(index);
+            this.SendReply(0, index);
             break;
 
         case 50: // fsync
             var req = marshall.Unmarshall2(["w", "d"], GetByte);
             var fid = req[0];
             this.BuildReply(id, tag, 0);
-            this.SendReply(index);
+            this.SendReply(0, index);
             break;
 
         case 40: // TREADDIR
@@ -3698,7 +3781,7 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             }
             marshall.Marshall(["w"], [count], this.replybuffer, 7);
             this.BuildReply(id, tag, 4 + count);
-            this.SendReply(index);
+            this.SendReply(0, index);
             break;
 
         case 118: // write
@@ -3710,7 +3793,7 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             this.fs.Write(this.fids[fid].inodeid, offset, count, GetByte);
             marshall.Marshall(["w"], [count], this.replybuffer, 7);
             this.BuildReply(id, tag, 4);
-            this.SendReply(index);
+            this.SendReply(0, index);
             break;
 
         case 74: // RENAMEAT
@@ -3723,11 +3806,11 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             var ret = this.fs.Rename(this.fids[olddirfid].inodeid, oldname, this.fids[newdirfid].inodeid, newname);
             if (ret == false) {
                 this.SendError(tag, "No such file or directory", ENOENT);                   
-                this.SendReply(index);
+                this.SendReply(0, index);
                 break;
             }
             this.BuildReply(id, tag, 0);
-            this.SendReply(index);
+            this.SendReply(0, index);
             break;
 
         case 76: // TUNLINKAT
@@ -3739,17 +3822,17 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             var id = this.fs.Search(this.fids[dirfd].inodeid, name);
             if (id == -1) {
                    this.SendError(tag, "No such file or directory", ENOENT);
-                   this.SendReply(index);
+                   this.SendReply(0, index);
                    break;
             }
             var ret = this.fs.Unlink(id);
             if (!ret) {
                 this.SendError(tag, "Directory not empty", ENOTEMPTY);
-                this.SendReply(index);
+                this.SendReply(0, index);
                 break;
             }
             this.BuildReply(id, tag, 0);
-            this.SendReply(index);
+            this.SendReply(0, index);
             break;
 
         case 100: // version
@@ -3758,7 +3841,7 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             this.msize = version[0];
             var size = marshall.Marshall(["w", "s"], [this.msize, this.VERSION], this.replybuffer, 7);
             this.BuildReply(id, tag, size);
-            this.SendReply(index);
+            this.SendReply(0, index);
             break;
 
         case 104: // attach
@@ -3771,7 +3854,7 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             var inode = this.fs.GetInode(this.fids[fid].inodeid);
             marshall.Marshall(["Q"], [inode.qid], this.replybuffer, 7);
             this.BuildReply(id, tag, 13);
-            this.SendReply(index);
+            this.SendReply(0, index);
             break;
 
         case 108: // tflush
@@ -3780,7 +3863,7 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             //message.Debug("[flush] " + tag);
             //marshall.Marshall(["Q"], [inode.qid], this.replybuffer, 7);
             this.BuildReply(id, tag, 0);
-            this.SendReply(index);
+            this.SendReply(0, index);
             break;
 
 
@@ -3795,7 +3878,7 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
                 this.fids[nwfid].inodeid = this.fids[fid].inodeid;
                 marshall.Marshall(["h"], [0], this.replybuffer, 7);
                 this.BuildReply(id, tag, 2);
-                this.SendReply(index);
+                this.SendReply(0, index);
                 break;
             }
             var wnames = [];
@@ -3821,7 +3904,7 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             }
             marshall.Marshall(["h"], [nwidx], this.replybuffer, 7);
             this.BuildReply(id, tag, offset-7);
-            this.SendReply(index);
+            this.SendReply(0, index);
             break;
 
         case 120: // clunk
@@ -3835,7 +3918,7 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
                 this.fids[req[0]].type = FID_NONE;
             }
             this.BuildReply(id, tag, 0);
-            this.SendReply(index);
+            this.SendReply(0, index);
             break;
 
         case 30: // xattrwalk
@@ -3852,14 +3935,14 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             }
             marshall.Marshall(["d"], [length], this.replybuffer, 7);
             this.BuildReply(id, tag, 8);
-            this.SendReply(index);
+            this.SendReply(0, index);
             break; 
 
         default:
             message.Debug("Error in Virtio9p: Unknown id " + id + " received");
             message.Abort();
             //this.SendError(tag, "Operation i not supported",  ENOTSUPP);
-            //this.SendReply(index);
+            //this.SendReply(0, index);
             break;
     }
 
@@ -3870,7 +3953,92 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
 
 module.exports = Virtio9p;
 
-},{"../../messagehandler":25,"../../utils":35,"./marshall":17}],15:[function(require,module,exports){
+},{"../../messagehandler":26,"../../utils":37,"./marshall":18}],15:[function(require,module,exports){
+// -------------------------------------------------
+// ------------- Block Virtio Device ---------------
+// -------------------------------------------------
+
+"use strict";
+
+var message = require('../../messagehandler');
+var utils = require('../../utils');
+var marshall = require('./marshall');
+
+var VIRTIO_BLK_T_IN          = 0;
+var VIRTIO_BLK_T_OUT         = 1;
+var VIRTIO_BLK_T_FLUSH       = 4;
+var VIRTIO_BLK_T_FLUSH_OUT   = 5;
+
+var VIRTIO_BLK_S_OK        = 0; 
+var VIRTIO_BLK_S_IOERR     = 1;
+var VIRTIO_BLK_S_UNSUPP    = 2;
+
+function VirtioBlock(ramdev) {
+    this.blocks = 100;
+    this.configspace = [0x0, 0x0, 0x0, 0x0, 0x0, 
+        (this.blocks >> 16)&0xFF, 
+        (this.blocks >>  8)&0xFF, 
+        (this.blocks >>  0)&0xFF, 
+        0x0, 0x0, 0x0, 0x0, 0x0]; // the size in big endian
+
+    this.deviceid = 0x2;
+    this.hostfeature = 0x0;
+    this.replybuffer = new Uint8Array(0x10000); // there is no size limit
+    this.replybuffersize = 0;
+    this.buffer = new Uint8Array(this.blocks*512);
+    this.Reset();
+}
+
+VirtioBlock.prototype.Reset = function() {
+}
+
+VirtioBlock.prototype.ReceiveRequest = function (queueidx, index, GetByte, size) {
+    //message.Debug("block device request: " + queueidx + " " + index + " " + size.read + " " + size.write);
+    var request  = marshall.Unmarshall2(["w", "w", "w", "w"], GetByte);
+    var type = utils.Swap32(request[0]);
+    var sector = utils.Swap32(request[3]);
+    //message.Debug("type: " + type + " sector: " + sector);
+
+    switch(type) {
+        case VIRTIO_BLK_T_IN:
+            if (size.write > 0x10000) {
+                message.Debug("Error in virtioblock: replybuffer too small");
+                message.Abort();
+            }
+            for(var i=0; i<size.write-1; i++) {
+                this.replybuffer[i] = this.buffer[sector*512+i];
+            }
+            this.replybuffersize = size.write;
+            this.replybuffer[size.write-1] = VIRTIO_BLK_S_OK;
+            this.SendReply(0, index);
+            break;
+
+        case VIRTIO_BLK_T_OUT:
+            for(var i=0; i<size.read-16; i++) {
+                this.buffer[sector*512+i] = GetByte();
+            }
+            this.replybuffersize = 1;
+            this.replybuffer[0] = VIRTIO_BLK_S_OK;
+            this.SendReply(0, index);
+            break;
+
+        case VIRTIO_BLK_T_FLUSH:
+            break;
+
+        case VIRTIO_BLK_T_FLUSH_OUT:
+            break;
+        
+        default:
+            message.Debug("Error in VirtioBlock: Unknown request type " + type);
+            message.Abort();
+            break;
+    }
+
+}
+
+module.exports = VirtioBlock;
+
+},{"../../messagehandler":26,"../../utils":37,"./marshall":18}],16:[function(require,module,exports){
 // -------------------------------------------------
 // ------------- Dummy Virtio Device ---------------
 // -------------------------------------------------
@@ -3895,33 +4063,138 @@ VirtioDummy.prototype.ReceiveRequest = function (index, GetByte) {
 
 module.exports = VirtioDummy;
 
-},{"../../messagehandler":25,"../../utils":35}],16:[function(require,module,exports){
+},{"../../messagehandler":26,"../../utils":37}],17:[function(require,module,exports){
 // -------------------------------------------------
 // ------------- Input Virtio Device ---------------
 // -------------------------------------------------
+// https://github.com/torvalds/linux/blob/master/include/uapi/linux/virtio_input.h
+// https://github.com/torvalds/linux/blob/master/drivers/virtio/virtio_input.c
+
+// https://lwn.net/Articles/637590/
+// http://lxr.free-electrons.com/source/include/uapi/linux/input.h
 
 "use strict";
 
 var message = require('../../messagehandler');
 var utils = require('../../utils');
 
+var VIRTIO_INPUT_CFG_UNSET      = 0x00; 
+var VIRTIO_INPUT_CFG_ID_NAME    = 0x01;  
+var VIRTIO_INPUT_CFG_ID_SERIAL  = 0x02;  
+var VIRTIO_INPUT_CFG_ID_DEVIDS  = 0x03;
+var VIRTIO_INPUT_CFG_PROP_BITS  = 0x10;
+var VIRTIO_INPUT_CFG_EV_BITS    = 0x11;  
+var VIRTIO_INPUT_CFG_ABS_INFO   = 0x12;
+
+var EV_SYN                = 0x00;
+var EV_KEY                = 0x01;
+var EV_REL                = 0x02;
+var EV_ABS                = 0x03;
+var EV_MSC                = 0x04;
+var EV_SW                 = 0x05;
+var EV_LED                = 0x11;
+var EV_SND                = 0x12;
+var EV_REP                = 0x14;
+var EV_FF                 = 0x15;
+var EV_PWR                = 0x16;
+var EV_FF_STATUS          = 0x17;
+var EV_MAX                = 0x1f;
+var EV_CNT                = (EV_MAX+1);
+
 function VirtioInput(ramdev) {
-    this.configspace = [0x0, 0x0];
+    this.configspace = new Uint8Array(256);
     this.deviceid = 18;
-    this.hostfeature = 0x1;
+    this.hostfeature = 0x0;
     this.Reset();
 }
 
 VirtioInput.prototype.Reset = function() {
 }
 
-VirtioInput.prototype.ReceiveRequest = function (index, GetByte) {
-    message.Debug("Virtio input request");
+VirtioInput.prototype.WriteConfig = function (addr, val) {
+    this.configspace[addr] = val;
+    if (addr != 1) return;
+    message.Debug("virtioinput configtype: " + this.configspace[0x0] + " " + this.configspace[0x1]);
+    
+    switch(this.configspace[0x0]) {
+        case VIRTIO_INPUT_CFG_UNSET:
+            break;
+
+        case VIRTIO_INPUT_CFG_ID_NAME:
+            this.configspace[2] = 5; // size
+            this.configspace[8] = 0x56; // "V"
+            this.configspace[9] = 0x4B; // "K"
+            this.configspace[10] = 0x42; // "B"
+            this.configspace[11] = 0x44; // "D"
+            this.configspace[12] = 0;
+            break;
+
+        case VIRTIO_INPUT_CFG_ID_SERIAL:
+            this.configspace[2] = 0; // size
+            this.configspace[8] = 0;
+            break;
+
+        case VIRTIO_INPUT_CFG_ID_DEVIDS:
+            this.configspace[2] = 0; // size
+            break;
+
+        case VIRTIO_INPUT_CFG_PROP_BITS:
+            this.configspace[2] = 0;
+            break;
+
+        case VIRTIO_INPUT_CFG_EV_BITS:
+            switch(this.configspace[1]) {
+                case EV_REP:
+                    this.configspace[2] = 0;
+                    break;
+
+                case EV_KEY:
+                    this.configspace[2] = 128/8;
+                    this.configspace[8] = 0xFF;
+                    this.configspace[9] = 0xFF;
+                    this.configspace[10] = 0xFF;
+                    this.configspace[11] = 0xFF;
+                    this.configspace[12] = 0xFF;
+                    this.configspace[13] = 0xFF;
+                    this.configspace[14] = 0xFF;
+                    this.configspace[15] = 0xFF;
+                    this.configspace[16] = 0xFF;
+                    this.configspace[17] = 0xFF;
+                    this.configspace[18] = 0xFF;
+                    this.configspace[19] = 0xFF;
+                    this.configspace[20] = 0xFF;
+                    this.configspace[21] = 0xFF;
+                    this.configspace[22] = 0xFF;
+                    this.configspace[22] = 0xFF;
+                    break;
+
+                default:
+                    this.configspace[2] = 0;
+                    break;
+            }
+            break;
+
+        case VIRTIO_INPUT_CFG_ABS_INFO:
+            this.configspace[2] = 0;
+            message.Debug("Virtioinput: abs_info not implemented");
+            message.Abort();
+            break;
+
+        default:
+            message.Debug("Error in virtio input: Unknown config");
+            message.Abort();
+        break;
+    }
+
+}
+
+VirtioInput.prototype.ReceiveRequest = function (queueidx, index, GetByte, size) {
+    message.Debug("Virtio input request " + queueidx + " " + index + " " + size.read + " " + size.write);
 }
 
 module.exports = VirtioInput;
 
-},{"../../messagehandler":25,"../../utils":35}],17:[function(require,module,exports){
+},{"../../messagehandler":26,"../../utils":37}],18:[function(require,module,exports){
 // -------------------------------------------------
 // ------------------ Marshall ---------------------
 // -------------------------------------------------
@@ -4095,33 +4368,119 @@ module.exports.Marshall = Marshall;
 module.exports.Unmarshall = Unmarshall;
 module.exports.Unmarshall2 = Unmarshall2;
 
-},{"../../../lib/utf8":1,"../../messagehandler":25}],18:[function(require,module,exports){
+},{"../../../lib/utf8":1,"../../messagehandler":26}],19:[function(require,module,exports){
 // -------------------------------------------------
-// ------------- Input Virtio Device ---------------
+// ------------ Network Virtio Device --------------
 // -------------------------------------------------
 
 "use strict";
 
 var message = require('../../messagehandler');
 var utils = require('../../utils');
+var marshall = require('./marshall');
 
 function VirtioNET(ramdev) {
-    this.configspace = [0x0, 0x0];
+    this.configspace = [0x0, 0x0, 0x0, 0x0, 0x0, 0x0]; // mac address
     this.deviceid = 1;
-    this.hostfeature = 0x0;
+    this.hostfeature = (1<<5); // Device has given MAC address.  and partial checksums
+
+    this.replybuffer = new Uint8Array(65550); // the maximum size of a TCP or UDP packet, plus the 14 byte ethernet header
+    this.replybuffersize = 0;
+
+    // TODO: not all networks addresses are valid
+    for(var i=0; i<6; i++) {
+        this.configspace[1] = Math.floor(Math.random()*256);
+    }
+
+    // TODO: As long as the old ethernet driver is active we can't overwrite the message
+    //message.Register("ethmac", this.Receive.bind(this) );
+
     this.Reset();
 }
 
 VirtioNET.prototype.Reset = function() {
+    this.receivebufferdesc = new Array();
+    this.receivebuffer = new Array();
 }
 
-VirtioNET.prototype.ReceiveRequest = function (index, GetByte) {
-    message.Debug("Virtio network request");
+
+VirtioNET.prototype.Receive = function(buffer) {
+    //message.Debug("Received packet of size " + buffer.byteLength);
+    this.receivebuffer.push(buffer);
+    this.HandleReceive();
+}
+
+VirtioNET.prototype.HandleReceive = function() {
+
+    if (this.receivebuffer.length == 0) {
+        return;
+    }
+
+    if (this.receivebufferdesc.length == 0) {
+        return;
+    }
+
+    var buffer = new Uint8Array(this.receivebuffer[0]);
+    var desc = this.receivebufferdesc[0];
+
+    if (buffer.length > desc.size.write) {
+        message.Debug("Error in VirtioNET: Received packet is larger than the next receive buffer");
+        message.Abort();
+    }
+    
+    this.receivebuffer.shift();
+    this.receivebufferdesc.shift();
+
+    // both buffers are valid so copy
+
+    this.replybuffersize = buffer.length + 10;
+    marshall.Marshall(["b", "b", "h", "h", "h", "h"], [0, 0, 0, 0, 0, 0], this.replybuffer, 0);
+    for(var i=0; i<buffer.length; i++) {
+        this.replybuffer[i+10] = buffer[i];
+    }
+    //this.replybuffersize = desc.size.write;
+
+    //message.Debug("Send packet of size " + buffer.length + " and idx " + desc.idx);
+    this.SendReply(0, desc.idx);
+}
+
+
+
+VirtioNET.prototype.ReceiveRequest = function (queueidx, index, GetByte, size) {
+    //message.Debug("Virtio network request of ringbuffer " + queueidx + " " + index + " " + size.read + " " + size.write);
+
+    if (queueidx > 1) {
+        message.Debug("Error in VirtioNET: Unsupported ringbuffer");
+        message.Abort();
+    }
+
+    if (queueidx == 0) {
+        // for some reason, some descriptors are sent multiple times. So check and return. 
+        for(var i=0; i<this.receivebufferdesc.length; i++) {
+            if (this.receivebufferdesc[i].idx == index) {
+                return;
+            }
+        }
+        this.receivebufferdesc.push({idx: index, size: size});
+        this.HandleReceive();
+        return;
+    }
+
+    var hdr = marshall.Unmarshall2(["b", "b", "h", "h", "h", "h"], GetByte);
+    //message.Debug(hdr);
+    var frame = new Uint8Array(size.read - 10);
+    for(var i=0; i<size.read-10; i++) {
+        frame[i] = GetByte();
+    }
+    message.Send("ethmac", frame.buffer);
+
+    this.replybuffersize = 0;
+    this.SendReply(queueidx, index);
 }
 
 module.exports = VirtioNET;
 
-},{"../../messagehandler":25,"../../utils":35}],19:[function(require,module,exports){
+},{"../../messagehandler":26,"../../utils":37,"./marshall":18}],20:[function(require,module,exports){
 var message = require('./messagehandler');
 var utils = require('./utils');
 var marshall = require('./dev/virtio/marshall');
@@ -4218,7 +4577,7 @@ elf.Extract = function(srcbuffer, destbuffer) {
 
 module.exports = elf;
 
-},{"./dev/virtio/marshall":17,"./messagehandler":25,"./utils":35}],20:[function(require,module,exports){
+},{"./dev/virtio/marshall":18,"./messagehandler":26,"./utils":37}],21:[function(require,module,exports){
 // -------------------------------------------------
 // ----------------- FILESYSTEM---------------------
 // -------------------------------------------------
@@ -4980,7 +5339,7 @@ FS.prototype.PrepareCAPs = function(id) {
 
 module.exports = FS;
 
-},{"../../lib/utf8.js":1,"../bzip2.js":2,"../dev/virtio/marshall.js":17,"../messagehandler":25,"../utils.js":35,"./fsloader.js":21,"./lazyUint8Array.js":22,"./tar.js":23}],21:[function(require,module,exports){
+},{"../../lib/utf8.js":1,"../bzip2.js":2,"../dev/virtio/marshall.js":18,"../messagehandler":26,"../utils.js":37,"./fsloader.js":22,"./lazyUint8Array.js":23,"./tar.js":24}],22:[function(require,module,exports){
 // -------------------------------------------------
 // ------------- FILESYSTEM LOADER -----------------
 // -------------------------------------------------
@@ -5081,7 +5440,7 @@ FSLoader.prototype.LoadJSON = function(url)
 
 module.exports = FSLoader;
 
-},{"../messagehandler":25,"../utils":35}],22:[function(require,module,exports){
+},{"../messagehandler":26,"../utils":37}],23:[function(require,module,exports){
 "use strict";
 
 var message = require("../messagehandler");
@@ -5176,7 +5535,7 @@ LazyUint8Array.prototype.CacheLength = function LazyUint8Array_CacheLength() {
 
 module.exports = LazyUint8Array;
 
-},{"../messagehandler":25}],23:[function(require,module,exports){
+},{"../messagehandler":26}],24:[function(require,module,exports){
 // -------------------------------------------------
 // -------------------- TAR ------------------------
 // -------------------------------------------------
@@ -5391,7 +5750,7 @@ TAR.prototype.Pack = function(path) {
 
 module.exports = TAR;
 
-},{"../messagehandler":25}],24:[function(require,module,exports){
+},{"../messagehandler":26}],25:[function(require,module,exports){
 module.exports = Math.imul || function(a, b) {
     var ah  = (a >>> 16) & 0xffff;
     var al = a & 0xffff;
@@ -5402,7 +5761,7 @@ module.exports = Math.imul || function(a, b) {
     return ((al * bl) + (((ah * bl + al * bh) << 16) >>> 0)|0);
 };
 
-},{}],25:[function(require,module,exports){
+},{}],26:[function(require,module,exports){
 // -------------------------------------------------
 // ------------- MessageHandler --------------------
 // -------------------------------------------------
@@ -5475,7 +5834,7 @@ module.exports.Abort = Abort;
 module.exports.Send = Send;
 
 
-},{}],26:[function(require,module,exports){
+},{}],27:[function(require,module,exports){
 var message = require('../messagehandler');
 
 function FastCPU(stdlib, foreign, heap) {
@@ -7112,7 +7471,7 @@ return {
 
 module.exports = FastCPU;
 
-},{"../messagehandler":25}],27:[function(require,module,exports){
+},{"../messagehandler":26}],28:[function(require,module,exports){
 /* this is a unified, abstract interface (a facade) to the different
  * CPU implementations
  */
@@ -7327,7 +7686,7 @@ forwardedMethods.forEach(function(m) {
 
 module.exports = CPU;
 
-},{"../imul":24,"../messagehandler":25,"../utils":35,"./fastcpu.js":26,"./safecpu.js":28,"./smpcpu.js":29}],28:[function(require,module,exports){
+},{"../imul":25,"../messagehandler":26,"../utils":37,"./fastcpu.js":27,"./safecpu.js":29,"./smpcpu.js":30}],29:[function(require,module,exports){
 // -------------------------------------------------
 // -------------------- CPU ------------------------
 // -------------------------------------------------
@@ -8443,7 +8802,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
 
 module.exports = SafeCPU;
 
-},{"../messagehandler":25,"../utils":35}],29:[function(require,module,exports){
+},{"../messagehandler":26,"../utils":37}],30:[function(require,module,exports){
 var message = require('../messagehandler');
 
 function SMPCPU(stdlib, foreign, heap) {
@@ -10261,7 +10620,7 @@ return {
 
 module.exports = SMPCPU;
 
-},{"../messagehandler":25}],30:[function(require,module,exports){
+},{"../messagehandler":26}],31:[function(require,module,exports){
 // -------------------------------------------------
 // -------------------- RAM ------------------------
 // -------------------------------------------------
@@ -10424,7 +10783,7 @@ RAM.prototype.Write16Little = function(addr, x) {
 
 module.exports = RAM;
 
-},{"./messagehandler":25,"./utils":35}],31:[function(require,module,exports){
+},{"./messagehandler":26,"./utils":37}],32:[function(require,module,exports){
 /* this is a unified, abstract interface (a facade) to the different
  * CPU implementations
  */
@@ -10496,7 +10855,7 @@ forwardedMethods.forEach(function(m) {
 
 module.exports = CPU;
 
-},{"../imul":24,"../messagehandler":25,"../utils":35,"./safecpu.js":32}],32:[function(require,module,exports){
+},{"../imul":25,"../messagehandler":26,"../utils":37,"./safecpu.js":33}],33:[function(require,module,exports){
 // -------------------------------------------------
 // -------------------- CPU ------------------------
 // -------------------------------------------------
@@ -10504,6 +10863,7 @@ module.exports = CPU;
 "use strict";
 var message = require('../messagehandler');
 var utils = require('../utils');
+var syscalls = require('./syscalls.js');
 
 var CSR_MSTATUS = 0x300;
 var CSR_CYCLES = 0xC00;
@@ -10537,10 +10897,21 @@ var VM_READ = 0;
 var VM_WRITE = 1;
 var VM_FETCH = 2;
 
+var SYS_OPENAT = 56;
+var SYS_CLOSE = 57;
+var SYS_PREAD = 67;
+var SYS_WRITE = 64;
+var SYS_FSTAT = 80;
+var SYS_EXIT = 93;
+var SYS_GETMAINVARS = 2011;
+
 var CAUSE_TIMER_INTERRUPT = (1<<31) | 0x01;
 var CAUSE_SOFTWARE_INTERRUPT = (1<<31);
+var CAUSE_INSTRUCTION_ACCESS_FAULT = 0x01;
 var CAUSE_ILLEGAL_INSTRUCTION = 0x02;
 var CAUSE_BREAKPOINT = 0x03;
+var CAUSE_LOAD_ACCESS_FAULT = 0x05;
+var CAUSE_STORE_ACCESS_FAULT = 0x07;
 var CAUSE_ENVCALL_UMODE = 0x08;
 var CAUSE_ENVCALL_SMODE = 0x09;
 var CAUSE_ENVCALL_HMODE = 0x0A;
@@ -10619,8 +10990,8 @@ function SafeCPU(ram) {
     this.fi = new Int32Array(this.ram.heap, 32<<2, 32<<1); // for copying operations
     this.ff = new Float32Array(this.ram.heap, 0, 1); // the zero register is used to convert to single precision
     this.csr = new Int32Array(this.ram.heap, 0x2000, 4096 << 2);
-    this.page_table = new Int32Array(this.ram.heap, 0x40000, 0x10000);
     this.pc = 0x200;
+
     this.Reset();
 }
 
@@ -10644,8 +11015,9 @@ SafeCPU.prototype.Reset = function() {
 
     this.amoaddr = 0x00; 
     this.amovalue = 0x00;
-    this.ram.Write32(this.TranslateVM(0x00,VM_WRITE),31*1024*1024); //Writing the amount of free memory available into the first memory location
+    this.ram.Write32(0x00,31*1024*1024); //Writing the amount of free memory available into the first memory location
 
+    this.syscallHandler = new syscalls(this.ram,this.csr);
 }
 
 SafeCPU.prototype.InvalidateTLB = function() {
@@ -10677,79 +11049,716 @@ SafeCPU.prototype.RaiseInterrupt = function (line, cpuid) {
 SafeCPU.prototype.ClearInterrupt = function (line, cpuid) {
 };
 
+SafeCPU.prototype.Disassemble = function (ins) {
+
+    var r = this.r;
+    var fi = this.fi;
+    var ff = this.ff;
+    var f = this.f;
+    var csr = this.csr;
+    var rindex = 0x00;
+    var findex = 0x00;
+    var imm = 0x00;
+    var imm1 = 0x00;
+    var imm2 = 0x00;
+    var imm3 = 0x00;
+    var imm4 = 0x00;
+    var zimm = 0x00;
+    var rs1 = 0x00;
+    var rs2 = 0x00;
+    var fs1 = 0x00;
+    var fs2 = 0x00;
+
+    switch(ins&0x7F) {
+
+        case 0x03:
+            //lb,lh,lw,lbu,lhu
+            switch((ins >> 12)&0x7) {
+                
+                case 0x00:
+                    //lb
+                    message.Debug("lb - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                    break;
+
+                case 0x01:
+                    //lh
+                    message.Debug("lh - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                    break;
+
+                case 0x02:
+                    //lw
+                    message.Debug("lw - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                    break;
+
+                case 0x04:
+                    //lbu
+                    message.Debug("lbu - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                    break;
+
+                case 0x05:
+                    //lhu
+                    message.Debug("lhu - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                    break;
+
+                default:
+                    message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + "not found");
+                    break;
+
+            }
+            break;
+
+        case 0x23:
+            //sb,sh,sw
+            switch((ins >> 12)&0x7) {
+                
+                case 0x00:
+                    //sb
+                    message.Debug("sb - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                    break;
+
+                case 0x01:
+                    //sh
+                    message.Debug("sh - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                    break;
+
+                case 0x02:
+                    //sw
+                    message.Debug("sw - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                    break;
+
+                default:
+                    message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + "not found");
+                    break;
+
+            }
+            break;
+
+        case 0x13:
+            //addi,slti,sltiu,xori,ori,andi,slli,srli,srai
+            switch((ins >> 12)&0x7) {
+                
+                case 0x00:
+                    //addi
+                    message.Debug("addi - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                    break;
+
+                case 0x02:
+                    //slti
+                    message.Debug("slti - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                    break;
+
+                case 0x03:
+                    //sltiu
+                    message.Debug("sltiu - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                    break;
+
+                case 0x04:
+                    //xori
+                    message.Debug("xori - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                    break;
+
+                case 0x06:
+                    //ori
+                    message.Debug("ori - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                    break;
+
+                case 0x07:
+                    //andi
+                    message.Debug("andi - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                    break;
+
+                case 0x01:
+                    //slli
+                    message.Debug("slli - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                    break;
+
+                case 0x05:
+                    if(((ins >> 25) & 0x7F) == 0x00){
+                        //srli
+                        message.Debug("srli - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                    }
+                    else if(((ins >> 25) & 0x7F) == 0x20){
+                        //srai
+                        message.Debug("srai - "+ utils.ToHex(ins)+" register " + r[rindex]);  
+                    }
+                    break;
+
+                default:
+                    message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + "not found");
+                    break;
+
+            }
+            break;
+
+        case 0x33:
+            //add,sub,sll,slt,sltu,xor,srl,sra,or,and
+            switch((ins >> 25)&0x7F) {
+                
+                case 0x00:
+                    //add,slt,sltu,add,or,xor,sll,srl
+                    switch((ins >> 12)&0x7) {
+                        case 0x00:
+                            //add
+                            message.Debug("add - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                            break;
+
+                        case 0x02:
+                            //slt
+                            message.Debug("slt - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                            break;
+
+                        case 0x03:
+                            //sltu
+                            message.Debug("sltu - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                            break;
+
+                        case 0x07:
+                            //and
+                            message.Debug("and - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                            break;
+
+                        case 0x06:
+                            //or
+                            message.Debug("or - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                            break;
+
+                        case 0x04:
+                            //xor
+                            message.Debug("xor - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                            break;
+
+                        case 0x01:
+                            //sll
+                            message.Debug("sll - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                            break;
+
+                        case 0x05:
+                            //srl
+                            message.Debug("srl - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                            break;
+                    }
+                    break;
+
+                case 0x20:
+                    //sub
+                    switch((ins >> 12)&0x7) {
+                        case 0x00:
+                            //sub
+                            message.Debug("sub - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                            break;
+
+                        case 0x05:
+                            //sra
+                            message.Debug("sra - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                            break;
+                    }
+                    break;
+
+                case 0x01:
+                    //mul,mulh,mulhsu,mulhu,div,divu,rem,remu
+                    switch((ins >> 12)&0x7) {
+                        case 0x00:
+                            //mul
+                            message.Debug("mul - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                            break;
+
+                        case 0x01:
+                            //mulh
+                            message.Debug("mulh - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                            break;
+
+                        case 0x02:
+                            //mulhsu
+                            message.Debug("mulhsu - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                            break;
+
+                        case 0x03:
+                            //mulhu
+                            message.Debug("mulhu - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                            break;
+
+                        case 0x04:
+                            //div
+                            message.Debug("div - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                            break;
+
+                        case 0x05:
+                            //divu
+                            message.Debug("divu - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                            break;
+
+                        case 0x06:
+                            //rem
+                            message.Debug("rem - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                            break;
+
+                        case 0x07:
+                            //remu
+                            message.Debug("remu - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                            break;
+                    }
+                    break;
+
+                
+
+                default:
+                    message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + "not found");
+                    break;
+
+            }
+            break;
+
+        case 0x37:
+            //lui
+            message.Debug("Lui - "+ utils.ToHex(ins)+" register " + r[rindex]);
+            break;
+
+        case 0x17:
+            //auipc
+            message.Debug("auipc - "+ utils.ToHex(ins)+" register " + r[rindex]);
+            break;
+
+        case 0x6F:
+            //jal
+            message.Debug("jal - "+ utils.ToHex(ins)+" register " + r[rindex]);
+            break; 
+
+        case 0x67:
+            //jalr
+            message.Debug("jalr - "+ utils.ToHex(ins)+" register " + r[rindex]);
+            break;
+
+        case 0x63:
+            //beq,bne,blt,bge,bltu,bgeu
+            switch((ins >> 12)&0x7) {
+                
+                case 0x00:
+                    //beq
+                    message.Debug("beq - "+ utils.ToHex(ins)+" register " + utils.ToHex(rs1));
+                    break;
+
+                case 0x01:
+                    //bne
+                    message.Debug("bne - "+ utils.ToHex(rs2)+" register " + utils.ToHex((ins >> 20) & 0x1F));
+                    break;
+
+                case 0x04:
+                    //blt
+                    message.Debug("blt - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                    break;
+
+                case 0x05:
+                    //bge
+                    message.Debug("bge - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                    break;
+
+                case 0x06:
+                    //bltu
+                    message.Debug("bltu - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                    break;
+
+                case 0x07:
+                    //bgeu
+                    message.Debug("bgeu - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                    break;
+
+                default:
+                    message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + "not found");
+                    break;
+
+            }
+            break;
+
+        case 0x73:
+            //csrrw,csrrs,csrrc,csrrwi,csrrsi,csrrci,ecall,eret,ebreak,mrts
+            switch((ins >> 12)&0x7) {
+                
+                case 0x01:
+                    //csrrw
+                    message.Debug("csrrw - "+ utils.ToHex(ins)+" rs1 "+utils.ToHex(rs1)+" imm " + csr[imm]);
+                    break;
+
+                case 0x02:
+                    //csrrs
+                    message.Debug("csrrs - "+ utils.ToHex(ins)+" rs1 "+utils.ToHex(rs1)+" imm " + csr[imm]);
+                    break;
+
+                case 0x03:
+                    //csrrc
+                    message.Debug("csrrc - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                    break;
+
+                case 0x05:
+                    //csrrwi
+                    message.Debug("csrrwi - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                    break;
+                    
+
+                case 0x06:
+                    //csrrsi
+                    message.Debug("csrrsi - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                    break;
+
+                case 0x07:
+                    //csrrci
+                    message.Debug("csrrci - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                    break;
+                
+                case 0x00:
+                    //ecall,eret,ebreak,mrts
+                    switch((ins >> 20)&0xFFF) {
+                        case 0x00:
+                            //ecall
+                            var current_privilege_level = (csr[CSR_MSTATUS] & 0x06) >> 1;
+                            switch(current_privilege_level)
+                            {
+                                case PRV_U:
+                                    message.Debug("ecall PRV_U -"+ utils.ToHex(ins));
+                                    break;
+
+                                case PRV_S:
+                                    message.Debug("ecall PRV_S -"+ utils.ToHex(ins));
+                                    break;
+
+                                case PRV_H:
+                                    message.Debug("Not supported ecall PRV_H -"+ utils.ToHex(ins));
+                                    break;
+
+                                case PRV_M:
+                                    message.Debug("ecall PRV_M -"+ utils.ToHex(ins));
+                                    break;
+                                
+                                default:
+                                    message.Debug("Error in ecall: Don't know how to handle privilege level " + current_privilege_level);
+                                    break;
+                            }
+                            break;
+
+                        case 0x001:
+                            //ebreak
+                            message.Debug("ebreak - "+ utils.ToHex(ins)+" at PC" + utils.ToHex(this.pc));
+                            break;
+
+                        case 0x100:
+                            //eret
+                            var current_privilege_level = (csr[CSR_MSTATUS] & 0x06) >> 1;
+                            if(current_privilege_level < PRV_S) {
+                                message.Debug("Error in eret: current_privilege_level isn't allowed access");
+                                break;   
+                            }
+                            switch(current_privilege_level)
+                            {
+                                
+                                case PRV_S:
+                                    message.Debug("eret PRV_S -"+ utils.ToHex(ins));
+                                    break;
+
+                                case PRV_H:
+                                    message.Debug("Not supported eret PRV_H -"+ utils.ToHex(ins));
+                                    break;
+
+                                case PRV_M:
+                                    message.Debug("eret PRV_M -"+ utils.ToHex(ins));
+                                    break;
+                                
+                                default:
+                                    message.Debug("Error in eret: Don't know how to handle privilege level " + current_privilege_level);
+                                    break;
+                            }
+                            break;
+
+                        case 0x305:
+                            //mrts     
+                            if(current_privilege_level != PRV_M) {
+                                message.Debug("Error in mrts: current_privilege_level isn't allowed access");
+                                break;   
+                            }
+                            message.Debug("mrts - "+ utils.ToHex(ins)+" at PC" + utils.ToHex(this.pc));
+                            break;
+
+                        case 0x101:
+                            //sfence.vm
+                            message.Debug("sfence.vm - "+ utils.ToHex(ins)+" at PC" + utils.ToHex(this.pc));
+                            break;
+
+                        default:
+                            message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + "not found");
+                            break;
+
+                    }
+                    break; 
+
+                default:
+                    message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + "not found");
+                    break;
+
+            }
+            break;
+
+        case 0x07:
+            //flw,fld
+            switch((ins >> 12)&0x7) {
+                
+                case 0x02:
+                    //flw
+                    message.Debug("flw - "+ utils.ToHex(ins)+" register " + f[findex]);
+                    break;
+
+                case 0x03:
+                    //fld
+                    message.Debug("fld - "+ utils.ToHex(ins)+" register " + fi[findex]);
+                    break;
+
+                default:
+                    message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + "not found");
+                    break;
+
+            }
+            break;
+
+        case 0x27:
+            //fsw,fsd
+            switch((ins >> 12)&0x7) {
+
+                case 0x02:
+                    //fsw
+                    message.Debug("fsw - "+ utils.ToHex(ins)+" register " + f[findex]);
+                    break;
+
+                case 0x03:
+                    //fsd
+                    message.Debug("fsw - "+ utils.ToHex(ins)+" register " + fi[findex]);
+                    break;
+
+                default:
+                    message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + "not found");
+                    break;
+
+            }
+            break;
+
+        case 0x53:
+            //fadd.s,fsub.s
+            switch((ins >> 25)&0x7F) {
+                
+                case 0x00 :
+                    //fadd.s
+                    message.Debug("fadd.s - "+ utils.ToHex(ins)+" register " + f[rindex]);
+                    break;
+
+                case 0x04:
+                    //fsub.s
+                    message.Debug("fsub.s - "+ utils.ToHex(ins)+" register " + f[rindex]);
+                    break;
+
+                case 0x60:
+                    //fcvt.w.s
+                    message.Debug("fcvt.w.s - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                    break;
+
+                case 0x01 :
+                    //fadd.d
+                    message.Debug("fadd.d - "+ utils.ToHex(ins)+" register " + f[rindex]);
+                    break;
+
+                case 0x05:
+                    //fsub.d
+                    message.Debug("fsub.d - "+ utils.ToHex(ins)+" register " + f[rindex]);
+                    break;
+
+                case 0x61:
+                    //fcvt.w.d
+                    message.Debug("fcvt.w.s - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                    break;
+
+                case 0x78:
+                    //fmv.s.x
+                    message.Debug("fmv.s.x - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                    break;
+
+
+                default:
+                    message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + "not found");
+                    break;
+            }
+            break;
+
+        case 0x2F:
+            //amoswap,amoadd,amoxor,amoand,amoor,amomin,amomax,amominu,amomaxu
+            switch((ins >> 27)&0x1F) {
+                
+                case 0x01:
+                    //amoswap
+                    message.Debug("amoswap - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                    break;
+
+                case 0x00:
+                    //amoadd
+                    message.Debug("amoadd - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                    break;
+
+                case 0x04:
+                    //amoxor
+                    message.Debug("amoxor - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                    break;
+
+                case 0x0C:
+                    //amoand
+                    message.Debug("amoand - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                    break;
+
+                case 0x08:
+                    //amoor
+                    message.Debug("amoor - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                    break;
+
+                case 0x10:
+                    //amomin
+                    message.Debug("amomin - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                    break;
+
+               case 0x14:
+                    //amomax
+                    message.Debug("amomax - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                    break;
+
+                case 0x18:
+                    //amominu
+                    message.Debug("amominu - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                    break;
+
+                case 0x1C:
+                    //amomaxu
+                    message.Debug("amomaxu - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                    break;
+
+                case 0x02:
+                    //lr.d
+                    message.Debug("lr.d - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                    break;
+
+                case 0x03:
+                    //sc.d
+                    message.Debug("sc.d - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                    break;
+
+                default:
+                    message.Debug("Error in Atomic Memory Instruction " + utils.ToHex(ins) + "not found");
+                    break;
+
+            }
+            break;
+
+        case 0x0F:
+            //fence
+            message.Debug("fence - "+ utils.ToHex(ins)+" at PC" + utils.ToHex(this.pc));
+            break;
+
+        default:
+            message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + " not found at "+utils.ToHex(this.pc));
+            break;
+    }
+
+    message.Debug(utils.ToHex(this.pc));
+};
+
+SafeCPU.prototype.CheckVMPrivilege = function (type, op) {
+
+    var priv = (this.csr[CSR_MSTATUS] & 0x06) >> 1;
+
+    if (type == 7) return true;
+    if ((type == 15) && (priv == PRV_S)) return true;
+    if ((type == 13) && (priv == PRV_S) && (op != VM_FETCH)) return true;
+    if ((type == 14) && (priv == PRV_S) && (op != VM_WRITE)) return true;
+
+    message.Debug("Inside CheckVMPrivilege for PC "+this.pc + " and type " + type + " and op " + op);
+    message.Abort();
+    return false;
+}
+
 SafeCPU.prototype.TranslateVM = function (addr,op) {
 
     var vm = (this.csr[CSR_MSTATUS] >> 17) & 0x1F;
     var current_privilege_level = (this.csr[CSR_MSTATUS] & 0x06) >> 1;
-    var i = 2; //i = LEVELS -1 and LEVELS = 2 in a 32 bit System
+    var i = 1; //i = LEVELS -1 and LEVELS = 2 in a 32 bit System
 
+    // vm bare mode
     if(vm == 0 || current_privilege_level == PRV_M) return addr;
-    else if(vm == 8){
-        var offset = addr & 0x3FFFFF;
-        var page_num = (addr >>> 22);
 
-        var frame_num = this.ram.Read32(this.csr[CSR_SPTBR] + (page_num << 2));
-        var type = ((frame_num >> 1) & 0xF);
-        var valid = (frame_num & 0x01);
-        if( type == 7 && valid == 1){
-            var physical_addr = (frame_num & 0xFFC00000) + offset;
-            return physical_addr;
-        }
-        else if(type < 2 && valid == 1){
-            i = i-1;
-            var pointer_addr = (frame_num & 0xFFC00000) + offset;
-            var new_sptbr = frame_num & 0xFFFFF000;
-            var new_page_num = (pointer_addr >>> 22);
-            var new_frame_num = this.ram.Read32(new_sptbr + (new_page_num << 2));
-            var new_type = ((new_frame_num >> 1) & 0xF);
-            var new_valid = (new_frame_num & 0x01);
-            if(new_type == 7 && new_valid == 1){
-                var physical_addr = (frame_num & 0xFFFFF000) | offset;
-                return physical_addr;
-            }
-            else{
-                message.Debug("Unsupported new_type field "+new_type+" or invalid entry in PTE at PC "+utils.ToHex(this.pc));
-                message.Abort();
-            }
-        }
-        else{
-            message.Debug("Unsupported type field "+type+" or invalid entry in PTE at PC "+utils.ToHex(this.pc));
-            message.Abort();
-        }
-    }
-    else{
-        message.Debug("unkown VM Mode "+vm+" at PC "+utils.ToHex(this.pc));
+    // only RV32 supported
+    if(vm != 8) {
+        message.Debug("unkown VM Mode " + vm + " at PC " + utils.ToHex(this.pc));
         message.Abort();
     }
 
-};
+    // LEVEL 1
+    var offset = addr & 0x3FFFFF;
+    var page_num = (addr >>> 22);
 
-SafeCPU.prototype.SysCall = function () {
+    var frame_num = this.ram.Read32(this.csr[CSR_SPTBR] + (page_num << 2));
+    var type = ((frame_num >> 1) & 0xF);
+    var valid = (frame_num & 0x01);
 
-    var syscall_id = this.ram.Read32(this.csr[CSR_MTOHOST]);
-    switch(syscall_id){
-
-        case 64:
-            //sys_write
-            var length = this.ram.Read32(this.csr[CSR_MTOHOST] + 8*3), i =0;
-            var string_address = this.ram.Read32(this.csr[CSR_MTOHOST] + 8*2);
-            while(i < length)
-                this.ram.Write8Little(0x90000000 >> 0, this.ram.Read8(string_address + (i++)));
-            this.csr[CSR_MFROMHOST] = i;
-            break;
-
-        case 93:
-            //sys_exit 
-            message.Debug("Program exited with sys_exit for inst at PC "+utils.ToHex(this.pc));
+    if (valid == 0) {
+        this.csr[CSR_MBADADDR] = addr;
+        if(op == VM_READ) this.Trap(CAUSE_LOAD_ACCESS_FAULT);
+            else if(op == VM_WRITE) this.Trap(CAUSE_STORE_ACCESS_FAULT);
+            else this.Trap(CAUSE_INSTRUCTION_ACCESS_FAULT);
+            return -1;
+        //message.Debug("Unsupported valid field " + valid + " or invalid entry in PTE at PC "+utils.ToHex(this.pc));
+        //message.Abort();
+    }
+    if (type >= 2) {
+        if (!this.CheckVMPrivilege(type,op)) {
+            message.Debug("Error in TranslateVM: Unhandled trap");
             message.Abort();
-            break;
-
-        default:
-            message.Debug("unkown SysCall "+utils.ToHex(syscall_id)+" at PC "+utils.ToHex(this.pc));
-            message.Abort();
-            break;
+        }
+/*
+        var updated_frame_num = frame_num;
+        if(op == VM_READ)
+            updated_frame_num = (frame_num | 0x20);
+        else if(op == VM_WRITE)
+            updated_frame_num = (frame_num | 0x60);
+        this.ram.Write32(this.csr[CSR_SPTBR] + (page_num << 2),updated_frame_num);
+*/
+        //var physical_addr = (frame_num & 0xFFC00000) | offset;
+        var physical_addr = (((frame_num >> 10) | ((addr >> 12) & 0xCFF)) << 12) | offset;
+        return physical_addr;
     }
 
+    // LEVEL 2
+    //message.Debug("Second level MMU");
+    i = i - 1;
+    var offset = addr & 0xFFF;
+    var new_sptbr = (frame_num & 0xFFFFFC00) << 2;
+    var new_page_num = (addr >> 12) & 0x3FF;
+    var new_frame_num = this.ram.Read32(new_sptbr + (new_page_num << 2));
+    var new_type = ((new_frame_num >> 1) & 0xF);
+    var new_valid = (new_frame_num & 0x01);
+
+    if (new_valid == 0) {
+        this.csr[CSR_MBADADDR] = addr;
+        if(op == VM_READ) this.Trap(CAUSE_LOAD_ACCESS_FAULT);
+            else if(op == VM_WRITE) this.Trap(CAUSE_STORE_ACCESS_FAULT);
+            else this.Trap(CAUSE_INSTRUCTION_ACCESS_FAULT);
+            return -1;
+    }
+
+    if (!this.CheckVMPrivilege(new_type, op)) {
+        message.Debug("Error in TranslateVM: Unhandled trap");
+        message.Abort();
+    }
+/*
+    var updated_frame_num = new_frame_num;
+    if(op == VM_READ)
+        updated_frame_num = (new_frame_num | 0x20);
+    else if(op == VM_WRITE)
+        updated_frame_num = (new_frame_num | 0x60);
+    this.ram.Write32(new_sptbr + (new_page_num << 2),updated_frame_num);
+*/
+    //var physical_addr = (new_frame_num & 0xFFFFF000) | offset;
+    var physical_addr = ((new_frame_num & 0xFFFFFC00) << 2) | offset;
+    return physical_addr;
 };
 
 SafeCPU.prototype.SetCSR = function (addr,value) {
@@ -10761,7 +11770,7 @@ SafeCPU.prototype.SetCSR = function (addr,value) {
         case CSR_MTOHOST:
             if(value > 0x100){
                 csr[addr] =  value;
-                this.SysCall();
+                this.syscallHandler.HandleSysCall();
             }
             else
                 this.ram.Write8Little(0x90000000 >> 0, value+0x30);
@@ -10769,6 +11778,7 @@ SafeCPU.prototype.SetCSR = function (addr,value) {
 
         case CSR_MTOHOST_TEMP: //only temporary for the patched pk.
             this.ram.Write8Little(0x90000000 >> 0, value);
+            if (value == 0xA) this.ram.Write8(0x90000000 >> 0, 0xD);
             break;
 
         case CSR_MFROMHOST:
@@ -10780,9 +11790,9 @@ SafeCPU.prototype.SetCSR = function (addr,value) {
             break;
 
         case CSR_MCPUID:
-            message.Debug("Error: Cannot write into CSR_CYCLES at "+utils.ToHex(addr));
+            //message.Debug("Error: Cannot write into CSR_CYCLES at "+utils.ToHex(addr));
             //this.Trap(CAUSE_ILLEGAL_INSTRUCTION);
-            csr[addr] = value;
+            //csr[addr] = value;
             break;
 
         case CSR_MIMPID:
@@ -10826,6 +11836,10 @@ SafeCPU.prototype.SetCSR = function (addr,value) {
             csr[addr] = value;
             break;
 
+        case CSR_SBADADDR:
+            csr[addr] = value;
+            break;
+
         case CSR_SSTATUS:
             csr[addr] = value;
             csr[CSR_MSTATUS] &= ~0x1F039; 
@@ -10865,8 +11879,9 @@ SafeCPU.prototype.SetCSR = function (addr,value) {
             break;
 
         case CSR_CYCLES:
-            message.Debug("Error: Cannot write into CSR_CYCLES at "+utils.ToHex(addr));
+            //message.Debug("Error: Cannot write into CSR_CYCLES at "+utils.ToHex(addr));
             //this.Trap(CAUSE_ILLEGAL_INSTRUCTION);
+            this.ticks = value;
             csr[addr] = value;
             break;
 
@@ -10963,6 +11978,10 @@ SafeCPU.prototype.GetCSR = function (addr) {
             break;
 
         case CSR_MBADADDR:
+            return csr[addr];
+            break;
+
+        case CSR_SBADADDR:
             return csr[addr];
             break;
 
@@ -11166,7 +12185,6 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
     var ff = this.ff;
     var f = this.f;
     var csr = this.csr;
-    r[0] = 0x00;
     var rindex = 0x00;
     var findex = 0x00;
     var imm = 0x00;
@@ -11184,1049 +12202,1315 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
     var fs2 = 0x00;
     // this is the way to write to the terminal
     //this.ram.Write8Little(0x90000000 >> 0, (this.ticks&63)+32);
-       
-
-    var current_privilege_level = (this.csr[CSR_MSTATUS] & 0x06) >> 1;
-    if (this.ticks == csr[CSR_STIMECMP]) {
-        csr[CSR_MIP] = csr[CSR_MIP] | 0x20;
-    }
-    var interrupts = csr[CSR_MIE] & csr[CSR_MIP];
-    var ie = csr[CSR_MSTATUS] & 0x01;
-    if (interrupts) {
-        if ((current_privilege_level < 3) || ((current_privilege_level == 3) && ie)) {
-            if (interrupts & 0x8) {
-                this.Trap(CAUSE_SOFTWARE_INTERRUPT);
-                this.pc = this.pc + 4|0;
+    
+    do {
+        r[0] = 0x00;
+        var current_privilege_level = (this.csr[CSR_MSTATUS] & 0x06) >> 1;
+        if (this.ticks == csr[CSR_STIMECMP]) {
+            csr[CSR_MIP] = csr[CSR_MIP] | 0x20;
+        }
+        var interrupts = csr[CSR_MIE] & csr[CSR_MIP];
+        var ie = csr[CSR_MSTATUS] & 0x01;
+        if (interrupts) {
+            if ((current_privilege_level < 3) || ((current_privilege_level == 3) && ie)) {
+                if (interrupts & 0x8) {
+                    this.Trap(CAUSE_SOFTWARE_INTERRUPT);
+                    this.pc = this.pc + 4|0;
+                }
+            }
+            if ((current_privilege_level < 1) || ((current_privilege_level == 1) && ie)) {
+                if (interrupts & 0x2) {
+                    this.Trap(CAUSE_SOFTWARE_INTERRUPT);
+                    this.pc = this.pc + 4|0;
+                }
+                if (interrupts & 0x20) {
+                     this.Trap(CAUSE_TIMER_INTERRUPT);
+                     this.pc = this.pc + 4|0;
+                }
             }
         }
-        if ((current_privilege_level < 1) || ((current_privilege_level == 1) && ie)) {
-            if (interrupts & 0x2) {
-                this.Trap(CAUSE_SOFTWARE_INTERRUPT);
-                this.pc = this.pc + 4|0;
-            }
-            if (interrupts & 0x20) {
-                 this.Trap(CAUSE_TIMER_INTERRUPT);
-                 this.pc = this.pc + 4|0;
-            }
+        var paddr = this.TranslateVM(this.pc,VM_FETCH);
+        if(paddr == -1) {
+            this.pc = this.pc + 4|0;
+            return 0;
         }
-    }
+        var ins = this.ram.Read32(paddr);
+        //this.Disassemble(ins);
 
-    var ins = this.ram.Read32(this.TranslateVM(this.pc,VM_READ));
+        switch(ins&0x7F) {
 
-    switch(ins&0x7F) {
+            case 0x03:
+                //lb,lh,lw,lbu,lhu
+                switch((ins >> 12)&0x7) {
+                    
+                    case 0x00:
+                        //lb
+                        imm = (ins >> 20);
+                        rs1 = r[(ins >> 15) & 0x1F];
+                        rindex = (ins >> 7) & 0x1F;
+                        paddr = this.TranslateVM(rs1 + imm,VM_READ);
+                        if(paddr == -1) break;
+                        r[rindex] = (this.ram.Read8(paddr) << 24) >> 24;
+                        //message.Debug("lb - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                        break;
 
-        case 0x03:
-            //lb,lh,lw,lbu,lhu
-            switch((ins >> 12)&0x7) {
-                
-                case 0x00:
-                    //lb
-                    imm = (ins >> 20);
-                    rs1 = r[(ins >> 15) & 0x1F];
-                    rindex = (ins >> 7) & 0x1F;
-                    r[rindex] = (this.ram.Read8(this.TranslateVM(rs1 + imm,VM_READ)) << 24) >> 24;
-                    message.Debug("lb - "+ utils.ToHex(ins)+" register " + r[rindex]);
-                    break;
+                    case 0x01:
+                        //lh
+                        imm = (ins >> 20);
+                        rs1 = r[(ins >> 15) & 0x1F];
+                        rindex = (ins >> 7) & 0x1F;
+                        paddr = this.TranslateVM(rs1 + imm,VM_READ);
+                        if(paddr == -1) break;
+                        r[rindex] = (this.ram.Read16(paddr) << 16) >> 16;
+                        //message.Debug("lh - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                        break;
 
-                case 0x01:
-                    //lh
-                    imm = (ins >> 20);
-                    rs1 = r[(ins >> 15) & 0x1F];
-                    rindex = (ins >> 7) & 0x1F;
-                    r[rindex] = (this.ram.Read16(this.TranslateVM(rs1 + imm,VM_READ)) << 16) >> 16;
-                    message.Debug("lh - "+ utils.ToHex(ins)+" register " + r[rindex]);
-                    break;
+                    case 0x02:
+                        //lw
+                        imm = (ins >> 20);
+                        rs1 = r[(ins >> 15) & 0x1F];
+                        rindex = (ins >> 7) & 0x1F;
+                        paddr = this.TranslateVM(rs1 + imm,VM_READ);
+                        if(paddr == -1) break;
+                        r[rindex] = this.ram.Read32(paddr);
+                        //message.Debug("lw - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                        break;
 
-                case 0x02:
-                    //lw
-                    imm = (ins >> 20);
-                    rs1 = r[(ins >> 15) & 0x1F];
-                    rindex = (ins >> 7) & 0x1F;
-                    r[rindex] = this.ram.Read32(this.TranslateVM(rs1 + imm,VM_READ));
-                    message.Debug("lw - "+ utils.ToHex(ins)+" register " + r[rindex]);
-                    break;
+                    case 0x04:
+                        //lbu
+                        imm = (ins >> 20);
+                        rs1 = r[(ins >> 15) & 0x1F];
+                        rindex = (ins >> 7) & 0x1F;
+                        paddr = this.TranslateVM(rs1 + imm,VM_READ);
+                        if(paddr == -1) break;
+                        r[rindex] = (this.ram.Read8(paddr) >>> 0);
+                        //message.Debug("lbu - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                        //if(rs1 + imm > 0x8b75) message.Abort();
+                        break;
 
-                case 0x04:
-                    //lbu
-                    imm = (ins >> 20);
-                    rs1 = r[(ins >> 15) & 0x1F];
-                    rindex = (ins >> 7) & 0x1F;
-                    r[rindex] = (this.ram.Read8(this.TranslateVM(rs1 + imm,VM_READ)) >>> 0);
-                    message.Debug("lbu - "+ utils.ToHex(ins)+" register " + r[rindex]);
-                    //if(rs1 + imm > 0x8b75) message.Abort();
-                    break;
+                    case 0x05:
+                        //lhu
+                        imm = (ins >> 20);
+                        rs1 = r[(ins >> 15) & 0x1F];
+                        rindex = (ins >> 7) & 0x1F;
+                        paddr = this.TranslateVM(rs1 + imm,VM_READ);
+                        if(paddr == -1) break;
+                        r[rindex] = (this.ram.Read16(paddr) >>> 0);
+                        //message.Debug("lhu - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                        break;
 
-                case 0x05:
-                    //lhu
-                    imm = (ins >> 20);
-                    rs1 = r[(ins >> 15) & 0x1F];
-                    rindex = (ins >> 7) & 0x1F;
-                    r[rindex] = (this.ram.Read16(this.TranslateVM(rs1 + imm,VM_READ)) >>> 0);
-                    message.Debug("lhu - "+ utils.ToHex(ins)+" register " + r[rindex]);
-                    break;
+                    default:
+                        //message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + "not found");
+                        message.Abort();
+                        break;
 
-                default:
-                    message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + "not found");
-                    message.Abort();
-                    break;
+                }
+                break;
 
-            }
-            break;
+            case 0x23:
+                //sb,sh,sw
+                switch((ins >> 12)&0x7) {
+                    
+                    case 0x00:
+                        //sb
+                        imm1 = (ins >> 25);
+                        imm2 = (ins >> 7) & 0x1F;
+                        imm = (imm1 << 5) + imm2;
+                        rs1 = r[(ins >> 15) & 0x1F];
+                        rindex = (ins >> 20) & 0x1F;
+                        paddr = this.TranslateVM(rs1 + imm,VM_WRITE);
+                        if(paddr == -1) break;
+                        this.ram.Write8(paddr,(r[rindex] & 0xFF));
+                        //message.Debug("sb - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                        break;
 
-        case 0x23:
-            //sb,sh,sw
-            switch((ins >> 12)&0x7) {
-                
-                case 0x00:
-                    //sb
-                    imm1 = (ins >> 25);
-                    imm2 = (ins >> 7) & 0x1F;
-                    imm = (imm1 << 5) + imm2;
-                    rs1 = r[(ins >> 15) & 0x1F];
-                    rindex = (ins >> 20) & 0x1F;
-                    this.ram.Write8(this.TranslateVM(rs1 + imm,VM_WRITE),(r[rindex] & 0xFF));
-                    message.Debug("sb - "+ utils.ToHex(ins)+" register " + r[rindex]);
-                    break;
+                    case 0x01:
+                        //sh
+                        imm1 = (ins >> 25);
+                        imm2 = (ins >> 7) & 0x1F;
+                        imm = (imm1 << 5) + imm2;
+                        rs1 = r[(ins >> 15) & 0x1F];
+                        rindex = (ins >> 20) & 0x1F;
+                        paddr = this.TranslateVM(rs1 + imm,VM_WRITE);
+                        if(paddr == -1) break;
+                        this.ram.Write16(paddr,(r[rindex] & 0xFFFF));
+                        //message.Debug("sh - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                        break;
 
-                case 0x01:
-                    //sh
-                    imm1 = (ins >> 25);
-                    imm2 = (ins >> 7) & 0x1F;
-                    imm = (imm1 << 5) + imm2;
-                    rs1 = r[(ins >> 15) & 0x1F];
-                    rindex = (ins >> 20) & 0x1F;
-                    this.ram.Write16(this.TranslateVM(rs1 + imm,VM_WRITE),(r[rindex] & 0xFFFF));
-                    message.Debug("sh - "+ utils.ToHex(ins)+" register " + r[rindex]);
-                    break;
+                    case 0x02:
+                        //sw
+                        imm1 = (ins >> 25);
+                        imm2 = (ins >> 7) & 0x1F;
+                        imm = (imm1 << 5) + imm2;
+                        rs1 = r[(ins >> 15) & 0x1F];
+                        rindex = (ins >> 20) & 0x1F;
+                        paddr = this.TranslateVM(rs1 + imm,VM_WRITE);
+                        if(paddr == -1) break;
+                        this.ram.Write32(paddr,r[rindex]);
+                        //message.Debug("sw - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                        break;
 
-                case 0x02:
-                    //sw
-                    imm1 = (ins >> 25);
-                    imm2 = (ins >> 7) & 0x1F;
-                    imm = (imm1 << 5) + imm2;
-                    rs1 = r[(ins >> 15) & 0x1F];
-                    rindex = (ins >> 20) & 0x1F;
-                    this.ram.Write32(this.TranslateVM(rs1 + imm,VM_WRITE),r[rindex]);
-                    message.Debug("sw - "+ utils.ToHex(ins)+" register " + r[rindex]);
-                    break;
+                    default:
+                        //message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + "not found");
+                        message.Abort();
+                        break;
 
-                default:
-                    message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + "not found");
-                    message.Abort();
-                    break;
+                }
+                break;
 
-            }
-            break;
+            case 0x13:
+                //addi,slti,sltiu,xori,ori,andi,slli,srli,srai
+                switch((ins >> 12)&0x7) {
+                    
+                    case 0x00:
+                        //addi
+                        imm = (ins >> 20);
+                        rs1 = r[(ins >> 15) & 0x1F];
+                        rindex = (ins >> 7) & 0x1F;
+                        r[rindex] = rs1 + imm;
+                        //message.Debug("addi - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                        break;
 
-        case 0x13:
-            //addi,slti,sltiu,xori,ori,andi,slli,srli,srai
-            switch((ins >> 12)&0x7) {
-                
-                case 0x00:
-                    //addi
-                    imm = (ins >> 20);
-                    rs1 = r[(ins >> 15) & 0x1F];
-                    rindex = (ins >> 7) & 0x1F;
-                    r[rindex] = rs1 + imm;
-                    message.Debug("addi - "+ utils.ToHex(ins)+" register " + r[rindex]);
-                    break;
+                    case 0x02:
+                        //slti
+                        imm = (ins >> 20);
+                        rs1 = r[(ins >> 15) & 0x1F];
+                        rindex = (ins >> 7) & 0x1F;
+                        if(rs1 < imm) r[rindex] = 0x01;
+                        else r[rindex] = 0x00;
+                        //message.Debug("slti - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                        break;
 
-                case 0x02:
-                    //slti
-                    imm = (ins >> 20);
-                    rs1 = r[(ins >> 15) & 0x1F];
-                    rindex = (ins >> 7) & 0x1F;
-                    if(rs1 < imm) r[rindex] = 0x01;
-                    else r[rindex] = 0x00;
-                    message.Debug("slti - "+ utils.ToHex(ins)+" register " + r[rindex]);
-                    break;
+                    case 0x03:
+                        //sltiu
+                        imm = (ins >>> 20) >>> 0;
+                        rs1 = r[(ins >> 15) & 0x1F] >>> 0;
+                        rindex = (ins >> 7) & 0x1F;
+                        if(rs1 < imm) r[rindex] = 0x01;
+                        else r[rindex] = 0x00;
+                        //message.Debug("sltiu - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                        break;
 
-                case 0x03:
-                    //sltiu
-                    imm = (ins >>> 20) >>> 0;
-                    rs1 = r[(ins >> 15) & 0x1F] >>> 0;
-                    rindex = (ins >> 7) & 0x1F;
-                    if(rs1 < imm) r[rindex] = 0x01;
-                    else r[rindex] = 0x00;
-                    message.Debug("sltiu - "+ utils.ToHex(ins)+" register " + r[rindex]);
-                    break;
+                    case 0x04:
+                        //xori
+                        imm = (ins >> 20);
+                        rs1 = r[(ins >> 15) & 0x1F];
+                        rindex = (ins >> 7) & 0x1F;
+                        r[rindex] = rs1 ^ imm;
+                        //message.Debug("xori - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                        break;
 
-                case 0x04:
-                    //xori
-                    imm = (ins >> 20);
-                    rs1 = r[(ins >> 15) & 0x1F];
-                    rindex = (ins >> 7) & 0x1F;
-                    r[rindex] = rs1 ^ imm;
-                    message.Debug("xori - "+ utils.ToHex(ins)+" register " + r[rindex]);
-                    break;
+                    case 0x06:
+                        //ori
+                        imm = (ins >> 20);
+                        rs1 = r[(ins >> 15) & 0x1F];
+                        rindex = (ins >> 7) & 0x1F;
+                        r[rindex] = rs1 | imm;
+                        //message.Debug("ori - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                        break;
 
-                case 0x06:
-                    //ori
-                    imm = (ins >> 20);
-                    rs1 = r[(ins >> 15) & 0x1F];
-                    rindex = (ins >> 7) & 0x1F;
-                    r[rindex] = rs1 | imm;
-                    message.Debug("ori - "+ utils.ToHex(ins)+" register " + r[rindex]);
-                    break;
+                    case 0x07:
+                        //andi
+                        imm = (ins >> 20);
+                        rs1 = r[(ins >> 15) & 0x1F];
+                        rindex = (ins >> 7) & 0x1F;
+                        r[rindex] = rs1 & imm;
+                        //message.Debug("andi - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                        break;
 
-                case 0x07:
-                    //andi
-                    imm = (ins >> 20);
-                    rs1 = r[(ins >> 15) & 0x1F];
-                    rindex = (ins >> 7) & 0x1F;
-                    r[rindex] = rs1 & imm;
-                    message.Debug("andi - "+ utils.ToHex(ins)+" register " + r[rindex]);
-                    break;
-
-                case 0x01:
-                    //slli
-                    imm = (ins >> 20) & 0x1F;
-                    rs1 = r[(ins >> 15) & 0x1F];
-                    rindex = (ins >> 7) & 0x1F;
-                    r[rindex] = rs1 << imm;
-                    message.Debug("slli - "+ utils.ToHex(ins)+" register " + r[rindex]);
-                    break;
-
-                case 0x05:
-                    if(((ins >> 25) & 0x7F) == 0x00){
-                        //srli
+                    case 0x01:
+                        //slli
                         imm = (ins >> 20) & 0x1F;
                         rs1 = r[(ins >> 15) & 0x1F];
                         rindex = (ins >> 7) & 0x1F;
-                        r[rindex] = rs1 >>> imm;
-                        message.Debug("srli - "+ utils.ToHex(ins)+" register " + r[rindex]);
-                    }
-                    else if(((ins >> 25) & 0x7F) == 0x20){
-                        //srai
-                        imm = (ins >> 20) & 0x1F;
-                        rs1 = r[(ins >> 15) & 0x1F];
-                        rindex = (ins >> 7) & 0x1F;
-                        r[rindex] = rs1 >> imm;
-                        message.Debug("srai - "+ utils.ToHex(ins)+" register " + r[rindex]);  
-                    }
-                    break;
+                        r[rindex] = rs1 << imm;
+                        //message.Debug("slli - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                        break;
 
-                default:
-                    message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + "not found");
-                    message.Abort();
-                    break;
-
-            }
-            break;
-
-        case 0x33:
-            //add,sub,sll,slt,sltu,xor,srl,sra,or,and
-            switch((ins >> 25)&0x7F) {
-                
-                case 0x00:
-                    //add,slt,sltu,add,or,xor,sll,srl
-                    switch((ins >> 12)&0x7) {
-                        case 0x00:
-                            //add
+                    case 0x05:
+                        if(((ins >> 25) & 0x7F) == 0x00){
+                            //srli
+                            imm = (ins >> 20) & 0x1F;
                             rs1 = r[(ins >> 15) & 0x1F];
-                            rs2 = r[(ins >> 20) & 0x1F];
                             rindex = (ins >> 7) & 0x1F;
-                            r[rindex] = rs1 + rs2;
-                            message.Debug("add - "+ utils.ToHex(ins)+" register " + r[rindex]);
-                            break;
-
-                        case 0x02:
-                            //slt
-                            rs1 = r[(ins >> 15) & 0x1F] >> 0;
-                            rs2 = r[(ins >> 20) & 0x1F] >> 0;
-                            rindex = (ins >> 7) & 0x1F;
-                            if(rs1 < rs2) r[rindex] = 0x01;
-                            else r[rindex] = 0x00;
-                            message.Debug("slt - "+ utils.ToHex(ins)+" register " + r[rindex]);
-                            break;
-
-                        case 0x03:
-                            //sltu
-                            rs1 = r[(ins >> 15) & 0x1F] >>> 0;
-                            rs2 = r[(ins >> 20) & 0x1F] >>> 0;
-                            rindex = (ins >> 7) & 0x1F;
-                            if(rs1 < rs2) r[rindex] = 0x01;
-                            else r[rindex] = 0x00;
-                            message.Debug("sltu - "+ utils.ToHex(ins)+" register " + r[rindex]);
-                            break;
-
-                        case 0x07:
-                            //and
+                            r[rindex] = rs1 >>> imm;
+                            //message.Debug("srli - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                        }
+                        else if(((ins >> 25) & 0x7F) == 0x20){
+                            //srai
+                            imm = (ins >> 20) & 0x1F;
                             rs1 = r[(ins >> 15) & 0x1F];
-                            rs2 = r[(ins >> 20) & 0x1F];
                             rindex = (ins >> 7) & 0x1F;
-                            r[rindex] = rs1 & rs2;
-                            message.Debug("and - "+ utils.ToHex(ins)+" register " + r[rindex]);
-                            break;
+                            r[rindex] = rs1 >> imm;
+                            //message.Debug("srai - "+ utils.ToHex(ins)+" register " + r[rindex]);  
+                        }
+                        break;
 
-                        case 0x06:
-                            //or
-                            rs1 = r[(ins >> 15) & 0x1F];
-                            rs2 = r[(ins >> 20) & 0x1F];
-                            rindex = (ins >> 7) & 0x1F;
-                            r[rindex] = rs1 | rs2;
-                            message.Debug("or - "+ utils.ToHex(ins)+" register " + r[rindex]);
-                            break;
+                    default:
+                        //message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + "not found");
+                        message.Abort();
+                        break;
 
-                        case 0x04:
-                            //xor
-                            rs1 = r[(ins >> 15) & 0x1F];
-                            rs2 = r[(ins >> 20) & 0x1F];
-                            rindex = (ins >> 7) & 0x1F;
-                            r[rindex] = rs1 ^ rs2;
-                            message.Debug("xor - "+ utils.ToHex(ins)+" register " + r[rindex]);
-                            break;
+                }
+                break;
 
-                        case 0x01:
-                            //sll
-                            rs1 = r[(ins >> 15) & 0x1F];
-                            rs2 = r[(ins >> 20) & 0x1F];
-                            rindex = (ins >> 7) & 0x1F;
-                            r[rindex] = rs1 << (rs2 & 0x1F);
-                            message.Debug("sll - "+ utils.ToHex(ins)+" register " + r[rindex]);
-                            break;
+            case 0x33:
+                //add,sub,sll,slt,sltu,xor,srl,sra,or,and
+                switch((ins >> 25)&0x7F) {
+                    
+                    case 0x00:
+                        //add,slt,sltu,add,or,xor,sll,srl
+                        switch((ins >> 12)&0x7) {
+                            case 0x00:
+                                //add
+                                rs1 = r[(ins >> 15) & 0x1F];
+                                rs2 = r[(ins >> 20) & 0x1F];
+                                rindex = (ins >> 7) & 0x1F;
+                                r[rindex] = rs1 + rs2;
+                                //message.Debug("add - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                                break;
 
-                        case 0x05:
-                            //srl
-                            rs1 = r[(ins >> 15) & 0x1F];
-                            rs2 = r[(ins >> 20) & 0x1F];
-                            rindex = (ins >> 7) & 0x1F;
-                            r[rindex] = rs1 >>> (rs2 & 0x1F);
-                            message.Debug("srl - "+ utils.ToHex(ins)+" register " + r[rindex]);
-                            break;
-                    }
-                    break;
+                            case 0x02:
+                                //slt
+                                rs1 = r[(ins >> 15) & 0x1F] >> 0;
+                                rs2 = r[(ins >> 20) & 0x1F] >> 0;
+                                rindex = (ins >> 7) & 0x1F;
+                                if(rs1 < rs2) r[rindex] = 0x01;
+                                else r[rindex] = 0x00;
+                                //message.Debug("slt - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                                break;
 
-                case 0x20:
-                    //sub
-                    switch((ins >> 12)&0x7) {
-                        case 0x00:
-                            //sub
-                            rs1 = r[(ins >> 15) & 0x1F];
-                            rs2 = r[(ins >> 20) & 0x1F];
-                            rindex = (ins >> 7) & 0x1F;
-                            r[rindex] = rs1 - rs2;
-                            message.Debug("sub - "+ utils.ToHex(ins)+" register " + r[rindex]);
-                            break;
+                            case 0x03:
+                                //sltu
+                                rs1 = r[(ins >> 15) & 0x1F] >>> 0;
+                                rs2 = r[(ins >> 20) & 0x1F] >>> 0;
+                                rindex = (ins >> 7) & 0x1F;
+                                if(rs1 < rs2) r[rindex] = 0x01;
+                                else r[rindex] = 0x00;
+                                //message.Debug("sltu - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                                break;
 
-                        case 0x05:
-                            //sra
-                            rs1 = r[(ins >> 15) & 0x1F];
-                            rs2 = r[(ins >> 20) & 0x1F];
-                            rindex = (ins >> 7) & 0x1F;
-                            r[rindex] = rs1 >> (rs2 & 0x1F);
-                            message.Debug("sra - "+ utils.ToHex(ins)+" register " + r[rindex]);
-                            break;
-                    }
-                    break;
+                            case 0x07:
+                                //and
+                                rs1 = r[(ins >> 15) & 0x1F];
+                                rs2 = r[(ins >> 20) & 0x1F];
+                                rindex = (ins >> 7) & 0x1F;
+                                r[rindex] = rs1 & rs2;
+                                //message.Debug("and - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                                break;
 
-                case 0x01:
-                    //mul,mulh,mulhsu,mulhu,div,divu,rem,remu
-                    switch((ins >> 12)&0x7) {
-                        case 0x00:
-                            //mul
-                            rs1 = r[(ins >> 15) & 0x1F];
-                            rs2 = r[(ins >> 20) & 0x1F];
-                            rindex = (ins >> 7) & 0x1F;
-                            mul = rs1 * rs2;
-                            r[rindex] = mul & 0xFFFFFFFF;
-                            message.Debug("mul - "+ utils.ToHex(ins)+" register " + r[rindex]);
-                            break;
+                            case 0x06:
+                                //or
+                                rs1 = r[(ins >> 15) & 0x1F];
+                                rs2 = r[(ins >> 20) & 0x1F];
+                                rindex = (ins >> 7) & 0x1F;
+                                r[rindex] = rs1 | rs2;
+                                //message.Debug("or - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                                break;
 
-                        case 0x01:
-                            //mulh
-                            rs1 = r[(ins >> 15) & 0x1F];
-                            rs2 = r[(ins >> 20) & 0x1F];
-                            rindex = (ins >> 7) & 0x1F;
-                            var result = this.UMul(rs1,rs2);
-                            r[rindex] = result[1];
-                            message.Debug("mulh - "+ utils.ToHex(ins)+" register " + r[rindex]);
-                            break;
+                            case 0x04:
+                                //xor
+                                rs1 = r[(ins >> 15) & 0x1F];
+                                rs2 = r[(ins >> 20) & 0x1F];
+                                rindex = (ins >> 7) & 0x1F;
+                                r[rindex] = rs1 ^ rs2;
+                                //message.Debug("xor - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                                break;
 
-                        case 0x02:
-                            //mulhsu
-                            rs1 = r[(ins >> 15) & 0x1F];
-                            rs2 = r[(ins >> 20) & 0x1F] >>> 0;
-                            rindex = (ins >> 7) & 0x1F;
-                            var result = this.SUMul(rs1,rs2);
-                            r[rindex] = result[1];
-                            message.Debug("mulhsu - "+ utils.ToHex(ins)+" register " + r[rindex]);
-                            break;
+                            case 0x01:
+                                //sll
+                                rs1 = r[(ins >> 15) & 0x1F];
+                                rs2 = r[(ins >> 20) & 0x1F];
+                                rindex = (ins >> 7) & 0x1F;
+                                r[rindex] = rs1 << (rs2 & 0x1F);
+                                //message.Debug("sll - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                                break;
 
-                        case 0x03:
-                            //mulhu
-                            rs1 = r[(ins >> 15) & 0x1F] >>> 0;
-                            rs2 = r[(ins >> 20) & 0x1F] >>> 0;
-                            rindex = (ins >> 7) & 0x1F;
-                            var result = this.IMul(rs1,rs2);
-                            r[rindex] = result[1];
-                            message.Debug("mulhu - "+ utils.ToHex(ins)+" register " + r[rindex]);
-                            break;
+                            case 0x05:
+                                //srl
+                                rs1 = r[(ins >> 15) & 0x1F];
+                                rs2 = r[(ins >> 20) & 0x1F];
+                                rindex = (ins >> 7) & 0x1F;
+                                r[rindex] = rs1 >>> (rs2 & 0x1F);
+                                //message.Debug("srl - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                                break;
+                        }
+                        break;
 
-                        case 0x04:
-                            //div
-                            rs1 = r[(ins >> 15) & 0x1F];
-                            rs2 = r[(ins >> 20) & 0x1F];
-                            rindex = (ins >> 7) & 0x1F;
-                            if(rs2 == 0)
-                                quo = -1;
-                            else
-                                quo = rs1 / rs2;
-                            r[rindex] = quo;
-                            message.Debug("div - "+ utils.ToHex(ins)+" register " + r[rindex]);
-                            break;
+                    case 0x20:
+                        //sub
+                        switch((ins >> 12)&0x7) {
+                            case 0x00:
+                                //sub
+                                rs1 = r[(ins >> 15) & 0x1F];
+                                rs2 = r[(ins >> 20) & 0x1F];
+                                rindex = (ins >> 7) & 0x1F;
+                                r[rindex] = rs1 - rs2;
+                                //message.Debug("sub - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                                break;
 
-                        case 0x05:
-                            //divu
-                            rs1 = r[(ins >> 15) & 0x1F];
-                            rs2 = r[(ins >> 20) & 0x1F];
-                            rindex = (ins >> 7) & 0x1F;
-                            if(rs2 == 0)
-                                quo = 0xFFFFFFFF;
-                            else
-                                quo = (rs1 >>> 0) / (rs2 >>> 0);
-                            r[rindex] = quo;
-                            message.Debug("divu - "+ utils.ToHex(ins)+" register " + r[rindex]);
-                            break;
+                            case 0x05:
+                                //sra
+                                rs1 = r[(ins >> 15) & 0x1F];
+                                rs2 = r[(ins >> 20) & 0x1F];
+                                rindex = (ins >> 7) & 0x1F;
+                                r[rindex] = rs1 >> (rs2 & 0x1F);
+                                //message.Debug("sra - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                                break;
+                        }
+                        break;
 
-                        case 0x06:
-                            //rem
-                            rs1 = r[(ins >> 15) & 0x1F];
-                            rs2 = r[(ins >> 20) & 0x1F];
-                            rindex = (ins >> 7) & 0x1F;
-                            if(rs2 == 0)
-                                rem = rs1;
-                            else
-                                rem = rs1 % rs2;
-                            r[rindex] = rem;
-                            message.Debug("rem - "+ utils.ToHex(ins)+" register " + r[rindex]);
-                            break;
+                    case 0x01:
+                        //mul,mulh,mulhsu,mulhu,div,divu,rem,remu
+                        switch((ins >> 12)&0x7) {
+                            case 0x00:
+                                //mul
+                                rs1 = r[(ins >> 15) & 0x1F];
+                                rs2 = r[(ins >> 20) & 0x1F];
+                                rindex = (ins >> 7) & 0x1F;
+                                mul = rs1 * rs2;
+                                r[rindex] = mul & 0xFFFFFFFF;
+                                //message.Debug("mul - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                                break;
 
-                        case 0x07:
-                            //remu
-                            rs1 = r[(ins >> 15) & 0x1F];
-                            rs2 = r[(ins >> 20) & 0x1F];
-                            rindex = (ins >> 7) & 0x1F;
-                            if(rs2 == 0)
-                                rem = (rs1 >>> 0);
-                            else
-                                rem = (rs1 >>> 0) % (rs2 >>> 0);
-                            r[rindex] = rem;
-                            message.Debug("remu - "+ utils.ToHex(ins)+" register " + r[rindex]);
-                            break;
-                    }
-                    break;
+                            case 0x01:
+                                //mulh
+                                rs1 = r[(ins >> 15) & 0x1F];
+                                rs2 = r[(ins >> 20) & 0x1F];
+                                rindex = (ins >> 7) & 0x1F;
+                                var result = this.UMul(rs1,rs2);
+                                r[rindex] = result[1];
+                                //message.Debug("mulh - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                                break;
 
-                
+                            case 0x02:
+                                //mulhsu
+                                rs1 = r[(ins >> 15) & 0x1F];
+                                rs2 = r[(ins >> 20) & 0x1F] >>> 0;
+                                rindex = (ins >> 7) & 0x1F;
+                                var result = this.SUMul(rs1,rs2);
+                                r[rindex] = result[1];
+                                //message.Debug("mulhsu - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                                break;
 
-                default:
-                    message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + "not found");
-                    message.Abort();
-                    break;
+                            case 0x03:
+                                //mulhu
+                                rs1 = r[(ins >> 15) & 0x1F] >>> 0;
+                                rs2 = r[(ins >> 20) & 0x1F] >>> 0;
+                                rindex = (ins >> 7) & 0x1F;
+                                var result = this.IMul(rs1,rs2);
+                                r[rindex] = result[1];
+                                //message.Debug("mulhu - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                                break;
 
-            }
-            break;
+                            case 0x04:
+                                //div
+                                rs1 = r[(ins >> 15) & 0x1F];
+                                rs2 = r[(ins >> 20) & 0x1F];
+                                rindex = (ins >> 7) & 0x1F;
+                                if(rs2 == 0)
+                                    quo = -1;
+                                else
+                                    quo = rs1 / rs2;
+                                r[rindex] = quo;
+                                //message.Debug("div - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                                break;
 
-        case 0x37:
-            //lui
-            rindex = (ins >> 7) & 0x1F;
-            r[rindex] = (ins & 0xFFFFF000);
-            message.Debug("Lui - "+ utils.ToHex(ins)+" register " + r[rindex]);
-            break;
+                            case 0x05:
+                                //divu
+                                rs1 = r[(ins >> 15) & 0x1F];
+                                rs2 = r[(ins >> 20) & 0x1F];
+                                rindex = (ins >> 7) & 0x1F;
+                                if(rs2 == 0)
+                                    quo = 0xFFFFFFFF;
+                                else
+                                    quo = (rs1 >>> 0) / (rs2 >>> 0);
+                                r[rindex] = quo;
+                                //message.Debug("divu - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                                break;
 
-        case 0x17:
-            //auipc
-            imm = (ins & 0xFFFFF000);
-            rindex = (ins >> 7) & 0x1F;
-            r[rindex] = (imm + this.pc);
-            message.Debug("auipc - "+ utils.ToHex(ins)+" register " + r[rindex]);
-            break;
+                            case 0x06:
+                                //rem
+                                rs1 = r[(ins >> 15) & 0x1F];
+                                rs2 = r[(ins >> 20) & 0x1F];
+                                rindex = (ins >> 7) & 0x1F;
+                                if(rs2 == 0)
+                                    rem = rs1;
+                                else
+                                    rem = rs1 % rs2;
+                                r[rindex] = rem;
+                                //message.Debug("rem - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                                break;
 
-        case 0x6F:
-            //jal
-            imm1 = (ins >> 21) & 0x3FF;
-            imm2 = ((ins >> 20) & 0x01) << 10;
-            imm3 = ((ins >> 12) & 0xFF) << 11;
-            imm4 = ((ins >> 31) & 0x01) << 19;
-            imm = (((imm1 + imm2 + imm3 +imm4) << 1) << 11) >> 11; 
-            rindex = (ins >> 7) & 0x1F;
-            r[rindex] = this.pc + 4;
-            this.pc = this.pc + imm - 4|0;//-4 is a temp hack
-            message.Debug("jal - "+ utils.ToHex(ins)+" register " + r[rindex]);
-            break; 
+                            case 0x07:
+                                //remu
+                                rs1 = r[(ins >> 15) & 0x1F];
+                                rs2 = r[(ins >> 20) & 0x1F];
+                                rindex = (ins >> 7) & 0x1F;
+                                if(rs2 == 0)
+                                    rem = (rs1 >>> 0);
+                                else
+                                    rem = (rs1 >>> 0) % (rs2 >>> 0);
+                                r[rindex] = rem;
+                                //message.Debug("remu - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                                break;
+                        }
+                        break;
 
-        case 0x67:
-            //jalr
-            imm = (ins >> 20);
-            rs1 = r[(ins >> 15) & 0x1F];
-            rindex = (ins >> 7) & 0x1F;
-            r[rindex] = this.pc + 4;
-            this.pc = ((rs1 + imm) & 0xFFFFFFFE) - 4|0;//-4 is a temp hack
-            message.Debug("jalr - "+ utils.ToHex(ins)+" register " + r[rindex]);
-            break;
-
-        case 0x63:
-            //beq,bne,blt,bge,bltu,bgeu
-            switch((ins >> 12)&0x7) {
-                
-                case 0x00:
-                    //beq
-                    imm1 = (ins >> 31) << 11;
-                    imm2 = ((ins >> 25) & 0x3F) << 4;
-                    imm3 = (ins >> 8) & 0x0F;
-                    imm4 = ((ins >> 7) & 0x01) << 10;
-                    imm = (((imm1 + imm2 + imm3 + imm4) << 1 ) << 19) >> 19;
-                    rs1 = r[(ins >> 15) & 0x1F];
-                    rs2 = r[(ins >> 20) & 0x1F];
-                    if(rs1 == rs2) this.pc = this.pc + imm - 4|0;//-4 temporary hack
-                    message.Debug("beq - "+ utils.ToHex(ins)+" register " + utils.ToHex(rs1));
-                    break;
-
-                case 0x01:
-                    //bne
-                    imm1 = (ins >> 31) << 11;
-                    imm2 = ((ins >> 25) & 0x3F) << 4;
-                    imm3 = (ins >> 8) & 0x0F;
-                    imm4 = ((ins >> 7) & 0x01) << 10;
-                    imm = (((imm1 + imm2 + imm3 + imm4) << 1 ) << 19) >> 19;
-                    rs1 = r[(ins >> 15) & 0x1F];
-                    rs2 = r[(ins >> 20) & 0x1F];
-                    if(rs1 != rs2) this.pc = this.pc + imm - 4|0;//-4 temporary hack
-                    message.Debug("bne - "+ utils.ToHex(rs2)+" register " + utils.ToHex((ins >> 20) & 0x1F));
-                    break;
-
-                case 0x04:
-                    //blt
-                    imm1 = (ins >> 31) << 11;
-                    imm2 = ((ins >> 25) & 0x3F) << 4;
-                    imm3 = (ins >> 8) & 0x0F;
-                    imm4 = ((ins >> 7) & 0x01) << 10;
-                    imm = (((imm1 + imm2 + imm3 + imm4) << 1 ) << 19) >> 19;
-                    rs1 = r[(ins >> 15) & 0x1F];
-                    rs2 = r[(ins >> 20) & 0x1F];
-                    if(rs1 < rs2) this.pc = this.pc + imm - 4|0;//-4 temporary hack
-                    message.Debug("blt - "+ utils.ToHex(ins)+" register " + r[rindex]);
-                    break;
-
-                case 0x05:
-                    //bge
-                    imm1 = (ins >> 31) << 11;
-                    imm2 = ((ins >> 25) & 0x3F) << 4;
-                    imm3 = (ins >> 8) & 0x0F;
-                    imm4 = ((ins >> 7) & 0x01) << 10;
-                    imm = (((imm1 + imm2 + imm3 + imm4) << 1 ) << 19) >> 19;
-                    rs1 = r[(ins >> 15) & 0x1F];
-                    rs2 = r[(ins >> 20) & 0x1F];
-                    if(rs1 >= rs2) this.pc = this.pc + imm - 4|0;//-4 temporary hack
-                    message.Debug("bge - "+ utils.ToHex(ins)+" register " + r[rindex]);
-                    break;
-
-                case 0x06:
-                    //bltu
-                    imm1 = (ins >> 31) << 11;
-                    imm2 = ((ins >> 25) & 0x3F) << 4;
-                    imm3 = (ins >> 8) & 0x0F;
-                    imm4 = ((ins >> 7) & 0x01) << 10;
-                    imm = (((imm1 + imm2 + imm3 + imm4) << 1 ) << 19) >> 19;
-                    rs1 = r[(ins >> 15) & 0x1F] >>> 0;
-                    rs2 = r[(ins >> 20) & 0x1F] >>> 0;
-                    if(rs1 < rs2) this.pc = this.pc + imm - 4|0;//-4 temporary hack
-                    message.Debug("bltu - "+ utils.ToHex(ins)+" register " + r[rindex]);
-                    break;
-
-                case 0x07:
-                    //bgeu
-                    imm1 = (ins >> 31) << 11;
-                    imm2 = ((ins >> 25) & 0x3F) << 4;
-                    imm3 = (ins >> 8) & 0x0F;
-                    imm4 = ((ins >> 7) & 0x01) << 10;
-                    imm = (((imm1 + imm2 + imm3 + imm4) << 1 ) << 19) >> 19;
-                    rs1 = r[(ins >> 15) & 0x1F] >>> 0;
-                    rs2 = r[(ins >> 20) & 0x1F] >>> 0;
-                    if(rs1 >= rs2) this.pc = this.pc + imm - 4|0;//-4 temporary hack
-                    message.Debug("bgeu - "+ utils.ToHex(ins)+" register " + r[rindex]);
-                    break;
-
-                default:
-                    message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + "not found");
-                    message.Abort();
-                    break;
-
-            }
-            break;
-
-        case 0x73:
-            //csrrw,csrrs,csrrc,csrrwi,csrrsi,csrrci,ecall,eret,ebreak,mrts
-            switch((ins >> 12)&0x7) {
-                
-                case 0x01:
-                    //csrrw
-                    imm = (ins >>> 20);
-                    rs1 = r[(ins >> 15) & 0x1F];
-                    rindex = (ins >> 7) & 0x1F;
-                    r[rindex] = this.GetCSR(imm);
-                    this.SetCSR(imm, rs1);
-                    message.Debug("csrrw - "+ utils.ToHex(ins)+" rs1 "+utils.ToHex(rs1)+" imm " + csr[imm]);
-                    break;
-
-                case 0x02:
-                    //csrrs
-                    imm = (ins >>> 20);
-                    rs1 = r[(ins >> 15) & 0x1F];
-                    rindex = (ins >> 7) & 0x1F;
-                    r[rindex] = this.GetCSR(imm);
-                    this.SetCSR(imm, this.GetCSR(imm) | rs1);
-                    message.Debug("csrrs - "+ utils.ToHex(ins)+" rs1 "+utils.ToHex(rs1)+" imm " + csr[imm]);
-                    break;
-
-                case 0x03:
-                    //csrrc
-                    imm = (ins >>> 20);
-                    rs1 = r[(ins >> 15) & 0x1F];
-                    rindex = (ins >> 7) & 0x1F;
-                    r[rindex] = this.GetCSR(imm);
-                    this.SetCSR(imm, this.GetCSR(imm) & (~rs1));
-                    message.Debug("csrrc - "+ utils.ToHex(ins)+" register " + r[rindex]);
-                    break;
-
-                case 0x05:
-                    //csrrwi
-                    imm = (ins >>> 20);
-                    zimm = (ins >> 15) & 0x1F;
-                    rindex = (ins >> 7) & 0x1F;
-                    r[rindex] = this.GetCSR(imm);
-                    if(zimm != 0) this.SetCSR(imm, (zimm >> 0));
-                    message.Debug("csrrwi - "+ utils.ToHex(ins)+" register " + r[rindex]);
-                    break;
                     
 
-                case 0x06:
-                    //csrrsi
-                    imm = (ins >>> 20);
-                    zimm = (ins >> 15) & 0x1F;
-                    rindex = (ins >> 7) & 0x1F;
-                    r[rindex] = this.GetCSR(imm);
-                    if(zimm != 0) this.SetCSR(imm, this.GetCSR(imm) | (zimm >> 0));
-                    message.Debug("csrrsi - "+ utils.ToHex(ins)+" register " + r[rindex]);
-                    break;
+                    default:
+                        //message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + "not found");
+                        message.Abort();
+                        break;
 
-                case 0x07:
-                    //csrrci
-                    imm = (ins >>> 20);
-                    zimm = (ins >> 15) & 0x1F;
-                    rindex = (ins >> 7) & 0x1F;
-                    r[rindex] = this.GetCSR(imm);
-                    if(zimm != 0) this.SetCSR(imm, this.GetCSR(imm) & ~(zimm >> 0));
-                    message.Debug("csrrci - "+ utils.ToHex(ins)+" register " + r[rindex]);
-                    break;
-                
-                case 0x00:
-                    //ecall,eret,ebreak,mrts
-                    switch((ins >> 20)&0xFFF) {
-                        case 0x00:
-                            //ecall
-                            var current_privilege_level = (csr[CSR_MSTATUS] & 0x06) >> 1;
-                            switch(current_privilege_level)
-                            {
-                                case PRV_U:
-                                    message.Debug("ecall PRV_U -"+ utils.ToHex(ins));
-                                    this.PushPrivilegeStack(PRV_S);
-                                    csr[CSR_MEPC] = this.pc;
-                                    csr[CSR_MCAUSE] = 0x08;
-                                    break;
+                }
+                break;
 
-                                case PRV_S:
-                                    message.Debug("ecall PRV_S -"+ utils.ToHex(ins));
-                                    this.PushPrivilegeStack(PRV_H);
-                                    csr[CSR_MEPC] = this.pc;
-                                    csr[CSR_MCAUSE] = 0x09;
-                                    break;
+            case 0x37:
+                //lui
+                rindex = (ins >> 7) & 0x1F;
+                r[rindex] = (ins & 0xFFFFF000);
+                //message.Debug("Lui - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                break;
 
-                                case PRV_H:
-                                    message.Debug("Not supported ecall PRV_H -"+ utils.ToHex(ins));
-                                    this.PushPrivilegeStack(PRV_M);
-                                    csr[CSR_MEPC] = this.pc;
-                                    csr[CSR_MCAUSE] = 0x0A;
+            case 0x17:
+                //auipc
+                imm = (ins & 0xFFFFF000);
+                rindex = (ins >> 7) & 0x1F;
+                r[rindex] = (imm + this.pc);
+                //message.Debug("auipc - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                break;
+
+            case 0x6F:
+                //jal
+                imm1 = (ins >> 21) & 0x3FF;
+                imm2 = ((ins >> 20) & 0x01) << 10;
+                imm3 = ((ins >> 12) & 0xFF) << 11;
+                imm4 = ((ins >> 31) & 0x01) << 19;
+                imm = (((imm1 + imm2 + imm3 +imm4) << 1) << 11) >> 11; 
+                rindex = (ins >> 7) & 0x1F;
+                r[rindex] = this.pc + 4;
+                this.pc = this.pc + imm - 4|0;//-4 is a temp hack
+                //message.Debug("jal - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                break; 
+
+            case 0x67:
+                //jalr
+                imm = (ins >> 20);
+                rs1 = r[(ins >> 15) & 0x1F];
+                rindex = (ins >> 7) & 0x1F;
+                r[rindex] = this.pc + 4;
+                this.pc = ((rs1 + imm) & 0xFFFFFFFE) - 4|0;//-4 is a temp hack
+                //message.Debug("jalr - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                break;
+
+            case 0x63:
+                //beq,bne,blt,bge,bltu,bgeu
+                switch((ins >> 12)&0x7) {
+                    
+                    case 0x00:
+                        //beq
+                        imm1 = (ins >> 31) << 11;
+                        imm2 = ((ins >> 25) & 0x3F) << 4;
+                        imm3 = (ins >> 8) & 0x0F;
+                        imm4 = ((ins >> 7) & 0x01) << 10;
+                        imm = (((imm1 + imm2 + imm3 + imm4) << 1 ) << 19) >> 19;
+                        rs1 = r[(ins >> 15) & 0x1F];
+                        rs2 = r[(ins >> 20) & 0x1F];
+                        if(rs1 == rs2) this.pc = this.pc + imm - 4|0;//-4 temporary hack
+                        //message.Debug("beq - "+ utils.ToHex(ins)+" register " + utils.ToHex(rs1));
+                        break;
+
+                    case 0x01:
+                        //bne
+                        imm1 = (ins >> 31) << 11;
+                        imm2 = ((ins >> 25) & 0x3F) << 4;
+                        imm3 = (ins >> 8) & 0x0F;
+                        imm4 = ((ins >> 7) & 0x01) << 10;
+                        imm = (((imm1 + imm2 + imm3 + imm4) << 1 ) << 19) >> 19;
+                        rs1 = r[(ins >> 15) & 0x1F];
+                        rs2 = r[(ins >> 20) & 0x1F];
+                        if(rs1 != rs2) this.pc = this.pc + imm - 4|0;//-4 temporary hack
+                        //message.Debug("bne - "+ utils.ToHex(rs2)+" register " + utils.ToHex((ins >> 20) & 0x1F));
+                        break;
+
+                    case 0x04:
+                        //blt
+                        imm1 = (ins >> 31) << 11;
+                        imm2 = ((ins >> 25) & 0x3F) << 4;
+                        imm3 = (ins >> 8) & 0x0F;
+                        imm4 = ((ins >> 7) & 0x01) << 10;
+                        imm = (((imm1 + imm2 + imm3 + imm4) << 1 ) << 19) >> 19;
+                        rs1 = r[(ins >> 15) & 0x1F];
+                        rs2 = r[(ins >> 20) & 0x1F];
+                        if(rs1 < rs2) this.pc = this.pc + imm - 4|0;//-4 temporary hack
+                        //message.Debug("blt - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                        break;
+
+                    case 0x05:
+                        //bge
+                        imm1 = (ins >> 31) << 11;
+                        imm2 = ((ins >> 25) & 0x3F) << 4;
+                        imm3 = (ins >> 8) & 0x0F;
+                        imm4 = ((ins >> 7) & 0x01) << 10;
+                        imm = (((imm1 + imm2 + imm3 + imm4) << 1 ) << 19) >> 19;
+                        rs1 = r[(ins >> 15) & 0x1F];
+                        rs2 = r[(ins >> 20) & 0x1F];
+                        if(rs1 >= rs2) this.pc = this.pc + imm - 4|0;//-4 temporary hack
+                        //message.Debug("bge - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                        break;
+
+                    case 0x06:
+                        //bltu
+                        imm1 = (ins >> 31) << 11;
+                        imm2 = ((ins >> 25) & 0x3F) << 4;
+                        imm3 = (ins >> 8) & 0x0F;
+                        imm4 = ((ins >> 7) & 0x01) << 10;
+                        imm = (((imm1 + imm2 + imm3 + imm4) << 1 ) << 19) >> 19;
+                        rs1 = r[(ins >> 15) & 0x1F] >>> 0;
+                        rs2 = r[(ins >> 20) & 0x1F] >>> 0;
+                        if(rs1 < rs2) this.pc = this.pc + imm - 4|0;//-4 temporary hack
+                        //message.Debug("bltu - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                        break;
+
+                    case 0x07:
+                        //bgeu
+                        imm1 = (ins >> 31) << 11;
+                        imm2 = ((ins >> 25) & 0x3F) << 4;
+                        imm3 = (ins >> 8) & 0x0F;
+                        imm4 = ((ins >> 7) & 0x01) << 10;
+                        imm = (((imm1 + imm2 + imm3 + imm4) << 1 ) << 19) >> 19;
+                        rs1 = r[(ins >> 15) & 0x1F] >>> 0;
+                        rs2 = r[(ins >> 20) & 0x1F] >>> 0;
+                        if(rs1 >= rs2) this.pc = this.pc + imm - 4|0;//-4 temporary hack
+                        //message.Debug("bgeu - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                        break;
+
+                    default:
+                        //message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + "not found");
+                        message.Abort();
+                        break;
+
+                }
+                break;
+
+            case 0x73:
+                //csrrw,csrrs,csrrc,csrrwi,csrrsi,csrrci,ecall,eret,ebreak,mrts
+                switch((ins >> 12)&0x7) {
+                    
+                    case 0x01:
+                        //csrrw
+                        imm = (ins >>> 20);
+                        rs1 = r[(ins >> 15) & 0x1F];
+                        rindex = (ins >> 7) & 0x1F;
+                        r[rindex] = this.GetCSR(imm);
+                        this.SetCSR(imm, rs1);
+                        //message.Debug("csrrw - "+ utils.ToHex(ins)+" rs1 "+utils.ToHex(rs1)+" imm " + csr[imm]);
+                        break;
+
+                    case 0x02:
+                        //csrrs
+                        imm = (ins >>> 20);
+                        rs1 = r[(ins >> 15) & 0x1F];
+                        rindex = (ins >> 7) & 0x1F;
+                        r[rindex] = this.GetCSR(imm);
+                        this.SetCSR(imm, this.GetCSR(imm) | rs1);
+                        //message.Debug("csrrs - "+ utils.ToHex(ins)+" rs1 "+utils.ToHex(rs1)+" imm " + csr[imm]);
+                        break;
+
+                    case 0x03:
+                        //csrrc
+                        imm = (ins >>> 20);
+                        rs1 = r[(ins >> 15) & 0x1F];
+                        rindex = (ins >> 7) & 0x1F;
+                        r[rindex] = this.GetCSR(imm);
+                        this.SetCSR(imm, this.GetCSR(imm) & (~rs1));
+                        //message.Debug("csrrc - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                        break;
+
+                    case 0x05:
+                        //csrrwi
+                        imm = (ins >>> 20);
+                        zimm = (ins >> 15) & 0x1F;
+                        rindex = (ins >> 7) & 0x1F;
+                        r[rindex] = this.GetCSR(imm);
+                        if(zimm != 0) this.SetCSR(imm, (zimm >> 0));
+                        //message.Debug("csrrwi - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                        break;
+                        
+
+                    case 0x06:
+                        //csrrsi
+                        imm = (ins >>> 20);
+                        zimm = (ins >> 15) & 0x1F;
+                        rindex = (ins >> 7) & 0x1F;
+                        r[rindex] = this.GetCSR(imm);
+                        if(zimm != 0) this.SetCSR(imm, this.GetCSR(imm) | (zimm >> 0));
+                        //message.Debug("csrrsi - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                        break;
+
+                    case 0x07:
+                        //csrrci
+                        imm = (ins >>> 20);
+                        zimm = (ins >> 15) & 0x1F;
+                        rindex = (ins >> 7) & 0x1F;
+                        r[rindex] = this.GetCSR(imm);
+                        if(zimm != 0) this.SetCSR(imm, this.GetCSR(imm) & ~(zimm >> 0));
+                        //message.Debug("csrrci - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                        break;
+                    
+                    case 0x00:
+                        //ecall,eret,ebreak,mrts
+                        switch((ins >> 20)&0xFFF) {
+                            case 0x00:
+                                //ecall
+                                var current_privilege_level = (csr[CSR_MSTATUS] & 0x06) >> 1;
+                                switch(current_privilege_level)
+                                {
+                                    case PRV_U:
+                                        //message.Debug("ecall PRV_U -"+ utils.ToHex(ins));
+                                        this.PushPrivilegeStack(PRV_M);
+                                        csr[CSR_MEPC] = this.pc;
+                                        csr[CSR_MCAUSE] = 0x08;
+                                        break;
+
+                                    case PRV_S:
+                                        //message.Debug("ecall PRV_S -"+ utils.ToHex(ins));
+                                        this.PushPrivilegeStack(PRV_M);
+                                        csr[CSR_MEPC] = this.pc;
+                                        csr[CSR_MCAUSE] = 0x09;
+                                        break;
+
+                                    case PRV_H:
+                                        //message.Debug("Not supported ecall PRV_H -"+ utils.ToHex(ins));
+                                        this.PushPrivilegeStack(PRV_M);
+                                        csr[CSR_MEPC] = this.pc;
+                                        csr[CSR_MCAUSE] = 0x0A;
+                                        message.Abort();
+                                        break;
+
+                                    case PRV_M:
+                                        //message.Debug("ecall PRV_M -"+ utils.ToHex(ins));
+                                        this.PushPrivilegeStack(PRV_M);
+                                        csr[CSR_MEPC] = this.pc;
+                                        csr[CSR_MCAUSE] = 0x0B;
+                                        break;
+                                    
+                                    default:
+                                        //message.Debug("Error in ecall: Don't know how to handle privilege level " + current_privilege_level);
+                                        message.Abort();
+                                        break;
+                                }
+                                this.pc =  0x100 + 0x40*current_privilege_level - 4|0;
+                                break;
+
+                            case 0x001:
+                                //ebreak
+                                this.Trap(CAUSE_BREAKPOINT);
+                                break;
+
+                            case 0x100:
+                                //eret
+                                var current_privilege_level = (csr[CSR_MSTATUS] & 0x06) >> 1;
+                                if(current_privilege_level < PRV_S) {
+                                    //message.Debug("Error in eret: current_privilege_level isn't allowed access");
                                     message.Abort();
-                                    break;
+                                    break;   
+                                }
+                                switch(current_privilege_level)
+                                {
+                                    
+                                    case PRV_S:
+                                        //message.Debug("eret PRV_S -"+ utils.ToHex(ins));
+                                        this.PopPrivilegeStack(PRV_U);
+                                        this.pc = csr[CSR_SEPC] - 4|0;
+                                        break;
 
-                                case PRV_M:
-                                    message.Debug("ecall PRV_M -"+ utils.ToHex(ins));
-                                    this.PushPrivilegeStack(PRV_M);
-                                    csr[CSR_MEPC] = this.pc;
-                                    csr[CSR_MCAUSE] = 0x0B;
-                                    break;
-                                
-                                default:
-                                    message.Debug("Error in ecall: Don't know how to handle privilege level " + current_privilege_level);
+                                    case PRV_H:
+                                        //message.Debug("Not supported eret PRV_H -"+ utils.ToHex(ins));
+                                        this.PopPrivilegeStack(PRV_U);
+                                        this.pc = csr[CSR_HEPC] - 4|0;
+                                        message.Abort();
+                                        break;
+
+                                    case PRV_M:
+                                        //message.Debug("eret PRV_M -"+ utils.ToHex(ins));
+                                        this.PopPrivilegeStack(PRV_U);
+                                        this.pc = csr[CSR_MEPC] - 4|0;
+                                        break;
+                                    
+                                    default:
+                                        //message.Debug("Error in eret: Don't know how to handle privilege level " + current_privilege_level);
+                                        message.Abort();
+                                        break;
+                                }
+                                break;
+
+                            case 0x305:
+                                //mrts     
+                                if(current_privilege_level != PRV_M) {
+                                    //message.Debug("Error in mrts: current_privilege_level isn't allowed access");
                                     message.Abort();
-                                    break;
-                            }
-                            this.pc =  0x100 + 0x40*current_privilege_level - 4|0;
-                            break;
+                                    break;   
+                                }
+                                csr[CSR_MSTATUS] = (csr[CSR_MSTATUS] & ~0x6) | 0x02; //Setting the Privilage level to Supervisor
+                                csr[CSR_SBADADDR] = csr[CSR_MBADADDR];
+                                csr[CSR_SCAUSE] = csr[CSR_MCAUSE];
+                                csr[CSR_SEPC] = csr[CSR_MEPC];
+                                this.pc = csr[CSR_STVEC] - 4|0;
+                                break;
 
-                        case 0x001:
-                            //ebreak
-                            this.Trap(CAUSE_BREAKPOINT);
-                            break;
+                            case 0x101:
+                                //sfence.vm
+                                break;
 
-                        case 0x100:
-                            //eret
-                            var current_privilege_level = (csr[CSR_MSTATUS] & 0x06) >> 1;
-                            if(current_privilege_level < PRV_S) {
-                                message.Debug("Error in eret: current_privilege_level isn't allowed access");
+                            default:
+                                //message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + "not found");
                                 message.Abort();
-                                break;   
-                            }
-                            switch(current_privilege_level)
-                            {
-                                
-                                case PRV_S:
-                                    message.Debug("eret PRV_S -"+ utils.ToHex(ins));
-                                    this.PopPrivilegeStack(PRV_U);
-                                    this.pc = csr[CSR_SEPC] - 4|0;
-                                    break;
+                                break;
 
-                                case PRV_H:
-                                    message.Debug("Not supported eret PRV_H -"+ utils.ToHex(ins));
-                                    this.PopPrivilegeStack(PRV_U);
-                                    this.pc = csr[CSR_HEPC] - 4|0;
-                                    message.Abort();
-                                    break;
+                        }
+                        break; 
 
-                                case PRV_M:
-                                    message.Debug("eret PRV_M -"+ utils.ToHex(ins));
-                                    this.PopPrivilegeStack(PRV_U);
-                                    this.pc = csr[CSR_MEPC] - 4|0;
-                                    break;
-                                
-                                default:
-                                    message.Debug("Error in eret: Don't know how to handle privilege level " + current_privilege_level);
-                                    message.Abort();
-                                    break;
-                            }
+                    default:
+                        //message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + "not found");
+                        message.Abort();
+                        break;
+
+                }
+                break;
+
+            case 0x07:
+                //flw,fld
+                switch((ins >> 12)&0x7) {
+                    
+                    case 0x02:
+                        //flw
+                        imm = (ins >> 20);
+                        fs1 = r[(ins >> 15) & 0x1F];
+                        findex = ((ins >> 7) & 0x1F);
+                        paddr = this.TranslateVM(fs1 + imm,VM_READ);
+                        if(paddr == -1) break;
+                        r[0] = this.ram.Read32(fs1 + imm);
+                        f[findex] = ff[0];
+                        //message.Debug("flw - "+ utils.ToHex(ins)+" register " + f[findex]);
+                        break;
+
+                    case 0x03:
+                        //fld
+                        imm = (ins >> 20);
+                        fs1 = r[(ins >> 15) & 0x1F];
+                        findex = ((ins >> 7) & 0x1F) << 1;
+                        paddr = this.TranslateVM(fs1 + imm + 0,VM_READ);
+                        if(paddr == -1) break;
+                        fi[findex + 0] = this.ram.Read32(paddr);
+                        paddr = this.TranslateVM(fs1 + imm + 4,VM_READ);
+                        if(paddr == -1) break;
+                        fi[findex + 1] = this.ram.Read32(paddr);
+                        //message.Debug("fld - "+ utils.ToHex(ins)+" register " + fi[findex]);
+                        break;
+
+                    default:
+                        //message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + "not found");
+                        message.Abort();
+                        break;
+
+                }
+                break;
+
+            case 0x27:
+                //fsw,fsd
+                switch((ins >> 12)&0x7) {
+
+                    case 0x02:
+                        //fsw
+                        imm1 = (ins >> 25);
+                        imm2 = (ins >> 7) & 0x1F;
+                        imm = (imm1 << 5) + imm2;
+                        fs1 = r[(ins >> 15) & 0x1F];
+                        findex = (ins >> 20) & 0x1F;
+                        ff[0] = f[findex];
+                        paddr = this.TranslateVM(fs1 + imm,VM_WRITE);
+                        if(paddr == -1) break;
+                        this.ram.Write32(paddr,r[0]);
+                        //message.Debug("fsw - "+ utils.ToHex(ins)+" register " + f[findex]);
+                        break;
+
+                    case 0x03:
+                        //fsd
+                        imm1 = (ins >> 25);
+                        imm2 = (ins >> 7) & 0x1F;
+                        imm = (imm1 << 5) + imm2;
+                        fs1 = r[(ins >> 15) & 0x1F];
+                        findex = ((ins >> 20) & 0x1F) << 1;
+                        paddr = this.TranslateVM(fs1 + imm + 0,VM_WRITE);
+                        if(paddr == -1) break;
+                        this.ram.Write32(paddr,fi[findex + 0]);
+                        paddr = this.TranslateVM(fs1 + imm + 4,VM_WRITE);
+                        if(paddr == -1) break;
+                        this.ram.Write32(paddr,fi[findex + 1]);
+                        //message.Debug("fsw - "+ utils.ToHex(ins)+" register " + fi[findex]);
+                        break;
+
+                    default:
+                        //message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + "not found");
+                        message.Abort();
+                        break;
+
+                }
+                break;
+
+            case 0x53:
+                //fadd.s,fsub.s
+                switch((ins >> 25)&0x7F) {
+                    
+                    case 0x00 :
+                        //fadd.s
+                        rs1 = f[(ins >> 15) & 0x1F];
+                        rs2 = f[(ins >> 20) & 0x1F];
+                        rindex = (ins >> 7) & 0x1F;
+                        f[rindex] = rs1 + rs2;
+                        //message.Debug("fadd.s - "+ utils.ToHex(ins)+" register " + f[rindex]);
+                        break;
+
+                    case 0x04:
+                        //fsub.s
+                        rs1 = f[(ins >> 15) & 0x1F];
+                        rs2 = f[(ins >> 20) & 0x1F];
+                        rindex = (ins >> 7) & 0x1F;
+                        f[rindex] = rs1 - rs2;
+                        //message.Debug("fsub.s - "+ utils.ToHex(ins)+" register " + f[rindex]);
+                        break;
+
+                    case 0x60:
+                        //fcvt.w.s
+                        rindex = (ins >> 7) & 0x1F;
+                        r[rindex] = f[(ins >> 15) & 0x1F];
+                        //message.Debug("fcvt.w.s - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                        break;
+
+                    case 0x01 :
+                        //fadd.d
+                        rs1 = f[(ins >> 15) & 0x1F];
+                        rs2 = f[(ins >> 20) & 0x1F];
+                        rindex = (ins >> 7) & 0x1F;
+                        f[rindex] = rs1 + rs2;
+                        //message.Debug("fadd.d - "+ utils.ToHex(ins)+" register " + f[rindex]);
+                        break;
+
+                    case 0x05:
+                        //fsub.d
+                        rs1 = f[(ins >> 15) & 0x1F];
+                        rs2 = f[(ins >> 20) & 0x1F];
+                        rindex = (ins >> 7) & 0x1F;
+                        f[rindex] = rs1 - rs2;
+                        //message.Debug("fsub.d - "+ utils.ToHex(ins)+" register " + f[rindex]);
+                        break;
+
+                    case 0x61:
+                        //fcvt.w.d
+                        rindex = (ins >> 7) & 0x1F;
+                        r[rindex] = f[(ins >> 15) & 0x1F];
+                        //message.Debug("fcvt.w.s - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                        break;
+
+                    case 0x78:
+                        //fmv.s.x
+                        rs1 = (ins >> 15) & 0x1F;
+                        findex = (ins >> 7) & 0x1F;
+                        r[0] = r[rs1];
+                        f[findex] = ff[0]; 
+                        //message.Debug("fmv.s.x - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                        break;
+
+
+                    default:
+                        //message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + "not found");
+                        message.Abort();
+                        break;
+                }
+                break;
+
+            case 0x2F:
+                //amoswap,amoadd,amoxor,amoand,amoor,amomin,amomax,amominu,amomaxu
+                switch((ins >> 27)&0x1F) {
+                    
+                    case 0x01:
+                        //amoswap
+                        rs1 = r[(ins >> 15) & 0x1F];
+                        rs2 = r[(ins >> 20) & 0x1F];
+                        rindex = (ins >> 7) & 0x1F;
+                        paddr = this.TranslateVM(rs1,VM_READ);
+                        if(paddr == -1) break;
+                        r[rindex] = this.ram.Read32(paddr);
+                        paddr = this.TranslateVM(rs1,VM_WRITE);
+                        if(paddr == -1) break;
+                        this.ram.Write32(paddr,rs2);
+                        //message.Debug("amoswap - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                        break;
+
+                    case 0x00:
+                        //amoadd
+                        rs1 = r[(ins >> 15) & 0x1F];
+                        rs2 = r[(ins >> 20) & 0x1F];
+                        rindex = (ins >> 7) & 0x1F;
+                        paddr = this.TranslateVM(rs1,VM_READ);
+                        if(paddr == -1) break;
+                        r[rindex] = this.ram.Read32(paddr);
+                        paddr = this.TranslateVM(rs1,VM_WRITE);
+                        if(paddr == -1) break;
+                        this.ram.Write32(paddr,r[rindex] + rs2);
+                        //message.Debug("amoadd - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                        break;
+
+                    case 0x04:
+                        //amoxor
+                        rs1 = r[(ins >> 15) & 0x1F];
+                        rs2 = r[(ins >> 20) & 0x1F];
+                        rindex = (ins >> 7) & 0x1F;
+                        paddr = this.TranslateVM(rs1,VM_READ);
+                        if(paddr == -1) break;
+                        r[rindex] = this.ram.Read32(paddr);
+                        paddr = this.TranslateVM(rs1,VM_WRITE);
+                        if(paddr == -1) break;
+                        this.ram.Write32(paddr,r[rindex] ^ rs2);
+                        //message.Debug("amoxor - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                        break;
+
+                    case 0x0C:
+                        //amoand
+                        rs1 = r[(ins >> 15) & 0x1F];
+                        rs2 = r[(ins >> 20) & 0x1F];
+                        rindex = (ins >> 7) & 0x1F;
+                        paddr = this.TranslateVM(rs1,VM_READ);
+                        if(paddr == -1) break;
+                        r[rindex] = this.ram.Read32(paddr);
+                        paddr = this.TranslateVM(rs1,VM_WRITE);
+                        if(paddr == -1) break;
+                        this.ram.Write32(paddr,r[rindex] & rs2);
+                        //message.Debug("amoand - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                        break;
+
+                    case 0x08:
+                        //amoor
+                        rs1 = r[(ins >> 15) & 0x1F];
+                        rs2 = r[(ins >> 20) & 0x1F];
+                        rindex = (ins >> 7) & 0x1F;
+                        paddr = this.TranslateVM(rs1,VM_READ);
+                        if(paddr == -1) break;
+                        r[rindex] = this.ram.Read32(paddr);
+                        paddr = this.TranslateVM(rs1,VM_WRITE);
+                        if(paddr == -1) break;
+                        this.ram.Write32(paddr,r[rindex] | rs2);
+                        //message.Debug("amoor - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                        break;
+
+                    case 0x10:
+                        //amomin
+                        rs1 = r[(ins >> 15) & 0x1F];
+                        rs2 = r[(ins >> 20) & 0x1F];
+                        rindex = (ins >> 7) & 0x1F;
+                        paddr = this.TranslateVM(rs1,VM_READ);
+                        if(paddr == -1) break;
+                        r[rindex] = this.ram.Read32(paddr);
+                        if((rs2 >> 0) > (r[rindex] >> 0)) r[0] = r[rindex];
+                        else r[0] = rs2;
+                        paddr = this.TranslateVM(rs1,VM_WRITE);
+                        if(paddr == -1) break;
+                        this.ram.Write32(paddr,r[0]);
+                        //message.Debug("amomin - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                        break;
+
+                   case 0x14:
+                        //amomax
+                        rs1 = r[(ins >> 15) & 0x1F];
+                        rs2 = r[(ins >> 20) & 0x1F];
+                        rindex = (ins >> 7) & 0x1F;
+                        paddr = this.TranslateVM(rs1,VM_READ);
+                        if(paddr == -1) break;
+                        r[rindex] = this.ram.Read32(paddr);
+                        if((rs2 >> 0) < (r[rindex] >> 0)) r[0] = r[rindex];
+                        else r[0] = rs2;
+                        paddr = this.TranslateVM(rs1,VM_WRITE);
+                        if(paddr == -1) break;
+                        this.ram.Write32(paddr,r[0]);
+                        //message.Debug("amomax - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                        break;
+
+                    case 0x18:
+                        //amominu
+                        rs1 = r[(ins >> 15) & 0x1F];
+                        rs2 = r[(ins >> 20) & 0x1F];
+                        rindex = (ins >> 7) & 0x1F;
+                        r[rindex] = this.ram.Read32(paddr);
+                        if((rs2 >>> 0) > (r[rindex] >>> 0)) r[0] = r[rindex];
+                        else r[0] = rs2;
+                        paddr = this.TranslateVM(rs1,VM_WRITE);
+                        if(paddr == -1) break;
+                        this.ram.Write32(paddr,r[0]);
+                        //message.Debug("amominu - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                        break;
+
+                    case 0x1C:
+                        //amomaxu
+                        rs1 = r[(ins >> 15) & 0x1F];
+                        rs2 = r[(ins >> 20) & 0x1F];
+                        rindex = (ins >> 7) & 0x1F;
+                        paddr = this.TranslateVM(rs1,VM_READ);
+                        if(paddr == -1) break;
+                        r[rindex] = this.ram.Read32(paddr);
+                        if((rs2 >>> 0) < (r[rindex] >>> 0)) r[0] = r[rindex];
+                        else r[0] = rs2;
+                        paddr = this.TranslateVM(rs1,VM_WRITE);
+                        if(paddr == -1) break;
+                        this.ram.Write32(paddr,r[0]);
+                        //message.Debug("amomaxu - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                        break;
+
+                    case 0x02:
+                        //lr.d
+                        rs1 = r[(ins >> 15) & 0x1F];
+                        rindex = (ins >> 7) & 0x1F;
+                        paddr = this.TranslateVM(rs1,VM_READ);
+                        if(paddr == -1) break;
+                        r[rindex] = this.ram.Read32(paddr);
+                        this.amoaddr = rs1;
+                        this.amovalue = r[rindex];
+                        //message.Debug("lr.d - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                        break;
+
+                    case 0x03:
+                        //sc.d
+                        rs1 = r[(ins >> 15) & 0x1F];
+                        rs2 = (ins >> 20) & 0x1F;
+                        rindex = (ins >> 7) & 0x1F;
+                        if(rs1 != this.amoaddr) {
+                            r[rindex] = 0x01;
                             break;
-
-                        case 0x305:
-                            //mrts     
-                            if(current_privilege_level != PRV_M) {
-                                message.Debug("Error in mrts: current_privilege_level isn't allowed access");
-                                message.Abort();
-                                break;   
-                            }
-                            csr[CSR_MSTATUS] = (csr[CSR_MSTATUS] & ~0x6) | 0x02; //Setting the Privilage level to Supervisor
-                            csr[CSR_SBADADDR] = csr[CSR_MBADADDR];
-                            csr[CSR_SCAUSE] = csr[CSR_MCAUSE];
-                            csr[CSR_SEPC] = csr[CSR_MEPC];
-                            this.pc = csr[CSR_STVEC] - 4|0;
+                        }
+                        var physical_addr = this.TranslateVM(rs1, VM_READ);
+                        if(physical_addr == -1) break;
+                        if(this.ram.Read32(physical_addr) != this.amovalue) {
+                            r[rindex] = 0x01;
                             break;
-
-                        default:
-                            message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + "not found");
-                            message.Abort();
-                            break;
-
-                    }
-                    break; 
-
-                default:
-                    message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + "not found");
-                    message.Abort();
-                    break;
-
-            }
-            break;
-
-        case 0x07:
-            //flw,fld
-            switch((ins >> 12)&0x7) {
-                
-                case 0x02:
-                    //flw
-                    imm = (ins >> 20);
-                    fs1 = r[(ins >> 15) & 0x1F];
-                    findex = ((ins >> 7) & 0x1F);
-                    r[0] = this.ram.Read32(fs1 + imm);
-                    f[findex] = ff[0];
-                    message.Debug("flw - "+ utils.ToHex(ins)+" register " + f[findex]);
-                    break;
-
-                case 0x03:
-                    //fld
-                    imm = (ins >> 20);
-                    fs1 = r[(ins >> 15) & 0x1F];
-                    findex = ((ins >> 7) & 0x1F) << 1;
-                    fi[findex + 0] = this.ram.Read32(fs1 + imm + 0);
-                    fi[findex + 1] = this.ram.Read32(fs1 + imm + 4);
-                    message.Debug("fld - "+ utils.ToHex(ins)+" register " + fi[findex]);
-                    break;
-
-                default:
-                    message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + "not found");
-                    message.Abort();
-                    break;
-
-            }
-            break;
-
-        case 0x27:
-            //fsw,fsd
-            switch((ins >> 12)&0x7) {
-
-                case 0x02:
-                    //fsw
-                    imm1 = (ins >> 25);
-                    imm2 = (ins >> 7) & 0x1F;
-                    imm = (imm1 << 5) + imm2;
-                    fs1 = r[(ins >> 15) & 0x1F];
-                    findex = (ins >> 20) & 0x1F;
-                    ff[0] = f[findex];
-                    this.ram.Write32(fs1 + imm,r[0]);
-                    message.Debug("fsw - "+ utils.ToHex(ins)+" register " + f[findex]);
-                    break;
-
-                case 0x03:
-                    //fsd
-                    imm1 = (ins >> 25);
-                    imm2 = (ins >> 7) & 0x1F;
-                    imm = (imm1 << 5) + imm2;
-                    fs1 = r[(ins >> 15) & 0x1F];
-                    findex = ((ins >> 20) & 0x1F) << 1;
-                    this.ram.Write32(fs1 + imm + 0,fi[findex + 0]);
-                    this.ram.Write32(fs1 + imm + 4,fi[findex + 1]);
-                    message.Debug("fsw - "+ utils.ToHex(ins)+" register " + fi[findex]);
-                    break;
-
-                default:
-                    message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + "not found");
-                    message.Abort();
-                    break;
-
-            }
-            break;
-
-        case 0x53:
-            //fadd.s,fsub.s
-            switch((ins >> 25)&0x7F) {
-                
-                case 0x00 :
-                    //fadd.s
-                    rs1 = f[(ins >> 15) & 0x1F];
-                    rs2 = f[(ins >> 20) & 0x1F];
-                    rindex = (ins >> 7) & 0x1F;
-                    f[rindex] = rs1 + rs2;
-                    message.Debug("fadd.s - "+ utils.ToHex(ins)+" register " + f[rindex]);
-                    break;
-
-                case 0x04:
-                    //fsub.s
-                    rs1 = f[(ins >> 15) & 0x1F];
-                    rs2 = f[(ins >> 20) & 0x1F];
-                    rindex = (ins >> 7) & 0x1F;
-                    f[rindex] = rs1 - rs2;
-                    message.Debug("fsub.s - "+ utils.ToHex(ins)+" register " + f[rindex]);
-                    break;
-
-                case 0x60:
-                    //fcvt.w.s
-                    rindex = (ins >> 7) & 0x1F;
-                    r[rindex] = f[(ins >> 15) & 0x1F];
-                    message.Debug("fcvt.w.s - "+ utils.ToHex(ins)+" register " + r[rindex]);
-                    break;
-
-                case 0x01 :
-                    //fadd.d
-                    rs1 = f[(ins >> 15) & 0x1F];
-                    rs2 = f[(ins >> 20) & 0x1F];
-                    rindex = (ins >> 7) & 0x1F;
-                    f[rindex] = rs1 + rs2;
-                    message.Debug("fadd.d - "+ utils.ToHex(ins)+" register " + f[rindex]);
-                    break;
-
-                case 0x05:
-                    //fsub.d
-                    rs1 = f[(ins >> 15) & 0x1F];
-                    rs2 = f[(ins >> 20) & 0x1F];
-                    rindex = (ins >> 7) & 0x1F;
-                    f[rindex] = rs1 - rs2;
-                    message.Debug("fsub.d - "+ utils.ToHex(ins)+" register " + f[rindex]);
-                    break;
-
-                case 0x61:
-                    //fcvt.w.d
-                    rindex = (ins >> 7) & 0x1F;
-                    r[rindex] = f[(ins >> 15) & 0x1F];
-                    message.Debug("fcvt.w.s - "+ utils.ToHex(ins)+" register " + r[rindex]);
-                    break;
-
-                case 0x78:
-                    //fmv.s.x
-                    rs1 = (ins >> 15) & 0x1F;
-                    findex = (ins >> 7) & 0x1F;
-                    r[0] = r[rs1];
-                    f[findex] = ff[0]; 
-                    message.Debug("fmv.s.x - "+ utils.ToHex(ins)+" register " + r[rindex]);
-                    break;
-
-
-                default:
-                    message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + "not found");
-                    message.Abort();
-                    break;
-            }
-            break;
-
-        case 0x2F:
-            //amoswap,amoadd,amoxor,amoand,amoor,amomin,amomax,amominu,amomaxu
-            switch((ins >> 27)&0x1F) {
-                
-                case 0x01:
-                    //amoswap
-                    rs1 = r[(ins >> 15) & 0x1F];
-                    rs2 = r[(ins >> 20) & 0x1F];
-                    rindex = (ins >> 7) & 0x1F;
-                    r[rindex] = this.ram.Read32(this.TranslateVM(rs1,VM_READ));
-                    this.ram.Write32(this.TranslateVM(rs1,VM_WRITE),rs2);
-                    message.Debug("amoswap - "+ utils.ToHex(ins)+" register " + r[rindex]);
-                    break;
-
-                case 0x00:
-                    //amoadd
-                    rs1 = r[(ins >> 15) & 0x1F];
-                    rs2 = r[(ins >> 20) & 0x1F];
-                    rindex = (ins >> 7) & 0x1F;
-                    r[rindex] = this.ram.Read32(this.TranslateVM(rs1,VM_READ));
-                    this.ram.Write32(this.TranslateVM(rs1,VM_WRITE),r[rindex] + rs2);
-                    message.Debug("amoadd - "+ utils.ToHex(ins)+" register " + r[rindex]);
-                    break;
-
-                case 0x04:
-                    //amoxor
-                    rs1 = r[(ins >> 15) & 0x1F];
-                    rs2 = r[(ins >> 20) & 0x1F];
-                    rindex = (ins >> 7) & 0x1F;
-                    r[rindex] = this.ram.Read32(this.TranslateVM(rs1,VM_READ));
-                    this.ram.Write32(this.TranslateVM(rs1,VM_WRITE),r[rindex] ^ rs2);
-                    message.Debug("amoxor - "+ utils.ToHex(ins)+" register " + r[rindex]);
-                    break;
-
-                case 0x0C:
-                    //amoand
-                    rs1 = r[(ins >> 15) & 0x1F];
-                    rs2 = r[(ins >> 20) & 0x1F];
-                    rindex = (ins >> 7) & 0x1F;
-                    r[rindex] = this.ram.Read32(this.TranslateVM(rs1,VM_READ));
-                    this.ram.Write32(this.TranslateVM(rs1,VM_WRITE),r[rindex] & rs2);
-                    message.Debug("amoand - "+ utils.ToHex(ins)+" register " + r[rindex]);
-                    break;
-
-                case 0x08:
-                    //amoor
-                    rs1 = r[(ins >> 15) & 0x1F];
-                    rs2 = r[(ins >> 20) & 0x1F];
-                    rindex = (ins >> 7) & 0x1F;
-                    r[rindex] = this.ram.Read32(this.TranslateVM(rs1,VM_READ));
-                    this.ram.Write32(this.TranslateVM(rs1,VM_WRITE),r[rindex] | rs2);
-                    message.Debug("amoor - "+ utils.ToHex(ins)+" register " + r[rindex]);
-                    break;
-
-                case 0x10:
-                    //amomin
-                    rs1 = r[(ins >> 15) & 0x1F];
-                    rs2 = r[(ins >> 20) & 0x1F];
-                    rindex = (ins >> 7) & 0x1F;
-                    r[rindex] = this.ram.Read32(this.TranslateVM(rs1,VM_READ));
-                    if((rs2 >> 0) > (r[rindex] >> 0)) r[0] = r[rindex];
-                    else r[0] = rs2;
-                    this.ram.Write32(this.TranslateVM(rs1,VM_WRITE),r[0]);
-                    message.Debug("amomin - "+ utils.ToHex(ins)+" register " + r[rindex]);
-                    break;
-
-               case 0x14:
-                    //amomax
-                    rs1 = r[(ins >> 15) & 0x1F];
-                    rs2 = r[(ins >> 20) & 0x1F];
-                    rindex = (ins >> 7) & 0x1F;
-                    r[rindex] = this.ram.Read32(this.TranslateVM(rs1,VM_READ));
-                    if((rs2 >> 0) < (r[rindex] >> 0)) r[0] = r[rindex];
-                    else r[0] = rs2;
-                    this.ram.Write32(this.TranslateVM(rs1,VM_WRITE),r[0]);
-                    message.Debug("amomax - "+ utils.ToHex(ins)+" register " + r[rindex]);
-                    break;
-
-                case 0x18:
-                    //amominu
-                    rs1 = r[(ins >> 15) & 0x1F];
-                    rs2 = r[(ins >> 20) & 0x1F];
-                    rindex = (ins >> 7) & 0x1F;
-                    r[rindex] = this.ram.Read32(this.TranslateVM(rs1,VM_READ));
-                    if((rs2 >>> 0) > (r[rindex] >>> 0)) r[0] = r[rindex];
-                    else r[0] = rs2;
-                    this.ram.Write32(this.TranslateVM(rs1,VM_WRITE),r[0]);
-                    message.Debug("amominu - "+ utils.ToHex(ins)+" register " + r[rindex]);
-                    break;
-
-                case 0x1C:
-                    //amomaxu
-                    rs1 = r[(ins >> 15) & 0x1F];
-                    rs2 = r[(ins >> 20) & 0x1F];
-                    rindex = (ins >> 7) & 0x1F;
-                    r[rindex] = this.ram.Read32(this.TranslateVM(rs1,VM_READ));
-                    if((rs2 >>> 0) < (r[rindex] >>> 0)) r[0] = r[rindex];
-                    else r[0] = rs2;
-                    this.ram.Write32(this.TranslateVM(rs1,VM_WRITE),r[0]);
-                    message.Debug("amomaxu - "+ utils.ToHex(ins)+" register " + r[rindex]);
-                    break;
-
-                case 0x02:
-                    //lr.d
-                    rs1 = r[(ins >> 15) & 0x1F];
-                    rindex = (ins >> 7) & 0x1F;
-                    r[rindex] = this.ram.Read32(this.TranslateVM(rs1,VM_READ));
-                    this.amoaddr = rs1;
-                    this.amovalue = r[rindex];
-                    message.Debug("lr.d - "+ utils.ToHex(ins)+" register " + r[rindex]);
-                    break;
-
-                case 0x03:
-                    //sc.d
-                    rs1 = r[(ins >> 15) & 0x1F];
-                    rs2 = (ins >> 20) & 0x1F;
-                    rindex = (ins >> 7) & 0x1F;
-                    r[rindex] = 0x01;
-                    this.ram.Write32(this.TranslateVM(rs1,VM_WRITE),r[rs2]);
-                    if(rs1 == this.amoaddr && r[rs2] == this.amovalue)
+                        }
                         r[rindex] = 0x00;
-                    message.Debug("sc.d - "+ utils.ToHex(ins)+" register " + r[rindex]);
-                    break;
+                        var physical_addr = this.TranslateVM(rs1, VM_WRITE);
+                        if(physical_addr == -1) break;
+                        this.ram.Write32(physical_addr, r[rs2]);
+                        //message.Debug("sc.d - "+ utils.ToHex(ins)+" register " + r[rindex]);
+                        break;
 
-                default:
-                    message.Debug("Error in Atomic Memory Instruction " + utils.ToHex(ins) + "not found");
-                    message.Abort();
-                    break;
+                    default:
+                        //message.Debug("Error in Atomic Memory Instruction " + utils.ToHex(ins) + "not found");
+                        message.Abort();
+                        break;
 
-            }
-            break;
+                }
+                break;
 
-        case 0x0F:
-            //fence
-            break;
+            case 0x0F:
+                //fence
+                break;
 
-        default:
-            message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + "not found");
-            message.Abort();
-            break;
+            default:
+                //message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + " not found at "+utils.ToHex(this.pc));
+                message.Abort();
+                break;
         }
 
-    message.Debug(utils.ToHex(this.pc));
-    this.pc = this.pc + 4|0;
-    this.ticks = this.ticks + 1|0;
+        //message.Debug(utils.ToHex(this.pc));
+        this.pc = this.pc + 4|0;
+        this.ticks = this.ticks + 1|0;
+    } while(--steps);
     return 0;
 };
 
 module.exports = SafeCPU;
 
-},{"../messagehandler":25,"../utils":35}],33:[function(require,module,exports){
+},{"../messagehandler":26,"../utils":37,"./syscalls.js":34}],34:[function(require,module,exports){
+
+"use strict";
+var message = require('../messagehandler');
+var utils = require('../utils');
+
+var SYS_OPENAT = 56;
+var SYS_CLOSE = 57;
+var SYS_PREAD = 67;
+var SYS_WRITE = 64;
+var SYS_FSTAT = 80;
+var SYS_EXIT = 93;
+var SYS_GETMAINVARS = 2011;
+
+var CSR_MTOHOST =  0x780;
+var CSR_MFROMHOST =  0x781;
+
+function SysCalls(ram,csr) {
+
+    message.Debug("Initialize SysCalls");
+
+    this.ram = ram;
+    this.csr = csr;
+    this.elf8mem = [];
+    this.file_descriptor_table = [];
+    this.file_size = []; //file descriptor is the index
+    this.file_pointer = []; //file descriptor is the index
+    this.file_descriptor_offset = 9;
+    this.elf8mem_offset = 0x00;
+    
+    
+}
+
+SysCalls.prototype.HandleSysCall = function () {
+
+    var ram = this.ram;
+    var csr = this.csr;
+    var syscall_id = this.ram.Read32(this.csr[CSR_MTOHOST]);
+    var argv = ["spike", "-m31", "-p1", "vmlinux"];
+    switch(syscall_id){
+
+        case SYS_OPENAT:
+            //sys_openat
+            var filename_pointer = this.ram.Read32(this.csr[CSR_MTOHOST] + 16);
+            var filename = "";
+            for(var i=0,c;;i++){
+                c = this.ram.Read8(filename_pointer+i);
+                if(c == 0)
+                    break;
+                else
+                    filename += String.fromCharCode(c);
+            }
+            var url = filename;
+            utils.LoadBinaryResourceII(url, this.OnFileLoaded.bind(this), false, function(error){message.Abort();});
+            this.ram.Write32(this.csr[CSR_MTOHOST], this.file_descriptor_offset);
+            this.csr[CSR_MFROMHOST] = 1;
+            break;
+
+        case SYS_PREAD:
+            //sys_pread
+            var file_descriptor = this.ram.Read32(this.csr[CSR_MTOHOST] + 8);
+            var file_address = this.file_descriptor_table[file_descriptor];
+            var buffer_address = this.ram.Read32(this.csr[CSR_MTOHOST] + 16);
+            var number_bytes = this.ram.Read32(this.csr[CSR_MTOHOST] + 24);
+            //var file_offset = this.file_pointer[file_descriptor];
+            var file_offset = this.ram.Read32(this.csr[CSR_MTOHOST] + 32);
+            var file_length = this.file_size[file_descriptor];
+            var i = 0;
+            for(var b;i < number_bytes;i++){
+                if((i + file_offset) >= file_length) break;
+                b = this.elf8mem[file_address + i + file_offset];
+                this.ram.Write8(buffer_address + i, b);
+            }
+            this.file_pointer[file_descriptor] += i;
+            this.ram.Write32(this.csr[CSR_MTOHOST], i);
+            this.csr[CSR_MFROMHOST] = 1;
+            break;
+
+        case SYS_CLOSE:
+            //sys_close
+            this.ram.Write32(this.csr[CSR_MTOHOST], 0);
+            this.csr[CSR_MFROMHOST] = 1;
+            break;
+
+        case SYS_FSTAT:
+            //sys_fstat
+            var file_descriptor = this.ram.Read32(this.csr[CSR_MTOHOST] + 8);
+            var stat_buffer_address = this.ram.Read32(this.csr[CSR_MTOHOST] + 16);
+            this.ram.Write32(stat_buffer_address, 0); //unsigned long   Device. 
+            this.ram.Write32(stat_buffer_address + 4, 0); //unsigned long   File serial number
+            this.ram.Write16(stat_buffer_address + 8, 0x81FF); //unsigned int    File mode
+            this.ram.Write16(stat_buffer_address +10, 0); //unsigned int    Link count
+            this.ram.Write16(stat_buffer_address +12, 0); //unsigned int    User ID of the file's owner
+            this.ram.Write16(stat_buffer_address +14, 0); //unsigned int    Group ID of the file's group
+            this.ram.Write32(stat_buffer_address +16, 0); //unsigned long   Device number, if device
+            this.ram.Write32(stat_buffer_address +20, 0); //unsigned long   __pad1
+            this.ram.Write32(stat_buffer_address +24, this.file_size[file_descriptor]); //long Size of file, in bytes
+            this.ram.Write16(stat_buffer_address +28, 512); //int           Optimal block size for I/O
+            this.ram.Write16(stat_buffer_address +30, 0); //int             __pad2
+            this.ram.Write32(stat_buffer_address +32, 0); //long            Number 512-byte blocks allocated
+            this.ram.Write32(stat_buffer_address +36, 0); //long            Time of last access
+            this.ram.Write32(stat_buffer_address +40, 0); //unsigned long   st_atime_nsec
+            this.ram.Write32(stat_buffer_address +44, 0); //long            Time of last modification
+            this.ram.Write32(stat_buffer_address +48, 0); //unsigned long   st_mtime_nsec
+            this.ram.Write32(stat_buffer_address +52, 0); //long            Time of last status change
+            this.ram.Write32(stat_buffer_address +56, 0); //unsigned long   st_ctime_nsec
+            this.ram.Write16(stat_buffer_address +60, 0); //unsigned int    __unused4
+            this.ram.Write16(stat_buffer_address +62, 0); //unsigned int    __unused5
+            this.ram.Write32(this.csr[CSR_MTOHOST], 1);
+            this.csr[CSR_MFROMHOST] = 1;
+            break;
+
+        case SYS_WRITE:
+            //sys_write
+            var length = this.ram.Read32(this.csr[CSR_MTOHOST] + 8*3), i =0;
+            var string_address = this.ram.Read32(this.csr[CSR_MTOHOST] + 8*2);
+            while(i < length){
+                var c = this.ram.Read8(string_address + (i++));
+                this.ram.Write8Little(0x90000000 >> 0, c);
+                if (c == 0xA) this.ram.Write8(0x90000000 >> 0, 0xD);
+            }
+            this.ram.Write32(this.csr[CSR_MTOHOST], i);
+            this.csr[CSR_MFROMHOST] = 1;
+            break;
+
+        case SYS_EXIT:
+            //sys_exit
+            message.Debug("Program exited with sys_exit for inst at PC "+utils.ToHex(this.pc));
+            message.Abort();
+            break;
+
+        case SYS_GETMAINVARS:
+            //sys_getmainvars
+            var address = this.ram.Read32(this.csr[CSR_MTOHOST] + 8);
+            var length = this.ram.Read32(this.csr[CSR_MTOHOST] + 16);
+
+           // write argc
+            this.ram.Write32(address, argv.length);
+            // argv[argc] = NULL
+            // envp[0] = NULL
+
+            // generate list of pointers to string
+            var ofs = argv.length*8 + 8*4; // offset of first string entry
+            for(var i=0; i<argv.length; i++) {
+                this.ram.Write32(address+8+i*8, address + ofs);
+                ofs += argv[i].length+1;
+            }
+
+            ofs = argv.length*8 + 8*4;
+            for(var i=0; i<argv.length; i++) {
+                for (var j=0; j<argv[i].length; j++) {
+                    this.ram.Write8(address + ofs, argv[i].charCodeAt(j));
+                    ofs++;
+                }
+                ofs++; // terminating "\0"
+            }
+
+            this.csr[CSR_MFROMHOST] = 1;
+            this.ram.Write32(this.csr[CSR_MTOHOST], 0);
+            break;
+
+        default:
+            message.Debug("unkown SysCall "+utils.ToHex(syscall_id)+" at PC "+utils.ToHex(this.pc));
+            message.Abort();
+           break;
+    }
+
+};
+
+SysCalls.prototype.OnFileLoaded = function(buffer) {
+
+    var buffer8 = new Uint8Array(buffer);
+    var length = buffer8.length;
+    for(var i=0; i<length; i++) this.elf8mem[i+this.elf8mem_offset] = buffer8[i];
+    this.file_descriptor_table[++this.file_descriptor_offset] = this.elf8mem_offset;
+    this.elf8mem_offset += length;
+    this.file_size[this.file_descriptor_offset] = length;
+    this.file_pointer[this.file_descriptor_offset] = 0;
+    
+};
+module.exports = SysCalls;
+},{"../messagehandler":26,"../utils":37}],35:[function(require,module,exports){
 // -------------------------------------------------
 // ------------------- SYSTEM ----------------------
 // -------------------------------------------------
@@ -12260,6 +13544,7 @@ var Virtio9p = require('./dev/virtio/9p.js');
 var VirtioDummy = require('./dev/virtio/dummy.js');
 var VirtioInput = require('./dev/virtio/input.js');
 var VirtioNET = require('./dev/virtio/net.js');
+var VirtioBlock = require('./dev/virtio/block.js');
 var FS = require('./filesystem/filesystem.js');
 
 
@@ -12349,6 +13634,7 @@ System.prototype.Reset = function() {
     this.virtiodummydev.Reset();
     this.virtioinputdev.Reset();
     this.virtionetdev.Reset();
+    this.virtioblockdev.Reset();
     this.cpu.Reset();
     this.ips = 0;
 };
@@ -12389,6 +13675,7 @@ System.prototype.Init = function(system) {
 
     this.virtioinputdev = new VirtioInput(this.ram);
     this.virtionetdev = new VirtioNET(this.ram);
+    this.virtioblockdev = new VirtioBlock(this.ram);
     this.virtiodummydev = new VirtioDummy(this.ram);
     this.virtiodev2 = new VirtIODev(this, 0xB, this.ram, this.virtiodummydev);
     this.virtiodev3 = new VirtIODev(this, 0xC, this.ram, this.virtiodummydev);
@@ -12577,7 +13864,7 @@ System.prototype.MainLoop = function() {
 
 module.exports = System;
 
-},{"./bzip2.js":2,"./dev/ata.js":3,"./dev/ethmac.js":4,"./dev/framebuffer.js":5,"./dev/irq.js":6,"./dev/keyboard.js":7,"./dev/rtc.js":8,"./dev/sound.js":9,"./dev/timer.js":10,"./dev/touchscreen.js":11,"./dev/uart.js":12,"./dev/virtio.js":13,"./dev/virtio/9p.js":14,"./dev/virtio/dummy.js":15,"./dev/virtio/input.js":16,"./dev/virtio/net.js":18,"./elf.js":19,"./filesystem/filesystem.js":20,"./messagehandler.js":25,"./or1k":27,"./ram.js":30,"./riscv":31,"./timer.js":34,"./utils.js":35}],34:[function(require,module,exports){
+},{"./bzip2.js":2,"./dev/ata.js":3,"./dev/ethmac.js":4,"./dev/framebuffer.js":5,"./dev/irq.js":6,"./dev/keyboard.js":7,"./dev/rtc.js":8,"./dev/sound.js":9,"./dev/timer.js":10,"./dev/touchscreen.js":11,"./dev/uart.js":12,"./dev/virtio.js":13,"./dev/virtio/9p.js":14,"./dev/virtio/block.js":15,"./dev/virtio/dummy.js":16,"./dev/virtio/input.js":17,"./dev/virtio/net.js":19,"./elf.js":20,"./filesystem/filesystem.js":21,"./messagehandler.js":26,"./or1k":28,"./ram.js":31,"./riscv":32,"./timer.js":36,"./utils.js":37}],36:[function(require,module,exports){
 // -------------------------------------------------
 // ------------------- TIMER -----------------------
 // -------------------------------------------------
@@ -12717,7 +14004,7 @@ Timer.prototype.GlobalUpdate = function(ticks) {
 
 module.exports = Timer;
 
-},{"./messagehandler.js":25,"./utils.js":35}],35:[function(require,module,exports){
+},{"./messagehandler.js":26,"./utils.js":37}],37:[function(require,module,exports){
 // -------------------------------------------------
 // ------------------ Utils ------------------------
 // -------------------------------------------------
@@ -12768,6 +14055,34 @@ function LoadBinaryResource(url, OnSuccess, OnError) {
     // open might fail, when we try to open an unsecure address, when the main page is secure
     try {
         req.open('GET', url, true);
+    } catch(err) {
+        OnError(err);
+        return;
+    }
+    req.responseType = "arraybuffer";
+    req.onreadystatechange = function () {
+        if (req.readyState != 4) {
+            return;
+        }
+        if ((req.status != 200) && (req.status != 0)) {
+            OnError("Error: Could not load file " + url);
+            return;
+        }
+        var arrayBuffer = req.response;
+        if (arrayBuffer) {
+            OnSuccess(arrayBuffer);
+        } else {
+            OnError("Error: No data received from: " + url);
+        }
+    };
+    req.send(null);
+}
+
+function LoadBinaryResourceII(url, OnSuccess, NonBlocking, OnError) {
+    var req = new XMLHttpRequest();
+    // open might fail, when we try to open an unsecure address, when the main page is secure
+    try {
+        req.open('GET', url, NonBlocking);
     } catch(err) {
         OnError(err);
         return;
@@ -12901,10 +14216,11 @@ module.exports.uint32 = uint32;
 module.exports.ToHex = ToHex;
 module.exports.ToBin = ToBin;
 module.exports.LoadBinaryResource = LoadBinaryResource;
+module.exports.LoadBinaryResourceII = LoadBinaryResourceII;
 module.exports.LoadTextResource = LoadTextResource;
 
 
-},{}],36:[function(require,module,exports){
+},{}],38:[function(require,module,exports){
 // -------------------------------------------------
 // -------------------- Worker ---------------------
 // -------------------------------------------------
@@ -12912,4 +14228,4 @@ module.exports.LoadTextResource = LoadTextResource;
 var System = require('./system.js');
 var sys = new System();
 
-},{"./system.js":33}]},{},[36]);
+},{"./system.js":35}]},{},[38]);
