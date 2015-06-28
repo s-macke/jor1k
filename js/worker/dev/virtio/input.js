@@ -11,6 +11,7 @@
 
 var message = require('../../messagehandler');
 var utils = require('../../utils');
+var marshall = require('./marshall');
 
 var VIRTIO_INPUT_CFG_UNSET      = 0x00; 
 var VIRTIO_INPUT_CFG_ID_NAME    = 0x01;  
@@ -39,16 +40,48 @@ function VirtioInput(ramdev) {
     this.configspace = new Uint8Array(256);
     this.deviceid = 18;
     this.hostfeature = 0x0;
+
+    // TODO remove old keyboard driver
+    message.Register("virtio.kbd.keydown", this.OnKeyDown.bind(this) );
+    message.Register("virtio.kbd.keyup", this.OnKeyUp.bind(this) );
+    
+    this.replybuffersize = 8;
+    this.replybuffer = new Uint8Array(8);
+
     this.Reset();
 }
 
 VirtioInput.prototype.Reset = function() {
+    this.receivebufferdesc = new Array();
 }
+
+
+VirtioInput.prototype.OnKeyDown = function(event) {
+    if (this.receivebufferdesc.length == 0) return;
+    var desc = this.receivebufferdesc[0];
+    this.receivebufferdesc.shift();
+    this.replybuffersize = 8;
+    // type, code and value
+    marshall.Marshall(["h", "h", "w"], [EV_KEY, event.keyCode, 1], this.replybuffer, 0);
+    this.SendReply(0, desc.idx);
+
+}
+
+VirtioInput.prototype.OnKeyUp = function(event) {
+    if (this.receivebufferdesc.length == 0) return;
+    var desc = this.receivebufferdesc[0];
+    this.receivebufferdesc.shift();
+    this.replybuffersize = 8;
+    // type, code and value
+    marshall.Marshall(["h", "h", "w"], [EV_KEY, event.keyCode, 0], this.replybuffer, 0);
+    this.SendReply(0, desc.idx);
+}
+
 
 VirtioInput.prototype.WriteConfig = function (addr, val) {
     this.configspace[addr] = val;
     if (addr != 1) return;
-    message.Debug("virtioinput configtype: " + this.configspace[0x0] + " " + this.configspace[0x1]);
+    //message.Debug("virtioinput configtype: " + this.configspace[0x0] + " " + this.configspace[0x1]);
     
     switch(this.configspace[0x0]) {
         case VIRTIO_INPUT_CFG_UNSET:
@@ -123,7 +156,24 @@ VirtioInput.prototype.WriteConfig = function (addr, val) {
 }
 
 VirtioInput.prototype.ReceiveRequest = function (queueidx, index, GetByte, size) {
-    message.Debug("Virtio input request " + queueidx + " " + index + " " + size.read + " " + size.write);
+    //message.Debug("Virtio input request " + queueidx + " " + index + " " + size.read + " " + size.write);
+
+    if (queueidx >= 1) {
+        message.Debug("Error in Virtio input: Unsupported queue index");
+        message.Abort();
+    }
+
+    if (queueidx == 0) {
+        // for some reason, some descriptors are sent multiple times. So check and return.
+        for(var i=0; i<this.receivebufferdesc.length; i++) {
+            if (this.receivebufferdesc[i].idx == index) {
+                return;
+            }
+        }
+        this.receivebufferdesc.push({idx: index, size: size});
+        return;
+    }
+
 }
 
 module.exports = VirtioInput;
