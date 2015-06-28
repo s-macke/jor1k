@@ -125,7 +125,7 @@ VirtIODev.prototype.ReadReg8 = function (addr) {
 
 VirtIODev.prototype.ReadReg16 = function (addr) {
     //message.Debug("read16 configspace16 of int " + this.intno + " : " + (addr-0x100));
-    if (this.ram.nativeendian == "little") {
+    if (this.ramdev.nativeendian == "little") {
         return (this.dev.configspace[addr-0x100+1]<<8) | (this.dev.configspace[addr-0x100  ]);
     } else
         return (this.dev.configspace[addr-0x100  ]<<8) | (this.dev.configspace[addr-0x100+1]);
@@ -138,7 +138,7 @@ VirtIODev.prototype.WriteReg8 = function (addr, value) {
 
 VirtIODev.prototype.ReadReg32 = function (addr) {
     var val = 0x0;
-    message.Debug("VirtIODev: read register of int "  + this.intno + " : " + utils.ToHex(addr));
+    //message.Debug("VirtIODev: read register of int "  + this.intno + " : " + utils.ToHex(addr));
     if (addr >= 0x100) {
         //message.Debug("read32 configspace of int " + this.intno + " : " + (addr-0x100));
         return (
@@ -331,7 +331,7 @@ VirtIODev.prototype.WriteReg32 = function (addr, val) {
         val = utils.Swap32(val);
     }
 
-    message.Debug("VirtIODev: write register of int "  + this.intno + " : " + utils.ToHex(addr) + " = " + val);
+    //message.Debug("VirtIODev: write register of int "  + this.intno + " : " + utils.ToHex(addr) + " = " + val);
 
     switch(addr)
     {
