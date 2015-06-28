@@ -4,6 +4,7 @@
 //https://github.com/qemu/qemu/blob/master/hw/display/virtio-gpu.c
 //https://www.kraxel.org/cgit/linux/commit/?h=virtio-gpu&id=1a9b48b35ab5961488a401276c7c574f7f90763f
 //https://www.kraxel.org/blog/
+//https://www.kraxel.org/virtio/virtio-v1.0-csprd03-virtio-gpu.html
 
 "use strict";
 
@@ -53,8 +54,8 @@ struct virtio_gpu_config {
 function VirtioGPU(ramdev) {
     // virtio_gpu_config
     this.configspace = [
-    0x0, 0x0, 0x0, 0x0, // events_read
-    0x0, 0x0, 0x0, 0x0, // events_clear
+    0x0, 0x0, 0x0, 0x0, // events_read: signals pending events to the driver. The driver MUST NOT write to this field. 
+    0x0, 0x0, 0x0, 0x0, // events_clear: clears pending events in the device. Writing a ’1’ into a bit will clear the corresponding bit in events_read, mimicking write-to-clear behavior.
     0x1, 0x0, 0x0, 0x0, // num_scanouts maximum 16
     0x0, 0x0, 0x0, 0x0, // reserved
     ];
@@ -69,6 +70,7 @@ function VirtioGPU(ramdev) {
 }
 
 VirtioGPU.prototype.Reset = function() {
+    this.resource = new Array();
 }
 
 VirtioGPU.prototype.ReplyOk = function(index) {
@@ -90,23 +92,32 @@ VirtioGPU.prototype.ReceiveRequest = function (queueidx, index, GetByte, size) {
     // virtio_gpu_ctrl_hdr
     var request = marshall.Unmarshall2(["w", "w", "d", "w", "w"], GetByte);
     var type = request[0];
+    var ctx_id = request[3]; // not used in 2D mode
     message.Debug(
     "type: " + type + 
     " flags: " + request[1] + 
     " fence: " + request[2] + 
-    " ctx_id: " + request[3] );
+    " ctx_id: " + ctx_id );
+
 
     switch(request[0]) {
+
+// --------------------------
+
         case VIRTIO_GPU_CMD_GET_DISPLAY_INFO:
             // struct virtio_gpu_resp_display_info
             marshall.Marshall(["w", "w", "d", "w", "w"], [VIRTIO_GPU_RESP_OK_DISPLAY_INFO, 0,0,0,0], this.replybuffer, 0);
-
+            for(var i=0; i<24+16*24; i++) {
+                this.replybuffersize[i] = 0x0;
+            }
             // one display connected with 1024x768 enabled=1
             marshall.Marshall(["w", "w", "w", "w", "w", "w"], [0, 0, 1024, 768, 1, 0], this.replybuffer, 24);
             message.Debug("get display info");
-            this.replybuffersize = 24 + 1*(16+8);
+            this.replybuffersize = 24 + 16*(16+8);
             this.SendReply(queueidx, index);
             break;
+
+// --------------------------
 
         case VIRTIO_GPU_CMD_RESOURCE_CREATE_2D:
             // struct virtio_gpu_resource_create_2d
@@ -118,6 +129,14 @@ VirtioGPU.prototype.ReceiveRequest = function (queueidx, index, GetByte, size) {
             if (resource_id == 0) {
                 message.Debug("Error in virtio gpu: resource_id is 0");
             }
+            this.resource[resource_id] = {
+                valid: true, 
+                width:width, 
+                height:height, 
+                format:format, 
+                addr:0x0, 
+                length: 0x0,
+                scanout_id: -1};
             message.Debug("create 2d: " + width  + "x" + height + " format: " + format + " resource_id: " + request[0]);
             this.ReplyOk(index);
             break;
@@ -125,19 +144,27 @@ VirtioGPU.prototype.ReceiveRequest = function (queueidx, index, GetByte, size) {
         case VIRTIO_GPU_CMD_RESOURCE_UNREF:
             // struct virtio_gpu_resource_unref
             var request = marshall.Unmarshall2(["w"], GetByte);
+            var resource_id = request[0];
+            
+            this.resource[resource_id].valid = false;
             message.Debug("resource unref: resource_id: " + request[0]);
             this.ReplyOk(index);
             break;
 
+// --------------------------
+
         case VIRTIO_GPU_CMD_RESOURCE_ATTACH_BACKING:
             // struct virtio_gpu_resource_attach_backing
             var request = marshall.Unmarshall2(["w", "w"], GetByte);
-            var nr_entries = request[1]
-            message.Debug("attach backing: resource_id: " + request[0] + " nr_entries:" + request[1] );
+            var nr_entries = request[1];
+            var resource_id = request[0];
+            message.Debug("attach backing: resource_id: " + resource_id + " nr_entries:" + request[1] );
             for(var i=0; i<nr_entries; i++) {
-                // struct virtio_gpu_mem_entry 
+                // struct virtio_gpu_mem_entry
                 var request = marshall.Unmarshall2(["d", "w", "w"], GetByte);
                 message.Debug("attach backing: addr:" + utils.ToHex(request[0]) + " length: " + request[1]);
+                this.resource[resource_id].addr = request[0];
+                this.resource[resource_id].length = request[1];
             }
             this.ReplyOk(index);
             break;
@@ -145,9 +172,14 @@ VirtioGPU.prototype.ReceiveRequest = function (queueidx, index, GetByte, size) {
         case VIRTIO_GPU_CMD_RESOURCE_DETACH_BACKING:
             // struct virtio_gpu_resource_detach_backing
             var request = marshall.Unmarshall2(["w"], GetByte);
-            message.Debug("detach backing: resource_id: " + request[0]);
+            var resource_id = request[0];
+            message.Debug("detach backing: resource_id: " + resource_id);
+            this.resource[resource_id].addr = 0x0;
+            this.resource[resource_id].length = 0x0;
             this.ReplyOk(index);
             break;
+
+// --------------------------
 
         case VIRTIO_GPU_CMD_SET_SCANOUT:
             var request = marshall.Unmarshall2(["w", "w", "w", "w", "w", "w"], GetByte);
@@ -157,7 +189,9 @@ VirtioGPU.prototype.ReceiveRequest = function (queueidx, index, GetByte, size) {
             var height = request[3];
             var scanout_id = request[4];
             var resource_id = request[5];
-            message.Debug("set scanout: x:" + x + " y:" + y + " width_" + width + " height:" + height + " scanout_id:" + scanout_id + " resource_id" + resource_id);
+            message.Debug("set scanout: x: " + x + " y: " + y + " width: " + width + " height: " + height + " scanout_id: " + scanout_id + " resource_id: " + resource_id);
+            if (resource_id != 0)
+                this.resource[resource_id].scanout_id = scanout_id;
             this.ReplyOk(index);
             break;
 

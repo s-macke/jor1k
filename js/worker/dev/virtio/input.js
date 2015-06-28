@@ -42,8 +42,8 @@ function VirtioInput(ramdev) {
     this.hostfeature = 0x0;
 
     // TODO remove old keyboard driver
-    // message.Register("keydown", this.OnKeyDown.bind(this) );
-    // message.Register("keyup", this.OnKeyUp.bind(this) );
+    message.Register("virtio.kbd.keydown", this.OnKeyDown.bind(this) );
+    message.Register("virtio.kbd.keyup", this.OnKeyUp.bind(this) );
     
     this.replybuffersize = 8;
     this.replybuffer = new Uint8Array(8);
@@ -173,8 +173,6 @@ VirtioInput.prototype.ReceiveRequest = function (queueidx, index, GetByte, size)
         this.receivebufferdesc.push({idx: index, size: size});
         return;
     }
-
-
 
 }
 

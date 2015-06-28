@@ -21,8 +21,7 @@ function VirtioNET(ramdev) {
         this.configspace[i] = Math.floor(Math.random()*256);
     }
 
-    // TODO: As long as the old ethernet driver is active we can't overwrite the message
-    //message.Register("ethmac", this.Receive.bind(this) );
+    message.Register("virtio.net.transfer", this.Receive.bind(this) );
 
     this.Reset();
 }
