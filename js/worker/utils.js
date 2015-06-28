@@ -71,6 +71,34 @@ function LoadBinaryResource(url, OnSuccess, OnError) {
     req.send(null);
 }
 
+function LoadBinaryResourceII(url, OnSuccess, NonBlocking, OnError) {
+    var req = new XMLHttpRequest();
+    // open might fail, when we try to open an unsecure address, when the main page is secure
+    try {
+        req.open('GET', url, NonBlocking);
+    } catch(err) {
+        OnError(err);
+        return;
+    }
+    req.responseType = "arraybuffer";
+    req.onreadystatechange = function () {
+        if (req.readyState != 4) {
+            return;
+        }
+        if ((req.status != 200) && (req.status != 0)) {
+            OnError("Error: Could not load file " + url);
+            return;
+        }
+        var arrayBuffer = req.response;
+        if (arrayBuffer) {
+            OnSuccess(arrayBuffer);
+        } else {
+            OnError("Error: No data received from: " + url);
+        }
+    };
+    req.send(null);
+}
+
 function LoadTextResource(url, OnSuccess, OnError) {
     var req = new XMLHttpRequest();
     req.open('GET', url, true);
@@ -181,5 +209,6 @@ module.exports.uint32 = uint32;
 module.exports.ToHex = ToHex;
 module.exports.ToBin = ToBin;
 module.exports.LoadBinaryResource = LoadBinaryResource;
+module.exports.LoadBinaryResourceII = LoadBinaryResourceII;
 module.exports.LoadTextResource = LoadTextResource;
 
