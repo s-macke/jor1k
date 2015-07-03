@@ -3015,7 +3015,7 @@ VirtIODev.prototype.ReadReg8 = function (addr) {
 
 VirtIODev.prototype.ReadReg16 = function (addr) {
     //message.Debug("read16 configspace16 of int " + this.intno + " : " + (addr-0x100));
-    if (this.ram.nativeendian == "little") {
+    if (this.ramdev.nativeendian == "little") {
         return (this.dev.configspace[addr-0x100+1]<<8) | (this.dev.configspace[addr-0x100  ]);
     } else
         return (this.dev.configspace[addr-0x100  ]<<8) | (this.dev.configspace[addr-0x100+1]);
@@ -3028,7 +3028,7 @@ VirtIODev.prototype.WriteReg8 = function (addr, value) {
 
 VirtIODev.prototype.ReadReg32 = function (addr) {
     var val = 0x0;
-    message.Debug("VirtIODev: read register of int "  + this.intno + " : " + utils.ToHex(addr));
+    //message.Debug("VirtIODev: read register of int "  + this.intno + " : " + utils.ToHex(addr));
     if (addr >= 0x100) {
         //message.Debug("read32 configspace of int " + this.intno + " : " + (addr-0x100));
         return (
@@ -3221,7 +3221,7 @@ VirtIODev.prototype.WriteReg32 = function (addr, val) {
         val = utils.Swap32(val);
     }
 
-    message.Debug("VirtIODev: write register of int "  + this.intno + " : " + utils.ToHex(addr) + " = " + val);
+    //message.Debug("VirtIODev: write register of int "  + this.intno + " : " + utils.ToHex(addr) + " = " + val);
 
     switch(addr)
     {
@@ -13786,7 +13786,9 @@ var CSR_CYCLES = 0xC00;
 var CSR_CYCLEW = 0x900;
 var CSR_MTOHOST =  0x780;
 var CSR_MTOHOST_TEMP =  0x345; //only temporary for the patched pk.
+var CSR_IEMASK_TEMP =  0x346; //only temporary for the patched pk.
 var CSR_MFROMHOST =  0x781;
+var CSR_MDEVCMDHOST =  0x782;
 var CSR_MCPUID = 0xF00;
 var CSR_MIMPID = 0xF01;
 var CSR_MHARTID = 0xF10;
@@ -13821,17 +13823,18 @@ var SYS_FSTAT = 80;
 var SYS_EXIT = 93;
 var SYS_GETMAINVARS = 2011;
 
-var CAUSE_TIMER_INTERRUPT = (1<<31) | 0x01;
-var CAUSE_SOFTWARE_INTERRUPT = (1<<31);
+var CAUSE_TIMER_INTERRUPT          = (1<<31) | 0x01;
+var CAUSE_HOST_INTERRUPT           = (1<<31) | 0x02;
+var CAUSE_SOFTWARE_INTERRUPT       = (1<<31) | 0x00;
 var CAUSE_INSTRUCTION_ACCESS_FAULT = 0x01;
-var CAUSE_ILLEGAL_INSTRUCTION = 0x02;
-var CAUSE_BREAKPOINT = 0x03;
-var CAUSE_LOAD_ACCESS_FAULT = 0x05;
-var CAUSE_STORE_ACCESS_FAULT = 0x07;
-var CAUSE_ENVCALL_UMODE = 0x08;
-var CAUSE_ENVCALL_SMODE = 0x09;
-var CAUSE_ENVCALL_HMODE = 0x0A;
-var CAUSE_ENVCALL_MMODE = 0x0B;
+var CAUSE_ILLEGAL_INSTRUCTION      = 0x02;
+var CAUSE_BREAKPOINT               = 0x03;
+var CAUSE_LOAD_ACCESS_FAULT        = 0x05;
+var CAUSE_STORE_ACCESS_FAULT       = 0x07;
+var CAUSE_ENVCALL_UMODE            = 0x08;
+var CAUSE_ENVCALL_SMODE            = 0x09;
+var CAUSE_ENVCALL_HMODE            = 0x0A;
+var CAUSE_ENVCALL_MMODE            = 0x0B;
 
 
 var CSR_FFLAGS = 0x1;
@@ -13960,6 +13963,8 @@ SafeCPU.prototype.CheckForInterrupt = function () {
 };
 
 SafeCPU.prototype.RaiseInterrupt = function (line, cpuid) {
+    message.Debug("raise int " + line);
+    this.csr[CSR_MFROMHOST] = line;
 };
 
 SafeCPU.prototype.ClearInterrupt = function (line, cpuid) {
@@ -14601,6 +14606,7 @@ SafeCPU.prototype.TranslateVM = function (addr,op) {
     // vm bare mode
     if(vm == 0 || current_privilege_level == PRV_M) return addr;
 
+    // hack, open mmio by direct mapping
     if ((addr>>>28) == 0x9) return addr;
 
     // only RV32 supported
@@ -14610,35 +14616,27 @@ SafeCPU.prototype.TranslateVM = function (addr,op) {
     }
 
     // LEVEL 1
-    //var offset = addr & 0x3FFFFF;
     var offset = addr & 0xFFF;
-    var page_num = (addr >> 22) & 0x3FF;
+    var page_num = (addr >>> 22);
 
     var frame_num = this.ram.Read32(this.csr[CSR_SPTBR] + (page_num << 2));
     var type = ((frame_num >> 1) & 0xF);
     var valid = (frame_num & 0x01);
 
     if (valid == 0) {
-        //message.Debug("Unsupported valid field " + valid + " or invalid entry in PTE at PC " + utils.ToHex(this.pc) + " and addr " + utils.ToHex(addr));
-
         this.csr[CSR_MBADADDR] = addr;
         if(op == VM_READ) this.Trap(CAUSE_LOAD_ACCESS_FAULT);
-        else if(op == VM_WRITE) this.Trap(CAUSE_STORE_ACCESS_FAULT);
-        else this.Trap(CAUSE_INSTRUCTION_ACCESS_FAULT);
-        return -1;
-
+            else if(op == VM_WRITE) this.Trap(CAUSE_STORE_ACCESS_FAULT);
+            else this.Trap(CAUSE_INSTRUCTION_ACCESS_FAULT);
+            return -1;
+        //message.Debug("Unsupported valid field " + valid + " or invalid entry in PTE at PC "+utils.ToHex(this.pc));
         //message.Abort();
-
     }
     if (type >= 2) {
         if (!this.CheckVMPrivilege(type,op)) {
             message.Debug("Error in TranslateVM: Unhandled trap");
             message.Abort();
         }
-
-        //message.Debug("Superpage mapping at pc="+utils.ToHex(this.pc) + " to " + utils.ToHex(frame_num));
-        //message.Abort();
-
 /*
         var updated_frame_num = frame_num;
         if(op == VM_READ)
@@ -14687,24 +14685,100 @@ SafeCPU.prototype.TranslateVM = function (addr,op) {
     return physical_addr;
 };
 
+SafeCPU.prototype.HandleHTIF = function(value) {
+    var csr = this.csr;
+    var dev = csr[CSR_MDEVCMDHOST] >> 16;
+    var cmd = csr[CSR_MDEVCMDHOST] & 0xFFFF;
+    message.Debug("" + dev + " " + cmd + " " + utils.ToHex(value));
+
+    switch(dev) {
+        case 0:
+            switch(cmd) {
+                case 0:
+                    if((value>>>0) > 0x100) {
+                        this.syscallHandler.HandleSysCall();
+                    } else {
+                        this.ram.Write8Little(0x90000000 >> 0, value+0x30);
+                        message.Debug("return value: " + value);
+                        message.Abort();
+                    }
+                    break;
+                case 255: // identify
+                    var pid = value >>> 8;
+                    this.ram.Write8(pid+0, 0x31);
+                    this.ram.Write8(pid+1, 0x32);
+                    this.ram.Write8(pid+2, 0x33);
+                    this.ram.Write8(pid+3, 0x00);
+                    csr[CSR_MTOHOST] = 0;
+                    csr[CSR_MFROMHOST] = 1;
+                    break;
+                default:
+                    message.Debug("Error in HTIF: unknown command");
+                    message.Abort();
+                    break;
+            }
+            break;
+
+        case 1: // console
+            if (cmd == 1) {
+                this.ram.Write8Little(0x90000000 >> 0, value);
+                if (value == 0xA) this.ram.Write8(0x90000000 >> 0, 0xD);
+                csr[CSR_MTOHOST] = 0;
+                csr[CSR_MFROMHOST] = 0;
+            } else 
+            if (cmd == 255) {
+                var pid = value >>> 8;
+                this.ram.Write8(pid+0, 0x34);
+                this.ram.Write8(pid+1, 0x35);
+                this.ram.Write8(pid+2, 0x36);
+                this.ram.Write8(pid+3, 0x00);
+                csr[CSR_MTOHOST] = 0;
+                csr[CSR_MFROMHOST] = 1;
+         
+            } else {
+                message.Debug("Error in HTIF: unknown command");
+                message.Abort();
+            }
+            break;
+
+        default:
+            if (cmd == 255) {
+                csr[CSR_MTOHOST] = 0;
+                csr[CSR_MFROMHOST] = 1;
+                var pid = value >>> 8;
+                this.ram.Write8(pid+0, 0x00);
+            } else {
+                message.Debug("Error in SetCSR in MTOHOST: unknown device " + dev + " and command " + cmd);
+                message.Abort();
+            }
+            break;           
+    }
+
+
+}
+
 SafeCPU.prototype.SetCSR = function (addr,value) {
 
     var csr = this.csr;
 
     switch(addr)
     {
+        case CSR_MDEVCMDHOST:
+            csr[addr] = value;
+            break;
+
         case CSR_MTOHOST:
-            if(value > 0x100){
-                csr[addr] =  value;
-                this.syscallHandler.HandleSysCall();
-            }
-            else
-                this.ram.Write8Little(0x90000000 >> 0, value+0x30);
+            csr[addr] =  value;
+            this.HandleHTIF(value);
             break;
 
         case CSR_MTOHOST_TEMP: //only temporary for the patched pk.
             this.ram.Write8Little(0x90000000 >> 0, value);
             if (value == 0xA) this.ram.Write8(0x90000000 >> 0, 0xD);
+            break;
+
+        case CSR_IEMASK_TEMP: //only temporary for the patched pk.
+            csr[addr] = value;
             break;
 
         case CSR_MFROMHOST:
@@ -14853,12 +14927,20 @@ SafeCPU.prototype.GetCSR = function (addr) {
 
     switch(addr)
     {
+        case CSR_MDEVCMDHOST:
+            return csr[addr];
+            break;
+
         case CSR_MTOHOST:
             return 0x0;
             break;
 
         case CSR_MTOHOST_TEMP: //only temporary for the patched pk.
             return 0x0;
+            break;
+
+        case CSR_IEMASK_TEMP: //only temporary for the patched pk.
+            return csr[addr];
             break;
 
         case CSR_MFROMHOST:
@@ -15131,6 +15213,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
     
     do {
         r[0] = 0x00;
+
         var current_privilege_level = (this.csr[CSR_MSTATUS] & 0x06) >> 1;
         if (this.ticks == csr[CSR_STIMECMP]) {
             csr[CSR_MIP] = csr[CSR_MIP] | 0x20;
@@ -15138,17 +15221,22 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
         var interrupts = csr[CSR_MIE] & csr[CSR_MIP];
         var ie = csr[CSR_MSTATUS] & 0x01;
         if (interrupts) {
+
             if ((current_privilege_level < 3) || ((current_privilege_level == 3) && ie)) {
                 if (interrupts & 0x8) {
                     this.Trap(CAUSE_SOFTWARE_INTERRUPT);
                     this.pc = this.pc + 4|0;
-                }
+                } /*else
+                if (csr[CSR_MFROMHOST] != 0) {
+                    this.Trap(CAUSE_HOST_INTERRUPT);
+                    this.pc = this.pc + 4|0;
+                }*/
             }
             if ((current_privilege_level < 1) || ((current_privilege_level == 1) && ie)) {
                 if (interrupts & 0x2) {
                     this.Trap(CAUSE_SOFTWARE_INTERRUPT);
                     this.pc = this.pc + 4|0;
-                }
+                } else
                 if (interrupts & 0x20) {
                      this.Trap(CAUSE_TIMER_INTERRUPT);
                      this.pc = this.pc + 4|0;
@@ -15158,7 +15246,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
         var paddr = this.TranslateVM(this.pc,VM_FETCH);
         if(paddr == -1) {
             this.pc = this.pc + 4|0;
-            return 0;
+            continue;
         }
         var ins = this.ram.Read32(paddr);
         //this.Disassemble(ins);
@@ -15226,7 +15314,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                         break;
 
                     default:
-                        //message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + "not found");
+                        message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + "not found");
                         message.Abort();
                         break;
 
@@ -15277,7 +15365,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                         break;
 
                     default:
-                        //message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + "not found");
+                        message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + "not found");
                         message.Abort();
                         break;
 
@@ -15309,7 +15397,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
 
                     case 0x03:
                         //sltiu
-                        imm = (ins >>> 20) >>> 0;
+                        imm = (ins >> 20) >>> 0;
                         rs1 = r[(ins >> 15) & 0x1F] >>> 0;
                         rindex = (ins >> 7) & 0x1F;
                         if(rs1 < imm) r[rindex] = 0x01;
@@ -15373,7 +15461,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                         break;
 
                     default:
-                        //message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + "not found");
+                        message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + "not found");
                         message.Abort();
                         break;
 
@@ -15586,7 +15674,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                     
 
                     default:
-                        //message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + "not found");
+                        message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + "not found");
                         message.Abort();
                         break;
 
@@ -15714,7 +15802,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                         break;
 
                     default:
-                        //message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + "not found");
+                        message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + "not found");
                         message.Abort();
                         break;
 
@@ -15722,7 +15810,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                 break;
 
             case 0x73:
-                //csrrw,csrrs,csrrc,csrrwi,csrrsi,csrrci,ecall,eret,ebreak,mrts
+                //csrrw,csrrs,csrrc,csrrwi,csrrsi,csrrci,ecall,eret,ebreak,mrts,wfi
                 switch((ins >> 12)&0x7) {
                     
                     case 0x01:
@@ -15787,7 +15875,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                         break;
                     
                     case 0x00:
-                        //ecall,eret,ebreak,mrts
+                        //ecall,eret,ebreak,mrts,wfi
                         switch((ins >> 20)&0xFFF) {
                             case 0x00:
                                 //ecall
@@ -15824,7 +15912,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                                         break;
                                     
                                     default:
-                                        //message.Debug("Error in ecall: Don't know how to handle privilege level " + current_privilege_level);
+                                        message.Debug("Error in ecall: Don't know how to handle privilege level " + current_privilege_level);
                                         message.Abort();
                                         break;
                                 }
@@ -15840,7 +15928,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                                 //eret
                                 var current_privilege_level = (csr[CSR_MSTATUS] & 0x06) >> 1;
                                 if(current_privilege_level < PRV_S) {
-                                    //message.Debug("Error in eret: current_privilege_level isn't allowed access");
+                                    message.Debug("Error in eret: current_privilege_level isn't allowed access");
                                     message.Abort();
                                     break;   
                                 }
@@ -15867,16 +15955,20 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                                         break;
                                     
                                     default:
-                                        //message.Debug("Error in eret: Don't know how to handle privilege level " + current_privilege_level);
+                                        message.Debug("Error in eret: Don't know how to handle privilege level " + current_privilege_level);
                                         message.Abort();
                                         break;
                                 }
                                 break;
 
+                            case 0x102:
+                                // wfi
+                                break;
+
                             case 0x305:
                                 //mrts     
                                 if(current_privilege_level != PRV_M) {
-                                    //message.Debug("Error in mrts: current_privilege_level isn't allowed access");
+                                    message.Debug("Error in mrts: current_privilege_level isn't allowed access");
                                     message.Abort();
                                     break;   
                                 }
@@ -15892,7 +15984,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                                 break;
 
                             default:
-                                //message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + "not found");
+                                message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + "not found");
                                 message.Abort();
                                 break;
 
@@ -15900,7 +15992,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                         break; 
 
                     default:
-                        //message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + "not found");
+                        message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + "not found");
                         message.Abort();
                         break;
 
@@ -15938,7 +16030,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                         break;
 
                     default:
-                        //message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + "not found");
+                        message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + "not found");
                         message.Abort();
                         break;
 
@@ -15980,7 +16072,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                         break;
 
                     default:
-                        //message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + "not found");
+                        message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + "not found");
                         message.Abort();
                         break;
 
@@ -16052,7 +16144,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
 
 
                     default:
-                        //message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + "not found");
+                        message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + "not found");
                         message.Abort();
                         break;
                 }
@@ -16229,7 +16321,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                         break;
 
                     default:
-                        //message.Debug("Error in Atomic Memory Instruction " + utils.ToHex(ins) + "not found");
+                        message.Debug("Error in Atomic Memory Instruction " + utils.ToHex(ins) + "not found");
                         message.Abort();
                         break;
 
@@ -16241,7 +16333,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                 break;
 
             default:
-                //message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + " not found at "+utils.ToHex(this.pc));
+                message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + " not found at "+utils.ToHex(this.pc));
                 message.Abort();
                 break;
         }
@@ -16667,6 +16759,8 @@ System.prototype.ClearSoftInterrupt = function (line, cpuid) {
 };
 
 System.prototype.PrintState = function() {
+    this.uartdev0.Step();
+    this.uartdev1.Step();
     message.Debug(this.cpu.toString());
 };
 
