@@ -851,9 +851,9 @@ SafeCPU.prototype.TranslateVM = function (addr,op) {
 
     if (valid == 0) {
         this.csr[CSR_MBADADDR] = addr;
-        if(op == VM_READ) this.Trap(CAUSE_LOAD_ACCESS_FAULT);
-            else if(op == VM_WRITE) this.Trap(CAUSE_STORE_ACCESS_FAULT);
-            else this.Trap(CAUSE_INSTRUCTION_ACCESS_FAULT);
+        if(op == VM_READ) this.Trap(CAUSE_LOAD_ACCESS_FAULT, this.pc - 4|0);
+            else if(op == VM_WRITE) this.Trap(CAUSE_STORE_ACCESS_FAULT, this.pc - 4|0);
+            else this.Trap(CAUSE_INSTRUCTION_ACCESS_FAULT, this.pc);
             return -1;
         //message.Debug("Unsupported valid field " + valid + " or invalid entry in PTE at PC "+utils.ToHex(this.pc));
         //message.Abort();
@@ -888,9 +888,9 @@ SafeCPU.prototype.TranslateVM = function (addr,op) {
 
     if (new_valid == 0) {
         this.csr[CSR_MBADADDR] = addr;
-        if(op == VM_READ) this.Trap(CAUSE_LOAD_ACCESS_FAULT);
-            else if(op == VM_WRITE) this.Trap(CAUSE_STORE_ACCESS_FAULT);
-            else this.Trap(CAUSE_INSTRUCTION_ACCESS_FAULT);
+        if(op == VM_READ) this.Trap(CAUSE_LOAD_ACCESS_FAULT, this.pc - 4|0);
+            else if(op == VM_WRITE) this.Trap(CAUSE_STORE_ACCESS_FAULT, this.pc - 4|0);
+            else this.Trap(CAUSE_INSTRUCTION_ACCESS_FAULT, this.pc|0);
             return -1;
     }
 
@@ -1174,7 +1174,7 @@ SafeCPU.prototype.GetCSR = function (addr) {
             break;
 
         case CSR_MSTATUS:
-            if (current_privilege_level == 0) this.Trap(CAUSE_ILLEGAL_INSTRUCTION);
+            if (current_privilege_level == 0) this.Trap(CAUSE_ILLEGAL_INSTRUCTION, this.pc - 4|0);
             return csr[addr];
             break;
 
@@ -1384,13 +1384,13 @@ SafeCPU.prototype.SUMul = function (a,b) {
     return result;
 };
 
-SafeCPU.prototype.Trap = function (cause) {
+SafeCPU.prototype.Trap = function (cause, current_pc) {
 
     var current_privilege_level = (this.csr[CSR_MSTATUS] & 0x06) >> 1;
     this.PushPrivilegeStack(PRV_M);
-    this.csr[CSR_MEPC] = this.pc;
+    this.csr[CSR_MEPC] = current_pc;
     this.csr[CSR_MCAUSE] = cause;
-    this.pc =  0x100 + 0x40*current_privilege_level - 4|0;  
+    this.pc =  0x100 + 0x40*current_privilege_level|0;  
 
 };
 
@@ -1450,8 +1450,8 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
 
             if ((current_privilege_level < 3) || ((current_privilege_level == 3) && ie)) {
                 if (interrupts & 0x8) {
-                    this.Trap(CAUSE_SOFTWARE_INTERRUPT);
-                    this.pc = this.pc + 4|0;
+                    this.Trap(CAUSE_SOFTWARE_INTERRUPT, this.pc);
+                    continue;
                 } /*else
                 if (csr[CSR_MFROMHOST] != 0) {
                     this.Trap(CAUSE_HOST_INTERRUPT);
@@ -1460,21 +1460,20 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
             }
             if ((current_privilege_level < 1) || ((current_privilege_level == 1) && ie)) {
                 if (interrupts & 0x2) {
-                    this.Trap(CAUSE_SOFTWARE_INTERRUPT);
-                    this.pc = this.pc + 4|0;
+                    this.Trap(CAUSE_SOFTWARE_INTERRUPT, this.pc);
+                    continue;
                 } else
                 if (interrupts & 0x20) {
-                     this.Trap(CAUSE_TIMER_INTERRUPT);
-                     this.pc = this.pc + 4|0;
+                     this.Trap(CAUSE_TIMER_INTERRUPT, this.pc);
+                     continue;
                 }
             }
         }
         var paddr = this.TranslateVM(this.pc,VM_FETCH);
-        if(paddr == -1) {
-            this.pc = this.pc + 4|0;
+        if(paddr == -1)
             continue;
-        }
         var ins = this.ram.Read32(paddr);
+        this.pc = this.pc + 4|0;
         //this.Disassemble(ins);
 
         switch(ins&0x7F) {
@@ -1918,7 +1917,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                 //auipc
                 imm = (ins & 0xFFFFF000);
                 rindex = (ins >> 7) & 0x1F;
-                r[rindex] = (imm + this.pc);
+                r[rindex] = (imm + this.pc - 4);
                 //message.Debug("auipc - "+ utils.ToHex(ins)+" register " + r[rindex]);
                 break;
 
@@ -1930,7 +1929,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                 imm4 = ((ins >> 31) & 0x01) << 19;
                 imm = (((imm1 + imm2 + imm3 +imm4) << 1) << 11) >> 11; 
                 rindex = (ins >> 7) & 0x1F;
-                r[rindex] = this.pc + 4;
+                r[rindex] = this.pc;
                 this.pc = this.pc + imm - 4|0;//-4 is a temp hack
                 //message.Debug("jal - "+ utils.ToHex(ins)+" register " + r[rindex]);
                 break; 
@@ -1940,8 +1939,8 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                 imm = (ins >> 20);
                 rs1 = r[(ins >> 15) & 0x1F];
                 rindex = (ins >> 7) & 0x1F;
-                r[rindex] = this.pc + 4;
-                this.pc = ((rs1 + imm) & 0xFFFFFFFE) - 4|0;//-4 is a temp hack
+                r[rindex] = this.pc;
+                this.pc = ((rs1 + imm) & 0xFFFFFFFE)|0;//-4 is a temp hack
                 //message.Debug("jalr - "+ utils.ToHex(ins)+" register " + r[rindex]);
                 break;
 
@@ -2111,21 +2110,21 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                                     case PRV_U:
                                         //message.Debug("ecall PRV_U -"+ utils.ToHex(ins));
                                         this.PushPrivilegeStack(PRV_M);
-                                        csr[CSR_MEPC] = this.pc;
+                                        csr[CSR_MEPC] = this.pc - 4;
                                         csr[CSR_MCAUSE] = 0x08;
                                         break;
 
                                     case PRV_S:
                                         //message.Debug("ecall PRV_S -"+ utils.ToHex(ins));
                                         this.PushPrivilegeStack(PRV_M);
-                                        csr[CSR_MEPC] = this.pc;
+                                        csr[CSR_MEPC] = this.pc - 4;
                                         csr[CSR_MCAUSE] = 0x09;
                                         break;
 
                                     case PRV_H:
                                         //message.Debug("Not supported ecall PRV_H -"+ utils.ToHex(ins));
                                         this.PushPrivilegeStack(PRV_M);
-                                        csr[CSR_MEPC] = this.pc;
+                                        csr[CSR_MEPC] = this.pc - 4;
                                         csr[CSR_MCAUSE] = 0x0A;
                                         message.Abort();
                                         break;
@@ -2133,7 +2132,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                                     case PRV_M:
                                         //message.Debug("ecall PRV_M -"+ utils.ToHex(ins));
                                         this.PushPrivilegeStack(PRV_M);
-                                        csr[CSR_MEPC] = this.pc;
+                                        csr[CSR_MEPC] = this.pc - 4;
                                         csr[CSR_MCAUSE] = 0x0B;
                                         break;
                                     
@@ -2142,12 +2141,12 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                                         message.Abort();
                                         break;
                                 }
-                                this.pc =  0x100 + 0x40*current_privilege_level - 4|0;
+                                this.pc =  0x100 + 0x40*current_privilege_level|0;
                                 break;
 
                             case 0x001:
                                 //ebreak
-                                this.Trap(CAUSE_BREAKPOINT);
+                                this.Trap(CAUSE_BREAKPOINT, this.pc - 4|0);
                                 break;
 
                             case 0x100:
@@ -2164,20 +2163,20 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                                     case PRV_S:
                                         //message.Debug("eret PRV_S -"+ utils.ToHex(ins));
                                         this.PopPrivilegeStack(PRV_U);
-                                        this.pc = csr[CSR_SEPC] - 4|0;
+                                        this.pc = csr[CSR_SEPC]|0;
                                         break;
 
                                     case PRV_H:
                                         //message.Debug("Not supported eret PRV_H -"+ utils.ToHex(ins));
                                         this.PopPrivilegeStack(PRV_U);
-                                        this.pc = csr[CSR_HEPC] - 4|0;
+                                        this.pc = csr[CSR_HEPC]|0;
                                         message.Abort();
                                         break;
 
                                     case PRV_M:
                                         //message.Debug("eret PRV_M -"+ utils.ToHex(ins));
                                         this.PopPrivilegeStack(PRV_U);
-                                        this.pc = csr[CSR_MEPC] - 4|0;
+                                        this.pc = csr[CSR_MEPC]|0;
                                         break;
                                     
                                     default:
@@ -2202,7 +2201,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                                 csr[CSR_SBADADDR] = csr[CSR_MBADADDR];
                                 csr[CSR_SCAUSE] = csr[CSR_MCAUSE];
                                 csr[CSR_SEPC] = csr[CSR_MEPC];
-                                this.pc = csr[CSR_STVEC] - 4|0;
+                                this.pc = csr[CSR_STVEC]|0;
                                 break;
 
                             case 0x101:
@@ -2565,7 +2564,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
         }
 
         //message.Debug(utils.ToHex(this.pc));
-        this.pc = this.pc + 4|0;
+        //this.pc = this.pc + 4|0;
         this.ticks = this.ticks + 1|0;
     } while(--steps);
     return 0;
