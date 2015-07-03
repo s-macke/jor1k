@@ -827,6 +827,8 @@ SafeCPU.prototype.TranslateVM = function (addr,op) {
     // vm bare mode
     if(vm == 0 || current_privilege_level == PRV_M) return addr;
 
+    if ((addr>>>28) == 0x9) return addr;
+
     // only RV32 supported
     if(vm != 8) {
         message.Debug("unkown VM Mode " + vm + " at PC " + utils.ToHex(this.pc));
@@ -834,27 +836,35 @@ SafeCPU.prototype.TranslateVM = function (addr,op) {
     }
 
     // LEVEL 1
-    var offset = addr & 0x3FFFFF;
-    var page_num = (addr >>> 22);
+    //var offset = addr & 0x3FFFFF;
+    var offset = addr & 0xFFF;
+    var page_num = (addr >> 22) & 0x3FF;
 
     var frame_num = this.ram.Read32(this.csr[CSR_SPTBR] + (page_num << 2));
     var type = ((frame_num >> 1) & 0xF);
     var valid = (frame_num & 0x01);
 
     if (valid == 0) {
+        //message.Debug("Unsupported valid field " + valid + " or invalid entry in PTE at PC " + utils.ToHex(this.pc) + " and addr " + utils.ToHex(addr));
+
         this.csr[CSR_MBADADDR] = addr;
         if(op == VM_READ) this.Trap(CAUSE_LOAD_ACCESS_FAULT);
-            else if(op == VM_WRITE) this.Trap(CAUSE_STORE_ACCESS_FAULT);
-            else this.Trap(CAUSE_INSTRUCTION_ACCESS_FAULT);
-            return -1;
-        //message.Debug("Unsupported valid field " + valid + " or invalid entry in PTE at PC "+utils.ToHex(this.pc));
+        else if(op == VM_WRITE) this.Trap(CAUSE_STORE_ACCESS_FAULT);
+        else this.Trap(CAUSE_INSTRUCTION_ACCESS_FAULT);
+        return -1;
+
         //message.Abort();
+
     }
     if (type >= 2) {
         if (!this.CheckVMPrivilege(type,op)) {
             message.Debug("Error in TranslateVM: Unhandled trap");
             message.Abort();
         }
+
+        //message.Debug("Superpage mapping at pc="+utils.ToHex(this.pc) + " to " + utils.ToHex(frame_num));
+        //message.Abort();
+
 /*
         var updated_frame_num = frame_num;
         if(op == VM_READ)
@@ -864,7 +874,7 @@ SafeCPU.prototype.TranslateVM = function (addr,op) {
         this.ram.Write32(this.csr[CSR_SPTBR] + (page_num << 2),updated_frame_num);
 */
         //var physical_addr = (frame_num & 0xFFC00000) | offset;
-        var physical_addr = (((frame_num >> 10) | ((addr >> 12) & 0xCFF)) << 12) | offset;
+        var physical_addr = (((frame_num >> 10) | ((addr >> 12) & 0x3FF)) << 12) | offset;
         return physical_addr;
     }
 
@@ -899,7 +909,7 @@ SafeCPU.prototype.TranslateVM = function (addr,op) {
     this.ram.Write32(new_sptbr + (new_page_num << 2),updated_frame_num);
 */
     //var physical_addr = (new_frame_num & 0xFFFFF000) | offset;
-    var physical_addr = ((new_frame_num & 0xFFFFFC00) << 2) | offset;
+    var physical_addr = ((new_frame_num >> 10) << 12) | offset;
     return physical_addr;
 };
 
