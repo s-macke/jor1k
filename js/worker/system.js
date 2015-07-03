@@ -227,6 +227,8 @@ System.prototype.ClearSoftInterrupt = function (line, cpuid) {
 };
 
 System.prototype.PrintState = function() {
+    this.uartdev0.Step();
+    this.uartdev1.Step();
     message.Debug(this.cpu.toString());
 };
 
