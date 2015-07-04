@@ -11,36 +11,30 @@ var SYS_FSTAT = 80;
 var SYS_EXIT = 93;
 var SYS_GETMAINVARS = 2011;
 
-var CSR_MTOHOST =  0x780;
-var CSR_MFROMHOST =  0x781;
-
-function SysCalls(ram,csr) {
-
-    message.Debug("Initialize SysCalls");
+function SysCalls(ram) {
 
     this.ram = ram;
-    this.csr = csr;
     this.elf8mem = [];
     this.file_descriptor_table = [];
     this.file_size = []; //file descriptor is the index
     this.file_pointer = []; //file descriptor is the index
     this.file_descriptor_offset = 9;
     this.elf8mem_offset = 0x00;
-    
-    
+
 }
 
-SysCalls.prototype.HandleSysCall = function () {
+SysCalls.prototype.HandleSysCall = function (addr) {
 
+    addr = addr | 0;
     var ram = this.ram;
-    var csr = this.csr;
-    var syscall_id = this.ram.Read32(this.csr[CSR_MTOHOST]);
+    var syscall_id = this.ram.Read32(addr);
+    //message.Debug("syscall_id " + syscall_id);
     var argv = ["spike", "-m31", "-p1", "vmlinux"];
     switch(syscall_id){
 
         case SYS_OPENAT:
             //sys_openat
-            var filename_pointer = this.ram.Read32(this.csr[CSR_MTOHOST] + 16);
+            var filename_pointer = this.ram.Read32(addr + 16);
             var filename = "";
             for(var i=0,c;;i++){
                 c = this.ram.Read8(filename_pointer+i);
@@ -51,18 +45,17 @@ SysCalls.prototype.HandleSysCall = function () {
             }
             var url = filename;
             utils.LoadBinaryResourceII(url, this.OnFileLoaded.bind(this), false, function(error){message.Abort();});
-            this.ram.Write32(this.csr[CSR_MTOHOST], this.file_descriptor_offset);
-            this.csr[CSR_MFROMHOST] = 1;
+            this.ram.Write32(addr, this.file_descriptor_offset);
             break;
 
         case SYS_PREAD:
             //sys_pread
-            var file_descriptor = this.ram.Read32(this.csr[CSR_MTOHOST] + 8);
+            var file_descriptor = this.ram.Read32(addr + 8);
             var file_address = this.file_descriptor_table[file_descriptor];
-            var buffer_address = this.ram.Read32(this.csr[CSR_MTOHOST] + 16);
-            var number_bytes = this.ram.Read32(this.csr[CSR_MTOHOST] + 24);
+            var buffer_address = this.ram.Read32(addr + 16);
+            var number_bytes = this.ram.Read32(addr + 24);
             //var file_offset = this.file_pointer[file_descriptor];
-            var file_offset = this.ram.Read32(this.csr[CSR_MTOHOST] + 32);
+            var file_offset = this.ram.Read32(addr + 32);
             var file_length = this.file_size[file_descriptor];
             var i = 0;
             for(var b;i < number_bytes;i++){
@@ -71,20 +64,18 @@ SysCalls.prototype.HandleSysCall = function () {
                 this.ram.Write8(buffer_address + i, b);
             }
             this.file_pointer[file_descriptor] += i;
-            this.ram.Write32(this.csr[CSR_MTOHOST], i);
-            this.csr[CSR_MFROMHOST] = 1;
+            this.ram.Write32(addr, i);
             break;
 
         case SYS_CLOSE:
             //sys_close
-            this.ram.Write32(this.csr[CSR_MTOHOST], 0);
-            this.csr[CSR_MFROMHOST] = 1;
+            this.ram.Write32(addr, 0);
             break;
 
         case SYS_FSTAT:
             //sys_fstat
-            var file_descriptor = this.ram.Read32(this.csr[CSR_MTOHOST] + 8);
-            var stat_buffer_address = this.ram.Read32(this.csr[CSR_MTOHOST] + 16);
+            var file_descriptor = this.ram.Read32(addr + 8);
+            var stat_buffer_address = this.ram.Read32(addr + 16);
             this.ram.Write32(stat_buffer_address, 0); //unsigned long   Device. 
             this.ram.Write32(stat_buffer_address + 4, 0); //unsigned long   File serial number
             this.ram.Write16(stat_buffer_address + 8, 0x81FF); //unsigned int    File mode
@@ -105,21 +96,19 @@ SysCalls.prototype.HandleSysCall = function () {
             this.ram.Write32(stat_buffer_address +56, 0); //unsigned long   st_ctime_nsec
             this.ram.Write16(stat_buffer_address +60, 0); //unsigned int    __unused4
             this.ram.Write16(stat_buffer_address +62, 0); //unsigned int    __unused5
-            this.ram.Write32(this.csr[CSR_MTOHOST], 1);
-            this.csr[CSR_MFROMHOST] = 1;
+            this.ram.Write32(addr, 1);
             break;
 
         case SYS_WRITE:
             //sys_write
-            var length = this.ram.Read32(this.csr[CSR_MTOHOST] + 8*3), i =0;
-            var string_address = this.ram.Read32(this.csr[CSR_MTOHOST] + 8*2);
+            var length = this.ram.Read32(addr + 8*3), i =0;
+            var string_address = this.ram.Read32(addr + 8*2);
             while(i < length){
                 var c = this.ram.Read8(string_address + (i++));
                 this.ram.Write8Little(0x90000000 >> 0, c);
                 if (c == 0xA) this.ram.Write8(0x90000000 >> 0, 0xD);
             }
-            this.ram.Write32(this.csr[CSR_MTOHOST], i);
-            this.csr[CSR_MFROMHOST] = 1;
+            this.ram.Write32(addr, i);
             break;
 
         case SYS_EXIT:
@@ -130,8 +119,8 @@ SysCalls.prototype.HandleSysCall = function () {
 
         case SYS_GETMAINVARS:
             //sys_getmainvars
-            var address = this.ram.Read32(this.csr[CSR_MTOHOST] + 8);
-            var length = this.ram.Read32(this.csr[CSR_MTOHOST] + 16);
+            var address = this.ram.Read32(addr + 8);
+            var length = this.ram.Read32(addr + 16);
 
            // write argc
             this.ram.Write32(address, argv.length);
@@ -154,8 +143,7 @@ SysCalls.prototype.HandleSysCall = function () {
                 ofs++; // terminating "\0"
             }
 
-            this.csr[CSR_MFROMHOST] = 1;
-            this.ram.Write32(this.csr[CSR_MTOHOST], 0);
+            this.ram.Write32(addr, 0);
             break;
 
         default:
