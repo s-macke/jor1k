@@ -4,6 +4,7 @@
 
 <select id="myselect" onchange="OnSelectChange(this)">
 </select> 
+<span id="stats"></span>
 <br>
 
 <canvas id="tty" class="screen" width="640" height="384">
@@ -168,6 +169,7 @@ var jor1kgui = new Jor1k(
     {
         term: myterm, 
         path: "../bin/",
+        statsid: "stats",
         system: {
             kernelURL: "riscvtests/" + tests[1],
             arch: "riscv",
