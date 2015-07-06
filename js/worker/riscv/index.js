@@ -9,12 +9,39 @@ var imul = require('../imul');
 
 // CPUs
 var SafeCPU = require('./safecpu.js');
+var FastCPU = require('./fastcpu.js');
+
+var stdlib = {
+    Int32Array : Int32Array,
+    Float32Array : Float32Array,
+    Float64Array : Float64Array,
+    Uint8Array : Uint8Array,
+    Uint16Array : Uint16Array,
+    Math : Math
+};
 
 function createCPU(cpuname, ram, heap, ncores) {
     var cpu = null;
 
+    var foreign = {
+        DebugMessage: message.Debug,
+        abort : message.Abort,
+        imul : imul,
+        Read32 : ram.Read32Little.bind(ram),
+        Write32 : ram.Write32Little.bind(ram),
+        Read16 : ram.Read16Little.bind(ram),
+        Write16 : ram.Write16Little.bind(ram),
+        Read8 : ram.Read8Little.bind(ram),
+        Write8 : ram.Write8Little.bind(ram)
+    };
+
     if (cpuname === "safe") {
         return new SafeCPU(ram);
+    }
+    else if (cpuname === "asm") {
+        cpu = FastCPU(stdlib, foreign, heap, ram);
+        cpu.Init();
+        return cpu;
     }
     throw new Error("invalid CPU name:" + cpuname);
 }
