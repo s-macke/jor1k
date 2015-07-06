@@ -94,13 +94,25 @@ function HTIFDisk(ram, SendFunc) {
         var offset = this.ram.Read32(value + 8);
         var size   = this.ram.Read32(value + 16);
         var tag    = this.ram.Read32(value + 24);
-        message.Debug("" + utils.ToHex(addr) + " " + utils.ToHex(offset) + " " + size + " " + tag);
+        //message.Debug("" + utils.ToHex(addr) + " " + utils.ToHex(offset) + " " + size + " " + tag);
         for(var i=0; i<size; i++) {
             this.ram.Write8(addr+i, this.buffer[offset+i]);
         }
         this.Send(2, 0, tag);
     }
 
+
+    this.Write = function(value) {
+        var addr   = this.ram.Read32(value + 0);
+        var offset = this.ram.Read32(value + 8);
+        var size   = this.ram.Read32(value + 16);
+        var tag    = this.ram.Read32(value + 24);
+        //message.Debug("" + utils.ToHex(addr) + " " + utils.ToHex(offset) + " " + size + " " + tag);
+        for(var i=0; i<size; i++) {
+            this.buffer[offset+i] = this.ram.Read8(addr+i);
+        }
+        this.Send(2, 1, tag);
+    }
 };
 
 // -------------------------------------------------
