@@ -237,6 +237,7 @@ jor1kGUI.prototype.Pause = function(pause) {
 jor1kGUI.prototype.SendChars = function(chars) {
     if (this.lastMouseDownTarget == this.fbcanvas) return;
     message.Send(this.activeTTY, chars);
+    message.Send("htif.term0.Transfer", chars);
 }
 
 // Returns the terminal attached to tty
