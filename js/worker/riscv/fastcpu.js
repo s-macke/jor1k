@@ -141,6 +141,9 @@ var pc = 0x200;
 var ticks;
 var amoaddr,amovalue;
 
+var fence = 0x01;
+var ppc = 0x200;
+
 function Init() {
     Reset();
 }
@@ -204,7 +207,8 @@ function Trap(cause, current_pc) {
     PushPrivilegeStack();
     csr[CSR_MEPC] = current_pc;
     csr[CSR_MCAUSE] = cause;
-    pc = (0x100 + 0x40*current_privilege_level)|0;  
+    pc = (0x100 + 0x40*current_privilege_level)|0;
+    fence = 1;  
 };
 
 function MemTrap(addr, op) {
@@ -808,6 +812,7 @@ function Step(steps, clockspeed) {
     var rs2 = 0x0;
     var fs1 = 0.0;
     var fs2 = 0.0;
+    var paddr;
     
     do {
         r[0] = 0x00;
@@ -844,13 +849,18 @@ function Step(steps, clockspeed) {
             }
         }
 
-        var paddr = TranslateVM(pc, VM_FETCH);
-        if(paddr == -1) {
-            continue;
+        if((pc & 0xFFF) == 0) fence = 1; //Checking if the physical pc has reached a page boundary
+ 
+        if(fence == 1){
+            ppc = TranslateVM(pc,VM_FETCH);
+            if(ppc == -1)
+                continue;
+            fence = 0;
         }
-        var ins = Read32(paddr);
-        pc = pc + 4|0;
+        var ins = Read32(ppc);
         //DebugIns.Disassemble(ins,r,csr,pc);
+        pc = pc + 4|0;
+        ppc = ppc + 4|0;
 
         switch(ins&0x7F) {
 
@@ -1240,6 +1250,7 @@ function Step(steps, clockspeed) {
                 rindex = (ins >> 7) & 0x1F;
                 r[rindex] = pc;
                 pc = pc + imm - 4|0;
+                fence = 1;
                 break; 
 
             case 0x67:
@@ -1249,6 +1260,7 @@ function Step(steps, clockspeed) {
                 rindex = (ins >> 7) & 0x1F;
                 r[rindex] = pc;
                 pc = ((rs1 + imm) & 0xFFFFFFFE)|0;
+                fence = 1;
                 break;
 
             case 0x63:
@@ -1309,6 +1321,7 @@ function Step(steps, clockspeed) {
                         break;
 
                 }
+                fence = 1;
                 break;
 
             case 0x73:
@@ -1429,6 +1442,7 @@ function Step(steps, clockspeed) {
                                         abort();
                                         break;
                                 }
+                                fence = 1;
                                 break;
 
                             case 0x102:
@@ -1447,6 +1461,7 @@ function Step(steps, clockspeed) {
                                 csr[CSR_SCAUSE] = csr[CSR_MCAUSE];
                                 csr[CSR_SEPC] = csr[CSR_MEPC];
                                 pc = csr[CSR_STVEC]|0;
+                                fence = 1;
                                 break;
 
                             case 0x101:
@@ -1765,7 +1780,6 @@ return {
     Init: Init,
     InvalidateTLB: InvalidateTLB,
     Step: Step,
-    Disassemble: Disassemble,
     TranslateVM: TranslateVM,
     GetCSR: GetCSR,
     SetCSR: SetCSR,
