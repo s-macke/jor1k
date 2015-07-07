@@ -126,7 +126,7 @@ function Start() {
 
     jor1kparameters = {
         system: {
-            kernelURL: "vmlinux.bin.bz2", // kernel image
+            kernelURL: "or1k/vmlinux.bin.bz2", // kernel image
             memorysize: 32, // in MB, must be a power of two
             cpu: "asm", // short name for the cpu to use
             ncores: 1,
@@ -175,7 +175,7 @@ function Start() {
                 jor1kparameters.system.cpu = params[i].split('=')[1];
                 if (jor1kparameters.system.cpu == "smp") {
                     console.log("Load smp kernel");
-                    jor1kparameters.system.kernelURL = "bin/vmlinuxsmp.bin.bz2";
+                    jor1kparameters.system.kernelURL = "or1k/vmlinuxsmp.bin.bz2";
                     jor1kparameters.system.ncores = 4;
                 }
             }
