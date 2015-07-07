@@ -105,28 +105,11 @@ System.prototype.ChangeCPU = function(cpuname) {
 
 System.prototype.Reset = function() {
     this.status = SYSTEM_STOP;
-    this.irqdev.Reset();
-    this.timerdev.Reset();
-    this.uartdev0.Reset();
-    this.uartdev1.Reset();
-    this.ethdev.Reset();
-    this.fbdev.Reset();
-    this.atadev.Reset();
-    this.tsdev.Reset();
-    this.snddev.Reset();
-    this.rtcdev.Reset();
-    this.kbddev.Reset();
-    this.virtiodev1.Reset();
-    this.virtiodev2.Reset();
-    this.virtiodev3.Reset();
-    this.virtio9pdev.Reset();
-    this.virtiodummydev.Reset();
-    this.virtioinputdev.Reset();
-    this.virtionetdev.Reset();
-    this.virtioblockdev.Reset();
-    this.virtiogpudev.Reset();
-    this.virtioconsoledev.Reset();
-    this.cpu.Reset();
+    
+    for(var i=0; i<this.devices.length; i++) {
+        this.devices[i].Reset();
+    }
+
     this.ips = 0;
 };
 
@@ -144,49 +127,84 @@ System.prototype.Init = function(system) {
     this.ram = new RAM(this.heap, ramoffset);
     this.CreateCPU(system.cpu, system.arch);
 
-    this.irqdev = new IRQDev(this);
-    this.timerdev = new TimerDev();
-    this.uartdev0 = new UARTDev(0, this, 0x2);
-    this.uartdev1 = new UARTDev(1, this, 0x3);
-    this.ethdev = new EthDev(this.ram, this);
-    this.ethdev.TransmitCallback = function(data){
-        message.Send("ethmac", data);
-    };
+    this.devices = [];
+    this.devices.push(this.cpu);
 
-    this.fbdev = new FBDev(this.ram);
-    this.atadev = new ATADev(this);
-    this.tsdev = new TouchscreenDev(this);
-    this.kbddev = new KeyboardDev(this);
-    this.snddev = new SoundDev(this, this.ram);
-    this.rtcdev = new RTCDev(this);
+    if (system.arch == "or1k") {
 
-    this.filesystem = new FS();
-    this.virtio9pdev = new Virtio9p(this.ram, this.filesystem);
-    this.virtiodev1 = new VirtIODev(this, 0x6, this.ram, this.virtio9pdev);
+        this.irqdev = new IRQDev(this);
+        this.timerdev = new TimerDev();
+        this.uartdev0 = new UARTDev(0, this, 0x2);
+        this.uartdev1 = new UARTDev(1, this, 0x3);
+        this.ethdev = new EthDev(this.ram, this);
+        this.ethdev.TransmitCallback = function(data){
+            message.Send("ethmac", data);
+        };
 
-    this.virtioinputdev = new VirtioInput(this.ram);
-    this.virtionetdev = new VirtioNET(this.ram);
-    this.virtioblockdev = new VirtioBlock(this.ram);
-    this.virtiodummydev = new VirtioDummy(this.ram);
-    this.virtiogpudev = new VirtioGPU(this.ram);
-    this.virtioconsoledev = new VirtioConsole(this.ram);
-    this.virtiodev2 = new VirtIODev(this, 0xB, this.ram, this.virtiodummydev);
-    this.virtiodev3 = new VirtIODev(this, 0xC, this.ram, this.virtiodummydev);
+        this.fbdev = new FBDev(this.ram);
+        this.atadev = new ATADev(this);
+        this.tsdev = new TouchscreenDev(this);
+        this.kbddev = new KeyboardDev(this);
+        this.snddev = new SoundDev(this, this.ram);
+        this.rtcdev = new RTCDev(this);
 
-    this.ram.AddDevice(this.uartdev0,   0x90000000, 0x7);
-    this.ram.AddDevice(this.fbdev,      0x91000000, 0x1000);
-    this.ram.AddDevice(this.ethdev,     0x92000000, 0x1000);
-    this.ram.AddDevice(this.tsdev,      0x93000000, 0x1000);
-    this.ram.AddDevice(this.kbddev,     0x94000000, 0x100);
-    this.ram.AddDevice(this.uartdev1,   0x96000000, 0x7);
-    this.ram.AddDevice(this.virtiodev1, 0x97000000, 0x1000);
-    this.ram.AddDevice(this.snddev,     0x98000000, 0x400);
-    this.ram.AddDevice(this.rtcdev,     0x99000000, 0x1000);
-    this.ram.AddDevice(this.irqdev,     0x9A000000, 0x1000);
-    this.ram.AddDevice(this.timerdev,   0x9B000000, 0x1000);
-    this.ram.AddDevice(this.virtiodev2, 0x9C000000, 0x1000);
-    this.ram.AddDevice(this.virtiodev3, 0x9D000000, 0x1000);
-    this.ram.AddDevice(this.atadev,     0x9E000000, 0x1000);
+        this.filesystem = new FS();
+        this.virtio9pdev = new Virtio9p(this.ram, this.filesystem);
+        this.virtiodev1 = new VirtIODev(this, 0x6, this.ram, this.virtio9pdev);
+        this.virtioinputdev = new VirtioInput(this.ram);
+        this.virtionetdev = new VirtioNET(this.ram);
+        this.virtioblockdev = new VirtioBlock(this.ram);
+        this.virtiodummydev = new VirtioDummy(this.ram);
+        this.virtiogpudev = new VirtioGPU(this.ram);
+        this.virtioconsoledev = new VirtioConsole(this.ram);
+        this.virtiodev2 = new VirtIODev(this, 0xB, this.ram, this.virtiodummydev);
+        this.virtiodev3 = new VirtIODev(this, 0xC, this.ram, this.virtiodummydev);
+
+        this.devices.push(this.irqdev);
+        this.devices.push(this.timerdev);
+        this.devices.push(this.uartdev0);
+        this.devices.push(this.uartdev1);
+        this.devices.push(this.ethdev);
+        this.devices.push(this.fbdev);
+        this.devices.push(this.atadev);
+        this.devices.push(this.tsdev);
+        this.devices.push(this.kbddev);
+        this.devices.push(this.snddev);
+        this.devices.push(this.rtcdev);
+        this.devices.push(this.virtio9pdev);
+        this.devices.push(this.virtiodev1);
+        this.devices.push(this.virtiodev2);
+        this.devices.push(this.virtiodev3);
+
+        this.devices.push(this.virtioinputdev);
+        this.devices.push(this.virtionetdev);
+        this.devices.push(this.virtioblockdev);
+        this.devices.push(this.virtiodummydev);
+        this.devices.push(this.virtiogpudev);
+        this.devices.push(this.virtioconsoledev);
+
+        this.ram.AddDevice(this.uartdev0,   0x90000000, 0x7);
+        this.ram.AddDevice(this.fbdev,      0x91000000, 0x1000);
+        this.ram.AddDevice(this.ethdev,     0x92000000, 0x1000);
+        this.ram.AddDevice(this.tsdev,      0x93000000, 0x1000);
+        this.ram.AddDevice(this.kbddev,     0x94000000, 0x100);
+        this.ram.AddDevice(this.uartdev1,   0x96000000, 0x7);
+        this.ram.AddDevice(this.virtiodev1, 0x97000000, 0x1000);
+        this.ram.AddDevice(this.snddev,     0x98000000, 0x400);
+        this.ram.AddDevice(this.rtcdev,     0x99000000, 0x1000);
+        this.ram.AddDevice(this.irqdev,     0x9A000000, 0x1000);
+        this.ram.AddDevice(this.timerdev,   0x9B000000, 0x1000);
+        this.ram.AddDevice(this.virtiodev2, 0x9C000000, 0x1000);
+        this.ram.AddDevice(this.virtiodev3, 0x9D000000, 0x1000);
+        this.ram.AddDevice(this.atadev,     0x9E000000, 0x1000);
+    } else 
+    if (system.arch == "riscv") {
+        // at the moment the htif interface is part of the CPU initialization.
+        // However, it uses uartdev0
+        this.uartdev0 = new UARTDev(0, this, 0x2);
+        this.devices.push(this.uartdev0);
+        this.ram.AddDevice(this.uartdev0,   0x90000000, 0x7);
+    }
 
     this.ips = 0; // external instruction per second counter
     this.idletime = 0; // start time of the idle routine
@@ -227,8 +245,8 @@ System.prototype.ClearSoftInterrupt = function (line, cpuid) {
 };
 
 System.prototype.PrintState = function() {
-    this.uartdev0.Step();
-    this.uartdev1.Step();
+    this.uartdev0 && this.uartdev0.Step();
+    this.uartdev1 && this.uartdev1.Step();
     message.Debug(this.cpu.toString());
 };
 
@@ -341,8 +359,8 @@ System.prototype.MainLoop = function() {
     totalsteps++; // at least one instruction
     this.ips += totalsteps;
 
-    this.uartdev0.Step();
-    this.uartdev1.Step();
+    this.uartdev0 && this.uartdev0.Step();
+    this.uartdev1 && this.uartdev1.Step();
     //this.snddev.Progress();
 
     // stepsleft != 0 indicates CPU idle

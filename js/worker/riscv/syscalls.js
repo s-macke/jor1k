@@ -44,7 +44,7 @@ SysCalls.prototype.HandleSysCall = function (addr) {
                     filename += String.fromCharCode(c);
             }
             var url = filename;
-            utils.LoadBinaryResourceII(url, this.OnFileLoaded.bind(this), false, function(error){message.Abort();});
+            utils.LoadBinaryResourceII("riscv/"+url, this.OnFileLoaded.bind(this), false, function(error){message.Abort();});
             this.ram.Write32(addr, this.file_descriptor_offset);
             break;
 

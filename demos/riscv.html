@@ -17,15 +17,14 @@
 <script>
 
 var Jor1k = require("Jor1k");
-var MackeTerm = require("MackeTerm");
+var LinuxTerm = require("LinuxTerm");
 
 
 var tests =
 [
 "choose test",
-"pk.bin",
-"pk",
 "bbl",
+"pk",
 "rv32ui-p-add.bin",
 "rv32ui-pt-add",
 "rv32ui-p-add",
@@ -164,14 +163,14 @@ for(var i = 0; i<tests.length; i++)
     x.add(option);
 }
 
-var myterm = new MackeTerm("tty");
+var term = new LinuxTerm("tty");
 var jor1kgui = new Jor1k(
     {
-        term: myterm, 
+        term: term, 
         path: "../bin/",
         statsid: "stats",
         system: {
-            kernelURL: "riscvtests/" + tests[1],
+            kernelURL: "riscv/" + tests[1],
             arch: "riscv",
             cpu: "safe"
         }
@@ -189,7 +188,7 @@ if (sel.value[0] == "c")
     return;
 }
 
-jor1kgui.params.system.kernelURL = "riscvtests/"+sel.value;
+jor1kgui.params.system.kernelURL = "riscv/"+sel.value;
 jor1kgui.Reset();
 jor1kgui.Pause(false);
     

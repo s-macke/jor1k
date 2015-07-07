@@ -19,7 +19,7 @@ Restart with new binary image:
 <script>
 
 var Jor1k = require("Jor1k");
-var MackeTerm = require("MackeTerm");
+var LinuxTerm = require("LinuxTerm");
 
 
 function Start(image)
@@ -36,17 +36,17 @@ function OnNewImage(files)
     reader.readAsArrayBuffer(files[0]);
 }
 
-jor1kgui = new Jor1k(
+jor1k = new Jor1k(
 	{
 	system: {
             memorysize: 32,
             cpu: "safe",
-            kernelURL : "rtems.bin.bz2",
+            kernelURL : "or1k/rtems.bin.bz2",
 	 },
          fs: {
             basefsURL: ""
          },
-         term: new MackeTerm("tty"),
+         term: new LinuxTerm("tty"),
 	 path: "../bin/"
 	});
 

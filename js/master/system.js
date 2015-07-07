@@ -26,7 +26,7 @@ function jor1kGUI(parameters)
 
     this.params.path = this.params.path || "";
 
-    this.params.system.kernelURL = this.params.system.kernelURL || "vmlinux.bin.bz2";
+    this.params.system.kernelURL = this.params.system.kernelURL || "or1k/vmlinux.bin.bz2";
     this.params.system.memorysize = this.params.system.memorysize || 32;
     this.params.system.arch = this.params.system.arch || "or1k";
     this.params.system.cpu = this.params.system.cpu || "asm";
@@ -237,6 +237,7 @@ jor1kGUI.prototype.Pause = function(pause) {
 jor1kGUI.prototype.SendChars = function(chars) {
     if (this.lastMouseDownTarget == this.fbcanvas) return;
     message.Send(this.activeTTY, chars);
+    message.Send("htif.term0.Transfer", chars);
 }
 
 // Returns the terminal attached to tty
