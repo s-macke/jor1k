@@ -23,9 +23,8 @@ var LinuxTerm = require("LinuxTerm");
 var tests =
 [
 "choose test",
-"pk.bin",
-"pk",
 "bbl",
+"pk",
 "rv32ui-p-add.bin",
 "rv32ui-pt-add",
 "rv32ui-p-add",
@@ -171,7 +170,7 @@ var jor1kgui = new Jor1k(
         path: "../bin/",
         statsid: "stats",
         system: {
-            kernelURL: "riscvtests/" + tests[1],
+            kernelURL: "riscv/" + tests[1],
             arch: "riscv",
             cpu: "safe"
         }
@@ -189,7 +188,7 @@ if (sel.value[0] == "c")
     return;
 }
 
-jor1kgui.params.system.kernelURL = "riscvtests/"+sel.value;
+jor1kgui.params.system.kernelURL = "riscv/"+sel.value;
 jor1kgui.Reset();
 jor1kgui.Pause(false);
     

@@ -82,7 +82,7 @@ function HTIFDisk(ram, SendFunc) {
     this.buffer = new Uint8Array(1024*1024);
     this.identify = "disk size="+this.buffer.length;
     
-    utils.LoadBinaryResourceII("ext2fsimage", 
+    utils.LoadBinaryResourceII("riscv/ext2fsimage", 
     function(buffer) {
         this.buffer = new Uint8Array(buffer);
         this.identify = "disk size="+this.buffer.length;   
