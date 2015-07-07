@@ -17,7 +17,7 @@
 <script>
 
 var Jor1k = require("Jor1k");
-var MackeTerm = require("MackeTerm");
+var LinuxTerm = require("LinuxTerm");
 
 
 var tests =
@@ -164,10 +164,10 @@ for(var i = 0; i<tests.length; i++)
     x.add(option);
 }
 
-var myterm = new MackeTerm("tty");
+var term = new LinuxTerm("tty");
 var jor1kgui = new Jor1k(
     {
-        term: myterm, 
+        term: term, 
         path: "../bin/",
         statsid: "stats",
         system: {

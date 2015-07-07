@@ -122,8 +122,7 @@ function Start() {
 
     var userid = RandomString(10);
 
-    var MackeTerm = require("MackeTerm");
-    var term = new MackeTerm("tty");   // canvas id for the terminal
+    var term = new LinuxTerm("tty");   // canvas id for the terminal
 
     jor1kparameters = {
         system: {
@@ -195,6 +194,7 @@ function Start() {
     // --------------------------------------------------------
 
     var Jor1k = require("Jor1k");
+    var LinuxTerm = require("LinuxTerm");
 
     jor1kgui = new Jor1k(jor1kparameters);
     term.SetCharReceiveListener(terminalPutCharListener);
