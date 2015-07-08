@@ -6,6 +6,7 @@
 var message = require('../messagehandler'); // global variable
 var utils = require('../utils');
 var imul = require('../imul');
+var HTIF = require('./htif.js');
 
 // CPUs
 var SafeCPU = require('./safecpu.js');
@@ -22,7 +23,7 @@ var stdlib = {
 
 function createCPU(cpuname, ram, heap, ncores) {
     var cpu = null;
-
+    var htif = new HTIF(ram);
     var foreign = {
         DebugMessage: message.Debug,
         abort : message.Abort,
@@ -32,14 +33,24 @@ function createCPU(cpuname, ram, heap, ncores) {
         Read16 : ram.Read16Little.bind(ram),
         Write16 : ram.Write16Little.bind(ram),
         Read8 : ram.Read8Little.bind(ram),
-        Write8 : ram.Write8Little.bind(ram)
+        Write8 : ram.Write8Little.bind(ram),
+        ReadDEVCMDToHost : htif.ReadDEVCMDToHost.bind(htif),
+        ReadDEVCMDFromHost : htif.ReadDEVCMDFromHost.bind(htif),
+        WriteDEVCMDToHost : htif.WriteDEVCMDToHost.bind(htif),
+        WriteDEVCMDFromHost : htif.WriteDEVCMDFromHost.bind(htif),
+        ReadToHost : htif.ReadToHost.bind(htif),
+        ReadFromHost : htif.ReadFromHost.bind(htif),
+        WriteToHost : htif.WriteToHost.bind(htif),
+        WriteFromHost : htif.WriteFromHost.bind(htif),
+        //HandleRequest: htif.HandleRequest.bind(htif),
+        IsQueueEmpty: htif.IsQueueEmpty.bind(htif)
     };
 
     if (cpuname === "safe") {
         return new SafeCPU(ram);
     }
     else if (cpuname === "asm") {
-        cpu = FastCPU(stdlib, foreign, heap, ram);
+        cpu = FastCPU(stdlib, foreign, heap);
         cpu.Init();
         return cpu;
     }

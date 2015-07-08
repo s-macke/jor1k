@@ -3,12 +3,11 @@
 // -------------------------------------------------
 var message = require('../messagehandler');
 var utils = require('../utils');
-var HTIF = require('./htif.js');
 var DebugIns = require('./disassemble.js');
 
 
 // constructor
-function FastCPU(stdlib, foreign, heap, ram) {
+function FastCPU(stdlib, foreign, heap) {
 "use asm";
 
 var DebugMessage = foreign.DebugMessage;
@@ -19,6 +18,16 @@ var Read16 = foreign.Read16;
 var Write16 = foreign.Write16;
 var Read8 = foreign.Read8;
 var Write8 = foreign.Write8;
+var ReadDEVCMDToHost = foreign.ReadDEVCMDToHost;
+var ReadDEVCMDFromHost = foreign.ReadDEVCMDFromHost;
+var WriteDEVCMDToHost = foreign.WriteDEVCMDToHost;
+var WriteDEVCMDFromHost = foreign.WriteDEVCMDFromHost;
+var ReadToHost = foreign.ReadToHost;
+var ReadFromHost = foreign.ReadFromHost;
+var WriteToHost = foreign.WriteToHost;
+var WriteFromHost = foreign.WriteFromHost;
+var IsQueueEmpty = foreign.IsQueueEmpty;
+
 
 var PRV_U = 0x00;
 var PRV_S = 0x01;
@@ -127,8 +136,6 @@ var CSR_UARCH12   = 0xCCC;
 var CSR_UARCH13   = 0xCCCD;
 var CSR_UARCH14   = 0xCCCE;
 var CSR_UARCH15   = 0xCCCF;
-
-var htif = new HTIF(ram);
 
 var r = new stdlib.Int32Array(heap, 0, 32); // registers
 var f = new stdlib.Float64Array(heap, 32<<2, 32); // registers
@@ -377,17 +384,17 @@ function SetCSR(addr,value) {
 
         case CSR_MDEVCMDTOHOST:
             csr[addr] = value;
-            htif.WriteDEVCMDToHost(value);
+            WriteDEVCMDToHost(value);
             break;
 
         case CSR_MDEVCMDFROMHOST:
             csr[addr] = value;
-            htif.WriteDEVCMDFromHost(value);
+            WriteDEVCMDFromHost(value);
             break;
 
         case CSR_MTOHOST:
             csr[addr] =  value;
-            htif.WriteToHost(value);
+            WriteToHost(value);
             break;
 
         case CSR_MTOHOST_TEMP: //only temporary for the patched pk.
@@ -397,7 +404,7 @@ function SetCSR(addr,value) {
 
         case CSR_MFROMHOST:
             csr[addr] = value;
-            htif.WriteFromHost(value);
+            WriteFromHost(value);
             break;
 
         case CSR_MSTATUS:
@@ -542,15 +549,15 @@ function GetCSR(addr) {
             break;
 
         case CSR_MDEVCMDTOHOST:
-            return htif.ReadDEVCMDToHost();
+            return ReadDEVCMDToHost();
             break;
 
         case CSR_MDEVCMDFROMHOST:
-            return htif.ReadDEVCMDFromHost();
+            return ReadDEVCMDFromHost();
             break;
 
         case CSR_MTOHOST:
-            return htif.ReadToHost();
+            return ReadToHost();
             break;
 
         case CSR_MTOHOST_TEMP: //only temporary for the patched pk.
@@ -558,7 +565,7 @@ function GetCSR(addr) {
             break;
 
         case CSR_MFROMHOST:
-            return htif.ReadFromHost();
+            return ReadFromHost();
             break;
 
         case CSR_MSTATUS:
@@ -832,7 +839,7 @@ function Step(steps, clockspeed) {
                     Trap(CAUSE_SOFTWARE_INTERRUPT, pc);
                     continue;
                 } else
-                if (!htif.IsQueueEmpty()) {
+                if (!IsQueueEmpty()) {
                     Trap(CAUSE_HOST_INTERRUPT, pc);
                     continue;
                 }
