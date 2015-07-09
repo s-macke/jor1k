@@ -28,6 +28,7 @@ var WriteToHost = foreign.WriteToHost;
 var WriteFromHost = foreign.WriteFromHost;
 var IsQueueEmpty = foreign.IsQueueEmpty;
 
+var ERROR_VMPRIVILEGE = 1;
 
 var PRV_U = 0x00;
 var PRV_S = 0x01;
@@ -190,11 +191,12 @@ function GetTimeToNextInterrupt() {
 }
 
 function GetTicks() {
-    return ticks;
+    return ticks|0;
 }
 
 function ProgressTime(delta) {
-    ticks += delta;
+    delta = delta|0;
+    ticks = ticks + delta|0;
 }
 
 
@@ -206,34 +208,45 @@ function CheckForInterrupt() {
 };
 
 function RaiseInterrupt(line, cpuid) {
-    DebugMessage("raise int " + line);
+    line = line|0;
+    cpuid = cpuid|0;
+    //DebugMessage("raise int " + line);
 };
 
 function ClearInterrupt(line, cpuid) {
+    line = line|0;
+    cpuid = cpuid|0;
 };
 
 function Trap(cause, current_pc) {
 
-    var current_privilege_level = (csr[(csrp + CSR_MSTATUS)>>2] & 0x06) >> 1;
+    cause = cause|0;
+    current_pc = current_pc|0;
+    var current_privilege_level = 0;
+    var offset = 0x100;
+    current_privilege_level = (csr[(csrp + CSR_MSTATUS)>>2] & 0x06) >> 1;
     PushPrivilegeStack();
     csr[(csrp + CSR_MEPC)>>2] = current_pc;
     csr[(csrp + CSR_MCAUSE)>>2] = cause;
-    pc = (0x100 + 0x40*current_privilege_level)|0;
+    pc = (offset + (current_privilege_level << 6))|0;
     fence = 1;  
 };
 
 function MemTrap(addr, op) {
+
+    addr = addr|0;
+    op = op|0;
     csr[(csrp + CSR_MBADADDR)>>2] = addr;
-    switch(op) {
-        case VM_READ:
+    switch(op|0) {
+        case 0: //VM_READ
             Trap(CAUSE_LOAD_ACCESS_FAULT, pc - 4|0);
             break;
 
-        case VM_WRITE:
+        case 1: //VM_WRITE
             Trap(CAUSE_STORE_ACCESS_FAULT, pc - 4|0);
             break;
 
-        case VM_FETCH:
+        case 2: //VM_FETCH
             Trap(CAUSE_INSTRUCTION_ACCESS_FAULT, pc);
             break;
     }
@@ -243,60 +256,68 @@ function MemTrap(addr, op) {
 
 function CheckVMPrivilege(type, op) {
 
-    var priv = (csr[(csrp + CSR_MSTATUS)>>2] & 0x06) >> 1;
+    type = type|0;
+    op = op|0;
+    var priv = 0;
+    priv = (csr[(csrp + CSR_MSTATUS)>>2] & 0x06) >> 1;
 
-    switch(type) {
+    switch(type|0) {
 
         case 2: 
-            if (op == VM_READ) return true;
-            if ((priv == PRV_U) && (op == VM_FETCH)) return true;
-            return false;
+            if (op == VM_READ) return 1;
+            if ((priv == PRV_U) && (op == VM_FETCH)) return 1;
+            return 0;
             break;
 
         case 3: 
-            if (!( (priv == PRV_S) && (op == VM_FETCH) ) ) return true;
+            if (!( (priv == PRV_S) && (op == VM_FETCH) ) ) return 1;
             break;
 
         case 4:
-            if (op == VM_READ) return true;
-            return false;
+            if (op == VM_READ) return 1;
+            return 0;
             break;
 
         case 5:
-            if (op != VM_FETCH) return true;
+            if (op != VM_FETCH) return 1;
             break;
 
         case 6:
-            if (op != VM_WRITE) return true;
+            if (op != VM_WRITE) return 1;
             break;
 
         case 7:
-            return true;
+            return 1;
             break;
 
         case 13:
-            if ((priv == PRV_S) && (op != VM_FETCH)) return true;
+            if ((priv == PRV_S) && (op != VM_FETCH)) return 1;
             break;
 
         case 14:
-            if ((priv == PRV_S) && (op != VM_WRITE)) return true;
+            if ((priv == PRV_S) && (op != VM_WRITE)) return 1;
             break;
 
         case 15: 
-            if (priv == PRV_S) return true;
+            if (priv == PRV_S) return 1;
             break;
 
     }
 
-    DebugMessage("Inside CheckVMPrivilege for PC "+utils.ToHex(pc) + " and type " + type + " and op " + op);
+    DebugMessage(ERROR_VMPRIVILEGE);
     abort();
-    return false;
+    return 0;
 }
 
 
 function TranslateVM(addr, op) {
-    var vm = (csr[(csrp + CSR_MSTATUS)>>2] >> 17) & 0x1F;
-    var current_privilege_level = (csr[(csrp + CSR_MSTATUS)>>2] & 0x06) >> 1;
+
+    addr = addr|0;
+    op = op|0;
+    var vm = 0;
+    var current_privilege_level = 0;
+    vm = (csr[(csrp + CSR_MSTATUS)>>2] >> 17) & 0x1F;
+    current_privilege_level = (csr[(csrp + CSR_MSTATUS)>>2] & 0x06) >> 1;
     var i = 1; //i = LEVELS -1 and LEVELS = 2 in a 32 bit System
 
     // vm bare mode
@@ -379,92 +400,94 @@ function TranslateVM(addr, op) {
 
 function SetCSR(addr,value) {
 
+    addr = addr|0;
+    value = value|0;
     addr = addr << 2;
-    switch(addr)
+    switch(addr|0)
     {
-        case CSR_FCSR:
+        case 0xC: //CSR_FCSR
             csr[(csrp + addr)>>2] = value;
             break;
 
-        case CSR_MDEVCMDTOHOST:
+        case 0x1E40: //CSR_MDEVCMDTOHOST
             csr[(csrp + addr)>>2] = value;
             WriteDEVCMDToHost(value);
             break;
 
-        case CSR_MDEVCMDFROMHOST:
+        case 0x1E44: //CSR_MDEVCMDFROMHOST
             csr[(csrp + addr)>>2] = value;
             WriteDEVCMDFromHost(value);
             break;
 
-        case CSR_MTOHOST:
+        case 0x1E00: //CSR_MTOHOST
             csr[(csrp + addr)>>2] =  value;
             WriteToHost(value);
             break;
 
-        case CSR_MTOHOST_TEMP: //only temporary for the patched pk.
+        case 0xD14: //CSR_MTOHOST_TEMP only temporary for the patched pk.
             Write8(0x90000000 >> 0, value);
             if (value == 0xA) Write8(0x90000000 >> 0, 0xD);
             break;
 
-        case CSR_MFROMHOST:
+        case 0x1E04: //CSR_MFROMHOST
             csr[(csrp + addr)>>2] = value;
             WriteFromHost(value);
             break;
 
-        case CSR_MSTATUS:
+        case 0xC00: //CSR_MSTATUS
             csr[(csrp + addr)>>2] = value;
             break;
 
-        case CSR_MCPUID:
+        case 0x3C00: //CSR_MCPUID
             //csr[addr] = value;
             break;
 
-        case CSR_MIMPID:
+        case 0x3C04: //CSR_MIMPID
             csr[(csrp + addr)>>2] = value;
             break;
 
-        case CSR_MHARTID:
+        case 0x3C40: //CSR_MHARTID
             csr[(csrp + addr)>>2] = value;
             break;
 
-        case CSR_MTVEC:
+        case 0xC04: //CSR_MTVEC
             csr[(csrp + addr)>>2] = value;
             break;
 
-        case CSR_MIP:
+        case 0xD10: //CSR_MIP
             //csr[addr] = value;
             var mask = 0x2 | 0x08; //mask = MIP_SSIP | MIP_MSIP
             csr[(csrp + addr)>>2] = (csr[(csrp + addr)>>2] & ~mask) | (value & mask);
             break;
 
-        case CSR_MIE:
+        case 0xC10: //CSR_MIE
             //csr[addr] = value;
             var mask = 0x2 | 0x08 | 0x20; //mask = MIP_SSIP | MIP_MSIP | MIP_STIP
             csr[(csrp + addr)>>2] = (csr[(csrp + addr)>>2] & ~mask) | (value & mask);
             break;
 
-        case CSR_SEPC:
-        case CSR_MEPC:
+        case 0x504: //CSR_SEPC
+        case 0xD04: //CSR_MEPC
             csr[(csrp + addr)>>2] = value;
             break;
 
-        case CSR_MCAUSE:
+        case 0xD08: //CSR_MCAUSE
             csr[(csrp + addr)>>2] = value;
             break;
 
-        case CSR_SCAUSE:
+        case 0x3508: //CSR_SCAUSE
             csr[(csrp + addr)>>2] = value;
             break;
 
-        case CSR_MBADADDR:
+        case 0xD0C: //CSR_MBADADDR
             csr[(csrp + addr)>>2] = value;
             break;
 
-        case CSR_SBADADDR:
+        case 0x350C: //CSR_SBADADDR
             csr[(csrp + addr)>>2] = value;
             break;
 
-        case CSR_SSTATUS:
+        case 0x400: //CSR_SSTATUS
             csr[(csrp + CSR_SSTATUS)>>2] = value;
             csr[(csrp + CSR_MSTATUS)>>2] &= ~0x1F039; 
             csr[(csrp + CSR_MSTATUS)>>2] |= (csr[(csrp + CSR_SSTATUS)>>2] & 0x01); //IE0
@@ -474,63 +497,63 @@ function SetCSR(addr,value) {
             csr[(csrp + CSR_MSTATUS)>>2] |= (csr[(csrp + CSR_SSTATUS)>>2] & 0x10000); //MPRV
             break; 
 
-        case CSR_STVEC:
+        case 0x404: //CSR_STVEC
             csr[(csrp + addr)>>2] = value;
             break;
 
-        case CSR_SIP:
+        case 0x510: //CSR_SIP
             //csr[addr] = value;
             var mask = 0x2; //mask = MIP_SSIP
             csr[(csrp + CSR_MIP)>>2] = (csr[(csrp + CSR_MIP)>>2] & ~mask) | (value & mask);
             break;
 
-        case CSR_SIE:
+        case 0x410: //CSR_SIE
             //csr[addr] = value;
             var mask = 0x2 | 0x20; //mask = MIP_SSIP | MIP_STIP
             csr[(csrp + CSR_MIE)>>2] = (csr[(csrp + CSR_MIE)>>2] & ~mask) | (value & mask);
             break;
 
-        case CSR_MSCRATCH:
+        case 0xD00: //CSR_MSCRATCH
             csr[(csrp + addr)>>2] = value;
             break;
 
-        case CSR_SSCRATCH:
+        case 0x500: //CSR_SSCRATCH
             csr[(csrp + addr)>>2] = value;
             break;
 
-        case CSR_CYCLEW:
+        case 0x2400: //CSR_CYCLEW
             csr[(csrp + addr)>>2] = value;
             break;
 
-        case CSR_CYCLES:
+        case 0x3000: //CSR_CYCLES
             ticks = value;
             csr[(csrp + addr)>>2] = value;
             break;
 
-        case CSR_MTIME:
-        case CSR_STIME:
-        case CSR_STIMEW:
+        case 0x1C04:  //CSR_MTIME
+        case 0x3404:  //CSR_STIME
+        case 0x2804: //CSR_STIMEW
             csr[(csrp + addr)>>2] = value;
             break;
 
-        case CSR_MTIMEH:
-        case CSR_STIMEH:
-        case CSR_STIMEHW:
+        case 0x1D04:  //CSR_MTIMEH
+        case 0x3604:  //CSR_STIMEH
+        case 0x2A04: //CSR_STIMEHW
             csr[(csrp + addr)>>2] = value;
             break;
 
-        case CSR_TIME:
-        case CSR_TIMEW:
+        case 0x3004:  //CSR_TIME
+        case 0x2404: //CSR_TIMEW
             csr[(csrp + addr)>>2] = value;
             break;
 
-        case CSR_MTIMECMP:
-        case CSR_STIMECMP:
+        case 0xC84: //CSR_MTIMECMP
+        case 0x484: //CSR_STIMECMP
             csr[(csrp + CSR_MIP)>>2] &= ~(0x20); //csr[CSR_MIP] &= ~MIP_STIP
             csr[(csrp + addr)>>2] = value;
             break;
 
-        case CSR_SPTBR:
+        case 0x600: //CSR_SPTBR
             csr[(csrp + addr)>>2] = value;
             break;
 
@@ -544,80 +567,81 @@ function SetCSR(addr,value) {
 
 function GetCSR(addr) {
 
+    addr = addr|0;
     var current_privilege_level = (csr[(csrp + CSR_MSTATUS)>>2] & 0x06) >> 1;
     addr = addr << 2;
-    switch(addr)
+    switch(addr|0)
     {
-        case CSR_FCSR:
+        case 0xC: //CSR_FCSR
             return 0x0;
             break;
 
-        case CSR_MDEVCMDTOHOST:
+        case 0x1E40: //CSR_MDEVCMDTOHOST
             return ReadDEVCMDToHost();
             break;
 
-        case CSR_MDEVCMDFROMHOST:
+        case 0x1E44: //CSR_MDEVCMDFROMHOST
             return ReadDEVCMDFromHost();
             break;
 
-        case CSR_MTOHOST:
+        case 0x1E00: //CSR_MTOHOST
             return ReadToHost();
             break;
 
-        case CSR_MTOHOST_TEMP: //only temporary for the patched pk.
+        case 0xD14: //CSR_MTOHOST_TEMP only temporary for the patched pk.
             return 0x0;
             break;
 
-        case CSR_MFROMHOST:
+        case 0x1E04: //CSR_MFROMHOST
             return ReadFromHost();
             break;
 
-        case CSR_MSTATUS:
+        case 0xC00: //CSR_MSTATUS
             return csr[(csrp + addr)>>2];
             break;
 
-        case CSR_MCPUID:
+        case 0x3C00: //CSR_MCPUID
             return csr[(csrp + addr)>>2];
             break;
 
-        case CSR_MIMPID:
+        case 0x3C40: //CSR_MIMPID
             return csr[(csrp + addr)>>2];
             break;
 
-        case CSR_MHARTID:
+        case 0x3C40: //CSR_MHARTID
             return csr[(csrp + addr)>>2];
             break;
 
-        case CSR_MTVEC:
+        case 0xC04: //CSR_MTVEC
             return csr[(csrp + addr)>>2];
             break;
 
-        case CSR_MIE:
+        case 0xC10: //CSR_MIE
             return csr[(csrp + addr)>>2];
             break;
 
-        case CSR_SEPC:
-        case CSR_MEPC:
+        case 0x504: //CSR_SEPC
+        case 0xD04: //CSR_MEPC
             return csr[(csrp + addr)>>2];
             break;
 
-        case CSR_MCAUSE:
+        case 0xD08: //CSR_MCAUSE
             return csr[(csrp + addr)>>2];
             break;
 
-        case CSR_SCAUSE:
+        case 0x3508: //CSR_SCAUSE
             return csr[(csrp + addr)>>2];
             break;
 
-        case CSR_MBADADDR:
+        case 0xD0C: //CSR_MBADADDR
             return csr[(csrp + addr)>>2];
             break;
 
-        case CSR_SBADADDR:
+        case 0x350C: //CSR_SBADADDR
             return csr[(csrp + addr)>>2];
             break;
 
-        case CSR_SSTATUS:
+        case 0x400: //CSR_SSTATUS
             //if (current_privilege_level == 0) Trap(CAUSE_ILLEGAL_INSTRUCTION);
             csr[(csrp + CSR_SSTATUS)>>2] = 0x00; 
             csr[(csrp + CSR_SSTATUS)>>2] |= (csr[(csrp + CSR_MSTATUS)>>2] & 0x01); //IE0
@@ -628,65 +652,65 @@ function GetCSR(addr) {
             return csr[(csrp + CSR_SSTATUS)>>2];
             break;
 
-        case CSR_STVEC:
+        case 0x404: //CSR_STVEC
             return csr[(csrp + addr)>>2];
             break;
 
-        case CSR_MIP:
+        case 0xD10: //CSR_MIP
             return csr[(csrp + addr)>>2];
             break;
 
-        case CSR_MIE:
+        case 0xC10: //CSR_MIE
             return csr[(csrp + addr)>>2];
             break;
 
-        case CSR_SIP: 
+        case 0x510: //CSR_SIP 
             return csr[(csrp + CSR_MIP)>>2] & (0x2 | 0x20);//(MIP_SSIP | MIP_STIP)
             break;
 
-        case CSR_SIE: 
+        case 0x410: //CSR_SIE 
             return csr[(csrp + CSR_MIE)>>2] & (0x2 | 0x20);//(MIP_SSIP | MIP_STIP)
             break;
 
-        case CSR_MSCRATCH:
+        case 0xD00: //CSR_MSCRATCH
             return csr[(csrp + addr)>>2];
             break;
 
-        case CSR_SSCRATCH:
+        case 0x500: //CSR_SSCRATCH
             return csr[(csrp + addr)>>2];
             break;
 
-        case CSR_CYCLEW:
+        case 0x2400: //CSR_CYCLEW
             return ticks;
             break;
 
-        case CSR_CYCLES:
+        case 0x3000: //CSR_CYCLES
             return ticks;
             break;
 
-        case CSR_MTIME:
-        case CSR_STIME:
-        case CSR_STIMEW:
+        case 0x1C04:  //CSR_MTIME
+        case 0x3404:  //CSR_STIME
+        case 0x2804: //CSR_STIMEW
             return ticks;
             break;
 
-        case CSR_MTIMEH:
-        case CSR_STIMEH:
-        case CSR_STIMEHW:
+        case 0x1D04:  //CSR_MTIMEH
+        case 0x3604:  //CSR_STIMEH
+        case 0x2A04: //CSR_STIMEHW
             return (ticks) >> 32;
             break;
 
-        case CSR_TIME:
-        case CSR_TIMEW:
+        case 0x3004:  //CSR_TIME
+        case 0x2404: //CSR_TIMEW
             return ticks;
             break;
 
-        case CSR_MTIMECMP:
-        case CSR_STIMECMP:
+        case 0xC84: //CSR_MTIMECMP
+        case 0x484: //CSR_STIMECMP
             return csr[(csrp + addr)>>2];
             break;
         
-        case CSR_SPTBR:
+        case 0x600: //CSR_SPTBR
             return csr[(csrp + addr)>>2];
             break;
 
@@ -701,6 +725,8 @@ function GetCSR(addr) {
 
 function IMul(a,b) {
 
+    a = a|0;
+    b = b|0;
     var result = [0,0];
 
     a >>>= 0;
@@ -731,6 +757,8 @@ function IMul(a,b) {
 
 function UMul(a,b) {
 
+    a = a|0;
+    b = b|0;
     var result = [0,0];
 
     if (a == 0) return result[0] = result[1] = 0, result;
@@ -761,6 +789,8 @@ function UMul(a,b) {
 
 function SUMul(a,b) {
 
+    a = a|0;
+    b = b|0;
     var result = [0,0];
 
     if (a == 0) return result[0] = result[1] = 0, result;
@@ -808,6 +838,8 @@ function PopPrivilegeStack(){
 
 function Step(steps, clockspeed) {
 
+    steps = steps|0;
+    clockspeed = clockspeed|0;
     var rindex = 0x00;
     var findex = 0x00;
     var imm = 0x00;
@@ -1390,20 +1422,20 @@ function Step(steps, clockspeed) {
                                 //ecall
                                 switch(current_privilege_level)
                                 {
-                                    case PRV_U:
+                                    case 0x00: //PRV_U
                                         Trap(CAUSE_ENVCALL_UMODE, pc - 4|0);
                                         break;
 
-                                    case PRV_S:
+                                    case 0x01: //PRV_S
                                         Trap(CAUSE_ENVCALL_SMODE, pc - 4|0);
                                         break;
 
-                                    case PRV_H:
+                                    case 0x02: //PRV_H
                                         Trap(CAUSE_ENVCALL_HMODE, pc - 4|0);
                                         abort();
                                         break;
 
-                                    case PRV_M:
+                                    case 0x03: //PRV_M
                                         Trap(CAUSE_ENVCALL_MMODE, pc - 4|0);
                                         break;
                                     
@@ -1432,18 +1464,18 @@ function Step(steps, clockspeed) {
                                 switch(current_privilege_level)
                                 {
                                     
-                                    case PRV_S:
+                                    case 0x01: //PRV_S
                                         //DebugMessage("eret PRV_S -"+ utils.ToHex(ins));
                                         pc = csr[(csrp + CSR_SEPC)>>2]|0;
                                         break;
 
-                                    case PRV_H:
+                                    case 0x02: //PRV_H
                                         //DebugMessage("Not supported eret PRV_H -"+ utils.ToHex(ins));
                                         pc = csr[(csrp + CSR_HEPC)>>2]|0;
                                         abort();
                                         break;
 
-                                    case PRV_M:
+                                    case 0x03: //PRV_M
                                         //DebugMessage("eret PRV_M -"+ utils.ToHex(ins));
                                         pc = csr[(csrp + CSR_MEPC)>>2]|0;
                                         break;
