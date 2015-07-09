@@ -28,7 +28,11 @@ var WriteToHost = foreign.WriteToHost;
 var WriteFromHost = foreign.WriteFromHost;
 var IsQueueEmpty = foreign.IsQueueEmpty;
 
+var ERROR_INCOMPLETE_VMPRIVILEGE = 0;
 var ERROR_VMPRIVILEGE = 1;
+var ERROR_VMMODE = 2;
+var ERROR_SETCSR = 3;
+var ERROR_GETCSR = 4;
 
 var PRV_U = 0x00;
 var PRV_S = 0x01;
@@ -264,26 +268,26 @@ function CheckVMPrivilege(type, op) {
     switch(type|0) {
 
         case 2: 
-            if (op == VM_READ) return 1;
-            if ((priv == PRV_U) && (op == VM_FETCH)) return 1;
+            if ((op|0) == (VM_READ|0)) return 1;
+            if (((priv|0) == (PRV_U|0)) & ((op|0) == (VM_FETCH|0))) return 1;
             return 0;
             break;
 
         case 3: 
-            if (!( (priv == PRV_S) && (op == VM_FETCH) ) ) return 1;
+            if (!( ((priv|0) == (PRV_S|0)) & ((op|0) == (VM_FETCH|0)) ) ) return 1;
             break;
 
         case 4:
-            if (op == VM_READ) return 1;
+            if ((op|0) == (VM_READ|0)) return 1;
             return 0;
             break;
 
         case 5:
-            if (op != VM_FETCH) return 1;
+            if ((op|0) != (VM_FETCH|0)) return 1;
             break;
 
         case 6:
-            if (op != VM_WRITE) return 1;
+            if ((op|0) != (VM_WRITE|0)) return 1;
             break;
 
         case 7:
@@ -291,20 +295,20 @@ function CheckVMPrivilege(type, op) {
             break;
 
         case 13:
-            if ((priv == PRV_S) && (op != VM_FETCH)) return 1;
+            if (((priv|0) == (PRV_S|0)) & ((op|0) != (VM_FETCH|0))) return 1;
             break;
 
         case 14:
-            if ((priv == PRV_S) && (op != VM_WRITE)) return 1;
+            if (((priv|0) == (PRV_S|0)) & ((op|0) != (VM_WRITE|0))) return 1;
             break;
 
         case 15: 
-            if (priv == PRV_S) return 1;
+            if ((priv|0) == (PRV_S|0)) return 1;
             break;
 
     }
 
-    DebugMessage(ERROR_VMPRIVILEGE);
+    DebugMessage(ERROR_INCOMPLETE_VMPRIVILEGE|0);
     abort();
     return 0;
 }
@@ -316,40 +320,55 @@ function TranslateVM(addr, op) {
     op = op|0;
     var vm = 0;
     var current_privilege_level = 0;
-    vm = (csr[(csrp + CSR_MSTATUS)>>2] >> 17) & 0x1F;
-    current_privilege_level = (csr[(csrp + CSR_MSTATUS)>>2] & 0x06) >> 1;
     var i = 1; //i = LEVELS -1 and LEVELS = 2 in a 32 bit System
 
+    var offset = 0;
+    var page_num = 0;
+    var frame_num = 0;
+    var type = 0;
+    var valid = 0;
+
+    //For Level 2
+    var new_sptbr = 0;
+    var new_page_num = 0;
+    var new_frame_num = 0;
+    var new_type = 0;
+    var new_valid = 0;
+
+
+    vm = (csr[(csrp + CSR_MSTATUS)>>2] >> 17) & 0x1F;
+    current_privilege_level = (csr[(csrp + CSR_MSTATUS)>>2] & 0x06) >> 1;
+    
     // vm bare mode
-    if(vm == 0 || current_privilege_level == PRV_M) return addr;
+    if(((vm|0) == 0) | ((current_privilege_level|0) == (PRV_M|0))) return addr|0;
 
     // hack, open mmio by direct mapping
     //if ((addr>>>28) == 0x9) return addr;
 
     // only RV32 supported
-    if(vm != 8) {
-        DebugMessage("unkown VM Mode " + vm + " at PC " + utils.ToHex(pc));
+    if((vm|0) != 8) {
+        DebugMessage(ERROR_VMMODE|0);
         abort();
     }
 
     // LEVEL 1
-    var offset = addr & 0xFFF;
-    var page_num = (addr >>> 22);
+    offset = addr & 0xFFF;
+    page_num = (addr >>> 22)|0;
 
-    var frame_num = Read32(csr[(csrp + CSR_SPTBR)>>2] + (page_num << 2));
-    var type = ((frame_num >> 1) & 0xF);
-    var valid = (frame_num & 0x01);
+    frame_num = Read32((+(~~csr[(csrp + CSR_SPTBR)>>2])) + (+(page_num << 2)))|0;
+    type = ((frame_num >> 1) & 0xF);
+    valid = (frame_num & 0x01);
 
-    if (valid == 0) {
+    if ((valid|0) == 0) {
         //DebugMessage("Unsupported valid field " + valid + " or invalid entry in PTE at PC "+utils.ToHex(pc) + " pl:" + current_privilege_level + " addr:" + utils.ToHex(addr) + " op:"+op);
         //abort();
         MemTrap(addr, op);
         return -1;
     }
-    if (type >= 2) {
+    if ((type|0) >= 2) {
 
-        if (!CheckVMPrivilege(type,op)) {
-            DebugMessage("Error in TranslateVM: Unhandled trap");
+        if (!(CheckVMPrivilege(type,op)|0)) {
+            DebugMessage(ERROR_VMPRIVILEGE|0);
             abort();
         }
 /*
@@ -365,20 +384,21 @@ function TranslateVM(addr, op) {
 
     // LEVEL 2
     //DebugMessage("Second level MMU");
-    i = i - 1;
-    var offset = addr & 0xFFF;
-    var new_sptbr = (frame_num & 0xFFFFFC00) << 2;
-    var new_page_num = (addr >> 12) & 0x3FF;
-    var new_frame_num = Read32(new_sptbr + (new_page_num << 2));
-    var new_type = ((new_frame_num >> 1) & 0xF);
-    var new_valid = (new_frame_num & 0x01);
 
-    if (new_valid == 0) {
+    offset = addr & 0xFFF;
+    new_sptbr = (frame_num & 0xFFFFFC00) << 2;
+    new_page_num = (addr >> 12) & 0x3FF;
+    new_frame_num = Read32((+(new_sptbr|0)) + (+(new_page_num << 2)))|0;
+    new_type = ((new_frame_num >> 1) & 0xF);
+    new_valid = (new_frame_num & 0x01);
+    i = (i - 1)|0;
+
+    if ((new_valid|0) == 0) {
         MemTrap(addr, op);
         return -1;
     }
 
-    if (!CheckVMPrivilege(new_type, op)) {
+    if (!(CheckVMPrivilege(new_type, op)|0)) {
         //DebugMessage("Error in TranslateVM: Unhandled trap");
         //abort();
         MemTrap(addr, op);
@@ -402,6 +422,7 @@ function SetCSR(addr,value) {
 
     addr = addr|0;
     value = value|0;
+    var mask = 0;
     addr = addr << 2;
     switch(addr|0)
     {
@@ -411,27 +432,27 @@ function SetCSR(addr,value) {
 
         case 0x1E40: //CSR_MDEVCMDTOHOST
             csr[(csrp + addr)>>2] = value;
-            WriteDEVCMDToHost(value);
+            WriteDEVCMDToHost(value|0);
             break;
 
         case 0x1E44: //CSR_MDEVCMDFROMHOST
             csr[(csrp + addr)>>2] = value;
-            WriteDEVCMDFromHost(value);
+            WriteDEVCMDFromHost(value|0);
             break;
 
         case 0x1E00: //CSR_MTOHOST
             csr[(csrp + addr)>>2] =  value;
-            WriteToHost(value);
+            WriteToHost(value|0);
             break;
 
         case 0xD14: //CSR_MTOHOST_TEMP only temporary for the patched pk.
-            Write8(0x90000000 >> 0, value);
-            if (value == 0xA) Write8(0x90000000 >> 0, 0xD);
+            Write8(0x90000000 >> 0, value|0);
+            if ((value|0) == 0xA) Write8(0x90000000 >> 0, 0xD);
             break;
 
         case 0x1E04: //CSR_MFROMHOST
             csr[(csrp + addr)>>2] = value;
-            WriteFromHost(value);
+            WriteFromHost(value|0);
             break;
 
         case 0xC00: //CSR_MSTATUS
@@ -456,13 +477,13 @@ function SetCSR(addr,value) {
 
         case 0xD10: //CSR_MIP
             //csr[addr] = value;
-            var mask = 0x2 | 0x08; //mask = MIP_SSIP | MIP_MSIP
+            mask = 0x2 | 0x08; //mask = MIP_SSIP | MIP_MSIP
             csr[(csrp + addr)>>2] = (csr[(csrp + addr)>>2] & ~mask) | (value & mask);
             break;
 
         case 0xC10: //CSR_MIE
             //csr[addr] = value;
-            var mask = 0x2 | 0x08 | 0x20; //mask = MIP_SSIP | MIP_MSIP | MIP_STIP
+            mask = 0x2 | 0x08 | 0x20; //mask = MIP_SSIP | MIP_MSIP | MIP_STIP
             csr[(csrp + addr)>>2] = (csr[(csrp + addr)>>2] & ~mask) | (value & mask);
             break;
 
@@ -489,12 +510,12 @@ function SetCSR(addr,value) {
 
         case 0x400: //CSR_SSTATUS
             csr[(csrp + CSR_SSTATUS)>>2] = value;
-            csr[(csrp + CSR_MSTATUS)>>2] &= ~0x1F039; 
-            csr[(csrp + CSR_MSTATUS)>>2] |= (csr[(csrp + CSR_SSTATUS)>>2] & 0x01); //IE0
-            csr[(csrp + CSR_MSTATUS)>>2] |= (csr[(csrp + CSR_SSTATUS)>>2] & 0x08); //IE1
-            csr[(csrp + CSR_MSTATUS)>>2] |= (csr[(csrp + CSR_SSTATUS)>>2] & 0x10); //PRV1
-            csr[(csrp + CSR_MSTATUS)>>2] |= (csr[(csrp + CSR_SSTATUS)>>2] & 0xF000); //FS,XS
-            csr[(csrp + CSR_MSTATUS)>>2] |= (csr[(csrp + CSR_SSTATUS)>>2] & 0x10000); //MPRV
+            csr[(csrp + CSR_MSTATUS)>>2] = csr[(csrp + CSR_MSTATUS)>>2] & (~0x1F039); 
+            csr[(csrp + CSR_MSTATUS)>>2] = csr[(csrp + CSR_MSTATUS)>>2] | (csr[(csrp + CSR_SSTATUS)>>2] & 0x01); //IE0
+            csr[(csrp + CSR_MSTATUS)>>2] = csr[(csrp + CSR_MSTATUS)>>2] | (csr[(csrp + CSR_SSTATUS)>>2] & 0x08); //IE1
+            csr[(csrp + CSR_MSTATUS)>>2] = csr[(csrp + CSR_MSTATUS)>>2] | (csr[(csrp + CSR_SSTATUS)>>2] & 0x10); //PRV1
+            csr[(csrp + CSR_MSTATUS)>>2] = csr[(csrp + CSR_MSTATUS)>>2] | (csr[(csrp + CSR_SSTATUS)>>2] & 0xF000); //FS,XS
+            csr[(csrp + CSR_MSTATUS)>>2] = csr[(csrp + CSR_MSTATUS)>>2] | (csr[(csrp + CSR_SSTATUS)>>2] & 0x10000); //MPRV
             break; 
 
         case 0x404: //CSR_STVEC
@@ -503,13 +524,13 @@ function SetCSR(addr,value) {
 
         case 0x510: //CSR_SIP
             //csr[addr] = value;
-            var mask = 0x2; //mask = MIP_SSIP
+            mask = 0x2; //mask = MIP_SSIP
             csr[(csrp + CSR_MIP)>>2] = (csr[(csrp + CSR_MIP)>>2] & ~mask) | (value & mask);
             break;
 
         case 0x410: //CSR_SIE
             //csr[addr] = value;
-            var mask = 0x2 | 0x20; //mask = MIP_SSIP | MIP_STIP
+            mask = 0x2 | 0x20; //mask = MIP_SSIP | MIP_STIP
             csr[(csrp + CSR_MIE)>>2] = (csr[(csrp + CSR_MIE)>>2] & ~mask) | (value & mask);
             break;
 
@@ -549,7 +570,7 @@ function SetCSR(addr,value) {
 
         case 0xC84: //CSR_MTIMECMP
         case 0x484: //CSR_STIMECMP
-            csr[(csrp + CSR_MIP)>>2] &= ~(0x20); //csr[CSR_MIP] &= ~MIP_STIP
+            csr[(csrp + CSR_MIP)>>2] = csr[(csrp + CSR_MIP)>>2] & (~(0x20)); //csr[CSR_MIP] &= ~MIP_STIP
             csr[(csrp + addr)>>2] = value;
             break;
 
@@ -559,7 +580,7 @@ function SetCSR(addr,value) {
 
         default:
             csr[(csrp + addr)>>2] = value;
-            DebugMessage("Error in SetCSR: PC "+utils.ToHex(pc)+" Address " + utils.ToHex(addr) + " unkown");
+            DebugMessage(ERROR_SETCSR|0);
             abort();
             break;
     }
@@ -568,8 +589,9 @@ function SetCSR(addr,value) {
 function GetCSR(addr) {
 
     addr = addr|0;
-    var current_privilege_level = (csr[(csrp + CSR_MSTATUS)>>2] & 0x06) >> 1;
-    addr = addr << 2;
+    var current_privilege_level = 0;
+    current_privilege_level = (csr[(csrp + CSR_MSTATUS)>>2] & 0x06) >> 1;
+    addr = (addr << 2)|0;
     switch(addr|0)
     {
         case 0xC: //CSR_FCSR
@@ -577,15 +599,15 @@ function GetCSR(addr) {
             break;
 
         case 0x1E40: //CSR_MDEVCMDTOHOST
-            return ReadDEVCMDToHost();
+            return ReadDEVCMDToHost()|0;
             break;
 
         case 0x1E44: //CSR_MDEVCMDFROMHOST
-            return ReadDEVCMDFromHost();
+            return ReadDEVCMDFromHost()|0;
             break;
 
         case 0x1E00: //CSR_MTOHOST
-            return ReadToHost();
+            return ReadToHost()|0;
             break;
 
         case 0xD14: //CSR_MTOHOST_TEMP only temporary for the patched pk.
@@ -593,133 +615,131 @@ function GetCSR(addr) {
             break;
 
         case 0x1E04: //CSR_MFROMHOST
-            return ReadFromHost();
+            return ReadFromHost()|0;
             break;
 
         case 0xC00: //CSR_MSTATUS
-            return csr[(csrp + addr)>>2];
+            return csr[(csrp + addr)>>2]|0;
             break;
 
         case 0x3C00: //CSR_MCPUID
-            return csr[(csrp + addr)>>2];
+            return csr[(csrp + addr)>>2]|0;
             break;
 
-        case 0x3C40: //CSR_MIMPID
-            return csr[(csrp + addr)>>2];
+        case 0x3C04: //CSR_MIMPID
+            return csr[(csrp + addr)>>2]|0;
             break;
 
         case 0x3C40: //CSR_MHARTID
-            return csr[(csrp + addr)>>2];
+            return csr[(csrp + addr)>>2]|0;
             break;
 
         case 0xC04: //CSR_MTVEC
-            return csr[(csrp + addr)>>2];
+            return csr[(csrp + addr)>>2]|0;
             break;
 
         case 0xC10: //CSR_MIE
-            return csr[(csrp + addr)>>2];
+            return csr[(csrp + addr)>>2]|0;
             break;
 
         case 0x504: //CSR_SEPC
         case 0xD04: //CSR_MEPC
-            return csr[(csrp + addr)>>2];
+            return csr[(csrp + addr)>>2]|0;
             break;
 
         case 0xD08: //CSR_MCAUSE
-            return csr[(csrp + addr)>>2];
+            return csr[(csrp + addr)>>2]|0;
             break;
 
         case 0x3508: //CSR_SCAUSE
-            return csr[(csrp + addr)>>2];
+            return csr[(csrp + addr)>>2]|0;
             break;
 
         case 0xD0C: //CSR_MBADADDR
-            return csr[(csrp + addr)>>2];
+            return csr[(csrp + addr)>>2]|0;
             break;
 
         case 0x350C: //CSR_SBADADDR
-            return csr[(csrp + addr)>>2];
+            return csr[(csrp + addr)>>2]|0;
             break;
 
         case 0x400: //CSR_SSTATUS
             //if (current_privilege_level == 0) Trap(CAUSE_ILLEGAL_INSTRUCTION);
             csr[(csrp + CSR_SSTATUS)>>2] = 0x00; 
-            csr[(csrp + CSR_SSTATUS)>>2] |= (csr[(csrp + CSR_MSTATUS)>>2] & 0x01); //IE0
-            csr[(csrp + CSR_SSTATUS)>>2] |= (csr[(csrp + CSR_MSTATUS)>>2] & 0x08); //IE1
-            csr[(csrp + CSR_SSTATUS)>>2] |= (csr[(csrp + CSR_MSTATUS)>>2] & 0x10); //PRV1
-            csr[(csrp + CSR_SSTATUS)>>2] |= (csr[(csrp + CSR_MSTATUS)>>2] & 0xF000); //FS,XS
-            csr[(csrp + CSR_SSTATUS)>>2] |= (csr[(csrp + CSR_MSTATUS)>>2] & 0x10000); //MPRV
-            return csr[(csrp + CSR_SSTATUS)>>2];
+            csr[(csrp + CSR_SSTATUS)>>2] = csr[(csrp + CSR_SSTATUS)>>2] | (csr[(csrp + CSR_MSTATUS)>>2] & 0x01); //IE0
+            csr[(csrp + CSR_SSTATUS)>>2] = csr[(csrp + CSR_SSTATUS)>>2] | (csr[(csrp + CSR_MSTATUS)>>2] & 0x08); //IE1
+            csr[(csrp + CSR_SSTATUS)>>2] = csr[(csrp + CSR_SSTATUS)>>2] | (csr[(csrp + CSR_MSTATUS)>>2] & 0x10); //PRV1
+            csr[(csrp + CSR_SSTATUS)>>2] = csr[(csrp + CSR_SSTATUS)>>2] | (csr[(csrp + CSR_MSTATUS)>>2] & 0xF000); //FS,XS
+            csr[(csrp + CSR_SSTATUS)>>2] = csr[(csrp + CSR_SSTATUS)>>2] | (csr[(csrp + CSR_MSTATUS)>>2] & 0x10000); //MPRV
+            return csr[(csrp + CSR_SSTATUS)>>2]|0;
             break;
 
         case 0x404: //CSR_STVEC
-            return csr[(csrp + addr)>>2];
+            return csr[(csrp + addr)>>2]|0;
             break;
 
         case 0xD10: //CSR_MIP
-            return csr[(csrp + addr)>>2];
-            break;
-
-        case 0xC10: //CSR_MIE
-            return csr[(csrp + addr)>>2];
+            return csr[(csrp + addr)>>2]|0;
             break;
 
         case 0x510: //CSR_SIP 
-            return csr[(csrp + CSR_MIP)>>2] & (0x2 | 0x20);//(MIP_SSIP | MIP_STIP)
+            return (csr[(csrp + CSR_MIP)>>2] & (0x2 | 0x20))|0;//(MIP_SSIP | MIP_STIP)
             break;
 
         case 0x410: //CSR_SIE 
-            return csr[(csrp + CSR_MIE)>>2] & (0x2 | 0x20);//(MIP_SSIP | MIP_STIP)
+            return (csr[(csrp + CSR_MIE)>>2] & (0x2 | 0x20))|0;//(MIP_SSIP | MIP_STIP)
             break;
 
         case 0xD00: //CSR_MSCRATCH
-            return csr[(csrp + addr)>>2];
+            return csr[(csrp + addr)>>2]|0;
             break;
 
         case 0x500: //CSR_SSCRATCH
-            return csr[(csrp + addr)>>2];
+            return csr[(csrp + addr)>>2]|0;
             break;
 
         case 0x2400: //CSR_CYCLEW
-            return ticks;
+            return ticks|0;
             break;
 
         case 0x3000: //CSR_CYCLES
-            return ticks;
+            return ticks|0;
             break;
 
         case 0x1C04:  //CSR_MTIME
         case 0x3404:  //CSR_STIME
         case 0x2804: //CSR_STIMEW
-            return ticks;
+            return ticks|0;
             break;
 
         case 0x1D04:  //CSR_MTIMEH
         case 0x3604:  //CSR_STIMEH
         case 0x2A04: //CSR_STIMEHW
-            return (ticks) >> 32;
+            return ((ticks) >> 32)|0;
             break;
 
         case 0x3004:  //CSR_TIME
         case 0x2404: //CSR_TIMEW
-            return ticks;
+            return ticks|0;
             break;
 
         case 0xC84: //CSR_MTIMECMP
         case 0x484: //CSR_STIMECMP
-            return csr[(csrp + addr)>>2];
+            return csr[(csrp + addr)>>2]|0;
             break;
         
         case 0x600: //CSR_SPTBR
-            return csr[(csrp + addr)>>2];
+            return csr[(csrp + addr)>>2]|0;
             break;
 
         default:
-            DebugMessage("Error in GetCSR: PC "+utils.ToHex(pc)+" Address " + utils.ToHex(addr) + " unkown");
+            DebugMessage(ERROR_GETCSR|0);
             abort();
-            return csr[(csrp + addr)>>2];
+            return csr[(csrp + addr)>>2]|0;
             break;
     }
+
+    return 0;
    
 };
 
