@@ -4,6 +4,13 @@
 
 <select id="myselect" onchange="OnSelectChange(this)">
 </select> 
+<br>
+<label>
+Restart with new binary image:
+<img src="images/upload.png" width="20px" height="20px" title="Restart with new binary image" />
+<input type="file" id="files" style="visibility:hidden;width:0; height:0;" name="files[]" onchange='OnNewImage(this.files)' />
+</label>
+<br>
 <span id="stats"></span>
 <br>
 
@@ -24,6 +31,7 @@ var tests =
 [
 "choose test",
 "bbl",
+"sos-image-riscv-spike",
 "pk",
 "rv32ui-p-add.bin",
 "rv32ui-pt-add",
@@ -172,7 +180,8 @@ var jor1kgui = new Jor1k(
         system: {
             kernelURL: "riscv/" + tests[1],
             arch: "riscv",
-            cpu: "safe"
+            cpu: "safe",
+            memorysize: 600,
         }
     }
 );
@@ -182,17 +191,29 @@ jor1kgui.Pause(true);
 function OnSelectChange(sel)
 {
 
-if (sel.value[0] == "c") 
+	if (sel.value[0] == "c") 
+	{
+    		jor1kgui.Pause(true);    
+    		return;
+	}
+
+
+	jor1kgui.params.system.kernelURL = "riscv/"+sel.value;
+	jor1kgui.Reset();
+	jor1kgui.Pause(false);
+};
+
+function OnNewImage(files)
 {
-    jor1kgui.Pause(true);    
-    return;
+    var reader = new FileReader();
+    reader.onload = function(e) {
+        jor1kgui.message.Send("Reset");
+        jor1kgui.message.Send("LoadAndStart", reader.result);
+	jor1kgui.Pause(false);
+    }.bind(this);
+    reader.readAsArrayBuffer(files[0]);
 }
 
-jor1kgui.params.system.kernelURL = "riscv/"+sel.value;
-jor1kgui.Reset();
-jor1kgui.Pause(false);
-    
-};
 
 
 </script>
