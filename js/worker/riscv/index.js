@@ -62,6 +62,7 @@ CPU.prototype.switchImplementation = function(cpuname) {
 
 CPU.prototype.toString = function() {
     var r = new Uint32Array(this.heap);
+    var csr = new Uint32Array(this.heap, 0x2000);
     var str = '';
     str += "Current state of the machine\n";
     str += "PC: " + utils.ToHex(this.cpu.pc) + "\n";
@@ -74,6 +75,10 @@ CPU.prototype.toString = function() {
             utils.ToHex(r[i + 3]) + "\n";
     }
     str += "mstatus: " + utils.ToBin(this.cpu.csr[0x300]) + "\n";
+    str += 
+        "mcause: " + utils.ToHex(csr[0x342]) + 
+        " mbadaddress: " + utils.ToHex(csr[0x343]) + 
+        " mepc: " + utils.ToHex(csr[0x341]) + "\n";
     return str;
 };
 
