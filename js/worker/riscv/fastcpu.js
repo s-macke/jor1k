@@ -898,52 +898,57 @@ function Step(steps, clockspeed) {
     var rs2 = 0x0;
     var fs1 = 0.0;
     var fs2 = 0.0;
-    var paddr;
+    
+    var paddr = 0;
+    var current_privilege_level = 0;
+    var interrupts = 0;
+    var ie = 0;
+    var ins = 0;
     
     do {
         r[0] = 0x00;
 
-        var current_privilege_level = (csr[(csrp + CSR_MSTATUS)>>2] & 0x06) >> 1;
+        current_privilege_level = (csr[(csrp + CSR_MSTATUS)>>2] & 0x06) >> 1;
 
         ticks = ticks + 1|0;
-        if (ticks == csr[(csrp + CSR_STIMECMP)>>2]) {
+        if ((ticks|0) == (csr[(csrp + CSR_STIMECMP)>>2]|0)) {
             csr[(csrp + CSR_MIP)>>2] = csr[(csrp + CSR_MIP)>>2] | 0x20;
         }
-        var interrupts = csr[(csrp + CSR_MIE)>>2] & csr[(csrp + CSR_MIP)>>2];
-        var ie = csr[(csrp + CSR_MSTATUS)>>2] & 0x01;
-        if (interrupts) {
+        interrupts = csr[(csrp + CSR_MIE)>>2] & csr[(csrp + CSR_MIP)>>2];
+        ie = csr[(csrp + CSR_MSTATUS)>>2] & 0x01;
+        if (interrupts|0) {
 
-            if ((current_privilege_level < 3) || ((current_privilege_level == 3) && ie)) {
-                if (interrupts & 0x8) {
+            if (((current_privilege_level|0) < 3) | (((current_privilege_level|0) == 3) & (ie|0))) {
+                if (((interrupts|0) & 0x8)) {
                     Trap(CAUSE_SOFTWARE_INTERRUPT, pc);
                     continue;
                 } else
-                if (!IsQueueEmpty()) {
+                if (!(IsQueueEmpty()|0)) {
                     Trap(CAUSE_HOST_INTERRUPT, pc);
                     continue;
                 }
             }
-            if ((current_privilege_level < 1) || ((current_privilege_level == 1) && ie)) {
-                if (interrupts & 0x2) {
+            if (((current_privilege_level|0) < 1) | (((current_privilege_level|0) == 1) & (ie|0))) {
+                if (((interrupts|0) & 0x2)) {
                     Trap(CAUSE_SOFTWARE_INTERRUPT, pc);
                     continue;
                 } else
-                if (interrupts & 0x20) {
+                if (((interrupts|0) & 0x20)) {
                      Trap(CAUSE_TIMER_INTERRUPT, pc);
                      continue;
                 }
             }
         }
 
-        if((pc & 0xFFF) == 0) fence = 1; //Checking if the physical pc has reached a page boundary
+        if(((pc|0) & 0xFFF) == 0) fence = 1; //Checking if the physical pc has reached a page boundary
  
-        if(fence == 1){
-            ppc = TranslateVM(pc,VM_FETCH);
-            if(ppc == -1)
+        if((fence|0) == 1){
+            ppc = TranslateVM(pc,VM_FETCH)|0;
+            if((ppc|0) == -1)
                 continue;
             fence = 0;
         }
-        var ins = Read32(ppc);
+        ins = Read32(ppc|0)|0;
         //DebugIns.Disassemble(ins,r,csr,pc);
         pc = pc + 4|0;
         ppc = ppc + 4|0;

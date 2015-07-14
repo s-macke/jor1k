@@ -6,6 +6,7 @@
 var message = require('../messagehandler'); // global variable
 var utils = require('../utils');
 var imul = require('../imul');
+var mul = require('../mul');
 var HTIF = require('./htif.js');
 
 // CPUs
@@ -28,6 +29,8 @@ function createCPU(cpuname, ram, heap, ncores) {
         DebugMessage: message.Debug,
         abort : message.Abort,
         imul : imul,
+        mul : mul,
+        MathAbs : Math.abs,
         Read32 : ram.Read32Little.bind(ram),
         Write32 : ram.Write32Little.bind(ram),
         Read16 : ram.Read16Little.bind(ram),
