@@ -29,7 +29,7 @@ More information can be found on the [Wiki][project wiki] pages.
 Sebastian Macke [simulationcorner.net](http://simulationcorner.net)
 
 ### Contributors
-Gerard Braad [gbraad.nl](http://gbraad.nl)  
+Gerard Braad [github.com/gbraad](http://github.com/gbraad)  
 Ben Burns [github.com/benjamincburns](http://github.com/benjamincburns)  
 Lawrence Angrave [github.com/angrave](http://github.com/angrave)  
 Neelabh Gupta [github.com/neelabhg](http://github.com/neelabhg)
