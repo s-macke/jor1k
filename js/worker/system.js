@@ -305,6 +305,13 @@ System.prototype.OnKernelLoaded = function(buffer) {
     } else 
     if (bzip2.IsBZIP2(buffer8)) {
         bzip2.simple(buffer8, function(x){this.ram.uint8mem[length++] = x;}.bind(this));
+        if (elf.IsELF(this.ram.uint8mem)) {
+            var temp = new Uint8Array(length);
+            for(var i=0; i<length; i++) {
+                temp[i] = this.ram.uint8mem[i];
+            }
+            elf.Extract(temp, this.ram.uint8mem);
+        }
     } else {
         length = buffer8.length;
         for(var i=0; i<length; i++) this.ram.uint8mem[i] = buffer8[i];

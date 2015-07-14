@@ -253,6 +253,11 @@ SafeCPU.prototype.CheckVMPrivilege = function (type, op) {
             return true;
             break;
 
+        case 11:
+            if (priv == PRV_S) return true;
+            return false;
+            break;
+
         case 13:
             if ((priv == PRV_S) && (op != VM_FETCH)) return true;
             break;
@@ -279,7 +284,7 @@ SafeCPU.prototype.TranslateVM = function (addr, op) {
     var i = 1; //i = LEVELS -1 and LEVELS = 2 in a 32 bit System
 
     // vm bare mode
-    if(vm == 0 || current_privilege_level == PRV_M) return addr;
+    if (vm == 0 || current_privilege_level == PRV_M) return addr;
 
     // hack, open mmio by direct mapping
     //if ((addr>>>28) == 0x9) return addr;
@@ -307,8 +312,10 @@ SafeCPU.prototype.TranslateVM = function (addr, op) {
     if (type >= 2) {
 
         if (!this.CheckVMPrivilege(type,op)) {
-            message.Debug("Error in TranslateVM: Unhandled trap");
-            message.Abort();
+            this.MemTrap(addr, op);
+            return -1;
+            //message.Debug("Error in TranslateVM: Unhandled trap");
+            //message.Abort();
         }
 /*
         var updated_frame_num = frame_num;
@@ -1570,6 +1577,12 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                         r[rindex] = f[(ins >> 15) & 0x1F];
                         break;
 
+                    case 0x68:
+                        //fcvt.s.w
+                        rindex = (ins >> 7) & 0x1F;
+                        f[rindex] = r[(ins >> 15) & 0x1F];
+                        break;
+
                     case 0x01 :
                         //fadd.d
                         fs1 = f[(ins >> 15) & 0x1F];
@@ -1584,6 +1597,23 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                         fs2 = f[(ins >> 20) & 0x1F];
                         rindex = (ins >> 7) & 0x1F;
                         f[rindex] = fs1 - fs2;
+                        break;
+
+                    // TODO check
+                    case 0x11:
+                        //fsgnj
+                        rindex = (ins >> 7) & 0x1F;
+                        switch((ins >> 12) & 7) {
+                            case 0:
+                                // fsgnj.d, also used for fmv.d
+                                fs1 = f[(ins >> 15) & 0x1F];
+                                fs2 = f[(ins >> 20) & 0x1F];
+                                f[rindex] = (fs2<0)?-Math.abs(fs1):Math.abs(fs1);
+                                break;
+                            default:
+                                message.Debug("Error in safecpu: Instruction (fsgn) " + utils.ToHex(ins) + " not found");
+                                message.Abort();
+                        }
                         break;
 
                     case 0x61:
@@ -1759,6 +1789,8 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
         }
 
     } while(--steps);
+
+
     return 0;
 };
 
