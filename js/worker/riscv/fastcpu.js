@@ -863,17 +863,19 @@ function SUMul(a,b,index) {
 
 function PushPrivilegeStack(){
 
-    var mstatus = csr[(csrp + CSR_MSTATUS)>>2];
-    var privilege_level_stack =  (mstatus & 0xFFF);
-    var new_privilege_level_stack = (((privilege_level_stack << 2) | PRV_M) << 1) & 0xFFF;
+    var mstatus = 0,privilege_level_stack = 0, new_privilege_level_stack = 0;
+    mstatus = csr[(csrp + CSR_MSTATUS)>>2]|0;
+    privilege_level_stack =  (mstatus & 0xFFF);
+    new_privilege_level_stack = (((privilege_level_stack << 2) | PRV_M) << 1) & 0xFFF;
     csr[(csrp + CSR_MSTATUS)>>2] = (((mstatus >> 12) << 12) + new_privilege_level_stack) & 0xFFFEFFFF; //Last "and" to set mprv(bit 16) to zero
 };
 
 function PopPrivilegeStack(){
 
-    var mstatus = csr[(csrp + CSR_MSTATUS)>>2];
-    var privilege_level_stack =  (mstatus & 0xFFF);
-    var new_privilege_level_stack = ((privilege_level_stack >>> 3) | ((PRV_U << 1) | 0x1) << 9);
+    var mstatus = 0,privilege_level_stack = 0, new_privilege_level_stack = 0;
+    mstatus = csr[(csrp + CSR_MSTATUS)>>2]|0;
+    privilege_level_stack =  (mstatus & 0xFFF);
+    new_privilege_level_stack = ((privilege_level_stack >>> 3) | ((PRV_U << 1) | 0x1) << 9);
     csr[(csrp + CSR_MSTATUS)>>2] = ((mstatus >> 12) << 12) + new_privilege_level_stack;
 };
 
