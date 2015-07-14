@@ -27,6 +27,8 @@ var ReadFromHost = foreign.ReadFromHost;
 var WriteToHost = foreign.WriteToHost;
 var WriteFromHost = foreign.WriteFromHost;
 var IsQueueEmpty = foreign.IsQueueEmpty;
+var mul = foreign.mul;
+var MathAbs = foreign.MathAbs;
 
 var ERROR_INCOMPLETE_VMPRIVILEGE = 0;
 var ERROR_VMPRIVILEGE = 1;
@@ -743,100 +745,119 @@ function GetCSR(addr) {
    
 };
 
-function IMul(a,b) {
+function IMul(a,b,index) {
 
     a = a|0;
     b = b|0;
-    var result = [0,0];
+    index = index|0;
+    var result0 = 0,result1 = 0;
+    
+    var a00 = 0, a16 = 0;
+    var b00 = 0, b16 = 0;
 
-    a >>>= 0;
-    b >>>= 0;
+    var c00 = 0;
+    var c16 = 0;
+    var c32 = 0;
+    var c48 = 0;
 
-    if (a < 32767 && b < 65536) {
-        result[0] = a * b;
-        result[1] = (result[0] < 0) ? -1 : 0;
-        return result;
+    if (((a >>> 0) < 32767) & ((b >>> 0) < 65536)) {
+        result0 = mul(a|0,b|0)|0;
+        result1 = ((result0|0) < 0) ? -1 : 0;
+        if((index|0) == 0) return result0|0;
+        else return result1|0;
     }
 
-    var a00 = a & 0xFFFF, a16 = a >>> 16;
-    var b00 = b & 0xFFFF, b16 = b >>> 16;
+    a00 = a & 0xFFFF;
+    a16 = a >>> 16;
+    b00 = b & 0xFFFF;
 
-    var c00 = a00 * b00;
-    var c16 = (c00 >>> 16) + (a16 * b00);
-    var c32 = c16 >>> 16;
-    c16 = (c16 & 0xFFFF) + (a00 * b16);
-    c32 += c16 >>> 16;
-    var c48 = c32 >>> 16;
-    c32 = (c32 & 0xFFFF) + (a16 * b16);
-    c48 += c32 >>> 16;
+    b16 = b >>> 16;
 
-    result[0] = ((c16 & 0xFFFF) << 16) | (c00 & 0xFFFF);
-    result[1] = ((c48 & 0xFFFF) << 16) | (c32 & 0xFFFF);
-    return result;
+    c00 = mul(a00|0,b00|0)|0;
+    c16 = ((c00 >>> 16) + (mul(a16|0,b00|0)|0))|0;
+    c32 = c16 >>> 16;
+    c16 = ((c16 & 0xFFFF) + (mul(a00|0,b16|0)|0))|0;
+    c32 = (c32 + (c16 >>> 16))|0;
+    c48 = c32 >>> 16;
+    c32 = ((c32 & 0xFFFF) + (mul(a16|0,b16|0)|0))|0;
+    c48 = (c48 + (c32 >>> 16))|0;
+
+    result0 = ((c16 & 0xFFFF) << 16) | (c00 & 0xFFFF);
+    result1 = ((c48 & 0xFFFF) << 16) | (c32 & 0xFFFF);
+    if((index|0) == 0) return result0|0;
+    return result1|0;
 };
 
-function UMul(a,b) {
+function UMul(a,b,index) {
 
     a = a|0;
     b = b|0;
-    var result = [0,0];
+    index = index|0;
+    var result0 = 0,result1 = 0;
+    var doNegate = 0;
 
-    if (a == 0) return result[0] = result[1] = 0, result;
-    if (b == 0) return result[0] = result[1] = 0, result;
+    if ((a|0) == 0) return 0;
+    if ((b|0) == 0) return 0;
 
-    a |= 0;
-    b |= 0;
-
-    if ((a >= -32768 && a <= 32767) && (b >= -32768 && b <= 32767)) {
-        result[0] = a * b;
-        result[1] = (result[0] < 0) ? -1 : 0;
-        return result;
+    if ((((a|0) >= -32768) & ((a|0) <= 32767)) & (((b|0) >= -32768) & ((b|0) <= 32767))) {
+        result0 = mul(a|0,b|0)|0;
+        result1 = ((result0|0) < 0) ? -1 : 0;
+        if((index|0) == 0) return result0|0;
+        else return result1|0;
     }
 
-    var doNegate = (a < 0) ^ (b < 0);
+    doNegate = ((a|0) < 0) ^ ((b|0) < 0);
 
-    result = IMul(Math.abs(a), Math.abs(b));
+    a = MathAbs(a|0)|0;
+    b = MathAbs(b|0)|0;
+    result0 = IMul(a, b, 0)|0;
+    result1 = IMul(a, b, 1)|0;
 
     if (doNegate) {
-        result[0] = ~result[0];
-        result[1] = ~result[1];
-        result[0] = (result[0] + 1) | 0;
-        if (result[0] == 0) result[1] = (result[1] + 1) | 0;
+        result0 = ~result0;
+        result1 = ~result1;
+        result0 = (result0 + 1) | 0;
+        if ((result0|0) == 0) result1 = (result1 + 1) | 0;
     }
 
-    return result;
+    if((index|0) == 0) return result0|0;
+    return result1|0;
 };
 
-function SUMul(a,b) {
+function SUMul(a,b,index) {
 
     a = a|0;
     b = b|0;
-    var result = [0,0];
+    index = index|0;
+    var result0 = 0,result1 = 0;
+    var doNegate = 0;
 
-    if (a == 0) return result[0] = result[1] = 0, result;
-    if (b == 0) return result[0] = result[1] = 0, result;
+    if ((a|0) == 0) return 0;
+    if ((b|0) == 0) return 0;
 
-    a |= 0;
-    b >>>= 0;
-
-    if ((a >= -32768 && a <= 32767) && (b >= -32768 && b <= 32767)) {
-        result[0] = a * b;
-        result[1] = (result[0] < 0) ? -1 : 0;
-        return result;
+    if ((((a|0) >= -32768) & ((a|0) <= 32767)) & (((b|0) >= -32768) & ((b >>> 0) <= 32767))) {
+        result0 = mul(a|0,b|0)|0;
+        result1 = ((result0|0) < 0) ? -1 : 0;
+        if((index|0) == 0) return result0|0;
+        else return result1|0;
     }
 
-    var doNegate = (a < 0) ^ (b < 0);
+    doNegate = ((a|0) < 0) ^ ((b|0) < 0);
 
-    result = IMul(Math.abs(a), Math.abs(b));
+    a = MathAbs(a|0)|0;
+    b = MathAbs(b|0)|0;
+    result0 = IMul(a, b, 0)|0;
+    result1 = IMul(a, b, 1)|0;
 
     if (doNegate) {
-        result[0] = ~result[0];
-        result[1] = ~result[1];
-        result[0] = (result[0] + 1) | 0;
-        if (result[0] == 0) result[1] = (result[1] + 1) | 0;
+        result0 = ~result0;
+        result1 = ~result1;
+        result0 = (result0 + 1) | 0;
+        if ((result0|0) == 0) result1 = (result1 + 1) | 0;
     }
 
-    return result;
+    if((index|0) == 0) return result0|0;
+    return result1|0;
 };
 
 
@@ -1220,22 +1241,22 @@ function Step(steps, clockspeed) {
                             case 0x01:
                                 //mulh
                                 rindex = (ins >> 7) & 0x1F;
-                                var result = UMul(rs1,rs2);
-                                r[rindex] = result[1];
+                                var result = UMul(rs1,rs2, 1);
+                                r[rindex] = result;
                                 break;
 
                             case 0x02:
                                 //mulhsu
                                 rindex = (ins >> 7) & 0x1F;
-                                var result = SUMul(rs1,rs2>>>0);
-                                r[rindex] = result[1];
+                                var result = SUMul(rs1,rs2>>>0, 1);
+                                r[rindex] = result;
                                 break;
 
                             case 0x03:
                                 //mulhu
                                 rindex = (ins >> 7) & 0x1F;
-                                var result = IMul(rs1>>>0, rs2>>>0);
-                                r[rindex] = result[1];
+                                var result = IMul(rs1>>>0, rs2>>>0, 1);
+                                r[rindex] = result;
                                 break;
 
                             case 0x04:
