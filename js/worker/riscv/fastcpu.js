@@ -38,6 +38,10 @@ var ERROR_GETCSR = 4;
 var ERROR_LOAD_WORD = 5;
 var ERROR_STORE_WORD = 6;
 var ERROR_INSTRUCTION_NOT_FOUND = 7;
+var ERROR_ECALL = 8;
+var ERROR_ERET = 9;
+var ERROR_ERET_PRIV = 10;
+var ERROR_MRTS = 11;
 
 var PRV_U = 0x00;
 var PRV_S = 0x01;
@@ -894,9 +898,10 @@ function Step(steps, clockspeed) {
     var imm3 = 0x00;
     var imm4 = 0x00;
     var zimm = 0x00;
-    var mul=0x00;
-    var quo=0x00;
-    var rem=0x00;
+    var mult = 0x00;
+    var quo = 0x00;
+    var rem = 0x00;
+    var result = 0x00;
     var rs1 = 0x0;
     var rs2 = 0x0;
     var fs1 = 0.0;
@@ -1087,16 +1092,16 @@ function Step(steps, clockspeed) {
                         imm = (ins >> 20);
                         rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
                         rindex = (ins >> 7) & 0x1F;
-                        if(rs1 < imm) r[(rindex << 2) >> 2] = 0x01;
+                        if((rs1|0) < (imm|0)) r[(rindex << 2) >> 2] = 0x01;
                         else r[(rindex << 2) >> 2] = 0x00;
                         break;
 
                     case 0x03:
                         //sltiu
                         imm = (ins >> 20) >>> 0;
-                        rs1 = r[(ins >> 15) & 0x1F] >>> 0;
+                        rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
                         rindex = (ins >> 7) & 0x1F;
-                        if(rs1 < imm) r[(rindex << 2) >> 2] = 0x01;
+                        if((rs1 >>> 0) < (imm >>> 0)) r[(rindex << 2) >> 2] = 0x01;
                         else r[(rindex << 2) >> 2] = 0x00;
                         break;
 
@@ -1164,7 +1169,7 @@ function Step(steps, clockspeed) {
                     case 0x00:
                         //add,slt,sltu,add,or,xor,sll,srl
                         rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
-                        rs2 = r[(ins >> 20) & 0x1F];
+                        rs2 = r[(((ins >> 20) & 0x1F) << 2) >> 2]|0;
                         switch((ins >> 12)&0x7) {
                             case 0x00:
                                 //add
@@ -1175,14 +1180,14 @@ function Step(steps, clockspeed) {
                             case 0x02:
                                 //slt
                                 rindex = (ins >> 7) & 0x1F;
-                                if(rs1 < rs2) r[(rindex << 2) >> 2] = 0x01;
+                                if((rs1|0) < (rs2|0)) r[(rindex << 2) >> 2] = 0x01;
                                 else r[(rindex << 2) >> 2] = 0x00;
                                 break;
 
                             case 0x03:
                                 //sltu
                                 rindex = (ins >> 7) & 0x1F;
-                                if((rs1>>>0) < (rs2>>>0)) r[(rindex << 2) >> 2] = 0x01;
+                                if((rs1 >>> 0) < (rs2 >>> 0)) r[(rindex << 2) >> 2] = 0x01;
                                 else r[(rindex << 2) >> 2] = 0x00;
                                 break;
 
@@ -1221,7 +1226,7 @@ function Step(steps, clockspeed) {
                     case 0x20:
                         //sub
                         rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
-                        rs2 = r[(ins >> 20) & 0x1F];
+                        rs2 = r[(((ins >> 20) & 0x1F) << 2) >> 2]|0;
                         rindex = (ins >> 7) & 0x1F;
                         switch((ins >> 12)&0x7) {
                             case 0x00:
@@ -1239,79 +1244,77 @@ function Step(steps, clockspeed) {
                     case 0x01:
                         //mul,mulh,mulhsu,mulhu,div,divu,rem,remu
                         rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
-                        rs2 = r[(ins >> 20) & 0x1F];
+                        rs2 = r[(((ins >> 20) & 0x1F) << 2) >> 2]|0;
                         switch((ins >> 12)&0x7) {
                             case 0x00:
                                 //mul
                                 rindex = (ins >> 7) & 0x1F;
-                                mul = rs1 * rs2;
-                                r[(rindex << 2) >> 2] = mul & 0xFFFFFFFF;
+                                mult = mul(rs1|0,rs2|0)|0;
+                                r[(rindex << 2) >> 2] = mult & 0xFFFFFFFF;
                                 break;
 
                             case 0x01:
                                 //mulh
                                 rindex = (ins >> 7) & 0x1F;
-                                var result = UMul(rs1,rs2, 1);
+                                result = UMul(rs1,rs2, 1)|0;
                                 r[(rindex << 2) >> 2] = result;
                                 break;
 
                             case 0x02:
                                 //mulhsu
                                 rindex = (ins >> 7) & 0x1F;
-                                var result = SUMul(rs1,rs2>>>0, 1);
+                                result = SUMul(rs1,rs2>>>0, 1)|0;
                                 r[(rindex << 2) >> 2] = result;
                                 break;
 
                             case 0x03:
                                 //mulhu
                                 rindex = (ins >> 7) & 0x1F;
-                                var result = IMul(rs1>>>0, rs2>>>0, 1);
+                                result = IMul(rs1>>>0, rs2>>>0, 1)|0;
                                 r[(rindex << 2) >> 2] = result;
                                 break;
 
                             case 0x04:
                                 //div
                                 rindex = (ins >> 7) & 0x1F;
-                                if(rs2 == 0)
+                                if((rs2|0) == 0)
                                     quo = -1;
                                 else
-                                    quo = rs1 / rs2;
+                                    quo = ((rs1|0) / (rs2|0))|0;
                                 r[(rindex << 2) >> 2] = quo;
                                 break;
 
                             case 0x05:
                                 //divu
                                 rindex = (ins >> 7) & 0x1F;
-                                if(rs2 == 0)
+                                if((rs2|0) == 0)
                                     quo = 0xFFFFFFFF;
                                 else
-                                    quo = (rs1 >>> 0) / (rs2 >>> 0);
+                                    quo = ((rs1 >>> 0) / (rs2 >>> 0))|0;
                                 r[(rindex << 2) >> 2] = quo;
                                 break;
 
                             case 0x06:
                                 //rem
                                 rindex = (ins >> 7) & 0x1F;
-                                if(rs2 == 0)
+                                if((rs2|0) == 0)
                                     rem = rs1;
                                 else
-                                    rem = rs1 % rs2;
+                                    rem = ((rs1|0) % (rs2|0))|0;
                                 r[(rindex << 2) >> 2] = rem;
                                 break;
 
                             case 0x07:
                                 //remu
                                 rindex = (ins >> 7) & 0x1F;
-                                if(rs2 == 0)
+                                if((rs2|0) == 0)
                                     rem = (rs1 >>> 0);
                                 else
-                                    rem = (rs1 >>> 0) % (rs2 >>> 0);
+                                    rem = ((rs1 >>> 0) % (rs2 >>> 0))|0;
                                 r[(rindex << 2) >> 2] = rem;
                                 break;
                         }
                         break;
-
-                    
 
                     default:
                         DebugMessage(ERROR_INSTRUCTION_NOT_FOUND|0);
@@ -1370,43 +1373,43 @@ function Step(steps, clockspeed) {
                     case 0x00:
                         //beq
                         rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
-                        rs2 = r[(ins >> 20) & 0x1F];
-                        if(rs1 == rs2) pc = pc + imm - 4|0;//-4 temporary hack
+                        rs2 = r[(((ins >> 20) & 0x1F) << 2) >> 2]|0;
+                        if((rs1|0) == (rs2|0)) pc = pc + imm - 4|0;//-4 temporary hack
                         break;
 
                     case 0x01:
                         //bne
                         rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
-                        rs2 = r[(ins >> 20) & 0x1F];
-                        if(rs1 != rs2) pc = pc + imm - 4|0;//-4 temporary hack
+                        rs2 = r[(((ins >> 20) & 0x1F) << 2) >> 2]|0;
+                        if((rs1|0) != (rs2|0)) pc = pc + imm - 4|0;//-4 temporary hack
                         break;
 
                     case 0x04:
                         //blt
                         rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
-                        rs2 = r[(ins >> 20) & 0x1F];
-                        if(rs1 < rs2) pc = pc + imm - 4|0;//-4 temporary hack
+                        rs2 = r[(((ins >> 20) & 0x1F) << 2) >> 2]|0;
+                        if((rs1|0) < (rs2|0)) pc = pc + imm - 4|0;//-4 temporary hack
                         break;
 
                     case 0x05:
                         //bge
                         rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
-                        rs2 = r[(ins >> 20) & 0x1F];
-                        if(rs1 >= rs2) pc = pc + imm - 4|0;//-4 temporary hack
+                        rs2 = r[(((ins >> 20) & 0x1F) << 2) >> 2]|0;
+                        if((rs1|0) >= (rs2|0)) pc = pc + imm - 4|0;//-4 temporary hack
                         break;
 
                     case 0x06:
                         //bltu
-                        rs1 = r[(ins >> 15) & 0x1F] >>> 0;
-                        rs2 = r[(ins >> 20) & 0x1F] >>> 0;
-                        if(rs1 < rs2) pc = pc + imm - 4|0;//-4 temporary hack
+                        rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
+                        rs2 = r[(((ins >> 20) & 0x1F) << 2) >> 2]|0;
+                        if((rs1 >>> 0) < (rs2 >>> 0)) pc = pc + imm - 4|0;//-4 temporary hack
                         break;
 
                     case 0x07:
                         //bgeu
-                        rs1 = r[(ins >> 15) & 0x1F] >>> 0;
-                        rs2 = r[(ins >> 20) & 0x1F] >>> 0;
-                        if(rs1 >= rs2) pc = pc + imm - 4|0;//-4 temporary hack
+                        rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
+                        rs2 = r[(((ins >> 20) & 0x1F) << 2) >> 2]|0;
+                        if((rs1 >>> 0) >= (rs2 >>> 0)) pc = pc + imm - 4|0;//-4 temporary hack
                         break;
 
                     default:
@@ -1427,43 +1430,43 @@ function Step(steps, clockspeed) {
                     
                     case 0x01:
                         //csrrw
-                        r[(rindex << 2) >> 2] = GetCSR(imm);
+                        r[(rindex << 2) >> 2] = GetCSR(imm)|0;
                         //if (rindex != ((ins >> 15) & 0x1F))
                         SetCSR(imm, rs1);
                         break;
 
                     case 0x02:
                         //csrrs
-                        r[(rindex << 2) >> 2] = GetCSR(imm);
-                        SetCSR(imm, GetCSR(imm) | rs1);
+                        r[(rindex << 2) >> 2] = GetCSR(imm)|0;
+                        SetCSR(imm, (GetCSR(imm)|0) | rs1);
                         break;
 
                     case 0x03:
                         //csrrc
-                        r[(rindex << 2) >> 2] = GetCSR(imm);
-                        SetCSR(imm, GetCSR(imm) & (~rs1));
+                        r[(rindex << 2) >> 2] = GetCSR(imm)|0;
+                        SetCSR(imm, (GetCSR(imm)|0) & (~rs1));
                         break;
 
                     case 0x05:
                         //csrrwi
-                        r[(rindex << 2) >> 2] = GetCSR(imm);
+                        r[(rindex << 2) >> 2] = GetCSR(imm)|0;
                         zimm = (ins >> 15) & 0x1F;
-                        if(zimm != 0) SetCSR(imm, (zimm >> 0));
+                        if((zimm|0) != 0) SetCSR(imm, (zimm >> 0));
                         break;
                         
 
                     case 0x06:
                         //csrrsi
-                        r[(rindex << 2) >> 2] = GetCSR(imm);
+                        r[(rindex << 2) >> 2] = GetCSR(imm)|0;
                         zimm = (ins >> 15) & 0x1F;
-                        if(zimm != 0) SetCSR(imm, GetCSR(imm) | (zimm >> 0));
+                        if((zimm|0) != 0) SetCSR(imm, (GetCSR(imm)|0) | (zimm >> 0));
                         break;
 
                     case 0x07:
                         //csrrci
-                        r[(rindex << 2) >> 2] = GetCSR(imm);
+                        r[(rindex << 2) >> 2] = GetCSR(imm)|0;
                         zimm = (ins >> 15) & 0x1F;
-                        if(zimm != 0) SetCSR(imm, GetCSR(imm) & ~(zimm >> 0));
+                        if((zimm|0) != 0) SetCSR(imm, (GetCSR(imm)|0) & ~(zimm >> 0));
                         break;
                     
                     case 0x00:
@@ -1471,7 +1474,7 @@ function Step(steps, clockspeed) {
                         switch((ins >> 20)&0xFFF) {
                             case 0x00:
                                 //ecall
-                                switch(current_privilege_level)
+                                switch(current_privilege_level|0)
                                 {
                                     case 0x00: //PRV_U
                                         Trap(CAUSE_ENVCALL_UMODE, pc - 4|0);
@@ -1491,7 +1494,7 @@ function Step(steps, clockspeed) {
                                         break;
                                     
                                     default:
-                                        DebugMessage("Error in ecall: Don't know how to handle privilege level " + current_privilege_level);
+                                        DebugMessage(ERROR_ECALL|0);
                                         abort();
                                         break;
                                 }
@@ -1504,15 +1507,15 @@ function Step(steps, clockspeed) {
 
                             case 0x100:
                                 //eret
-                                var current_privilege_level = (csr[(csrp + CSR_MSTATUS)>>2] & 0x06) >> 1;
-                                if(current_privilege_level < PRV_S) {
-                                    DebugMessage("Error in eret: current_privilege_level isn't allowed access");
+                                current_privilege_level = (csr[(csrp + CSR_MSTATUS)>>2] & 0x06) >> 1;
+                                if((current_privilege_level|0) < (PRV_S|0)) {
+                                    DebugMessage(ERROR_ERET_PRIV|0);
                                     abort();
                                     break;   
                                 }
                                 PopPrivilegeStack();
 
-                                switch(current_privilege_level)
+                                switch(current_privilege_level|0)
                                 {
                                     
                                     case 0x01: //PRV_S
@@ -1532,7 +1535,7 @@ function Step(steps, clockspeed) {
                                         break;
                                     
                                     default:
-                                        DebugMessage("Error in eret: Don't know how to handle privilege level " + current_privilege_level);
+                                        DebugMessage(ERROR_ERET|0);
                                         abort();
                                         break;
                                 }
@@ -1545,8 +1548,8 @@ function Step(steps, clockspeed) {
 
                             case 0x305:
                                 //mrts     
-                                if(current_privilege_level != PRV_M) {
-                                    DebugMessage("Error in mrts: current_privilege_level isn't allowed access");
+                                if((current_privilege_level|0) != (PRV_M|0)) {
+                                    DebugMessage(ERROR_MRTS|0);
                                     abort();
                                     break;   
                                 }
@@ -1716,7 +1719,7 @@ function Step(steps, clockspeed) {
             case 0x2F:
                 //amoswap, amoadd, amoxor, amoand, amoor, amomin, amomax, amominu, amomaxu
                 rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
-                rs2 = r[(ins >> 20) & 0x1F];
+                rs2 = r[(((ins >> 20) & 0x1F) << 2) >> 2]|0;
                 rindex = (ins >> 7) & 0x1F;
                 switch((ins >> 27)&0x1F) {
                     
@@ -1829,7 +1832,7 @@ function Step(steps, clockspeed) {
                     case 0x03:
                         //sc.d
                         rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
-                        rs2 = r[(ins >> 20) & 0x1F];
+                        rs2 = r[(((ins >> 20) & 0x1F) << 2) >> 2]|0;
                         if(rs1 != amoaddr) {
                             r[(rindex << 2) >> 2] = 0x01;
                             break;
