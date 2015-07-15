@@ -1599,8 +1599,8 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                         f[rindex] = fs1 - fs2;
                         break;
 
-                    // TODO check
-                    case 0x11:
+                    case 0x10: // single precision
+                    case 0x11: // double precision
                         //fsgnj
                         rindex = (ins >> 7) & 0x1F;
                         switch((ins >> 12) & 7) {
