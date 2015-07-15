@@ -35,6 +35,9 @@ var ERROR_VMPRIVILEGE = 1;
 var ERROR_VMMODE = 2;
 var ERROR_SETCSR = 3;
 var ERROR_GETCSR = 4;
+var ERROR_LOAD_WORD = 5;
+var ERROR_STORE_WORD = 6;
+var ERROR_INSTRUCTION_NOT_FOUND = 7;
 
 var PRV_U = 0x00;
 var PRV_S = 0x01;
@@ -962,59 +965,59 @@ function Step(steps, clockspeed) {
                     case 0x00:
                         //lb
                         imm = (ins >> 20);
-                        rs1 = r[(ins >> 15) & 0x1F];
+                        rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
                         rindex = (ins >> 7) & 0x1F;
-                        paddr = TranslateVM(rs1 + imm|0, VM_READ);
-                        if(paddr == -1) break;
-                        r[rindex] = (Read8(paddr) << 24) >> 24;
+                        paddr = TranslateVM(rs1 + imm|0, VM_READ)|0;
+                        if((paddr|0) == -1) break;
+                        r[(rindex << 2) >> 2] = ((Read8(paddr|0)|0) << 24) >> 24;
                         break;
 
                     case 0x01:
                         //lh
                         imm = (ins >> 20);
-                        rs1 = r[(ins >> 15) & 0x1F];
+                        rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
                         rindex = (ins >> 7) & 0x1F;
-                        paddr = TranslateVM(rs1 + imm|0, VM_READ);
-                        if(paddr == -1) break;
-                        r[rindex] = (Read16(paddr) << 16) >> 16;
+                        paddr = TranslateVM(rs1 + imm|0, VM_READ)|0;
+                        if((paddr|0) == -1) break;
+                        r[(rindex << 2) >> 2] = ((Read16(paddr|0)|0) << 16) >> 16;
                         break;
 
                     case 0x02:
                         //lw
                         imm = (ins >> 20);
-                        rs1 = r[(ins >> 15) & 0x1F];
+                        rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
                         rindex = (ins >> 7) & 0x1F;
                         if ((rs1+imm) & 3) {
-                             DebugMessage("Error in lw: unaligned address");
+                             DebugMessage(ERROR_LOAD_WORD|0);
                              abort();
                         }
-                        paddr = TranslateVM(rs1 + imm|0, VM_READ);
-                        if(paddr == -1) break;
-                        r[rindex] = Read32(paddr);
+                        paddr = TranslateVM(rs1 + imm|0, VM_READ)|0;
+                        if((paddr|0) == -1) break;
+                        r[(rindex << 2) >> 2] = (Read32(paddr|0)|0);
                         break;
 
                     case 0x04:
                         //lbu
                         imm = (ins >> 20);
-                        rs1 = r[(ins >> 15) & 0x1F];
+                        rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
                         rindex = (ins >> 7) & 0x1F;
-                        paddr = TranslateVM(rs1 + imm|0, VM_READ);
-                        if(paddr == -1) break;
-                        r[rindex] = Read8(paddr) & 0xFF;
+                        paddr = TranslateVM(rs1 + imm|0, VM_READ)|0;
+                        if((paddr|0) == -1) break;
+                        r[(rindex << 2) >> 2] = (Read8(paddr|0)|0) & 0xFF;
                         break;
 
                     case 0x05:
                         //lhu
                         imm = (ins >> 20);
-                        rs1 = r[(ins >> 15) & 0x1F];
+                        rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
                         rindex = (ins >> 7) & 0x1F;
-                        paddr = TranslateVM(rs1 + imm|0 ,VM_READ);
-                        if(paddr == -1) break;
-                        r[rindex] = Read16(paddr) & 0xFFFF;
+                        paddr = TranslateVM(rs1 + imm|0 ,VM_READ)|0;
+                        if((paddr|0) == -1) break;
+                        r[(rindex << 2) >> 2] = (Read16(paddr|0)|0) & 0xFFFF;
                         break;
 
                     default:
-                        DebugMessage("Error in safecpu: Instruction " + utils.ToHex(ins) + "not found");
+                        DebugMessage(ERROR_INSTRUCTION_NOT_FOUND|0);
                         abort();
                         break;
 
@@ -1030,37 +1033,37 @@ function Step(steps, clockspeed) {
                     
                     case 0x00:
                         //sb
-                        rs1 = r[(ins >> 15) & 0x1F];
+                        rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
                         rindex = (ins >> 20) & 0x1F;
-                        paddr = TranslateVM(rs1 + imm|0,VM_WRITE);
-                        if(paddr == -1) break;
-                        Write8(paddr,(r[rindex] & 0xFF));
+                        paddr = TranslateVM(rs1 + imm|0,VM_WRITE)|0;
+                        if((paddr|0) == -1) break;
+                        Write8(paddr|0,(r[(rindex << 2) >> 2] & 0xFF));
                         break;
 
                     case 0x01:
                         //sh
-                        rs1 = r[(ins >> 15) & 0x1F];
+                        rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
                         rindex = (ins >> 20) & 0x1F;
-                        paddr = TranslateVM(rs1 + imm|0,VM_WRITE);
-                        if(paddr == -1) break;
-                        Write16(paddr,(r[rindex] & 0xFFFF));
+                        paddr = TranslateVM(rs1 + imm|0,VM_WRITE)|0;
+                        if((paddr|0) == -1) break;
+                        Write16(paddr|0,(r[(rindex << 2) >> 2] & 0xFFFF));
                         break;
 
                     case 0x02:
                         //sw
-                        rs1 = r[(ins >> 15) & 0x1F];
+                        rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
                         rindex = (ins >> 20) & 0x1F;
                         if ((rs1+imm) & 3) {
-                             DebugMessage("Error in sw: unaligned address");
+                             DebugMessage(ERROR_STORE_WORD|0);
                              abort();
                         }
-                        paddr = TranslateVM(rs1 + imm|0,VM_WRITE);
-                        if(paddr == -1) break;
-                        Write32(paddr,r[rindex]);
+                        paddr = TranslateVM(rs1 + imm|0,VM_WRITE)|0;
+                        if((paddr|0) == -1) break;
+                        Write32(paddr|0,r[(rindex << 2) >> 2]|0);
                         break;
 
                     default:
-                        DebugMessage("Error in safecpu: Instruction " + utils.ToHex(ins) + "not found");
+                        DebugMessage(ERROR_INSTRUCTION_NOT_FOUND|0);
                         abort();
                         break;
 
@@ -1074,18 +1077,18 @@ function Step(steps, clockspeed) {
                     case 0x00:
                         //addi
                         imm = (ins >> 20);
-                        rs1 = r[(ins >> 15) & 0x1F];
+                        rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
                         rindex = (ins >> 7) & 0x1F;
-                        r[rindex] = rs1 + imm;
+                        r[(rindex << 2) >> 2] = rs1 + imm;
                         break;
 
                     case 0x02:
                         //slti
                         imm = (ins >> 20);
-                        rs1 = r[(ins >> 15) & 0x1F];
+                        rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
                         rindex = (ins >> 7) & 0x1F;
-                        if(rs1 < imm) r[rindex] = 0x01;
-                        else r[rindex] = 0x00;
+                        if(rs1 < imm) r[(rindex << 2) >> 2] = 0x01;
+                        else r[(rindex << 2) >> 2] = 0x00;
                         break;
 
                     case 0x03:
@@ -1093,61 +1096,61 @@ function Step(steps, clockspeed) {
                         imm = (ins >> 20) >>> 0;
                         rs1 = r[(ins >> 15) & 0x1F] >>> 0;
                         rindex = (ins >> 7) & 0x1F;
-                        if(rs1 < imm) r[rindex] = 0x01;
-                        else r[rindex] = 0x00;
+                        if(rs1 < imm) r[(rindex << 2) >> 2] = 0x01;
+                        else r[(rindex << 2) >> 2] = 0x00;
                         break;
 
                     case 0x04:
                         //xori
                         imm = (ins >> 20);
-                        rs1 = r[(ins >> 15) & 0x1F];
+                        rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
                         rindex = (ins >> 7) & 0x1F;
-                        r[rindex] = rs1 ^ imm;
+                        r[(rindex << 2) >> 2] = rs1 ^ imm;
                         break;
 
                     case 0x06:
                         //ori
                         imm = (ins >> 20);
-                        rs1 = r[(ins >> 15) & 0x1F];
+                        rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
                         rindex = (ins >> 7) & 0x1F;
-                        r[rindex] = rs1 | imm;
+                        r[(rindex << 2) >> 2] = rs1 | imm;
                         break;
 
                     case 0x07:
                         //andi
                         imm = (ins >> 20);
-                        rs1 = r[(ins >> 15) & 0x1F];
+                        rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
                         rindex = (ins >> 7) & 0x1F;
-                        r[rindex] = rs1 & imm;
+                        r[(rindex << 2) >> 2] = rs1 & imm;
                         break;
 
                     case 0x01:
                         //slli
                         imm = (ins >> 20) & 0x1F;
-                        rs1 = r[(ins >> 15) & 0x1F];
+                        rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
                         rindex = (ins >> 7) & 0x1F;
-                        r[rindex] = rs1 << imm;
+                        r[(rindex << 2) >> 2] = rs1 << imm;
                         break;
 
                     case 0x05:
                         if(((ins >> 25) & 0x7F) == 0x00){
                             //srli
                             imm = (ins >> 20) & 0x1F;
-                            rs1 = r[(ins >> 15) & 0x1F];
+                            rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
                             rindex = (ins >> 7) & 0x1F;
-                            r[rindex] = rs1 >>> imm;
+                            r[(rindex << 2) >> 2] = rs1 >>> imm;
                         }
                         else if(((ins >> 25) & 0x7F) == 0x20){
                             //srai
                             imm = (ins >> 20) & 0x1F;
-                            rs1 = r[(ins >> 15) & 0x1F];
+                            rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
                             rindex = (ins >> 7) & 0x1F;
-                            r[rindex] = rs1 >> imm;
+                            r[(rindex << 2) >> 2] = rs1 >> imm;
                         }
                         break;
 
                     default:
-                        DebugMessage("Error in safecpu: Instruction " + utils.ToHex(ins) + "not found");
+                        DebugMessage(ERROR_INSTRUCTION_NOT_FOUND|0);
                         abort();
                         break;
 
@@ -1160,110 +1163,110 @@ function Step(steps, clockspeed) {
                     
                     case 0x00:
                         //add,slt,sltu,add,or,xor,sll,srl
-                        rs1 = r[(ins >> 15) & 0x1F];
+                        rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
                         rs2 = r[(ins >> 20) & 0x1F];
                         switch((ins >> 12)&0x7) {
                             case 0x00:
                                 //add
                                 rindex = (ins >> 7) & 0x1F;
-                                r[rindex] = rs1 + rs2;
+                                r[(rindex << 2) >> 2] = rs1 + rs2;
                                 break;
 
                             case 0x02:
                                 //slt
                                 rindex = (ins >> 7) & 0x1F;
-                                if(rs1 < rs2) r[rindex] = 0x01;
-                                else r[rindex] = 0x00;
+                                if(rs1 < rs2) r[(rindex << 2) >> 2] = 0x01;
+                                else r[(rindex << 2) >> 2] = 0x00;
                                 break;
 
                             case 0x03:
                                 //sltu
                                 rindex = (ins >> 7) & 0x1F;
-                                if((rs1>>>0) < (rs2>>>0)) r[rindex] = 0x01;
-                                else r[rindex] = 0x00;
+                                if((rs1>>>0) < (rs2>>>0)) r[(rindex << 2) >> 2] = 0x01;
+                                else r[(rindex << 2) >> 2] = 0x00;
                                 break;
 
                             case 0x07:
                                 //and
                                 rindex = (ins >> 7) & 0x1F;
-                                r[rindex] = rs1 & rs2;
+                                r[(rindex << 2) >> 2] = rs1 & rs2;
                                 break;
 
                             case 0x06:
                                 //or
                                 rindex = (ins >> 7) & 0x1F;
-                                r[rindex] = rs1 | rs2;
+                                r[(rindex << 2) >> 2] = rs1 | rs2;
                                 break;
 
                             case 0x04:
                                 //xor
                                 rindex = (ins >> 7) & 0x1F;
-                                r[rindex] = rs1 ^ rs2;
+                                r[(rindex << 2) >> 2] = rs1 ^ rs2;
                                 break;
 
                             case 0x01:
                                 //sll
                                 rindex = (ins >> 7) & 0x1F;
-                                r[rindex] = rs1 << (rs2 & 0x1F);
+                                r[(rindex << 2) >> 2] = rs1 << (rs2 & 0x1F);
                                 break;
 
                             case 0x05:
                                 //srl
                                 rindex = (ins >> 7) & 0x1F;
-                                r[rindex] = rs1 >>> (rs2 & 0x1F);
+                                r[(rindex << 2) >> 2] = rs1 >>> (rs2 & 0x1F);
                                 break;
                         }
                         break;
 
                     case 0x20:
                         //sub
-                        rs1 = r[(ins >> 15) & 0x1F];
+                        rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
                         rs2 = r[(ins >> 20) & 0x1F];
                         rindex = (ins >> 7) & 0x1F;
                         switch((ins >> 12)&0x7) {
                             case 0x00:
                                 //sub
-                                r[rindex] = rs1 - rs2;
+                                r[(rindex << 2) >> 2] = rs1 - rs2;
                                 break;
 
                             case 0x05:
                                 //sra
-                                r[rindex] = rs1 >> (rs2 & 0x1F);
+                                r[(rindex << 2) >> 2] = rs1 >> (rs2 & 0x1F);
                                 break;
                         }
                         break;
 
                     case 0x01:
                         //mul,mulh,mulhsu,mulhu,div,divu,rem,remu
-                        rs1 = r[(ins >> 15) & 0x1F];
+                        rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
                         rs2 = r[(ins >> 20) & 0x1F];
                         switch((ins >> 12)&0x7) {
                             case 0x00:
                                 //mul
                                 rindex = (ins >> 7) & 0x1F;
                                 mul = rs1 * rs2;
-                                r[rindex] = mul & 0xFFFFFFFF;
+                                r[(rindex << 2) >> 2] = mul & 0xFFFFFFFF;
                                 break;
 
                             case 0x01:
                                 //mulh
                                 rindex = (ins >> 7) & 0x1F;
                                 var result = UMul(rs1,rs2, 1);
-                                r[rindex] = result;
+                                r[(rindex << 2) >> 2] = result;
                                 break;
 
                             case 0x02:
                                 //mulhsu
                                 rindex = (ins >> 7) & 0x1F;
                                 var result = SUMul(rs1,rs2>>>0, 1);
-                                r[rindex] = result;
+                                r[(rindex << 2) >> 2] = result;
                                 break;
 
                             case 0x03:
                                 //mulhu
                                 rindex = (ins >> 7) & 0x1F;
                                 var result = IMul(rs1>>>0, rs2>>>0, 1);
-                                r[rindex] = result;
+                                r[(rindex << 2) >> 2] = result;
                                 break;
 
                             case 0x04:
@@ -1273,7 +1276,7 @@ function Step(steps, clockspeed) {
                                     quo = -1;
                                 else
                                     quo = rs1 / rs2;
-                                r[rindex] = quo;
+                                r[(rindex << 2) >> 2] = quo;
                                 break;
 
                             case 0x05:
@@ -1283,7 +1286,7 @@ function Step(steps, clockspeed) {
                                     quo = 0xFFFFFFFF;
                                 else
                                     quo = (rs1 >>> 0) / (rs2 >>> 0);
-                                r[rindex] = quo;
+                                r[(rindex << 2) >> 2] = quo;
                                 break;
 
                             case 0x06:
@@ -1293,7 +1296,7 @@ function Step(steps, clockspeed) {
                                     rem = rs1;
                                 else
                                     rem = rs1 % rs2;
-                                r[rindex] = rem;
+                                r[(rindex << 2) >> 2] = rem;
                                 break;
 
                             case 0x07:
@@ -1303,7 +1306,7 @@ function Step(steps, clockspeed) {
                                     rem = (rs1 >>> 0);
                                 else
                                     rem = (rs1 >>> 0) % (rs2 >>> 0);
-                                r[rindex] = rem;
+                                r[(rindex << 2) >> 2] = rem;
                                 break;
                         }
                         break;
@@ -1311,7 +1314,7 @@ function Step(steps, clockspeed) {
                     
 
                     default:
-                        DebugMessage("Error in safecpu: Instruction " + utils.ToHex(ins) + "not found");
+                        DebugMessage(ERROR_INSTRUCTION_NOT_FOUND|0);
                         abort();
                         break;
 
@@ -1321,14 +1324,14 @@ function Step(steps, clockspeed) {
             case 0x37:
                 //lui
                 rindex = (ins >> 7) & 0x1F;
-                r[rindex] = (ins & 0xFFFFF000);
+                r[(rindex << 2) >> 2] = (ins & 0xFFFFF000);
                 break;
 
             case 0x17:
                 //auipc
                 imm = (ins & 0xFFFFF000);
                 rindex = (ins >> 7) & 0x1F;
-                r[rindex] = (imm + pc - 4)|0;
+                r[(rindex << 2) >> 2] = (imm + pc - 4)|0;
                 break;
 
             case 0x6F:
@@ -1339,7 +1342,7 @@ function Step(steps, clockspeed) {
                 imm4 = (ins >> 31) << 19;
                 imm =  (imm1 | imm2 | imm3 | imm4 ) << 1; 
                 rindex = (ins >> 7) & 0x1F;
-                r[rindex] = pc;
+                r[(rindex << 2) >> 2] = pc;
                 pc = pc + imm - 4|0;
                 fence = 1;
                 break; 
@@ -1347,9 +1350,9 @@ function Step(steps, clockspeed) {
             case 0x67:
                 //jalr
                 imm = (ins >> 20);
-                rs1 = r[(ins >> 15) & 0x1F];
+                rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
                 rindex = (ins >> 7) & 0x1F;
-                r[rindex] = pc;
+                r[(rindex << 2) >> 2] = pc;
                 pc = ((rs1 + imm) & 0xFFFFFFFE)|0;
                 fence = 1;
                 break;
@@ -1366,28 +1369,28 @@ function Step(steps, clockspeed) {
                     
                     case 0x00:
                         //beq
-                        rs1 = r[(ins >> 15) & 0x1F];
+                        rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
                         rs2 = r[(ins >> 20) & 0x1F];
                         if(rs1 == rs2) pc = pc + imm - 4|0;//-4 temporary hack
                         break;
 
                     case 0x01:
                         //bne
-                        rs1 = r[(ins >> 15) & 0x1F];
+                        rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
                         rs2 = r[(ins >> 20) & 0x1F];
                         if(rs1 != rs2) pc = pc + imm - 4|0;//-4 temporary hack
                         break;
 
                     case 0x04:
                         //blt
-                        rs1 = r[(ins >> 15) & 0x1F];
+                        rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
                         rs2 = r[(ins >> 20) & 0x1F];
                         if(rs1 < rs2) pc = pc + imm - 4|0;//-4 temporary hack
                         break;
 
                     case 0x05:
                         //bge
-                        rs1 = r[(ins >> 15) & 0x1F];
+                        rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
                         rs2 = r[(ins >> 20) & 0x1F];
                         if(rs1 >= rs2) pc = pc + imm - 4|0;//-4 temporary hack
                         break;
@@ -1407,7 +1410,7 @@ function Step(steps, clockspeed) {
                         break;
 
                     default:
-                        DebugMessage("Error in safecpu: Instruction " + utils.ToHex(ins) + "not found");
+                        DebugMessage(ERROR_INSTRUCTION_NOT_FOUND|0);
                         abort();
                         break;
 
@@ -1418,32 +1421,32 @@ function Step(steps, clockspeed) {
             case 0x73:
                 //csrrw, csrrs, csrrc, csrrwi, csrrsi, csrrci, ecall, eret, ebreak, mrts, wfi
                 imm = (ins >>> 20);
-                rs1 = r[(ins >> 15) & 0x1F];
+                rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
                 rindex = (ins >> 7) & 0x1F;
                 switch((ins >> 12)&0x7) {
                     
                     case 0x01:
                         //csrrw
-                        r[rindex] = GetCSR(imm);
+                        r[(rindex << 2) >> 2] = GetCSR(imm);
                         //if (rindex != ((ins >> 15) & 0x1F))
                         SetCSR(imm, rs1);
                         break;
 
                     case 0x02:
                         //csrrs
-                        r[rindex] = GetCSR(imm);
+                        r[(rindex << 2) >> 2] = GetCSR(imm);
                         SetCSR(imm, GetCSR(imm) | rs1);
                         break;
 
                     case 0x03:
                         //csrrc
-                        r[rindex] = GetCSR(imm);
+                        r[(rindex << 2) >> 2] = GetCSR(imm);
                         SetCSR(imm, GetCSR(imm) & (~rs1));
                         break;
 
                     case 0x05:
                         //csrrwi
-                        r[rindex] = GetCSR(imm);
+                        r[(rindex << 2) >> 2] = GetCSR(imm);
                         zimm = (ins >> 15) & 0x1F;
                         if(zimm != 0) SetCSR(imm, (zimm >> 0));
                         break;
@@ -1451,14 +1454,14 @@ function Step(steps, clockspeed) {
 
                     case 0x06:
                         //csrrsi
-                        r[rindex] = GetCSR(imm);
+                        r[(rindex << 2) >> 2] = GetCSR(imm);
                         zimm = (ins >> 15) & 0x1F;
                         if(zimm != 0) SetCSR(imm, GetCSR(imm) | (zimm >> 0));
                         break;
 
                     case 0x07:
                         //csrrci
-                        r[rindex] = GetCSR(imm);
+                        r[(rindex << 2) >> 2] = GetCSR(imm);
                         zimm = (ins >> 15) & 0x1F;
                         if(zimm != 0) SetCSR(imm, GetCSR(imm) & ~(zimm >> 0));
                         break;
@@ -1560,7 +1563,7 @@ function Step(steps, clockspeed) {
                                 break;
 
                             default:
-                                DebugMessage("Error in safecpu: Instruction " + utils.ToHex(ins) + "not found");
+                                DebugMessage(ERROR_INSTRUCTION_NOT_FOUND|0);
                                 abort();
                                 break;
 
@@ -1568,7 +1571,7 @@ function Step(steps, clockspeed) {
                         break; 
 
                     default:
-                        DebugMessage("Error in safecpu: Instruction " + utils.ToHex(ins) + "not found");
+                        DebugMessage(ERROR_INSTRUCTION_NOT_FOUND|0);
                         abort();
                         break;
 
@@ -1582,27 +1585,27 @@ function Step(steps, clockspeed) {
                     case 0x02:
                         //flw
                         imm = (ins >> 20);
-                        rs1 = r[(ins >> 15) & 0x1F];
+                        rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
                         findex = ((ins >> 7) & 0x1F);
                         paddr = TranslateVM(rs1 + imm|0,VM_READ);
-                        if(paddr == -1) break;
-                        r[0] = Read32(paddr);
+                        if((paddr|0) == -1) break;
+                        r[0] = (Read32(paddr|0)|0);
                         f[fp + findex|0] = ff[0];
                         break;
 
                     case 0x03:
                         //fld
                         imm = (ins >> 20);
-                        rs1 = r[(ins >> 15) & 0x1F];
+                        rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
                         findex = ((ins >> 7) & 0x1F) << 1;
                         paddr = TranslateVM(rs1 + imm|0,VM_READ);
-                        if(paddr == -1) break;
+                        if((paddr|0) == -1) break;
                         fi[fip + findex + 0|0] = Read32(paddr+0);
                         fi[fip + findex + 1|0] = Read32(paddr+4);
                         break;
 
                     default:
-                        DebugMessage("Error in safecpu: Instruction " + utils.ToHex(ins) + "not found");
+                        DebugMessage(ERROR_INSTRUCTION_NOT_FOUND|0);
                         abort();
                         break;
 
@@ -1618,12 +1621,12 @@ function Step(steps, clockspeed) {
                         imm1 = (ins >> 25);
                         imm2 = (ins >> 7) & 0x1F;
                         imm = (imm1 << 5) + imm2;
-                        rs1 = r[(ins >> 15) & 0x1F];
+                        rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
                         findex = (ins >> 20) & 0x1F;
                         ff[0] = f[fp + findex|0];
                         paddr = TranslateVM(rs1 + imm|0, VM_WRITE);
-                        if(paddr == -1) break;
-                        Write32(paddr, r[0]);
+                        if((paddr|0) == -1) break;
+                        Write32(paddr|0, r[0]);
                         break;
 
                     case 0x03:
@@ -1631,16 +1634,16 @@ function Step(steps, clockspeed) {
                         imm1 = (ins >> 25);
                         imm2 = (ins >> 7) & 0x1F;
                         imm = (imm1 << 5) + imm2;
-                        rs1 = r[(ins >> 15) & 0x1F];
+                        rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
                         findex = ((ins >> 20) & 0x1F) << 1;
                         paddr = TranslateVM(rs1 + imm + 0|0, VM_WRITE);
                         if (paddr == -1) break;
-                        Write32(paddr+0, fi[fip + findex + 0|0]);
-                        Write32(paddr+4, fi[fip + findex + 1|0]);
+                        Write32(paddr|0+0, fi[fip + findex + 0|0]);
+                        Write32(paddr|0+4, fi[fip + findex + 1|0]);
                         break;
 
                     default:
-                        DebugMessage("Error in safecpu: Instruction " + utils.ToHex(ins) + "not found");
+                        DebugMessage(ERROR_INSTRUCTION_NOT_FOUND|0);
                         abort();
                         break;
 
@@ -1670,7 +1673,7 @@ function Step(steps, clockspeed) {
                     case 0x60:
                         //fcvt.w.s
                         rindex = (ins >> 7) & 0x1F;
-                        r[rindex] = f[fp + ((ins >> 15) & 0x1F)|0];
+                        r[(rindex << 2) >> 2] = f[fp + ((ins >> 15) & 0x1F)|0];
                         break;
 
                     case 0x01 :
@@ -1692,19 +1695,19 @@ function Step(steps, clockspeed) {
                     case 0x61:
                         //fcvt.w.d
                         rindex = (ins >> 7) & 0x1F;
-                        r[rindex] = f[fp + ((ins >> 15) & 0x1F)|0];
+                        r[(rindex << 2) >> 2] = f[fp + ((ins >> 15) & 0x1F)|0];
                         break;
 
                     case 0x78:
                         //fmv.s.x
-                        rs1 = r[(ins >> 15) & 0x1F];
+                        rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
                         findex = (ins >> 7) & 0x1F;
                         f[fp + rindex|0] = rs1; 
                         break;
 
 
                     default:
-                        DebugMessage("Error in safecpu: Instruction " + utils.ToHex(ins) + "not found");
+                        DebugMessage(ERROR_INSTRUCTION_NOT_FOUND|0);
                         abort();
                         break;
                 }
@@ -1712,7 +1715,7 @@ function Step(steps, clockspeed) {
 
             case 0x2F:
                 //amoswap, amoadd, amoxor, amoand, amoor, amomin, amomax, amominu, amomaxu
-                rs1 = r[(ins >> 15) & 0x1F];
+                rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
                 rs2 = r[(ins >> 20) & 0x1F];
                 rindex = (ins >> 7) & 0x1F;
                 switch((ins >> 27)&0x1F) {
@@ -1720,127 +1723,127 @@ function Step(steps, clockspeed) {
                     case 0x01:
                         //amoswap
                         paddr = TranslateVM(rs1|0, VM_READ);
-                        if(paddr == -1) break;
-                        r[rindex] = Read32(paddr);
+                        if((paddr|0) == -1) break;
+                        r[(rindex << 2) >> 2] = (Read32(paddr|0)|0);
                         paddr = TranslateVM(rs1|0, VM_WRITE);
-                        if(paddr == -1) break;
-                        Write32(paddr, rs2);
+                        if((paddr|0) == -1) break;
+                        Write32(paddr|0, rs2);
                         break;
 
                     case 0x00:
                         //amoadd
                         paddr = TranslateVM(rs1|0,VM_READ);
-                        if(paddr == -1) break;
-                        r[rindex] = Read32(paddr);
+                        if((paddr|0) == -1) break;
+                        r[(rindex << 2) >> 2] = (Read32(paddr|0)|0);
                         paddr = TranslateVM(rs1|0,VM_WRITE);
-                        if(paddr == -1) break;
-                        Write32(paddr,r[rindex] + rs2);
+                        if((paddr|0) == -1) break;
+                        Write32(paddr|0,r[(rindex << 2) >> 2] + rs2);
                         break;
 
                     case 0x04:
                         //amoxor
                         paddr = TranslateVM(rs1|0,VM_READ);
-                        if(paddr == -1) break;
-                        r[rindex] = Read32(paddr);
+                        if((paddr|0) == -1) break;
+                        r[(rindex << 2) >> 2] = (Read32(paddr|0)|0);
                         paddr = TranslateVM(rs1|0,VM_WRITE);
-                        if(paddr == -1) break;
-                        Write32(paddr,r[rindex] ^ rs2);
+                        if((paddr|0) == -1) break;
+                        Write32(paddr|0,r[(rindex << 2) >> 2] ^ rs2);
                         break;
 
                     case 0x0C:
                         //amoand
                         paddr = TranslateVM(rs1|0,VM_READ);
-                        if(paddr == -1) break;
-                        r[rindex] = Read32(paddr);
+                        if((paddr|0) == -1) break;
+                        r[(rindex << 2) >> 2] = (Read32(paddr|0)|0);
                         paddr = TranslateVM(rs1|0,VM_WRITE);
-                        if(paddr == -1) break;
-                        Write32(paddr,r[rindex] & rs2);
+                        if((paddr|0) == -1) break;
+                        Write32(paddr|0,r[(rindex << 2) >> 2] & rs2);
                         break;
 
                     case 0x08:
                         //amoor
                         paddr = TranslateVM(rs1|0,VM_READ);
-                        if(paddr == -1) break;
-                        r[rindex] = Read32(paddr);
+                        if((paddr|0) == -1) break;
+                        r[(rindex << 2) >> 2] = (Read32(paddr|0)|0);
                         paddr = TranslateVM(rs1|0,VM_WRITE);
-                        if(paddr == -1) break;
-                        Write32(paddr,r[rindex] | rs2);
+                        if((paddr|0) == -1) break;
+                        Write32(paddr|0,r[(rindex << 2) >> 2] | rs2);
                         break;
 
                     case 0x10:
                         //amomin
                         paddr = TranslateVM(rs1|0,VM_READ);
-                        if(paddr == -1) break;
-                        r[rindex] = Read32(paddr);
-                        if((rs2 >> 0) > (r[rindex] >> 0)) r[0] = r[rindex];
+                        if((paddr|0) == -1) break;
+                        r[(rindex << 2) >> 2] = (Read32(paddr|0)|0);
+                        if((rs2 >> 0) > (r[(rindex << 2) >> 2] >> 0)) r[0] = r[(rindex << 2) >> 2];
                         else r[0] = rs2;
                         paddr = TranslateVM(rs1|0,VM_WRITE);
-                        if(paddr == -1) break;
-                        Write32(paddr,r[0]);
+                        if((paddr|0) == -1) break;
+                        Write32(paddr|0,r[0]);
                         break;
 
                    case 0x14:
                         //amomax
                         paddr = TranslateVM(rs1,VM_READ);
-                        if(paddr == -1) break;
-                        r[rindex] = Read32(paddr);
-                        if((rs2 >> 0) < (r[rindex] >> 0)) r[0] = r[rindex];
+                        if((paddr|0) == -1) break;
+                        r[(rindex << 2) >> 2] = (Read32(paddr|0)|0);
+                        if((rs2 >> 0) < (r[(rindex << 2) >> 2] >> 0)) r[0] = r[(rindex << 2) >> 2];
                         else r[0] = rs2;
                         paddr = TranslateVM(rs1,VM_WRITE);
-                        if(paddr == -1) break;
-                        Write32(paddr,r[0]);
+                        if((paddr|0) == -1) break;
+                        Write32(paddr|0,r[0]);
                         break;
 
                     case 0x18:
                         //amominu
-                        r[rindex] = Read32(paddr);
-                        if((rs2 >>> 0) > (r[rindex] >>> 0)) r[0] = r[rindex];
+                        r[(rindex << 2) >> 2] = (Read32(paddr|0)|0);
+                        if((rs2 >>> 0) > (r[(rindex << 2) >> 2] >>> 0)) r[0] = r[(rindex << 2) >> 2];
                         else r[0] = rs2;
                         paddr = TranslateVM(rs1,VM_WRITE);
-                        if(paddr == -1) break;
-                        Write32(paddr,r[0]);
+                        if((paddr|0) == -1) break;
+                        Write32(paddr|0,r[0]);
                         break;
 
                     case 0x1C:
                         //amomaxu
                         paddr = TranslateVM(rs1,VM_READ);
-                        if(paddr == -1) break;
-                        r[rindex] = Read32(paddr);
-                        if((rs2 >>> 0) < (r[rindex] >>> 0)) r[0] = r[rindex];
+                        if((paddr|0) == -1) break;
+                        r[(rindex << 2) >> 2] = (Read32(paddr|0)|0);
+                        if((rs2 >>> 0) < (r[(rindex << 2) >> 2] >>> 0)) r[0] = r[(rindex << 2) >> 2];
                         else r[0] = rs2;
                         paddr = TranslateVM(rs1,VM_WRITE);
-                        if(paddr == -1) break;
-                        Write32(paddr,r[0]);
+                        if((paddr|0) == -1) break;
+                        Write32(paddr|0,r[0]);
                         break;
 
                     case 0x02:
                         //lr.d
-                        rs1 = r[(ins >> 15) & 0x1F];
+                        rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
                         paddr = TranslateVM(rs1,VM_READ);
-                        if(paddr == -1) break;
-                        r[rindex] = Read32(paddr);
+                        if((paddr|0) == -1) break;
+                        r[(rindex << 2) >> 2] = (Read32(paddr|0)|0);
                         amoaddr = rs1;
-                        amovalue = r[rindex];
+                        amovalue = r[(rindex << 2) >> 2];
                         break;
 
                     case 0x03:
                         //sc.d
-                        rs1 = r[(ins >> 15) & 0x1F];
+                        rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
                         rs2 = r[(ins >> 20) & 0x1F];
                         if(rs1 != amoaddr) {
-                            r[rindex] = 0x01;
+                            r[(rindex << 2) >> 2] = 0x01;
                             break;
                         }
                         paddr = TranslateVM(rs1, VM_READ);
-                        if(paddr == -1) break;
-                        if(Read32(paddr) != amovalue) {
-                            r[rindex] = 0x01;
+                        if((paddr|0) == -1) break;
+                        if((Read32(paddr|0)|0) != amovalue) {
+                            r[(rindex << 2) >> 2] = 0x01;
                             break;
                         }
-                        r[rindex] = 0x00;
+                        r[(rindex << 2) >> 2] = 0x00;
                         paddr = TranslateVM(rs1, VM_WRITE);
                         if (paddr == -1) break;
-                        Write32(paddr, rs2);
+                        Write32(paddr|0, rs2);
                         break;
 
                     default:
