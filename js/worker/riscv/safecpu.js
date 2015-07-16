@@ -825,7 +825,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
         var current_privilege_level = (this.csr[CSR_MSTATUS] & 0x06) >> 1;
 
         this.ticks = this.ticks + 1|0;
-        if (this.ticks == csr[CSR_STIMECMP]) {
+        if (this.ticks == csr[CSR_MTIMECMP]) {
             csr[CSR_MIP] = csr[CSR_MIP] | 0x20;
         }
         var interrupts = csr[CSR_MIE] & csr[CSR_MIP];
@@ -1599,8 +1599,8 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                         f[rindex] = fs1 - fs2;
                         break;
 
-                    // TODO check
-                    case 0x11:
+                    case 0x10: // single precision
+                    case 0x11: // double precision
                         //fsgnj
                         rindex = (ins >> 7) & 0x1F;
                         switch((ins >> 12) & 7) {

@@ -16,6 +16,51 @@ function StringToBytes(str, ram, offset) {
     ram.Write8(offset+str.length, 0);
 }
 
+
+// -------------------------------------------------
+
+
+function HTIFFB(ram, SendFunc) {
+    this.ram = ram;
+    this.identify = "rfb";
+    this.Send = SendFunc;
+    this.width = 640;
+    this.height = 400;
+    this.paddr = 0x0;
+
+    this.Read = function(value) {
+        this.width  = (value >>  0)&0xFFFF;
+        this.height = (value >> 16)&0xFFFF;
+        this.n = (this.width * this.height)>>1;
+        this.buffer = new Int32Array(this.n);
+        this.Send(3, 0, 1);
+    }
+
+    this.Write = function(value) {
+        this.paddr = value;
+        this.Send(3, 1, 1);
+    }
+
+    this.OnGetFB = function() {
+        if (this.paddr == 0x0) return;
+        message.Send("GetFB", this.GetBuffer() );
+    }
+
+    this.GetBuffer = function () {
+        var i=0, n = this.buffer.length;
+        var data = this.buffer;
+        var mem = this.ram.int32mem;
+        var addr = this.paddr>>2;
+        for (i = 0; i < n; ++i) {
+            data[i] = mem[addr+i];
+        }
+        return this.buffer;
+    }
+
+    message.Register("GetFB", this.OnGetFB.bind(this) );
+};
+
+
 // -------------------------------------------------
 
 function HTIFConsole(ram, SendFunc) {
@@ -127,6 +172,7 @@ function HTIF(ram) {
     this.device.push( new HTIFSyscall(this.ram, this.Send.bind(this)) ); // dev 0
     this.device.push( new HTIFConsole(this.ram, this.Send.bind(this)) ); // dev 1
     this.device.push( new HTIFDisk   (this.ram, this.Send.bind(this)) ); // dev 2
+    this.device.push( new HTIFFB     (this.ram, this.Send.bind(this)) ); // dev 3
 
     this.devid = 0x0;
     this.cmd = 0x0;
