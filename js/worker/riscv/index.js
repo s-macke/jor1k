@@ -15,6 +15,8 @@ var FastCPU = require('./fastcpu.js');
 
 var stdlib = {
     Int32Array : Int32Array,
+    Int8Array : Int8Array,
+    Int16Array : Int16Array,
     Float32Array : Float32Array,
     Float64Array : Float64Array,
     Uint8Array : Uint8Array,
