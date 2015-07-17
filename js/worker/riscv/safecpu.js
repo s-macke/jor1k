@@ -56,6 +56,7 @@ var CSR_MTVEC     = 0x301;
 var CSR_MTDELEG   = 0x302;
 var CSR_MIE       = 0x304;
 var CSR_MTIMECMP  = 0x321;
+var CSR_MTIMECMPH = 0x361;
 var CSR_MEPC      = 0x341;
 var CSR_MSCRATCH  = 0x340;
 var CSR_MCAUSE    = 0x342;
@@ -517,6 +518,10 @@ SafeCPU.prototype.SetCSR = function (addr,value) {
             csr[addr] = value;
             break;
 
+        case CSR_MTIMECMPH:
+            csr[addr] = value;
+            break;
+
         case CSR_SPTBR:
             csr[addr] = value;
             break;
@@ -671,9 +676,10 @@ SafeCPU.prototype.GetCSR = function (addr) {
 
         case CSR_MTIMECMP:
         case CSR_STIMECMP:
+        case CSR_MTIMECMPH:
             return csr[addr];
             break;
-        
+
         case CSR_SPTBR:
             return csr[addr];
             break;
