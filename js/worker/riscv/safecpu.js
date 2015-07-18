@@ -117,6 +117,8 @@ var CSR_UARCH13   = 0xCCCD;
 var CSR_UARCH14   = 0xCCCE;
 var CSR_UARCH15   = 0xCCCF;
 
+var QUIET_NAN = 0xFFFFFFFF;
+var SIGNALLING_NAN = 0x7FFFFFFF;
 
 // constructor
 function SafeCPU(ram) {
@@ -526,6 +528,18 @@ SafeCPU.prototype.SetCSR = function (addr,value) {
             csr[addr] = value;
             break;
 
+        case CSR_FRM:
+            csr[addr] = value;
+            break;
+
+        case CSR_FFLAGS:
+            csr[addr] = value;
+            break;
+
+        case CSR_FCSR:
+            csr[addr] = value;
+            break;
+
         default:
             csr[addr] = value;
             message.Debug("Error in SetCSR: PC "+utils.ToHex(this.pc)+" Address " + utils.ToHex(addr) + " unkown");
@@ -684,6 +698,18 @@ SafeCPU.prototype.GetCSR = function (addr) {
             return csr[addr];
             break;
 
+        case CSR_FRM:
+            return csr[addr];
+            break;
+
+        case CSR_FFLAGS:
+            return csr[addr];
+            break;
+
+        case CSR_FCSR:
+            return csr[addr];
+            break;
+
         default:
             message.Debug("Error in GetCSR: PC "+utils.ToHex(this.pc)+" Address " + utils.ToHex(addr) + " unkown");
             message.Abort();
@@ -824,6 +850,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
     var rs2 = 0x0;
     var fs1 = 0.0;
     var fs2 = 0.0;
+    var fs3 = 0.0;
     
     do {
         r[0] = 0x00;
@@ -1577,6 +1604,28 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                         f[rindex] = fs1 - fs2;
                         break;
 
+                    case 0x50:
+                        //feq.s
+                        fs1 = f[(ins >> 15) & 0x1F];
+                        fs2 = f[(ins >> 20) & 0x1F];
+                        rindex = (ins >> 7) & 0x1F;
+                        if(fs1 > fs2) f[rindex] = 1;
+                        else f[rindex] = 0;
+                        if(fs1 == QUIET_NAN || fs2 == QUIET_NAN) f[rindex] = 0;
+                        else if(fs1 == SIGNALLING_NAN || fs2 == SIGNALLING_NAN) message.Abort();
+                        break;
+
+                    case 0x51:
+                        //feq.d
+                        fs1 = f[(ins >> 15) & 0x1F];
+                        fs2 = f[(ins >> 20) & 0x1F];
+                        rindex = (ins >> 7) & 0x1F;
+                        if(fs1 > fs2) f[rindex] = 1;
+                        else f[rindex] = 0;
+                        if(fs1 == QUIET_NAN || fs2 == QUIET_NAN) f[rindex] = 0;
+                        else if(fs1 == SIGNALLING_NAN || fs2 == SIGNALLING_NAN) message.Abort();
+                        break;
+
                     case 0x60:
                         //fcvt.w.s
                         rindex = (ins >> 7) & 0x1F;
@@ -1585,6 +1634,12 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
 
                     case 0x68:
                         //fcvt.s.w
+                        rindex = (ins >> 7) & 0x1F;
+                        f[rindex] = r[(ins >> 15) & 0x1F];
+                        break;
+
+                    case 0x69:
+                        //fcvt.d.w
                         rindex = (ins >> 7) & 0x1F;
                         f[rindex] = r[(ins >> 15) & 0x1F];
                         break;
@@ -1605,17 +1660,40 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                         f[rindex] = fs1 - fs2;
                         break;
 
+                    case 0x09:
+                        //fmul.d
+                        fs1 = f[(ins >> 15) & 0x1F];
+                        fs2 = f[(ins >> 20) & 0x1F];
+                        rindex = (ins >> 7) & 0x1F;
+                        f[rindex] = fs1 * fs2;
+                        break;
+
                     case 0x10: // single precision
                     case 0x11: // double precision
                         //fsgnj
                         rindex = (ins >> 7) & 0x1F;
                         switch((ins >> 12) & 7) {
                             case 0:
-                                // fsgnj.d, also used for fmv.d
+                                //fsgnj.d, also used for fmv.d
                                 fs1 = f[(ins >> 15) & 0x1F];
                                 fs2 = f[(ins >> 20) & 0x1F];
                                 f[rindex] = (fs2<0)?-Math.abs(fs1):Math.abs(fs1);
                                 break;
+
+                            case 1:
+                                //fsgnjn.d
+                                fs1 = f[(ins >> 15) & 0x1F];
+                                fs2 = f[(ins >> 20) & 0x1F];
+                                f[rindex] = (fs2<0)?Math.abs(fs1):-Math.abs(fs1);
+                                break;
+
+                            case 3:
+                                //fsgnjx.d
+                                fs1 = f[(ins >> 15) & 0x1F];
+                                fs2 = f[(ins >> 20) & 0x1F];
+                                f[rindex] = ((fs2<0 && fs1<0) || (fs2>0 && fs1>0))?-Math.abs(fs1):Math.abs(fs1);
+                                break;
+
                             default:
                                 message.Debug("Error in safecpu: Instruction (fsgn) " + utils.ToHex(ins) + " not found");
                                 message.Abort();
@@ -1641,6 +1719,42 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                         message.Abort();
                         break;
                 }
+                break;
+
+            case 0x43:
+                //fmadd.d,fmadd.s
+                fs1 = f[(ins >> 15) & 0x1F];
+                fs2 = f[(ins >> 20) & 0x1F];
+                fs3 = f[(ins >> 27) & 0x1F];
+                rindex = (ins >> 7) & 0x1F;
+                f[rindex] = fs1 * fs2 + fs3;
+                break;
+
+            case 0x47:
+                //fmsub.d,fmsub.s
+                fs1 = f[(ins >> 15) & 0x1F];
+                fs2 = f[(ins >> 20) & 0x1F];
+                fs3 = f[(ins >> 27) & 0x1F];
+                rindex = (ins >> 7) & 0x1F;
+                f[rindex] = fs1 * fs2 - fs3;
+                break;
+
+            case 0x4B:
+                //fnmadd.d,fnmadd.s
+                fs1 = f[(ins >> 15) & 0x1F];
+                fs2 = f[(ins >> 20) & 0x1F];
+                fs3 = f[(ins >> 27) & 0x1F];
+                rindex = (ins >> 7) & 0x1F;
+                f[rindex] = -(fs1 * fs2 + fs3);
+                break;
+
+            case 0x4F:
+                //fnmsub.d,fnmsub.s
+                fs1 = f[(ins >> 15) & 0x1F];
+                fs2 = f[(ins >> 20) & 0x1F];
+                fs3 = f[(ins >> 27) & 0x1F];
+                rindex = (ins >> 7) & 0x1F;
+                f[rindex] = -(fs1 * fs2 - fs3);
                 break;
 
             case 0x2F:
