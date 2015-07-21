@@ -28,7 +28,7 @@ var WriteToHost = foreign.WriteToHost;
 var WriteFromHost = foreign.WriteFromHost;
 var IsQueueEmpty = foreign.IsQueueEmpty;
 var mul = foreign.mul;
-var MathAbs = foreign.MathAbs;
+var MathAbs = stdlib.Math.abs;
 
 var ERROR_INCOMPLETE_VMPRIVILEGE = 0;
 var ERROR_VMPRIVILEGE = 1;
