@@ -857,10 +857,20 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
 
         var current_privilege_level = (this.csr[CSR_MSTATUS] & 0x06) >> 1;
 
+        if (!(steps & 63)) {
+            // ---------- TICK ----------
+            this.ticks = (this.ticks + clockspeed) & 0xFFFFFFFF;
+            if (this.ticks > csr[CSR_MTIMECMP]) {
+                csr[CSR_MIP] = csr[CSR_MIP] | 0x20;
+            }            
+
+        }
+
+        /*
         this.ticks = this.ticks + 1|0;
         if (this.ticks == csr[CSR_MTIMECMP]) {
             csr[CSR_MIP] = csr[CSR_MIP] | 0x20;
-        }
+        } */
         var interrupts = csr[CSR_MIE] & csr[CSR_MIP];
         var ie = csr[CSR_MSTATUS] & 0x01;
         if (interrupts) {
@@ -1609,10 +1619,10 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                         fs1 = f[(ins >> 15) & 0x1F];
                         fs2 = f[(ins >> 20) & 0x1F];
                         rindex = (ins >> 7) & 0x1F;
-                        if(fs1 > fs2) f[rindex] = 1;
+                        if(fs1 == fs2) f[rindex] = 1;
                         else f[rindex] = 0;
-                        if(fs1 == QUIET_NAN || fs2 == QUIET_NAN) f[rindex] = 0;
-                        else if(fs1 == SIGNALLING_NAN || fs2 == SIGNALLING_NAN) message.Abort();
+                        //if(fs1 == QUIET_NAN || fs2 == QUIET_NAN) f[rindex] = 0;
+                        //else if(fs1 == SIGNALLING_NAN || fs2 == SIGNALLING_NAN) message.Abort();
                         break;
 
                     case 0x51:
@@ -1620,10 +1630,10 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                         fs1 = f[(ins >> 15) & 0x1F];
                         fs2 = f[(ins >> 20) & 0x1F];
                         rindex = (ins >> 7) & 0x1F;
-                        if(fs1 > fs2) f[rindex] = 1;
+                        if(fs1 == fs2) f[rindex] = 1;
                         else f[rindex] = 0;
-                        if(fs1 == QUIET_NAN || fs2 == QUIET_NAN) f[rindex] = 0;
-                        else if(fs1 == SIGNALLING_NAN || fs2 == SIGNALLING_NAN) message.Abort();
+                        //if(fs1 == QUIET_NAN || fs2 == QUIET_NAN) f[rindex] = 0;
+                        //else if(fs1 == SIGNALLING_NAN || fs2 == SIGNALLING_NAN) message.Abort();
                         break;
 
                     case 0x60:
