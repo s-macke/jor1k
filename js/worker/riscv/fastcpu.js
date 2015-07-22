@@ -938,9 +938,16 @@ function Step(steps, clockspeed) {
         if ((ticks|0) == (csr[(csrp + CSR_MTIMECMP)>>2]|0)) {
             csr[(csrp + CSR_MIP)>>2] = csr[(csrp + CSR_MIP)>>2] | 0x20;
         }
-        interrupts = csr[(csrp + CSR_MIE)>>2] & csr[(csrp + CSR_MIP)>>2];
-        ie = csr[(csrp + CSR_MSTATUS)>>2] & 0x01;
-        if (interrupts|0) {
+
+        if(((pc|0) & 0xFFF) == 0) fence = 1; //Checking if the physical pc has reached a page boundary
+ 
+        if((fence|0) == 1) {
+            ppc = TranslateVM(pc,VM_FETCH)|0;
+            if((ppc|0) == -1)
+                continue;
+
+            interrupts = csr[(csrp + CSR_MIE)>>2] & csr[(csrp + CSR_MIP)>>2];
+            ie = csr[(csrp + CSR_MSTATUS)>>2] & 0x01;
 
             if (((current_privilege_level|0) < 3) | (((current_privilege_level|0) == 3) & (ie|0))) {
                 if (((interrupts|0) & 0x8)) {
@@ -962,16 +969,10 @@ function Step(steps, clockspeed) {
                      continue;
                 }
             }
-        }
 
-        if(((pc|0) & 0xFFF) == 0) fence = 1; //Checking if the physical pc has reached a page boundary
- 
-        if((fence|0) == 1){
-            ppc = TranslateVM(pc,VM_FETCH)|0;
-            if((ppc|0) == -1)
-                continue;
             fence = 0;
         }
+
         ram_index = ppc|0;
         ins = ram[(ramp + ram_index) >> 2]|0;
         //DebugIns.Disassemble(ins,r,csr,pc);

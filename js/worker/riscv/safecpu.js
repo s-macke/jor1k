@@ -829,7 +829,6 @@ SafeCPU.prototype.PopPrivilegeStack = function () {
 };
 
 SafeCPU.prototype.Step = function (steps, clockspeed) {
-
     var r = this.r;
     var fi = this.fi;
     var ff = this.ff;
@@ -851,6 +850,9 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
     var fs1 = 0.0;
     var fs2 = 0.0;
     var fs3 = 0.0;
+
+    steps = steps | 0;
+    clockspeed = clockspeed | 0;
     
     do {
         r[0] = 0x00;
@@ -864,22 +866,14 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                 csr[CSR_MIP] = csr[CSR_MIP] | 0x20;
             }            
 
-        }
-
-        /*
-        this.ticks = this.ticks + 1|0;
-        if (this.ticks == csr[CSR_MTIMECMP]) {
-            csr[CSR_MIP] = csr[CSR_MIP] | 0x20;
-        } */
-        var interrupts = csr[CSR_MIE] & csr[CSR_MIP];
-        var ie = csr[CSR_MSTATUS] & 0x01;
-        if (interrupts) {
+            var interrupts = csr[CSR_MIE] & csr[CSR_MIP];
+            var ie = csr[CSR_MSTATUS] & 0x01;
 
             if ((current_privilege_level < 3) || ((current_privilege_level == 3) && ie)) {
                 if (interrupts & 0x8) {
                     this.Trap(CAUSE_SOFTWARE_INTERRUPT, this.pc);
                     continue;
-                } else
+                }
                 if (!this.htif.IsQueueEmpty()) {
                     this.Trap(CAUSE_HOST_INTERRUPT, this.pc);
                     continue;
@@ -895,7 +889,9 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                      continue;
                 }
             }
+
         }
+
 
         var paddr = this.TranslateVM(this.pc, VM_FETCH);
         if(paddr == -1) {
@@ -1918,7 +1914,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                 break;
         }
 
-    } while(--steps);
+    } while(steps=steps-1|0);
 
 
     return 0;
