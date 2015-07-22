@@ -92,6 +92,7 @@ var CSR_MTVEC     = 0xC04;
 var CSR_MTDELEG   = 0xC08;
 var CSR_MIE       = 0xC10;
 var CSR_MTIMECMP  = 0xC84;
+var CSR_MTIMECMPH = 0xD84;
 var CSR_MEPC      = 0xD04;
 var CSR_MSCRATCH  = 0xD00;
 var CSR_MCAUSE    = 0xD08;
@@ -595,6 +596,7 @@ function SetCSR(addr,value) {
             csr[(csrp + addr)>>2] = value;
             break;
 
+        case 0xD84: //CSR_MTIMECMPH
         case 0x600: //CSR_SPTBR
             csr[(csrp + addr)>>2] = value;
             break;
@@ -749,6 +751,7 @@ function GetCSR(addr) {
             return csr[(csrp + addr)>>2]|0;
             break;
         
+        case 0xD84: //CSR_MTIMECMPH
         case 0x600: //CSR_SPTBR
             return csr[(csrp + addr)>>2]|0;
             break;
@@ -932,7 +935,7 @@ function Step(steps, clockspeed) {
         current_privilege_level = (csr[(csrp + CSR_MSTATUS)>>2] & 0x06) >> 1;
 
         ticks = ticks + 1|0;
-        if ((ticks|0) == (csr[(csrp + CSR_STIMECMP)>>2]|0)) {
+        if ((ticks|0) == (csr[(csrp + CSR_MTIMECMP)>>2]|0)) {
             csr[(csrp + CSR_MIP)>>2] = csr[(csrp + CSR_MIP)>>2] | 0x20;
         }
         interrupts = csr[(csrp + CSR_MIE)>>2] & csr[(csrp + CSR_MIP)>>2];
