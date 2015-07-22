@@ -434,7 +434,7 @@ function TranslateVM(addr, op) {
     Write32(new_sptbr + (new_page_num << 2),updated_frame_num);
 */
 
-    return ((new_frame_num >> 10) << 12) | offset;
+    return ((new_frame_num >> 10) << 12) | offset | 0;
 };
 
 
@@ -1619,7 +1619,7 @@ function Step(steps, clockspeed) {
                         if((paddr|0) == -1) break;
                         ram_index = paddr|0;
                         r[0] = ram[(ramp + ram_index) >> 2]|0;
-                        f[(fp + (findex << 3)) >> 3] = ff[0];
+                        f[(fp + (findex << 3)) >> 3] = +ff[0];
                         break;
 
                     case 0x03:
