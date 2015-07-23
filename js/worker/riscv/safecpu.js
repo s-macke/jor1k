@@ -169,7 +169,10 @@ SafeCPU.prototype.InvalidateTLB = function() {
 }
 
 SafeCPU.prototype.GetTimeToNextInterrupt = function () {
-    return 10;
+    //return 10;
+    var delta = (csr[CSR_MTIMECMP] & 0xFFFFFFFF) - (this.ticks & 0xFFFFFFFF);
+    delta += delta<0?0x100000000:0x0;
+    return delta;
 }
 
 SafeCPU.prototype.GetTicks = function () {
@@ -856,11 +859,13 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
         r[0] = 0x00;
 
         var current_privilege_level = (this.csr[CSR_MSTATUS] & 0x06) >> 1;
-
+        
         if (!(steps & 63)) {
             // ---------- TICK ----------
+            var delta = (csr[CSR_MTIMECMP] & 0xFFFFFFFF) - (this.ticks & 0xFFFFFFFF);
+            delta += delta<0?0x100000000:0x0;
             this.ticks = (this.ticks + clockspeed) & 0xFFFFFFFF;
-            if (this.ticks > csr[CSR_MTIMECMP]) {
+            if (delta <= clockspeed) {
                 csr[CSR_MIP] = csr[CSR_MIP] | 0x20;
             }            
 
@@ -1486,6 +1491,8 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
 
                             case 0x102:
                                 // wfi
+                                if((interrupts && ie))
+                                    return steps;
                                 break;
 
                             case 0x305:
