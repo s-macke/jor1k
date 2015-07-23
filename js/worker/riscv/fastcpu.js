@@ -71,8 +71,8 @@ var CSR_CYCLES = 0x3000;
 var CSR_CYCLEW = 0x2400;
 
 
-var CSR_FFLAGS    = 0x1;
-var CSR_FRM       = 0x2;
+var CSR_FFLAGS    = 0x4;
+var CSR_FRM       = 0x8;
 var CSR_FCSR      = 0xC;
 
 var CSR_SSTATUS   = 0x400;
@@ -601,6 +601,11 @@ function SetCSR(addr,value) {
             csr[(csrp + addr)>>2] = value;
             break;
 
+        case 0x04: //CSR_FRM
+        case 0x08: //CSR_FFLAGS
+            csr[(csrp + addr)>>2] = value;
+            break;
+
         default:
             csr[(csrp + addr)>>2] = value;
             DebugMessage(ERROR_SETCSR|0);
@@ -753,6 +758,11 @@ function GetCSR(addr) {
         
         case 0xD84: //CSR_MTIMECMPH
         case 0x600: //CSR_SPTBR
+            return csr[(csrp + addr)>>2]|0;
+            break;
+
+        case 0x04: //CSR_FRM
+        case 0x08: //CSR_FFLAGS
             return csr[(csrp + addr)>>2]|0;
             break;
 
@@ -921,6 +931,7 @@ function Step(steps, clockspeed) {
     var rs2 = 0x0;
     var fs1 = 0.0;
     var fs2 = 0.0;
+    var fs3 = 0.0;
     
     var paddr = 0;
     var current_privilege_level = 0;
@@ -1703,10 +1714,39 @@ function Step(steps, clockspeed) {
                         f[(fp + (rindex << 3)) >> 3] = fs1 - fs2;
                         break;
 
+                    case 0x50:
+                        //feq.s
+                        fs1 = (+f[(fp + (((ins >> 15) & 0x1F) << 3)) >> 3]);
+                        fs2 = (+f[(fp + (((ins >> 20) & 0x1F) << 3)) >> 3]);
+                        rindex = (ins >> 7) & 0x1F;
+                        if((~~fs1) == (~~fs2)) f[(fp + (rindex << 3)) >> 3] = 1.0;
+                        else f[(fp + (rindex << 3)) >> 3] = 0.0;
+                        //if(fs1 == QUIET_NAN || fs2 == QUIET_NAN) f[rindex] = 0;
+                        //else if(fs1 == SIGNALLING_NAN || fs2 == SIGNALLING_NAN) message.Abort();
+                        break;
+
+                    case 0x51:
+                        //feq.d
+                        fs1 = (+f[(fp + (((ins >> 15) & 0x1F) << 3)) >> 3]);
+                        fs2 = (+f[(fp + (((ins >> 20) & 0x1F) << 3)) >> 3]);
+                        rindex = (ins >> 7) & 0x1F;
+                        if((~~fs1) == (~~fs2)) f[(fp + (rindex << 3)) >> 3] = 1.0;
+                        else f[(fp + (rindex << 3)) >> 3] = 0.0;
+                        //if(fs1 == QUIET_NAN || fs2 == QUIET_NAN) f[rindex] = 0;
+                        //else if(fs1 == SIGNALLING_NAN || fs2 == SIGNALLING_NAN) message.Abort();
+                        break;
+
                     case 0x60:
                         //fcvt.w.s
                         rindex = (ins >> 7) & 0x1F;
                         r[(rindex << 2) >> 2] = (~~+f[(fp + (((ins >> 15) & 0x1F) << 3)) >> 3]);
+                        break;
+
+                    case 0x68: //fcvt.s.w
+                    case 0x69:
+                        //fcvt.d.w
+                        rindex = (ins >> 7) & 0x1F;
+                        f[(fp + (rindex << 3)) >> 3] = (+~~r[(((ins >> 15) & 0x1F) << 2) >> 2]);
                         break;
 
                     case 0x01 :
@@ -1723,6 +1763,42 @@ function Step(steps, clockspeed) {
                         fs2 = (+f[(fp + (((ins >> 20) & 0x1F) << 3)) >> 3]);
                         rindex = (ins >> 7) & 0x1F;
                         f[(fp + (rindex << 3)) >> 3] = fs1 - fs2;
+                        break;
+
+                    case 0x09:
+                        //fmul.d
+                        fs1 = (+f[(fp + (((ins >> 15) & 0x1F) << 3)) >> 3]);
+                        fs2 = (+f[(fp + (((ins >> 20) & 0x1F) << 3)) >> 3]);
+                        rindex = (ins >> 7) & 0x1F;
+                        f[(fp + (rindex << 3)) >> 3] = (+mul(fs1,fs2));
+                        break;
+ 
+                    case 0x10: // single precision
+                    case 0x11: // double precision
+                        //fsgnj
+                        fs1 = (+f[(fp + (((ins >> 15) & 0x1F) << 3)) >> 3]);
+                        fs2 = (+f[(fp + (((ins >> 20) & 0x1F) << 3)) >> 3]);
+                        rindex = (ins >> 7) & 0x1F;
+                        switch((ins >> 12) & 7) {
+                            case 0:
+                                //fsgnj.d, also used for fmv.d
+                                f[(fp + (rindex << 3)) >> 3] = ((~~fs2)<0)?-MathAbs(fs1):MathAbs(fs1);
+                                break;
+ 
+                            case 1:
+                                //fsgnjn.d
+                                f[(fp + (rindex << 3)) >> 3] = ((~~fs2)<0)?MathAbs(fs1):-MathAbs(fs1);
+                                break;
+ 
+                            case 3:
+                                //fsgnjx.d
+                                f[(fp + (rindex << 3)) >> 3] = (((~~fs2|0)<0 & (~~fs1)<0) | ((~~fs2)>0 & (~~fs1)>0))?-MathAbs(fs1):MathAbs(fs1);
+                                break;
+ 
+                            default:
+                                DebugMessage(ERROR_INSTRUCTION_NOT_FOUND|0);
+                                abort();
+                        }
                         break;
 
                     case 0x61:
@@ -1744,6 +1820,42 @@ function Step(steps, clockspeed) {
                         abort();
                         break;
                 }
+                break;
+
+            case 0x43:
+                //fmadd.d,fmadd.s
+                fs1 = (+f[(fp + (((ins >> 15) & 0x1F) << 3)) >> 3]);
+                fs2 = (+f[(fp + (((ins >> 20) & 0x1F) << 3)) >> 3]);
+                fs3 = (+f[(fp + (((ins >> 27) & 0x1F) << 3)) >> 3]);
+                rindex = (ins >> 7) & 0x1F;
+                f[(fp + (rindex << 3)) >> 3] = fs1 * fs2 + fs3;
+                break;
+ 
+            case 0x47:
+                //fmsub.d,fmsub.s
+                fs1 = (+f[(fp + (((ins >> 15) & 0x1F) << 3)) >> 3]);
+                fs2 = (+f[(fp + (((ins >> 20) & 0x1F) << 3)) >> 3]);
+                fs3 = (+f[(fp + (((ins >> 27) & 0x1F) << 3)) >> 3]);
+                rindex = (ins >> 7) & 0x1F;
+                f[(fp + (rindex << 3)) >> 3] = fs1 * fs2 - fs3;
+                break;
+ 
+            case 0x4B:
+                //fnmadd.d,fnmadd.s
+                fs1 = (+f[(fp + (((ins >> 15) & 0x1F) << 3)) >> 3]);
+                fs2 = (+f[(fp + (((ins >> 20) & 0x1F) << 3)) >> 3]);
+                fs3 = (+f[(fp + (((ins >> 27) & 0x1F) << 3)) >> 3]);
+                rindex = (ins >> 7) & 0x1F;
+                f[(fp + (rindex << 3)) >> 3] = -(fs1 * fs2 + fs3);
+                break;
+ 
+            case 0x4F:
+                //fnmsub.d,fnmsub.s
+                fs1 = (+f[(fp + (((ins >> 15) & 0x1F) << 3)) >> 3]);
+                fs2 = (+f[(fp + (((ins >> 20) & 0x1F) << 3)) >> 3]);
+                fs3 = (+f[(fp + (((ins >> 27) & 0x1F) << 3)) >> 3]);
+                rindex = (ins >> 7) & 0x1F;
+                f[(fp + (rindex << 3)) >> 3] = -(fs1 * fs2 - fs3);
                 break;
 
             case 0x2F:
