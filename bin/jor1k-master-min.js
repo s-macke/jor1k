@@ -314,8 +314,13 @@ Ethernet.prototype.OpenSocket = function() {
 }
 
 Ethernet.prototype.SendFrame = function(data) {
-    if (!this.socket) return;
-    this.socket.send(data);
+    if (typeof this.socket == "undefined") return;
+    try {
+        this.socket.send(data);
+    } catch (err) {
+        // this is unusual error, object exists, but send does not work 
+        EthernetErrorHandler(err);
+    }
 }
 
 Ethernet.prototype.Close = function() {
@@ -328,10 +333,13 @@ module.exports = Ethernet;
 },{"../messagehandler":9}],4:[function(require,module,exports){
 var message = require('../messagehandler.js');
 var download = require('../../lib/download');
+var utils = require('../utils.js');
 
 "use strict";
 
-function Filesystem() {
+function Filesystem(syncURL, userid) {
+    this.syncURL = syncURL;
+    this.userid = userid;
 }
 
 Filesystem.prototype.TAR = function(path) {
@@ -345,7 +353,7 @@ Filesystem.prototype.Sync = function(path) {
 }
 
 Filesystem.prototype.OnSync = function(d) {
-    utils.UploadBinaryResource(this.params.syncURL, this.params.userid + ".tar", d,
+    utils.UploadBinaryResource(this.syncURL, this.userid + ".tar", d,
         function(response) {
             alert(
                 "Message from Server:" + response + "\n" +
@@ -353,7 +361,7 @@ Filesystem.prototype.OnSync = function(d) {
                 "In order to access the data at a later date,\n" +
                 "start the next session with the current url with the user id\n" +
                 "The folder size is currently limited to 1MB. Note that the feature is experimental.\n" +
-                "The content can be downloaded under http://jor1k.com/sync/tarballs/" + this.params.userid+".tar.bz2"
+                "The content can be downloaded under http://jor1k.com/sync/tarballs/" + this.userid+".tar.bz2"
             );
             }.bind(this),
         function(msg) {alert(msg);}
@@ -393,7 +401,7 @@ Filesystem.prototype.WatchFile = function(fileName, callback) {
 
 module.exports = Filesystem;
 
-},{"../../lib/download":1,"../messagehandler.js":9}],5:[function(require,module,exports){
+},{"../../lib/download":1,"../messagehandler.js":9,"../utils.js":11}],5:[function(require,module,exports){
 var message = require('../messagehandler.js');
 
 
@@ -1661,11 +1669,12 @@ function jor1kGUI(parameters)
 
     this.params.path = this.params.path || "";
 
-    this.params.system.kernelURL = this.params.system.kernelURL || "vmlinux.bin.bz2";
+    this.params.system.kernelURL = this.params.system.kernelURL || "or1k/vmlinux.bin.bz2";
     this.params.system.memorysize = this.params.system.memorysize || 32;
     this.params.system.arch = this.params.system.arch || "or1k";
     this.params.system.cpu = this.params.system.cpu || "asm";
     this.params.system.ncores = this.params.system.ncores || 1;
+    this.params.syncURL = this.params.syncURL || "";
 
     this.params.fs = this.params.fs  || {};
     this.params.fs.basefsURL = this.params.fs.basefsURL  || "basefs.json";
@@ -1709,7 +1718,7 @@ function jor1kGUI(parameters)
     this.activeTTY = "tty0";
     this.terminput = new TerminalInput(this.SendChars.bind(this));
 
-    this.fs = new Filesystem();
+    this.fs = new Filesystem(this.params.syncURL, this.params.userid);
 
     this.sound = new LoopSoundBuffer(22050);
     message.Register("sound",      this.sound.AddBuffer.bind(this.sound));
@@ -1872,6 +1881,7 @@ jor1kGUI.prototype.Pause = function(pause) {
 jor1kGUI.prototype.SendChars = function(chars) {
     if (this.lastMouseDownTarget == this.fbcanvas) return;
     message.Send(this.activeTTY, chars);
+    message.Send("htif.term0.Transfer", chars);
 }
 
 // Returns the terminal attached to tty
@@ -1942,14 +1952,14 @@ var Jor1k = require('./system');
 
 module.exports = Jor1k;
 
-},{"./system":10}],"MackeTerm":[function(require,module,exports){
+},{"./system":10}],"LinuxTerm":[function(require,module,exports){
 var Terminal = require("../master/dev/terminal");
 
-function MackeTerm(termElementId) {
+function LinuxTerm(termElementId) {
     this.termElementId = termElementId;
 }
 
-MackeTerm.prototype.Init = function(jor1kGUI, tty) {
+LinuxTerm.prototype.Init = function(jor1kGUI, tty) {
     this.term = new Terminal(24, 80, this.termElementId);
     jor1kGUI.message.Register(tty, function(d) {
        d.forEach(function(c) {
@@ -1964,22 +1974,22 @@ MackeTerm.prototype.Init = function(jor1kGUI, tty) {
     }.bind(this);
 }
 
-MackeTerm.prototype.WasHitByEvent = function(evt) {
+LinuxTerm.prototype.WasHitByEvent = function(evt) {
     return this.terminalcanvas.contains(evt.target);
 }
 
-MackeTerm.prototype.PauseBlink = function(pause) {
+LinuxTerm.prototype.PauseBlink = function(pause) {
     this.term.PauseBlink(pause);
 }
 
-MackeTerm.prototype.SetCharReceiveListener = function (callback) {
+LinuxTerm.prototype.SetCharReceiveListener = function (callback) {
     this.term.OnCharReceived = callback;
 }
 
-MackeTerm.prototype.RemoveCharReceiveListener = function () {
+LinuxTerm.prototype.RemoveCharReceiveListener = function () {
     this.term.OnCharReceived = function (){};
 }
 
-module.exports = MackeTerm;
+module.exports = LinuxTerm;
 
 },{"../master/dev/terminal":8}]},{},[]);
