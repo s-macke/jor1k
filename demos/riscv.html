@@ -1,5 +1,20 @@
 <!doctype html>
 
+<style>
+
+.terminal {
+border: 0px solid black;
+font-family: courier,fixed,swiss,monospace,sans-serif;
+font-size: 12px;
+color: #bbbbbb;
+background: #000000;
+border-collapse: collapse
+}
+
+</style>
+
+
+
 <h1>riscv simple demo</h1>
 
 <select id="myselect" onchange="OnSelectChange(this)">
@@ -14,10 +29,8 @@ Restart with new binary image:
 <span id="stats"></span>
 <br>
 
-<canvas id="tty" class="screen" width="640" height="384">
-                        Terminal uses canvas
-</canvas>
-
+<table id="tty" class="terminal">
+</table>
 
 <script src="../bin/jor1k-master-min.js"></script>
 
@@ -181,7 +194,7 @@ var jor1kgui = new Jor1k(
             kernelURL: "riscv/" + tests[1],
             arch: "riscv",
             cpu: "safe",
-            memorysize: 600,
+            memorysize: 32,
         }
     }
 );
