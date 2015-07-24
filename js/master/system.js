@@ -31,6 +31,7 @@ function jor1kGUI(parameters)
     this.params.system.arch = this.params.system.arch || "or1k";
     this.params.system.cpu = this.params.system.cpu || "asm";
     this.params.system.ncores = this.params.system.ncores || 1;
+    this.params.syncURL = this.params.syncURL || "";
 
     this.params.fs = this.params.fs  || {};
     this.params.fs.basefsURL = this.params.fs.basefsURL  || "basefs.json";
@@ -74,7 +75,7 @@ function jor1kGUI(parameters)
     this.activeTTY = "tty0";
     this.terminput = new TerminalInput(this.SendChars.bind(this));
 
-    this.fs = new Filesystem();
+    this.fs = new Filesystem(this.params.syncURL, this.params.userid);
 
     this.sound = new LoopSoundBuffer(22050);
     message.Register("sound",      this.sound.AddBuffer.bind(this.sound));

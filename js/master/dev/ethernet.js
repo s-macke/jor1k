@@ -62,8 +62,13 @@ Ethernet.prototype.OpenSocket = function() {
 }
 
 Ethernet.prototype.SendFrame = function(data) {
-    if (!this.socket) return;
-    this.socket.send(data);
+    if (typeof this.socket == "undefined") return;
+    try {
+        this.socket.send(data);
+    } catch (err) {
+        // this is unusual error, object exists, but send does not work 
+        EthernetErrorHandler(err);
+    }
 }
 
 Ethernet.prototype.Close = function() {

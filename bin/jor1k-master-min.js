@@ -314,8 +314,13 @@ Ethernet.prototype.OpenSocket = function() {
 }
 
 Ethernet.prototype.SendFrame = function(data) {
-    if (!this.socket) return;
-    this.socket.send(data);
+    if (typeof this.socket == "undefined") return;
+    try {
+        this.socket.send(data);
+    } catch (err) {
+        // this is unusual error, object exists, but send does not work 
+        EthernetErrorHandler(err);
+    }
 }
 
 Ethernet.prototype.Close = function() {
@@ -328,10 +333,13 @@ module.exports = Ethernet;
 },{"../messagehandler":9}],4:[function(require,module,exports){
 var message = require('../messagehandler.js');
 var download = require('../../lib/download');
+var utils = require('../utils.js');
 
 "use strict";
 
-function Filesystem() {
+function Filesystem(syncURL, userid) {
+    this.syncURL = syncURL;
+    this.userid = userid;
 }
 
 Filesystem.prototype.TAR = function(path) {
@@ -345,7 +353,7 @@ Filesystem.prototype.Sync = function(path) {
 }
 
 Filesystem.prototype.OnSync = function(d) {
-    utils.UploadBinaryResource(this.params.syncURL, this.params.userid + ".tar", d,
+    utils.UploadBinaryResource(this.syncURL, this.userid + ".tar", d,
         function(response) {
             alert(
                 "Message from Server:" + response + "\n" +
@@ -353,7 +361,7 @@ Filesystem.prototype.OnSync = function(d) {
                 "In order to access the data at a later date,\n" +
                 "start the next session with the current url with the user id\n" +
                 "The folder size is currently limited to 1MB. Note that the feature is experimental.\n" +
-                "The content can be downloaded under http://jor1k.com/sync/tarballs/" + this.params.userid+".tar.bz2"
+                "The content can be downloaded under http://jor1k.com/sync/tarballs/" + this.userid+".tar.bz2"
             );
             }.bind(this),
         function(msg) {alert(msg);}
@@ -393,7 +401,7 @@ Filesystem.prototype.WatchFile = function(fileName, callback) {
 
 module.exports = Filesystem;
 
-},{"../../lib/download":1,"../messagehandler.js":9}],5:[function(require,module,exports){
+},{"../../lib/download":1,"../messagehandler.js":9,"../utils.js":11}],5:[function(require,module,exports){
 var message = require('../messagehandler.js');
 
 
@@ -1666,6 +1674,7 @@ function jor1kGUI(parameters)
     this.params.system.arch = this.params.system.arch || "or1k";
     this.params.system.cpu = this.params.system.cpu || "asm";
     this.params.system.ncores = this.params.system.ncores || 1;
+    this.params.syncURL = this.params.syncURL || "";
 
     this.params.fs = this.params.fs  || {};
     this.params.fs.basefsURL = this.params.fs.basefsURL  || "basefs.json";
@@ -1709,7 +1718,7 @@ function jor1kGUI(parameters)
     this.activeTTY = "tty0";
     this.terminput = new TerminalInput(this.SendChars.bind(this));
 
-    this.fs = new Filesystem();
+    this.fs = new Filesystem(this.params.syncURL, this.params.userid);
 
     this.sound = new LoopSoundBuffer(22050);
     message.Register("sound",      this.sound.AddBuffer.bind(this.sound));

@@ -478,7 +478,7 @@ bzip2.decompress = function(bits, stream, buf, bufsize) {
 
 module.exports = bzip2;
 
-},{"./messagehandler":21}],3:[function(require,module,exports){
+},{"./messagehandler":25}],3:[function(require,module,exports){
 // -------------------------------------------------
 // --------------------- ATA -----------------------
 // -------------------------------------------------
@@ -913,7 +913,7 @@ ATADev.prototype.WriteReg32 = function(addr, x) {
 
 module.exports = ATADev;
 
-},{"../messagehandler":21,"../utils":31}],4:[function(require,module,exports){
+},{"../messagehandler":25,"../utils":35}],4:[function(require,module,exports){
 // -------------------------------------------------
 // ----------------- Ethernet ----------------------
 // -------------------------------------------------
@@ -1669,7 +1669,7 @@ function EthDev(ram, intdev, mac) {
 
 module.exports = EthDev;
 
-},{"../messagehandler":21,"../utils":31}],5:[function(require,module,exports){
+},{"../messagehandler":25,"../utils":35}],5:[function(require,module,exports){
 // -------------------------------------------------
 // ---------------- Framebuffer --------------------
 // -------------------------------------------------
@@ -1729,7 +1729,7 @@ FBDev.prototype.GetBuffer = function () {
 
 module.exports = FBDev;
 
-},{"../messagehandler":21,"../utils":31}],6:[function(require,module,exports){
+},{"../messagehandler":25,"../utils":35}],6:[function(require,module,exports){
 // -------------------------------------------------
 // ---------------------- IRQ ----------------------
 // -------------------------------------------------
@@ -1835,7 +1835,7 @@ IRQDev.prototype.WriteReg32 = function (addr, value) {
 
 module.exports = IRQDev;
 
-},{"../messagehandler":21,"../utils":31}],7:[function(require,module,exports){
+},{"../messagehandler":25,"../utils":35}],7:[function(require,module,exports){
 // -------------------------------------------------
 // ------------------ KEYBOARD ---------------------
 // -------------------------------------------------
@@ -2164,7 +2164,7 @@ KeyboardDev.prototype.ReadReg8 = function (addr) {
 
 module.exports = KeyboardDev;
 
-},{"../messagehandler":21}],8:[function(require,module,exports){
+},{"../messagehandler":25}],8:[function(require,module,exports){
 // -------------------------------------------------
 // ---------------------- RTC ----------------------
 // -------------------------------------------------
@@ -2245,7 +2245,7 @@ RTCDev.prototype.WriteReg32 = function (addr, value) {
 
 module.exports = RTCDev;
 
-},{"../messagehandler":21,"../utils":31}],9:[function(require,module,exports){
+},{"../messagehandler":25,"../utils":35}],9:[function(require,module,exports){
 // -------------------------------------------------
 // --------------------- SOUND ---------------------
 // -------------------------------------------------
@@ -2417,7 +2417,7 @@ SoundDev.prototype.WriteReg32 = function (addr, value) {
 
 module.exports = SoundDev;
 
-},{"../messagehandler":21,"../utils":31}],10:[function(require,module,exports){
+},{"../messagehandler":25,"../utils":35}],10:[function(require,module,exports){
 // -------------------------------------------------
 // -------------------- Timer ----------------------
 // -------------------------------------------------
@@ -2447,7 +2447,7 @@ TimerDev.prototype.WriteReg32 = function (addr, value) {
 
 module.exports = TimerDev;
 
-},{"../messagehandler":21}],11:[function(require,module,exports){
+},{"../messagehandler":25}],11:[function(require,module,exports){
 // -------------------------------------------------
 // ---------------- TOUCHSCREEN --------------------
 // -------------------------------------------------
@@ -2590,7 +2590,7 @@ TouchscreenDev.prototype.WriteReg32 = function (addr, value) {
 
 module.exports = TouchscreenDev;
 
-},{"../messagehandler":21,"../utils":31}],12:[function(require,module,exports){
+},{"../messagehandler":25,"../utils":35}],12:[function(require,module,exports){
 // -------------------------------------------------
 // -------------------- UART -----------------------
 // -------------------------------------------------
@@ -2887,7 +2887,7 @@ UARTDev.prototype.WriteReg8 = function(addr, x) {
 
 module.exports = UARTDev;
 
-},{"../messagehandler":21,"../utils":31}],13:[function(require,module,exports){
+},{"../messagehandler":25,"../utils":35}],13:[function(require,module,exports){
 // -------------------------------------------------
 // ------------------- VIRTIO ----------------------
 // -------------------------------------------------
@@ -2911,7 +2911,7 @@ var message = require('../messagehandler');
 var VIRTIO_MAGIC_REG = 0x0;
 var VIRTIO_VERSION_REG = 0x4;
 var VIRTIO_DEVICE_REG = 0x8;
-var VIRTIO_VENDOR_REG = 0xc;
+var VIRTIO_VENDOR_REG = 0xC;
 var VIRTIO_HOSTFEATURES_REG = 0x10;
 var VIRTIO_HOSTFEATURESSEL_REG = 0x14;
 var VIRTIO_GUESTFEATURES_REG = 0x20;
@@ -2922,10 +2922,18 @@ var VIRTIO_QUEUENUMMAX_REG = 0x34;
 var VIRTIO_QUEUENUM_REG = 0x38;
 var VIRTIO_QUEUEALIGN_REG = 0x3C;
 var VIRTIO_QUEUEPFN_REG = 0x40;
+var VIRTIO_QUEUE_READY = 0x44;
 var VIRTIO_QUEUENOTIFY_REG = 0x50;
 var VIRTIO_INTERRUPTSTATUS_REG = 0x60;
 var VIRTIO_INTERRUPTACK_REG = 0x64;
 var VIRTIO_STATUS_REG = 0x70;
+var VIRTIO_QUEUE_DESC_LOW = 0x80;
+var VIRTIO_QUEUE_DESC_HIGH = 0x84;
+var VIRTIO_QUEUE_AVAIL_LOW = 0x90;
+var VIRTIO_QUEUE_AVAIL_HIGH = 0x94;
+var VIRTIO_QUEUE_USED_LOW = 0xA0;
+var VIRTIO_QUEUE_USED_HIGH = 0xA4;
+var VIRTIO_CONFIG_GENERATION = 0xFC;
 
 var VRING_DESC_F_NEXT =      1; /* This marks a buffer as continuing via the next field. */
 var VRING_DESC_F_WRITE =     2; /* This marks a buffer as write-only (otherwise read-only). */
@@ -2943,10 +2951,11 @@ function CopyBufferToMemory(from, to, offset, size) {
         to.Write8(offset+i, from[i]);
 }
 
-function VirtIODev(intdev, ramdev, device) {
+function VirtIODev(intdev, intno, ramdev, device) {
     this.dev = device;
     this.dev.SendReply = this.SendReply.bind(this);
     this.intdev = intdev;
+    this.intno = intno;
     this.ramdev = ramdev;
     this.Reset();
 }
@@ -2957,7 +2966,8 @@ VirtIODev.prototype.Reset = function() {
     this.intstatus = 0x0;
     this.pagesize = 0x0;
     this.queuenum = 0x100;
-    this.align = 0x0;
+    this.align = 0x2000;
+    this.queueready = 0x0;
     this.availidx = 0x0;
 
     this.descaddr = 0x0;
@@ -2967,6 +2977,7 @@ VirtIODev.prototype.Reset = function() {
 
 // Ring buffer addresses
 VirtIODev.prototype.UpdateAddr = function() {
+
     this.descaddr = this.queuepfn * this.pagesize;
     this.availaddr = this.descaddr + this.queuenum*16;
     this.usedaddr = this.availaddr + 2 + 2 + this.queuenum*2 + 2;
@@ -2974,15 +2985,23 @@ VirtIODev.prototype.UpdateAddr = function() {
         var mask = ~(this.align - 1);
         this.usedaddr = (this.usedaddr & mask) + this.align;
     }
+
 }
 
 VirtIODev.prototype.ReadReg8 = function (addr) {
+    //message.Debug("configspace of int " + this.intno + " : " + (addr-0x100));
     return this.dev.configspace[addr-0x100];
+}
+VirtIODev.prototype.ReadReg16 = function (addr) {
+    //message.Debug("configspace16 of int " + this.intno + " : " + (addr-0x100));
+    return (this.dev.configspace[addr-0x100]<<8) | (this.dev.configspace[addr-0x100+1]);
 }
 
 
 VirtIODev.prototype.ReadReg32 = function (addr) {
     var val = 0x0;
+    //message.Debug("VirtIODev: read register of int "  + this.intno + " : " + utils.ToHex(addr));
+
     switch(addr)
     {
         case VIRTIO_MAGIC_REG:
@@ -2991,14 +3010,15 @@ VirtIODev.prototype.ReadReg32 = function (addr) {
 
         case VIRTIO_VERSION_REG:
             val = 0x1;
-            break;
-
-        case VIRTIO_VENDOR_REG:
-            val = 0xFFFFFFFF;
+            //val = 0x2; // for Linux >= 4.0
             break;
 
         case VIRTIO_DEVICE_REG:
             val = this.dev.deviceid;
+            break;
+
+        case VIRTIO_VENDOR_REG:
+            val = 0xFFFFFFFF;
             break;
 
         case VIRTIO_HOSTFEATURES_REG:
@@ -3013,12 +3033,20 @@ VirtIODev.prototype.ReadReg32 = function (addr) {
             val = this.queuepfn;
             break;
 
-        case VIRTIO_STATUS_REG:
-            val = this.status;
+        case VIRTIO_QUEUE_READY:
+            val = this.queueready;
             break;
 
         case VIRTIO_INTERRUPTSTATUS_REG:
             val = this.intstatus;
+            break;
+
+        case VIRTIO_STATUS_REG:
+            val = this.status;
+            break;
+
+        case VIRTIO_CONFIG_GENERATION:
+            val = 0x0;
             break;
 
         default:
@@ -3031,19 +3059,19 @@ VirtIODev.prototype.ReadReg32 = function (addr) {
 
 VirtIODev.prototype.GetDescriptor = function(index) {
 
-    var addr = this.queuepfn * this.pagesize + index * 16;
+    var addr = this.descaddr + index * 16;
     var buffer = new Uint8Array(16);
     CopyMemoryToBuffer(this.ramdev, buffer, addr, 16);
 
     var desc = marshall.Unmarshall(["w", "w", "w", "h", "h"], buffer, 0);
-//    message.Debug("GetDescriptor: index=" + index + " addr=" + utils.ToHex(utils.Swap32(desc[1])) + " len=" + utils.Swap32(desc[2]) + " flags=" + utils.Swap16(desc[3])  + " next=" + utils.Swap16(desc[4]));
+    //var desc = marshall.Unmarshall(["d", "w", "h", "h"], buffer, 0); // for Linux > 4
+    //message.Debug("GetDescriptor: index=" + index + " addr=" + utils.ToHex(desc[1]) + " len=" + desc[2] + " flags=" + desc[3]  + " next=" + desc[4]);
 
     return {
-        addrhigh: utils.Swap32(desc[0]),
         addr: utils.Swap32(desc[1]),
         len: utils.Swap32(desc[2]),
         flags: utils.Swap16(desc[3]),
-        next: utils.Swap16(desc[4])        
+        next: utils.Swap16(desc[4])
     };
 }
 
@@ -3072,12 +3100,13 @@ VirtIODev.prototype.PrintRing = function() {
 
 
 VirtIODev.prototype.ConsumeDescriptor = function(descindex, desclen) {
-    var index = this.ramdev.Read16(this.usedaddr + 2); // get used index
+    var index = (this.ramdev.Read16(this.usedaddr + 2)); // get used index
     //message.Debug("used index:" + index + " descindex=" + descindex);
     var usedaddr = this.usedaddr + 4 + (index & (this.queuenum-1)) * 8;
-    this.ramdev.Write32(usedaddr+0, descindex);
-    this.ramdev.Write32(usedaddr+4, desclen);
-    this.ramdev.Write16(this.usedaddr + 2, (index+1));
+
+    this.ramdev.Write32(usedaddr+0, (descindex));
+    this.ramdev.Write32(usedaddr+4, (desclen));
+    this.ramdev.Write16(this.usedaddr + 2, ((index+1)));
 }
 
 VirtIODev.prototype.SendReply = function (index) {
@@ -3114,24 +3143,20 @@ VirtIODev.prototype.SendReply = function (index) {
     }
 
     this.intstatus = 1;
-    this.intdev.RaiseInterrupt(0x6);
+    this.intdev.RaiseInterrupt(this.intno);
 }
 
 
 
 VirtIODev.prototype.WriteReg32 = function (addr, val) {
     val = utils.Swap32(val);
+    //message.Debug("VirtIODev: write register of int "  + this.intno + " : " + utils.ToHex(addr) + " = " + val);
     switch(addr)
     {
         case VIRTIO_GUEST_PAGE_SIZE_REG:
             this.pagesize = val;
             this.UpdateAddr();
             //message.Debug("Guest page size : " + utils.ToHex(val));
-            break;
-
-        case VIRTIO_STATUS_REG:
-            //message.Debug("write status reg : " + utils.ToHex(val));
-            this.status = val;
             break;
 
         case VIRTIO_HOSTFEATURESSEL_REG:
@@ -3170,15 +3195,20 @@ VirtIODev.prototype.WriteReg32 = function (addr, val) {
 
         case VIRTIO_QUEUENOTIFY_REG:
             //message.Debug("write queuenotify reg : " + utils.ToHex(val));
-            this.UpdateAddr();
             if (val != 0) {
                 message.Debug("Error in virtiodev: Untested case of queuenotify " + val);
                 message.Abort();
                 return;
             }
-            var availidx = (this.ramdev.Read16(this.availaddr + 2)-1) & (this.queuenum-1);
+	    /*
+            var buffer = new Uint8Array(4);
+            CopyMemoryToBuffer(this.ramdev, buffer, this.availaddr + 2, 4);
+            var desc = marshall.Unmarshall(["h", "h"], buffer, 0);
+            */
+            var availidx = ((this.ramdev.Read16(this.availaddr + 2))-1) & (this.queuenum-1);
+            val = (this.ramdev.Read16(this.availaddr + 4 + (availidx)*2));
+
             //message.Debug((this.ramdev.Read16(this.availaddr + 2)-1));
-            val = this.ramdev.Read16(this.availaddr + 4 + (availidx)*2);
             //message.Debug("write to index : " + utils.ToHex(val) + " availidx:" + availidx);
 
             var currentindex = val;
@@ -3204,11 +3234,70 @@ VirtIODev.prototype.WriteReg32 = function (addr, val) {
             this.dev.ReceiveRequest(currentindex, this.GetByte);
             break;
 
+        case VIRTIO_QUEUE_READY:
+            this.queueready = val;
+            break;
+
+
         case VIRTIO_INTERRUPTACK_REG:
             //message.Debug("write interruptack reg : " + utils.ToHex(val));
             this.intstatus &= ~val;
-            this.intdev.ClearInterrupt(0x6);
+            this.intdev.ClearInterrupt(this.intno);
             break;
+
+        case VIRTIO_STATUS_REG:
+            //message.Debug("write status reg : " + utils.ToHex(val));
+            this.status = val;
+            switch(this.status) {
+                case 0: // reset
+                    this.intdev.ClearInterrupt(this.intno);
+                    this.intstatus = 0;
+                    break;
+                case 1: // acknowledge (found the device, valid virtio device)
+                    break;
+                case 3: //acknoledge + driver (driver present)
+                    break;
+                case 7: // ??
+                    break;
+                case 11: //acknowledge + driver + features Ok
+                    break;
+                case 15: //acknowledge + driver + features Ok + driver_ok (Let's start)
+                    break;
+                case 131: // acknowledge + driver + failed
+                    message.Debug("virtio device initialization failed with status " + this.status);
+                    message.Abort();
+                case 139: // acknowledge + driver + features Ok + failed
+                    message.Debug("virtio device initialization failed with status " + this.status);
+                    message.Abort();
+                    break;
+                default:
+                    message.Debug("Error in virtio status register: Unknown status " + this.status);
+                    message.Abort();
+                    break;
+            }
+            break;
+
+            case VIRTIO_QUEUE_DESC_LOW:
+                this.descaddr = val;
+                break;
+
+            case VIRTIO_QUEUE_DESC_HIGH:
+                break;
+
+            case VIRTIO_QUEUE_AVAIL_LOW:
+                this.availaddr = val;
+                break;
+
+            case VIRTIO_QUEUE_AVAIL_HIGH:
+                break;
+
+            case VIRTIO_QUEUE_USED_LOW:
+                this.usedaddr = val;
+                break;
+
+            case VIRTIO_QUEUE_USED_HIGH:
+                break;
+
 
         default:
             message.Debug("Error in VirtIODev: Attempt to write register " + utils.ToHex(addr) + ":" + utils.ToHex(val));
@@ -3221,7 +3310,7 @@ VirtIODev.prototype.WriteReg32 = function (addr, val) {
 
 module.exports = VirtIODev;
 
-},{"../messagehandler":21,"../utils":31,"./virtio/marshall":15}],14:[function(require,module,exports){
+},{"../messagehandler":25,"../utils":35,"./virtio/marshall":17}],14:[function(require,module,exports){
 // -------------------------------------------------
 // --------------------- 9P ------------------------
 // -------------------------------------------------
@@ -3283,7 +3372,6 @@ function Virtio9p(ramdev, filesystem) {
     this.SendReply = function() {};
     this.deviceid = 0x9; // 9p filesystem
     this.hostfeature = 0x1; // mountpoint
-    //this.configspace = [0x0, 0x4, 0x68, 0x6F, 0x73, 0x74]; // length of string and "host" string
     this.configspace = [0x0, 0x9, 0x2F, 0x64, 0x65, 0x76, 0x2F, 0x72, 0x6F, 0x6F, 0x74 ]; // length of string and "/dev/root" string
     this.VERSION = "9P2000.L";
     this.BLOCKSIZE = 8192; // Let's define one page.
@@ -3300,7 +3388,6 @@ Virtio9p.prototype.Createfid = function(inode, type, uid) {
 Virtio9p.prototype.Reset = function() {
     this.fids = [];
 }
-
 
 
 Virtio9p.prototype.BuildReply = function(id, tag, payloadsize) {
@@ -3352,25 +3439,26 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
             var req = marshall.Unmarshall2(["w", "w"], GetByte);
             var fid = req[0];
             var mode = req[1];
-            //message.Debug("[open] fid=" + fid + ", mode=" + mode);
-            var inode = this.fs.GetInode(this.fids[fid].inodeid);
-            req[0] = inode.qid;
-            req[1] = this.msize - 24;
-            marshall.Marshall(["Q", "w"], req, this.replybuffer, 7);
-            this.BuildReply(id, tag, 13+4);
+            //message.Debug("[open] fid=" + fid + ", mode=" + mode + ", tag=" + tag);
+            var idx = this.fids[fid].inodeid;
+            var inode = this.fs.GetInode(idx);
             //message.Debug("file open " + inode.name);
-            //if (inode.status == STATUS_LOADING) return;
-            var ret = this.fs.OpenInode(this.fids[fid].inodeid, mode);
-            this.fs.AddEvent(this.fids[fid].inodeid, 
-                function() {
-                    //message.Debug("file opened " + inode.name + " tag:"+tag);
-                    req[0] = inode.qid;
-                    req[1] = this.msize - 24;
-                    marshall.Marshall(["Q", "w"], req, this.replybuffer, 7);
-                    this.BuildReply(id, tag, 13+4);
-                    this.SendReply(index);
-                }.bind(this)
-            );
+            var ret = this.fs.OpenInode(idx, mode);
+
+            var evfunction = 
+                (function(idx, id, tag, index){
+                    return function() {
+                        var inode = this.fs.GetInode(idx);
+                        //message.Debug("file opened " + inode.name + " tag:"+tag);
+                        req[0] = inode.qid;
+                        req[1] = this.msize - 24;
+                        marshall.Marshall(["Q", "w"], req, this.replybuffer, 7);
+                        this.BuildReply(id, tag, 13+4);
+                        this.SendReply(index);
+                    }.bind(this);
+                }.bind(this))(idx, id, tag, index);
+
+            this.fs.AddEvent(idx, evfunction);
             break;
 
         case 70: // link (just copying)
@@ -3782,7 +3870,58 @@ Virtio9p.prototype.ReceiveRequest = function (index, GetByte) {
 
 module.exports = Virtio9p;
 
-},{"../../messagehandler":21,"../../utils":31,"./marshall":15}],15:[function(require,module,exports){
+},{"../../messagehandler":25,"../../utils":35,"./marshall":17}],15:[function(require,module,exports){
+// -------------------------------------------------
+// ------------- Dummy Virtio Device ---------------
+// -------------------------------------------------
+
+"use strict";
+
+var message = require('../../messagehandler');
+var utils = require('../../utils');
+
+function VirtioDummy(ramdev) {
+    this.configspace = [0x0];
+    this.deviceid = 0x0;
+    this.hostfeature = 0x0;
+    this.Reset();
+}
+
+VirtioDummy.prototype.Reset = function() {
+}
+
+VirtioDummy.prototype.ReceiveRequest = function (index, GetByte) {
+}
+
+module.exports = VirtioDummy;
+
+},{"../../messagehandler":25,"../../utils":35}],16:[function(require,module,exports){
+// -------------------------------------------------
+// ------------- Input Virtio Device ---------------
+// -------------------------------------------------
+
+"use strict";
+
+var message = require('../../messagehandler');
+var utils = require('../../utils');
+
+function VirtioInput(ramdev) {
+    this.configspace = [0x0, 0x0];
+    this.deviceid = 18;
+    this.hostfeature = 0x1;
+    this.Reset();
+}
+
+VirtioInput.prototype.Reset = function() {
+}
+
+VirtioInput.prototype.ReceiveRequest = function (index, GetByte) {
+    message.Debug("Virtio input request");
+}
+
+module.exports = VirtioInput;
+
+},{"../../messagehandler":25,"../../utils":35}],17:[function(require,module,exports){
 // -------------------------------------------------
 // ------------------ Marshall ---------------------
 // -------------------------------------------------
@@ -3956,7 +4095,130 @@ module.exports.Marshall = Marshall;
 module.exports.Unmarshall = Unmarshall;
 module.exports.Unmarshall2 = Unmarshall2;
 
-},{"../../../lib/utf8":1,"../../messagehandler":21}],16:[function(require,module,exports){
+},{"../../../lib/utf8":1,"../../messagehandler":25}],18:[function(require,module,exports){
+// -------------------------------------------------
+// ------------- Input Virtio Device ---------------
+// -------------------------------------------------
+
+"use strict";
+
+var message = require('../../messagehandler');
+var utils = require('../../utils');
+
+function VirtioNET(ramdev) {
+    this.configspace = [0x0, 0x0];
+    this.deviceid = 1;
+    this.hostfeature = 0x0;
+    this.Reset();
+}
+
+VirtioNET.prototype.Reset = function() {
+}
+
+VirtioNET.prototype.ReceiveRequest = function (index, GetByte) {
+    message.Debug("Virtio network request");
+}
+
+module.exports = VirtioNET;
+
+},{"../../messagehandler":25,"../../utils":35}],19:[function(require,module,exports){
+var message = require('./messagehandler');
+var utils = require('./utils');
+var marshall = require('./dev/virtio/marshall');
+
+var elf = {};
+
+elf.IsELF = function(buffer) {
+    if ((buffer[0] == 0x7F) && 
+        (buffer[1] == 0x45) && 
+        (buffer[2] == 0x4C) && 
+        (buffer[3] == 0x46)) 
+        return true;
+
+    return false;
+}
+    
+elf.Extract = function(srcbuffer, destbuffer) {
+
+    var offset = 0;
+    var output = [];
+    output = marshall.Unmarshall(["w", "b", "b", "b", "b"], srcbuffer, offset);
+    var ei_class = output[1];
+    if (ei_class != 1) {
+        message.Debug("Error reading elf binary: 64-Bit not supported");
+        message.Abort();
+    }
+
+/*
+    output[0] // magic
+    output[1] // ei_class  1 -> 32 bit, 2 -> 64 bit
+    output[2] // ei_data    1 little end, 2 big end
+    output[3] // ei_version  currently always 1
+    output[4] // ei_pad      marks beginning of padding
+*/
+
+    offset = 0x10;
+    output = marshall.Unmarshall(["h", "h", "w", "w", "w", "w"], srcbuffer, offset);
+    var e_entry = output[3]; // virtual address of entry point into program
+    var e_phoff = output[4]; // offset for program header
+    var e_shoff = output[5]; // offset for section header
+    //message.Debug("e_entry: " +  utils.ToHex(e_entry));
+    //message.Debug("e_phoff: " +  utils.ToHex(e_phoff));
+    //message.Debug("e_shoff: " +  utils.ToHex(e_shoff));
+
+    offset = 0x2E;
+    output = marshall.Unmarshall(["h", "h", "h"], srcbuffer, offset);
+    var e_shentsize = output[0]; // size of each individual entry in section header table
+    var e_shnum = output[1]; // number of entries in section header table
+    var e_shstrndx = output[2]; // section header string table index
+    //message.Debug("e_shentsize: " +  utils.ToHex(e_shnum));
+    //message.Debug("e_shnum: " +  utils.ToHex(e_shnum));
+    //message.Debug("e_shstrndx: " +  utils.ToHex(e_shstrndx));
+
+    var section_headers = [];
+
+    for (var i = 0; i < e_shnum; i++) {
+
+        offset = e_shoff + i*e_shentsize;
+        output = marshall.Unmarshall(["w", "w", "w", "w", "w", "w"], srcbuffer, offset);
+
+        var section = {};
+        section.name = output[0];
+        section.type = output[1];
+        section.flags = output[2];
+        section.addr = output[3];
+        section.offs = output[4];
+        section.size = output[5];
+        /*
+        message.Debug("" +
+		section.name + " " + 
+		utils.ToHex(section.addr) + " " + 
+		utils.ToHex(section.size));
+        */
+        section_headers.push(section);
+    }
+
+    // copy necessary data into memory
+    for (var i = 0; i < section_headers.length; i++) {
+
+        // check for allocate flag (bit #1) and type != 8 (aka NOT NOBITS)
+        if ((((section_headers[i].flags >> 1) & 0x1) == 0x1) && (section_headers[i].type != 8)) {
+            for (var j = 0; j < section_headers[i].size; j++) {
+                destbuffer[section_headers[i].addr + j] = srcbuffer[section_headers[i].offs + j];
+            }
+        } else 
+        if ((((section_headers[i].flags >> 1) & 0x1) == 0x1) && (section_headers.type == 8)) {
+            // for .bss, load in zeroes, since it's not actually stored in the elf
+            for (var j = 0; j < section_headers[i].size; j++) {
+                destbuffer[section_headers[i].addr + j] = 0x0;
+            }
+        }
+    }
+}
+
+module.exports = elf;
+
+},{"./dev/virtio/marshall":17,"./messagehandler":25,"./utils":35}],20:[function(require,module,exports){
 // -------------------------------------------------
 // ----------------- FILESYSTEM---------------------
 // -------------------------------------------------
@@ -4063,7 +4325,7 @@ FS.prototype.LoadFilesystem = function(userinfo)
 // -----------------------------------------------------
 
 FS.prototype.AddEvent = function(id, OnEvent) {
-    var inode = this.inodes[id];
+    var inode = this.GetInode(id);
     if (inode.status == STATUS_OK) {
         OnEvent();
         return;
@@ -4072,16 +4334,21 @@ FS.prototype.AddEvent = function(id, OnEvent) {
 }
 
 FS.prototype.HandleEvent = function(id) {
+
     if (this.filesinloadingqueue == 0) {
         this.OnLoaded();
         this.OnLoaded = function() {}
     }
     //message.Debug("number of events: " + this.events.length);
-    for(var i = this.events.length - 1; i >= 0; i--) {
-        if (this.events[i].id != id) continue;
-        this.events[i].OnEvent();
-        this.events.splice(i, 1);
+    var newevents = [];
+    for(var i=0; i<this.events.length; i++) {
+        if (this.events[i].id == id) {
+            this.events[i].OnEvent();
+        } else {
+            newevents.push(this.events[i]);
+        }
     }
+    this.events = newevents;
 }
 
 
@@ -4161,17 +4428,23 @@ FS.prototype.LoadFile = function(idx) {
 
     if (inode.compressed) {
         inode.data = new Uint8Array(inode.size);
-        utils.LoadBinaryResource(inode.url + ".bz2",
-        function(buffer){
-            var buffer8 = new Uint8Array(buffer);
-            var ofs = 0;
-            bzip2.simple(buffer8, function(x){inode.data[ofs++] = x;}.bind(this) );    
-            inode.status = STATUS_OK;
-            this.filesinloadingqueue--;
-            this.HandleEvent(idx);            
-        }.bind(this), 
-        function(error){throw error;});
 
+        var succfunction = 
+        (function(idx){
+            return function(buffer){
+                var inode = this.GetInode(idx);
+                var buffer8 = new Uint8Array(buffer);
+                var ofs = 0;
+                bzip2.simple(buffer8, function(x){inode.data[ofs++] = x;}.bind(this) );
+                inode.status = STATUS_OK;
+                this.filesinloadingqueue--;
+                this.HandleEvent(idx);
+            }.bind(this) 
+        }.bind(this))(idx);
+
+        utils.LoadBinaryResource(inode.url + ".bz2", 
+        succfunction,
+        function(error){throw error;});
         return;
     }
 
@@ -4187,18 +4460,24 @@ FS.prototype.LoadFile = function(idx) {
         return;
     }
 
-    utils.LoadBinaryResource(inode.url, 
-        function(buffer){
+    var succfunction = 
+    (function(idx){
+        return function(buffer){
+            var inode = this.GetInode(idx);
             inode.data = new Uint8Array(buffer);
-            if (inode.size != this.inodes[idx].data.length) message.Warning("Size wrong for uncompressed non-lazily loaded file: " + inode.name);
-            inode.size = this.inodes[idx].data.length; // correct size if the previous was wrong. 
+            if (inode.size != inode.data.length) message.Warning("Size wrong for uncompressed non-lazily loaded file: " + inode.name);
+            inode.size = inode.data.length; // correct size if the previous was wrong. 
             inode.status = STATUS_OK;
             if (inode.name == "rcS") {
                 this.AppendDateHack(idx);
             }
             this.filesinloadingqueue--;
             this.HandleEvent(idx);            
-        }.bind(this), 
+        }.bind(this);
+    }.bind(this))(idx);
+
+    utils.LoadBinaryResource(inode.url, 
+        succfunction,
         function(error){throw error;});
 
 }
@@ -4701,7 +4980,7 @@ FS.prototype.PrepareCAPs = function(id) {
 
 module.exports = FS;
 
-},{"../../lib/utf8.js":1,"../bzip2.js":2,"../dev/virtio/marshall.js":15,"../messagehandler":21,"../utils.js":31,"./fsloader.js":17,"./lazyUint8Array.js":18,"./tar.js":19}],17:[function(require,module,exports){
+},{"../../lib/utf8.js":1,"../bzip2.js":2,"../dev/virtio/marshall.js":17,"../messagehandler":25,"../utils.js":35,"./fsloader.js":21,"./lazyUint8Array.js":22,"./tar.js":23}],21:[function(require,module,exports){
 // -------------------------------------------------
 // ------------- FILESYSTEM LOADER -----------------
 // -------------------------------------------------
@@ -4802,7 +5081,7 @@ FSLoader.prototype.LoadJSON = function(url)
 
 module.exports = FSLoader;
 
-},{"../messagehandler":21,"../utils":31}],18:[function(require,module,exports){
+},{"../messagehandler":25,"../utils":35}],22:[function(require,module,exports){
 "use strict";
 
 var message = require("../messagehandler");
@@ -4897,7 +5176,7 @@ LazyUint8Array.prototype.CacheLength = function LazyUint8Array_CacheLength() {
 
 module.exports = LazyUint8Array;
 
-},{"../messagehandler":21}],19:[function(require,module,exports){
+},{"../messagehandler":25}],23:[function(require,module,exports){
 // -------------------------------------------------
 // -------------------- TAR ------------------------
 // -------------------------------------------------
@@ -5112,7 +5391,7 @@ TAR.prototype.Pack = function(path) {
 
 module.exports = TAR;
 
-},{"../messagehandler":21}],20:[function(require,module,exports){
+},{"../messagehandler":25}],24:[function(require,module,exports){
 module.exports = Math.imul || function(a, b) {
     var ah  = (a >>> 16) & 0xffff;
     var al = a & 0xffff;
@@ -5123,7 +5402,7 @@ module.exports = Math.imul || function(a, b) {
     return ((al * bl) + (((ah * bl + al * bh) << 16) >>> 0)|0);
 };
 
-},{}],21:[function(require,module,exports){
+},{}],25:[function(require,module,exports){
 // -------------------------------------------------
 // ------------- MessageHandler --------------------
 // -------------------------------------------------
@@ -5193,7 +5472,7 @@ module.exports.Abort = Abort;
 module.exports.Send = Send;
 
 
-},{}],22:[function(require,module,exports){
+},{}],26:[function(require,module,exports){
 var message = require('../messagehandler');
 
 function FastCPU(stdlib, foreign, heap) {
@@ -6830,7 +7109,7 @@ return {
 
 module.exports = FastCPU;
 
-},{"../messagehandler":21}],23:[function(require,module,exports){
+},{"../messagehandler":25}],27:[function(require,module,exports){
 /* this is a unified, abstract interface (a facade) to the different
  * CPU implementations
  */
@@ -7045,7 +7324,7 @@ forwardedMethods.forEach(function(m) {
 
 module.exports = CPU;
 
-},{"../imul":20,"../messagehandler":21,"../utils":31,"./fastcpu.js":22,"./safecpu.js":24,"./smpcpu.js":25}],24:[function(require,module,exports){
+},{"../imul":24,"../messagehandler":25,"../utils":35,"./fastcpu.js":26,"./safecpu.js":28,"./smpcpu.js":29}],28:[function(require,module,exports){
 // -------------------------------------------------
 // -------------------- CPU ------------------------
 // -------------------------------------------------
@@ -8161,7 +8440,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
 
 module.exports = SafeCPU;
 
-},{"../messagehandler":21,"../utils":31}],25:[function(require,module,exports){
+},{"../messagehandler":25,"../utils":35}],29:[function(require,module,exports){
 var message = require('../messagehandler');
 
 function SMPCPU(stdlib, foreign, heap) {
@@ -9979,7 +10258,7 @@ return {
 
 module.exports = SMPCPU;
 
-},{"../messagehandler":21}],26:[function(require,module,exports){
+},{"../messagehandler":25}],30:[function(require,module,exports){
 // -------------------------------------------------
 // -------------------- RAM ------------------------
 // -------------------------------------------------
@@ -10142,7 +10421,7 @@ RAM.prototype.Write16Little = function(addr, x) {
 
 module.exports = RAM;
 
-},{"./messagehandler":21,"./utils":31}],27:[function(require,module,exports){
+},{"./messagehandler":25,"./utils":35}],31:[function(require,module,exports){
 /* this is a unified, abstract interface (a facade) to the different
  * CPU implementations
  */
@@ -10200,7 +10479,7 @@ forwardedMethods.forEach(function(m) {
 
 module.exports = CPU;
 
-},{"../imul":20,"../messagehandler":21,"../utils":31,"./safecpu.js":28}],28:[function(require,module,exports){
+},{"../imul":24,"../messagehandler":25,"../utils":35,"./safecpu.js":32}],32:[function(require,module,exports){
 // -------------------------------------------------
 // -------------------- CPU ------------------------
 // -------------------------------------------------
@@ -11114,7 +11393,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
 
 module.exports = SafeCPU;
 
-},{"../messagehandler":21,"../utils":31}],29:[function(require,module,exports){
+},{"../messagehandler":25,"../utils":35}],33:[function(require,module,exports){
 // -------------------------------------------------
 // ------------------- SYSTEM ----------------------
 // -------------------------------------------------
@@ -11125,6 +11404,7 @@ var message = require('./messagehandler.js'); // global variable
 var utils = require('./utils.js');
 var RAM = require('./ram.js');
 var bzip2 = require('./bzip2.js');
+var elf = require('./elf.js');
 var Timer = require('./timer.js');
 
 // CPU
@@ -11144,6 +11424,9 @@ var KeyboardDev = require('./dev/keyboard.js');
 var SoundDev = require('./dev/sound.js');
 var VirtIODev = require('./dev/virtio.js');
 var Virtio9p = require('./dev/virtio/9p.js');
+var VirtioDummy = require('./dev/virtio/dummy.js');
+var VirtioInput = require('./dev/virtio/input.js');
+var VirtioNET = require('./dev/virtio/net.js');
 var FS = require('./filesystem/filesystem.js');
 
 
@@ -11225,8 +11508,13 @@ System.prototype.Reset = function() {
     this.snddev.Reset();
     this.rtcdev.Reset();
     this.kbddev.Reset();
-    this.virtiodev.Reset();
+    this.virtiodev1.Reset();
+    this.virtiodev2.Reset();
+    this.virtiodev3.Reset();
     this.virtio9pdev.Reset();
+    this.virtiodummydev.Reset();
+    this.virtioinputdev.Reset();
+    this.virtionetdev.Reset();
     this.cpu.Reset();
     this.ips = 0;
 };
@@ -11263,20 +11551,28 @@ System.prototype.Init = function(system) {
 
     this.filesystem = new FS();
     this.virtio9pdev = new Virtio9p(this.ram, this.filesystem);
-    this.virtiodev = new VirtIODev(this, this.ram, this.virtio9pdev);
+    this.virtiodev1 = new VirtIODev(this, 0x6, this.ram, this.virtio9pdev);
 
-    this.ram.AddDevice(this.atadev,    0x9e000000, 0x1000);
-    this.ram.AddDevice(this.uartdev0,  0x90000000, 0x7);
-    this.ram.AddDevice(this.uartdev1,  0x96000000, 0x7);
-    this.ram.AddDevice(this.snddev,    0x98000000, 0x400);
-    this.ram.AddDevice(this.ethdev,    0x92000000, 0x1000);
-    this.ram.AddDevice(this.virtiodev, 0x97000000, 0x1000);
-    this.ram.AddDevice(this.fbdev,     0x91000000, 0x1000);
-    this.ram.AddDevice(this.tsdev,     0x93000000, 0x1000);
-    this.ram.AddDevice(this.kbddev,    0x94000000, 0x100);
-    this.ram.AddDevice(this.rtcdev,    0x99000000, 0x1000);
-    this.ram.AddDevice(this.irqdev,    0x9A000000, 0x1000);
-    this.ram.AddDevice(this.timerdev,  0x9B000000, 0x1000);
+    this.virtioinputdev = new VirtioInput(this.ram);
+    this.virtionetdev = new VirtioNET(this.ram);
+    this.virtiodummydev = new VirtioDummy(this.ram);
+    this.virtiodev2 = new VirtIODev(this, 0xB, this.ram, this.virtiodummydev);
+    this.virtiodev3 = new VirtIODev(this, 0xC, this.ram, this.virtiodummydev);
+
+    this.ram.AddDevice(this.uartdev0,   0x90000000, 0x7);
+    this.ram.AddDevice(this.fbdev,      0x91000000, 0x1000);
+    this.ram.AddDevice(this.ethdev,     0x92000000, 0x1000);
+    this.ram.AddDevice(this.tsdev,      0x93000000, 0x1000);
+    this.ram.AddDevice(this.kbddev,     0x94000000, 0x100);
+    this.ram.AddDevice(this.uartdev1,   0x96000000, 0x7);
+    this.ram.AddDevice(this.virtiodev1, 0x97000000, 0x1000);
+    this.ram.AddDevice(this.snddev,     0x98000000, 0x400);
+    this.ram.AddDevice(this.rtcdev,     0x99000000, 0x1000);
+    this.ram.AddDevice(this.irqdev,     0x9A000000, 0x1000);
+    this.ram.AddDevice(this.timerdev,   0x9B000000, 0x1000);
+    this.ram.AddDevice(this.virtiodev2, 0x9C000000, 0x1000);
+    this.ram.AddDevice(this.virtiodev3, 0x9D000000, 0x1000);
+    this.ram.AddDevice(this.atadev,     0x9E000000, 0x1000);
 
     this.ips = 0; // external instruction per second counter
     this.idletime = 0; // start time of the idle routine
@@ -11369,6 +11665,10 @@ System.prototype.OnKernelLoaded = function(buffer) {
     this.SendStringToTerminal("Decompressing kernel...\r\n");
     var buffer8 = new Uint8Array(buffer);
     var length = 0;
+
+    if (elf.IsELF(buffer8)) {
+        elf.Extract(buffer8, this.ram.uint8mem);
+    } else 
     if (bzip2.IsBZIP2(buffer8)) {
         bzip2.simple(buffer8, function(x){this.ram.uint8mem[length++] = x;}.bind(this));
     } else {
@@ -11443,7 +11743,7 @@ System.prototype.MainLoop = function() {
 
 module.exports = System;
 
-},{"./bzip2.js":2,"./dev/ata.js":3,"./dev/ethmac.js":4,"./dev/framebuffer.js":5,"./dev/irq.js":6,"./dev/keyboard.js":7,"./dev/rtc.js":8,"./dev/sound.js":9,"./dev/timer.js":10,"./dev/touchscreen.js":11,"./dev/uart.js":12,"./dev/virtio.js":13,"./dev/virtio/9p.js":14,"./filesystem/filesystem.js":16,"./messagehandler.js":21,"./or1k":23,"./ram.js":26,"./riscv":27,"./timer.js":30,"./utils.js":31}],30:[function(require,module,exports){
+},{"./bzip2.js":2,"./dev/ata.js":3,"./dev/ethmac.js":4,"./dev/framebuffer.js":5,"./dev/irq.js":6,"./dev/keyboard.js":7,"./dev/rtc.js":8,"./dev/sound.js":9,"./dev/timer.js":10,"./dev/touchscreen.js":11,"./dev/uart.js":12,"./dev/virtio.js":13,"./dev/virtio/9p.js":14,"./dev/virtio/dummy.js":15,"./dev/virtio/input.js":16,"./dev/virtio/net.js":18,"./elf.js":19,"./filesystem/filesystem.js":20,"./messagehandler.js":25,"./or1k":27,"./ram.js":30,"./riscv":31,"./timer.js":34,"./utils.js":35}],34:[function(require,module,exports){
 // -------------------------------------------------
 // ------------------- TIMER -----------------------
 // -------------------------------------------------
@@ -11583,7 +11883,7 @@ Timer.prototype.GlobalUpdate = function(ticks) {
 
 module.exports = Timer;
 
-},{"./messagehandler.js":21,"./utils.js":31}],31:[function(require,module,exports){
+},{"./messagehandler.js":25,"./utils.js":35}],35:[function(require,module,exports){
 // -------------------------------------------------
 // ------------------ Utils ------------------------
 // -------------------------------------------------
@@ -11763,7 +12063,7 @@ module.exports.LoadBinaryResource = LoadBinaryResource;
 module.exports.LoadTextResource = LoadTextResource;
 
 
-},{}],32:[function(require,module,exports){
+},{}],36:[function(require,module,exports){
 // -------------------------------------------------
 // -------------------- Worker ---------------------
 // -------------------------------------------------
@@ -11771,4 +12071,4 @@ module.exports.LoadTextResource = LoadTextResource;
 var System = require('./system.js');
 var sys = new System();
 
-},{"./system.js":29}]},{},[32]);
+},{"./system.js":33}]},{},[36]);
