@@ -941,7 +941,6 @@ function Step(steps, clockspeed) {
     var ram_index = 0;
     
     do {
-        r[0] = 0x00;
 
         current_privilege_level = (csr[(csrp + CSR_MSTATUS)>>2] & 0x06) >> 1;
 
@@ -1385,6 +1384,7 @@ function Step(steps, clockspeed) {
                 r[(rindex << 2) >> 2] = pc;
                 pc = pc + imm - 4|0;
                 fence = 1;
+                r[0] = 0;
                 break; 
 
             case 0x67:
@@ -1395,6 +1395,7 @@ function Step(steps, clockspeed) {
                 r[(rindex << 2) >> 2] = pc;
                 pc = ((rs1 + imm) & 0xFFFFFFFE)|0;
                 fence = 1;
+                r[0] = 0;
                 break;
 
             case 0x63:
@@ -1616,6 +1617,7 @@ function Step(steps, clockspeed) {
                         break;
 
                 }
+                r[0] = 0;
                 break;
 
             case 0x07:
@@ -1632,6 +1634,7 @@ function Step(steps, clockspeed) {
                         ram_index = paddr|0;
                         r[0] = ram[(ramp + ram_index) >> 2]|0;
                         f[(fp + (findex << 3)) >> 3] = +ff[0];
+                        r[0] = 0;
                         break;
 
                     case 0x03:
@@ -1669,7 +1672,8 @@ function Step(steps, clockspeed) {
                         paddr = TranslateVM(rs1 + imm|0, VM_WRITE)|0;
                         if((paddr|0) == -1) break;
                         ram_index = paddr|0;
-                        ram[(ramp + ram_index) >> 2] = r[0]|0; 
+                        ram[(ramp + ram_index) >> 2] = r[0]|0;
+                        r[0] = 0;
                         break;
 
                     case 0x03:
@@ -1806,7 +1810,8 @@ function Step(steps, clockspeed) {
                         rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
                         r[0] = rs1;
                         findex = (ins >> 7) & 0x1F;
-                        f[(fp + (rindex << 3)) >> 3] = ff[0]; 
+                        f[(fp + (rindex << 3)) >> 3] = ff[0];
+                        r[0] = 0;
                         break;
 
 
@@ -1815,6 +1820,7 @@ function Step(steps, clockspeed) {
                         abort();
                         break;
                 }
+                r[0] = 0;
                 break;
 
             case 0x43:
@@ -2015,6 +2021,7 @@ function Step(steps, clockspeed) {
                         break;
 
                 }
+                r[0] = 0;
                 break;
 
             case 0x0F:
