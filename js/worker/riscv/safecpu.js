@@ -133,7 +133,7 @@ function SafeCPU(ram) {
 
     this.f = new Float64Array(this.ram.heap, 32<<2, 32); 
 
-    this.fi = new Int32Array(this.ram.heap, 32<<2, 32); // for copying operations
+    this.fi = new Int32Array(this.ram.heap, 32<<2, 64); // for copying operations
     this.ff = new Float32Array(this.ram.heap, 0, 1); // the zero register is used to convert to single precision
 
     this.csr = new Int32Array(this.ram.heap, 0x2000, 4096);
@@ -1601,8 +1601,9 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                 //fadd.s, fsub.s
                 switch((ins >> 25)&0x7F) {
                     
-                    case 0x00 :
-                        //fadd.s
+                    case 0x00:
+                    case 0x01:
+                        //fadd.s, fadd.d
                         fs1 = f[(ins >> 15) & 0x1F];
                         fs2 = f[(ins >> 20) & 0x1F];
                         rindex = (ins >> 7) & 0x1F;
@@ -1610,7 +1611,8 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                         break;
 
                     case 0x04:
-                        //fsub.s
+                    case 0x05:
+                        //fsub.s, fsub.d
                         fs1 = f[(ins >> 15) & 0x1F];
                         fs2 = f[(ins >> 20) & 0x1F];
                         rindex = (ins >> 7) & 0x1F;
@@ -1618,25 +1620,32 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                         break;
 
                     case 0x50:
-                        //feq.s
-                        fs1 = f[(ins >> 15) & 0x1F];
-                        fs2 = f[(ins >> 20) & 0x1F];
-                        rindex = (ins >> 7) & 0x1F;
-                        if(fs1 == fs2) f[rindex] = 1;
-                        else f[rindex] = 0;
-                        //if(fs1 == QUIET_NAN || fs2 == QUIET_NAN) f[rindex] = 0;
-                        //else if(fs1 == SIGNALLING_NAN || fs2 == SIGNALLING_NAN) message.Abort();
-                        break;
-
                     case 0x51:
-                        //feq.d
+                        //fcmp.s, fcmp.d
                         fs1 = f[(ins >> 15) & 0x1F];
                         fs2 = f[(ins >> 20) & 0x1F];
                         rindex = (ins >> 7) & 0x1F;
-                        if(fs1 == fs2) f[rindex] = 1;
-                        else f[rindex] = 0;
-                        //if(fs1 == QUIET_NAN || fs2 == QUIET_NAN) f[rindex] = 0;
-                        //else if(fs1 == SIGNALLING_NAN || fs2 == SIGNALLING_NAN) message.Abort();
+                        switch((ins >> 12) & 0x7) {
+                            case 0x0:
+                                if (fs1 <= fs2) r[rindex] = 1;
+                                else r[rindex] = 0;
+                                break;
+
+                            case 0x1:
+                                if (fs1 < fs2) r[rindex] = 1;
+                                else r[rindex] = 0;
+                                break;
+
+                            case 0x2:
+                                if (fs1 == fs2) r[rindex] = 1;
+                                else r[rindex] = 0;
+                                break;
+
+                            default:
+                                message.Debug("Error in safecpu: Instruction (fcmp) " + utils.ToHex(ins) + " not found");
+                                message.Abort();
+                                break;
+                        }
                         break;
 
                     case 0x60:
@@ -1657,22 +1666,6 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                         f[rindex] = r[(ins >> 15) & 0x1F];
                         break;
 
-                    case 0x01 :
-                        //fadd.d
-                        fs1 = f[(ins >> 15) & 0x1F];
-                        fs2 = f[(ins >> 20) & 0x1F];
-                        rindex = (ins >> 7) & 0x1F;
-                        f[rindex] = fs1 + fs2;
-                        break;
-
-                    case 0x05:
-                        //fsub.d
-                        fs1 = f[(ins >> 15) & 0x1F];
-                        fs2 = f[(ins >> 20) & 0x1F];
-                        rindex = (ins >> 7) & 0x1F;
-                        f[rindex] = fs1 - fs2;
-                        break;
-
                     case 0x09:
                         //fmul.d
                         fs1 = f[(ins >> 15) & 0x1F];
@@ -1683,28 +1676,24 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
 
                     case 0x10: // single precision
                     case 0x11: // double precision
-                        //fsgnj
+                        //#fsgnj
                         rindex = (ins >> 7) & 0x1F;
+                        fs1 = f[(ins >> 15) & 0x1F];
+                        fs2 = f[(ins >> 20) & 0x1F];
                         switch((ins >> 12) & 7) {
                             case 0:
                                 //fsgnj.d, also used for fmv.d
-                                fs1 = f[(ins >> 15) & 0x1F];
-                                fs2 = f[(ins >> 20) & 0x1F];
                                 f[rindex] = (fs2<0)?-Math.abs(fs1):Math.abs(fs1);
                                 break;
 
                             case 1:
                                 //fsgnjn.d
-                                fs1 = f[(ins >> 15) & 0x1F];
-                                fs2 = f[(ins >> 20) & 0x1F];
                                 f[rindex] = (fs2<0)?Math.abs(fs1):-Math.abs(fs1);
                                 break;
 
                             case 3:
                                 //fsgnjx.d
-                                fs1 = f[(ins >> 15) & 0x1F];
-                                fs2 = f[(ins >> 20) & 0x1F];
-                                f[rindex] = ((fs2<0 && fs1<0) || (fs2>0 && fs1>0))?-Math.abs(fs1):Math.abs(fs1);
+                                f[rindex] = ((fs2<0 && fs1<0) || (fs2>0 && fs1>0))?Math.abs(fs1):-Math.abs(fs1);
                                 break;
 
                             default:
@@ -1722,8 +1711,9 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                     case 0x78:
                         //fmv.s.x
                         rs1 = r[(ins >> 15) & 0x1F];
+                        r[0] = rs1;
                         findex = (ins >> 7) & 0x1F;
-                        f[findex] = rs1; 
+                        f[findex] = ff[0]; 
                         break;
 
 
