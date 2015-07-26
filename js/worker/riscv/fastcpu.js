@@ -1651,6 +1651,7 @@ function Step(steps, clockspeed) {
 
                     default:
                         DebugMessage(ERROR_INSTRUCTION_NOT_FOUND|0);
+                        DebugMessage(ins|0);
                         abort();
                         break;
 
@@ -1692,6 +1693,7 @@ function Step(steps, clockspeed) {
 
                     default:
                         DebugMessage(ERROR_INSTRUCTION_NOT_FOUND|0);
+                        DebugMessage(ins|0);
                         abort();
                         break;
 
@@ -1745,6 +1747,7 @@ function Step(steps, clockspeed) {
 
                             default:
                                 DebugMessage(ERROR_INSTRUCTION_NOT_FOUND|0);
+                                DebugMessage(ins|0);
                                 abort();
                                 break;
                         }
@@ -1763,8 +1766,8 @@ function Step(steps, clockspeed) {
                         f[(fp + (rindex << 3)) >> 3] = (+~~r[(((ins >> 15) & 0x1F) << 2) >> 2]);
                         break;
 
-                    case 0x09:
-                        //fmul.d
+                    case 0x08: //fmul.s
+                    case 0x09: //fmul.d
                         fs1 = (+f[(fp + (((ins >> 15) & 0x1F) << 3)) >> 3]);
                         fs2 = (+f[(fp + (((ins >> 20) & 0x1F) << 3)) >> 3]);
                         rindex = (ins >> 7) & 0x1F;
@@ -1795,6 +1798,7 @@ function Step(steps, clockspeed) {
  
                             default:
                                 DebugMessage(ERROR_INSTRUCTION_NOT_FOUND|0);
+                                DebugMessage(ins|0);
                                 abort();
                         }
                         break;
@@ -1817,6 +1821,7 @@ function Step(steps, clockspeed) {
 
                     default:
                         DebugMessage(ERROR_INSTRUCTION_NOT_FOUND|0);
+                        DebugMessage(ins|0);
                         abort();
                         break;
                 }
@@ -2030,6 +2035,7 @@ function Step(steps, clockspeed) {
 
             default:
                 DebugMessage(ERROR_INSTRUCTION_NOT_FOUND|0);
+                DebugMessage(ins|0);
                 abort();
                 break;
         }
