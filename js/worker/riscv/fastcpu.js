@@ -177,6 +177,9 @@ var amoaddr = 0,amovalue = 0;
 var fence = 0x01;
 var ppc = 0x200;
 
+var tlb_index = 0x00;
+var tlb_entry = 0x00;
+
 function Init() {
     Reset();
 }
@@ -202,6 +205,9 @@ function Reset() {
     // for atomic load & store instructions
     amoaddr = 0x00; 
     amovalue = 0x00;
+
+    tlb_index = -1;
+    tlb_entry = -1;
 }
 
 function InvalidateTLB() {
@@ -892,6 +898,24 @@ function SUMul(a,b,index) {
     return result1|0;
 };
 
+function TLBLookUp(addr){
+
+    addr = addr|0;
+    if((tlb_index|0) == (addr|0)) return tlb_entry|0;
+    else return -1;
+
+    return -1;
+}
+
+function UpdateTLB(addr,entry){
+
+    addr = addr|0;
+    entry = entry|0;
+
+    tlb_index = addr;
+    tlb_entry = entry;
+}
+
 
 function PushPrivilegeStack(){
 
@@ -952,31 +976,36 @@ function Step(steps, clockspeed) {
         if(((pc|0) & 0xFFF) == 0) fence = 1; //Checking if the physical pc has reached a page boundary
  
         if((fence|0) == 1) {
-            ppc = TranslateVM(pc,VM_FETCH)|0;
-            if((ppc|0) == -1)
-                continue;
 
-            interrupts = csr[(csrp + CSR_MIE)>>2] & csr[(csrp + CSR_MIP)>>2];
-            ie = csr[(csrp + CSR_MSTATUS)>>2] & 0x01;
+            ppc = TLBLookUp(pc)|0;
+            if((ppc|0) == -1){
+                ppc = TranslateVM(pc,VM_FETCH)|0;
+                if((ppc|0) == -1)
+                    continue;
 
-            if (((current_privilege_level|0) < 3) | (((current_privilege_level|0) == 3) & (ie|0))) {
-                if (((interrupts|0) & 0x8)) {
-                    Trap(CAUSE_SOFTWARE_INTERRUPT, pc);
-                    continue;
-                } else
-                if (!(IsQueueEmpty()|0)) {
-                    Trap(CAUSE_HOST_INTERRUPT, pc);
-                    continue;
+                UpdateTLB(pc,ppc);
+                interrupts = csr[(csrp + CSR_MIE)>>2] & csr[(csrp + CSR_MIP)>>2];
+                ie = csr[(csrp + CSR_MSTATUS)>>2] & 0x01;
+
+                if (((current_privilege_level|0) < 3) | (((current_privilege_level|0) == 3) & (ie|0))) {
+                    if (((interrupts|0) & 0x8)) {
+                        Trap(CAUSE_SOFTWARE_INTERRUPT, pc);
+                        continue;
+                    } else
+                    if (!(IsQueueEmpty()|0)) {
+                        Trap(CAUSE_HOST_INTERRUPT, pc);
+                        continue;
+                    }
                 }
-            }
-            if (((current_privilege_level|0) < 1) | (((current_privilege_level|0) == 1) & (ie|0))) {
-                if (((interrupts|0) & 0x2)) {
-                    Trap(CAUSE_SOFTWARE_INTERRUPT, pc);
-                    continue;
-                } else
-                if (((interrupts|0) & 0x20)) {
-                     Trap(CAUSE_TIMER_INTERRUPT, pc);
-                     continue;
+                if (((current_privilege_level|0) < 1) | (((current_privilege_level|0) == 1) & (ie|0))) {
+                    if (((interrupts|0) & 0x2)) {
+                        Trap(CAUSE_SOFTWARE_INTERRUPT, pc);
+                        continue;
+                    } else
+                    if (((interrupts|0) & 0x20)) {
+                         Trap(CAUSE_TIMER_INTERRUPT, pc);
+                         continue;
+                    }
                 }
             }
 
