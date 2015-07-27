@@ -164,8 +164,9 @@ function HTIFDisk(ram, SendFunc) {
 
 
 // constructor
-function HTIF(ram) {
+function HTIF(ram, irqdev) {
     this.ram = ram;
+    this.irqdev = irqdev;
     
     this.device = [];
 
@@ -192,7 +193,9 @@ HTIF.prototype.Send = function(devid, cmd, data) {
 
     if (this.fromhostqueue.length == 1)
         this.reg_devcmdfromhost =
-        (this.fromhostqueue[0].devid << 16) | this.fromhostqueue[0].cmd;
+            (this.fromhostqueue[0].devid << 16) | this.fromhostqueue[0].cmd;
+
+    this.irqdev.RaiseInterrupt(0xF);
 }
 
 // -------------------------------------------------
@@ -248,9 +251,11 @@ HTIF.prototype.WriteFromHost = function(value) {
     {
         this.fromhostqueue.shift();
 
-        if (this.fromhostqueue.length > 0)
+        if (this.fromhostqueue.length > 0) {
             this.reg_devcmdfromhost =
-            (this.fromhostqueue[0].devid << 16) | this.fromhostqueue[0].cmd;
+                (this.fromhostqueue[0].devid << 16) | this.fromhostqueue[0].cmd;
+            this.irqdev.RaiseInterrupt(0xF);
+        }
     }
 }
 

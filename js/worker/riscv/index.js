@@ -7,7 +7,6 @@ var message = require('../messagehandler'); // global variable
 var utils = require('../utils');
 var imul = require('../imul');
 var mul = require('../mul');
-var HTIF = require('./htif.js');
 
 // CPUs
 var SafeCPU = require('./safecpu.js');
@@ -24,9 +23,8 @@ var stdlib = {
     Math : Math
 };
 
-function createCPU(cpuname, ram, heap, ncores) {
+function createCPU(cpuname, ram, htif, heap, ncores) {
     var cpu = null;
-    var htif = new HTIF(ram);
     var foreign = {
         DebugMessage: message.Debug,
         abort : message.Abort,
@@ -52,7 +50,7 @@ function createCPU(cpuname, ram, heap, ncores) {
     };
 
     if (cpuname === "safe") {
-        return new SafeCPU(ram);
+        return new SafeCPU(ram, htif);
     }
     else if (cpuname === "asm") {
         cpu = FastCPU(stdlib, foreign, heap);

@@ -10,6 +10,7 @@ var RAM = require('./ram.js');
 var bzip2 = require('./bzip2.js');
 var elf = require('./elf.js');
 var Timer = require('./timer.js');
+var HTIF = require('./riscv/htif.js');
 
 // CPU
 var OR1KCPU = require('./or1k');
@@ -90,7 +91,7 @@ System.prototype.CreateCPU = function(cpuname, arch) {
             this.cpu = new OR1KCPU(cpuname, this.ram, this.heap, this.ncores);
         } else
         if (arch == "riscv") {
-            this.cpu = new RISCVCPU(cpuname, this.ram, this.heap, this.ncores);
+            this.cpu = new RISCVCPU(cpuname, this.ram, this.htif, this.heap, this.ncores);
         } else
             throw "Architecture " + arch + " not supported";
     } catch (e) {
@@ -125,6 +126,11 @@ System.prototype.Init = function(system) {
     this.heap = new ArrayBuffer(this.memorysize*0x100000); 
     this.memorysize--; // - the lower 1 MB are used for the cpu cores
     this.ram = new RAM(this.heap, ramoffset);
+
+    if (system.arch == "riscv") {
+        this.htif = new HTIF(this.ram, this);
+    }
+
     this.CreateCPU(system.cpu, system.arch);
 
     this.devices = [];
