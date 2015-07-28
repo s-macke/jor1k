@@ -898,25 +898,6 @@ function SUMul(a,b,index) {
     return result1|0;
 };
 
-function TLBLookUp(addr){
-
-    addr = addr|0;
-    if((tlb_index|0) == (addr|0)) return tlb_entry|0;
-    else return -1;
-
-    return -1;
-}
-
-function UpdateTLB(addr,entry){
-
-    addr = addr|0;
-    entry = entry|0;
-
-    tlb_index = addr;
-    tlb_entry = entry;
-}
-
-
 function PushPrivilegeStack(){
 
     var mstatus = 0,privilege_level_stack = 0, new_privilege_level_stack = 0;
@@ -977,35 +958,37 @@ function Step(steps, clockspeed) {
  
         if((fence|0) == 1) {
 
-            ppc = TLBLookUp(pc)|0;
-            if((ppc|0) == -1){
+            if(!((tlb_index ^ pc) & 0xFFFFF000)) ppc = (tlb_entry ^ pc);
+            else {
                 ppc = TranslateVM(pc,VM_FETCH)|0;
                 if((ppc|0) == -1)
                     continue;
 
-                UpdateTLB(pc,ppc);
-                interrupts = csr[(csrp + CSR_MIE)>>2] & csr[(csrp + CSR_MIP)>>2];
-                ie = csr[(csrp + CSR_MSTATUS)>>2] & 0x01;
+                tlb_index = pc;
+                tlb_entry = ((ppc ^ pc) & 0xFFFFF000);
+            }
 
-                if (((current_privilege_level|0) < 3) | (((current_privilege_level|0) == 3) & (ie|0))) {
-                    if (((interrupts|0) & 0x8)) {
-                        Trap(CAUSE_SOFTWARE_INTERRUPT, pc);
-                        continue;
-                    } else
-                    if (!(IsQueueEmpty()|0)) {
-                        Trap(CAUSE_HOST_INTERRUPT, pc);
-                        continue;
-                    }
+            interrupts = csr[(csrp + CSR_MIE)>>2] & csr[(csrp + CSR_MIP)>>2];
+            ie = csr[(csrp + CSR_MSTATUS)>>2] & 0x01;
+
+            if (((current_privilege_level|0) < 3) | (((current_privilege_level|0) == 3) & (ie|0))) {
+                if (((interrupts|0) & 0x8)) {
+                    Trap(CAUSE_SOFTWARE_INTERRUPT, pc);
+                    continue;
+                } else
+                if (!(IsQueueEmpty()|0)) {
+                    Trap(CAUSE_HOST_INTERRUPT, pc);
+                    continue;
                 }
-                if (((current_privilege_level|0) < 1) | (((current_privilege_level|0) == 1) & (ie|0))) {
-                    if (((interrupts|0) & 0x2)) {
-                        Trap(CAUSE_SOFTWARE_INTERRUPT, pc);
-                        continue;
-                    } else
-                    if (((interrupts|0) & 0x20)) {
-                         Trap(CAUSE_TIMER_INTERRUPT, pc);
-                         continue;
-                    }
+            }
+            if (((current_privilege_level|0) < 1) | (((current_privilege_level|0) == 1) & (ie|0))) {
+                if (((interrupts|0) & 0x2)) {
+                    Trap(CAUSE_SOFTWARE_INTERRUPT, pc);
+                    continue;
+                } else
+                if (((interrupts|0) & 0x20)) {
+                     Trap(CAUSE_TIMER_INTERRUPT, pc);
+                     continue;
                 }
             }
 
@@ -1029,8 +1012,15 @@ function Step(steps, clockspeed) {
                         imm = (ins >> 20);
                         rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
                         rindex = (ins >> 7) & 0x1F;
-                        paddr = TranslateVM(rs1 + imm|0, VM_READ)|0;
-                        if((paddr|0) == -1) break;
+                        if((tlb_index ^ (rs1 + imm|0)) & 0xFFFFF000){
+
+                            paddr = TranslateVM(rs1 + imm|0, VM_READ)|0;
+                            if((paddr|0) == -1) break;
+
+                            tlb_index = paddr;
+                            tlb_entry = ((paddr ^ (rs1 + imm|0)) & 0xFFFFF000);
+                        }
+                        else paddr = (tlb_entry ^ (rs1 + imm|0));
                         ram_index = paddr|0;
                         r[(rindex << 2) >> 2] = ((ram8[(ramp + ram_index) >> 0]) << 24) >> 24;
                         break;
