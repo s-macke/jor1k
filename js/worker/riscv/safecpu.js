@@ -5,7 +5,6 @@
 "use strict";
 var message = require('../messagehandler');
 var utils = require('../utils');
-var HTIF = require('./htif.js');
 var DebugIns = require('./disassemble.js');
 
 var PRV_U = 0x00;
@@ -121,12 +120,12 @@ var QUIET_NAN = 0xFFFFFFFF;
 var SIGNALLING_NAN = 0x7FFFFFFF;
 
 // constructor
-function SafeCPU(ram) {
+function SafeCPU(ram, htif) {
     message.Debug("Initialize RISCV CPU");
 
     this.ram = ram;
 
-    this.htif = new HTIF(this.ram);
+    this.htif = htif;
 
     // registers
     this.r = new Int32Array(this.ram.heap, 0, 32);
@@ -169,9 +168,8 @@ SafeCPU.prototype.InvalidateTLB = function() {
 }
 
 SafeCPU.prototype.GetTimeToNextInterrupt = function () {
-    //return 10;
-    var delta = (csr[CSR_MTIMECMP] & 0xFFFFFFFF) - (this.ticks & 0xFFFFFFFF);
-    delta += delta<0?0x100000000:0x0;
+    var delta = (this.csr[CSR_MTIMECMP]>>>0) - (this.ticks & 0xFFFFFFFF);
+    delta = delta + (delta<0?0xFFFFFFFF:0x0) | 0;
     return delta;
 }
 
@@ -180,7 +178,7 @@ SafeCPU.prototype.GetTicks = function () {
 }
 
 SafeCPU.prototype.ProgressTime = function (delta) {
-    this.ticks += delta;
+    this.ticks = this.ticks + delta | 0;
 }
 
 
@@ -192,7 +190,7 @@ SafeCPU.prototype.CheckForInterrupt = function () {
 };
 
 SafeCPU.prototype.RaiseInterrupt = function (line, cpuid) {
-    message.Debug("raise int " + line);
+    //message.Debug("raise int " + line);
 };
 
 SafeCPU.prototype.ClearInterrupt = function (line, cpuid) {
@@ -853,9 +851,12 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
     var fs1 = 0.0;
     var fs2 = 0.0;
     var fs3 = 0.0;
+    var interrupts = 0x0;
+    var ie = 0x0;
 
     steps = steps | 0;
     clockspeed = clockspeed | 0;
+    var delta = 0;
     
     do {
         r[0] = 0x00;
@@ -864,15 +865,15 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
         
         if (!(steps & 63)) {
             // ---------- TICK ----------
-            var delta = (csr[CSR_MTIMECMP] & 0xFFFFFFFF) - (this.ticks & 0xFFFFFFFF);
-            delta += delta<0?0x100000000:0x0;
-            this.ticks = (this.ticks + clockspeed) & 0xFFFFFFFF;
-            if (delta <= clockspeed) {
+            var delta = csr[CSR_MTIMECMP] - this.ticks | 0;
+            delta = delta + (delta<0?0xFFFFFFFF:0x0) | 0;
+            this.ticks = this.ticks + clockspeed | 0;
+            if (delta < clockspeed) {
                 csr[CSR_MIP] = csr[CSR_MIP] | 0x20;
-            }            
+            }
 
-            var interrupts = csr[CSR_MIE] & csr[CSR_MIP];
-            var ie = csr[CSR_MSTATUS] & 0x01;
+            interrupts = csr[CSR_MIE] & csr[CSR_MIP];
+            ie = csr[CSR_MSTATUS] & 0x01;
 
             if ((current_privilege_level < 3) || ((current_privilege_level == 3) && ie)) {
                 if (interrupts & 0x8) {
@@ -927,6 +928,10 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                         imm = (ins >> 20);
                         rs1 = r[(ins >> 15) & 0x1F];
                         rindex = (ins >> 7) & 0x1F;
+                        if (rs1+imm & 1) {
+                             message.Debug("Error in lh: unaligned address");
+                             message.Abort();
+                        }
                         paddr = this.TranslateVM(rs1 + imm|0, VM_READ);
                         if(paddr == -1) break;
                         r[rindex] = (this.ram.Read16(paddr) << 16) >> 16;
@@ -937,7 +942,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                         imm = (ins >> 20);
                         rs1 = r[(ins >> 15) & 0x1F];
                         rindex = (ins >> 7) & 0x1F;
-                        if ((rs1+imm) & 3) {
+                        if (rs1+imm & 3) {
                              message.Debug("Error in lw: unaligned address");
                              message.Abort();
                         }
@@ -961,6 +966,10 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                         imm = (ins >> 20);
                         rs1 = r[(ins >> 15) & 0x1F];
                         rindex = (ins >> 7) & 0x1F;
+                        if (rs1+imm & 1) {
+                             message.Debug("Error in lhu: unaligned address");
+                             message.Abort();
+                        }
                         paddr = this.TranslateVM(rs1 + imm|0 ,VM_READ);
                         if(paddr == -1) break;
                         r[rindex] = this.ram.Read16(paddr) & 0xFFFF;
@@ -994,6 +1003,10 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                         //sh
                         rs1 = r[(ins >> 15) & 0x1F];
                         rindex = (ins >> 20) & 0x1F;
+                        if (rs1+imm & 1) {
+                             message.Debug("Error in sh: unaligned address");
+                             message.Abort();
+                        }
                         paddr = this.TranslateVM(rs1 + imm|0,VM_WRITE);
                         if(paddr == -1) break;
                         this.ram.Write16(paddr,(r[rindex] & 0xFFFF));
@@ -1003,7 +1016,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                         //sw
                         rs1 = r[(ins >> 15) & 0x1F];
                         rindex = (ins >> 20) & 0x1F;
-                        if ((rs1+imm) & 3) {
+                        if (rs1+imm & 3) {
                              message.Debug("Error in sw: unaligned address");
                              message.Abort();
                         }
@@ -1463,18 +1476,14 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                                 {
                                     
                                     case PRV_S:
-                                        //message.Debug("eret PRV_S -"+ utils.ToHex(ins));
                                         this.pc = csr[CSR_SEPC]|0;
                                         break;
 
                                     case PRV_H:
-                                        //message.Debug("Not supported eret PRV_H -"+ utils.ToHex(ins));
                                         this.pc = csr[CSR_HEPC]|0;
-                                        message.Abort();
                                         break;
 
                                     case PRV_M:
-                                        //message.Debug("eret PRV_M -"+ utils.ToHex(ins));
                                         this.pc = csr[CSR_MEPC]|0;
                                         break;
                                     
@@ -1487,8 +1496,11 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
 
                             case 0x102:
                                 // wfi
-                                if((interrupts && ie))
+                                /*
+                                interrupts = csr[CSR_MIE] & csr[CSR_MIP];
+                                if ((!interrupts) && (this.htif.IsQueueEmpty()))
                                     return steps;
+                                */
                                 break;
 
                             case 0x305:
@@ -1534,6 +1546,10 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                         imm = (ins >> 20);
                         rs1 = r[(ins >> 15) & 0x1F];
                         findex = ((ins >> 7) & 0x1F);
+                        if (rs1+imm & 3) {
+                             message.Debug("Error in flw: unaligned address");
+                             message.Abort();
+                        }
                         paddr = this.TranslateVM(rs1 + imm|0,VM_READ);
                         if(paddr == -1) break;
                         r[0] = this.ram.Read32(paddr);
@@ -1545,6 +1561,10 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                         imm = (ins >> 20);
                         rs1 = r[(ins >> 15) & 0x1F];
                         findex = ((ins >> 7) & 0x1F) << 1;
+                        if (rs1+imm & 7) {
+                             message.Debug("Error in flw: unaligned address");
+                             message.Abort();
+                        }
                         paddr = this.TranslateVM(rs1 + imm|0,VM_READ);
                         if(paddr == -1) break;
                         fi[findex + 0] = this.ram.Read32(paddr+0);
@@ -1571,6 +1591,10 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                         rs1 = r[(ins >> 15) & 0x1F];
                         findex = (ins >> 20) & 0x1F;
                         ff[0] = f[findex];
+                        if (rs1+imm & 3) {
+                             message.Debug("Error in fsw: unaligned address");
+                             message.Abort();
+                        }
                         paddr = this.TranslateVM(rs1 + imm|0, VM_WRITE);
                         if(paddr == -1) break;
                         this.ram.Write32(paddr, r[0]);
@@ -1583,6 +1607,10 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                         imm = (imm1 << 5) + imm2;
                         rs1 = r[(ins >> 15) & 0x1F];
                         findex = ((ins >> 20) & 0x1F) << 1;
+                        if (rs1+imm & 7) {
+                             message.Debug("Error in fsd: unaligned address");
+                             message.Abort();
+                        }
                         paddr = this.TranslateVM(rs1 + imm + 0|0, VM_WRITE);
                         if (paddr == -1) break;
                         this.ram.Write32(paddr+0, fi[findex + 0]);
@@ -1666,8 +1694,10 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                         f[rindex] = r[(ins >> 15) & 0x1F];
                         break;
 
+
+                    case 0x08:
                     case 0x09:
-                        //fmul.d
+                        //fmul.s, fmul.d
                         fs1 = f[(ins >> 15) & 0x1F];
                         fs2 = f[(ins >> 20) & 0x1F];
                         rindex = (ins >> 7) & 0x1F;
