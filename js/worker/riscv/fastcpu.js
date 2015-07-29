@@ -177,6 +177,25 @@ var amoaddr = 0,amovalue = 0;
 var fence = 0x01;
 var ppc = 0x200;
 
+var instlb_index = -1; //tlb index for pc
+var instlb_entry = -1;
+var read8tlb_index = -1; //tlb index for lb ins
+var read8tlb_entry = -1;
+var read8utlb_index = -1; //tlb index for lbu ins
+var read8utlb_entry = -1;
+var read16tlb_index = -1; //tlb index for lh ins
+var read16tlb_entry = -1;
+var read16utlb_index = -1; //tlb index for lhu ins
+var read16utlb_entry = -1;
+var read32tlb_index = -1; //tlb index for lw ins
+var read32tlb_entry = -1;
+var store8tlb_index = -1; //tlb index for sb ins
+var store8tlb_entry = -1;
+var store16tlb_index = -1; //tlb index for sh ins
+var store16tlb_entry = -1;
+var store32tlb_index = -1; //tlb index for sw ins
+var store32tlb_entry = -1;
+
 function Init() {
     Reset();
 }
@@ -250,7 +269,8 @@ function Trap(cause, current_pc) {
     csr[(csrp + CSR_MEPC)>>2] = current_pc;
     csr[(csrp + CSR_MCAUSE)>>2] = cause;
     pc = (offset + (current_privilege_level << 6))|0;
-    fence = 1;  
+    fence = 1;
+    InvalidateTLB();
 };
 
 function MemTrap(addr, op) {
@@ -892,6 +912,26 @@ function SUMul(a,b,index) {
     return result1|0;
 };
 
+function InvalidateTLB(){
+
+    read8tlb_index = -1;
+    read8tlb_entry = -1;
+    read8utlb_index = -1;
+    read8utlb_entry = -1;
+    read16tlb_index = -1;
+    read16tlb_entry = -1;
+    read16utlb_index = -1;
+    read16utlb_entry = -1;
+    read32tlb_index = -1;
+    read32tlb_entry = -1;
+    store8tlb_index = -1;
+    store8tlb_entry = -1;
+    store16tlb_index = -1;
+    store16tlb_entry = -1;
+    store32tlb_index = -1;
+    store32tlb_entry = -1;
+
+}
 
 function PushPrivilegeStack(){
 
@@ -952,9 +992,16 @@ function Step(steps, clockspeed) {
         if(((pc|0) & 0xFFF) == 0) fence = 1; //Checking if the physical pc has reached a page boundary
  
         if((fence|0) == 1) {
-            ppc = TranslateVM(pc,VM_FETCH)|0;
-            if((ppc|0) == -1)
-                continue;
+
+            if(!((instlb_index ^ pc) & 0xFFFFF000)) ppc = (instlb_entry ^ pc);
+            else {
+                ppc = TranslateVM(pc,VM_FETCH)|0;
+                if((ppc|0) == -1)
+                    continue;
+
+                instlb_index = pc;
+                instlb_entry = ((ppc ^ pc) & 0xFFFFF000);
+            }
 
             interrupts = csr[(csrp + CSR_MIE)>>2] & csr[(csrp + CSR_MIP)>>2];
             ie = csr[(csrp + CSR_MSTATUS)>>2] & 0x01;
@@ -1000,8 +1047,15 @@ function Step(steps, clockspeed) {
                         imm = (ins >> 20);
                         rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
                         rindex = (ins >> 7) & 0x1F;
-                        paddr = TranslateVM(rs1 + imm|0, VM_READ)|0;
-                        if((paddr|0) == -1) break;
+                        if(!((read8tlb_index ^ (rs1 + imm|0)) & 0xFFFFF000)) paddr = (read8tlb_entry ^ (rs1 + imm|0));
+                        else{
+
+                            paddr = TranslateVM(rs1 + imm|0, VM_READ)|0;
+                            if((paddr|0) == -1) break;
+
+                            read8tlb_index = paddr;
+                            read8tlb_entry = ((paddr ^ (rs1 + imm|0)) & 0xFFFFF000);
+                        }
                         ram_index = paddr|0;
                         r[(rindex << 2) >> 2] = ((ram8[(ramp + ram_index) >> 0]) << 24) >> 24;
                         break;
@@ -1011,8 +1065,15 @@ function Step(steps, clockspeed) {
                         imm = (ins >> 20);
                         rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
                         rindex = (ins >> 7) & 0x1F;
-                        paddr = TranslateVM(rs1 + imm|0, VM_READ)|0;
-                        if((paddr|0) == -1) break;
+                        if(!((read16tlb_index ^ (rs1 + imm|0)) & 0xFFFFF000)) paddr = (read16tlb_entry ^ (rs1 + imm|0));
+                        else{
+
+                            paddr = TranslateVM(rs1 + imm|0, VM_READ)|0;
+                            if((paddr|0) == -1) break;
+
+                            read16tlb_index = paddr;
+                            read16tlb_entry = ((paddr ^ (rs1 + imm|0)) & 0xFFFFF000);
+                        }
                         ram_index = paddr|0;
                         r[(rindex << 2) >> 2] = ((ram16[(ramp + ram_index) >> 1]) << 16) >> 16;
                         break;
@@ -1026,8 +1087,15 @@ function Step(steps, clockspeed) {
                              DebugMessage(ERROR_LOAD_WORD|0);
                              abort();
                         }
-                        paddr = TranslateVM(rs1 + imm|0, VM_READ)|0;
-                        if((paddr|0) == -1) break;
+                        if(!((read32tlb_index ^ (rs1 + imm|0)) & 0xFFFFF000)) paddr = (read32tlb_entry ^ (rs1 + imm|0));
+                        else{
+
+                            paddr = TranslateVM(rs1 + imm|0, VM_READ)|0;
+                            if((paddr|0) == -1) break;
+
+                            read32tlb_index = paddr;
+                            read32tlb_entry = ((paddr ^ (rs1 + imm|0)) & 0xFFFFF000);
+                        }
                         ram_index = paddr|0;
                         r[(rindex << 2) >> 2] = ram[(ramp + ram_index) >> 2]|0;
                         break;
@@ -1037,8 +1105,15 @@ function Step(steps, clockspeed) {
                         imm = (ins >> 20);
                         rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
                         rindex = (ins >> 7) & 0x1F;
-                        paddr = TranslateVM(rs1 + imm|0, VM_READ)|0;
-                        if((paddr|0) == -1) break;
+                        if(!((read8utlb_index ^ (rs1 + imm|0)) & 0xFFFFF000)) paddr = (read8utlb_entry ^ (rs1 + imm|0));
+                        else{
+
+                            paddr = TranslateVM(rs1 + imm|0, VM_READ)|0;
+                            if((paddr|0) == -1) break;
+
+                            read8utlb_index = paddr;
+                            read8utlb_entry = ((paddr ^ (rs1 + imm|0)) & 0xFFFFF000);
+                        }
                         ram_index = paddr|0;
                         r[(rindex << 2) >> 2] = (ram8[(ramp + ram_index) >> 0]) & 0xFF;
                         break;
@@ -1048,8 +1123,15 @@ function Step(steps, clockspeed) {
                         imm = (ins >> 20);
                         rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
                         rindex = (ins >> 7) & 0x1F;
-                        paddr = TranslateVM(rs1 + imm|0 ,VM_READ)|0;
-                        if((paddr|0) == -1) break;
+                        if(!((read16utlb_index ^ (rs1 + imm|0)) & 0xFFFFF000)) paddr = (read16utlb_entry ^ (rs1 + imm|0));
+                        else{
+
+                            paddr = TranslateVM(rs1 + imm|0, VM_READ)|0;
+                            if((paddr|0) == -1) break;
+
+                            read16utlb_index = paddr;
+                            read16utlb_entry = ((paddr ^ (rs1 + imm|0)) & 0xFFFFF000);
+                        }
                         ram_index = paddr|0;
                         r[(rindex << 2) >> 2] = (ram16[(ramp + ram_index) >> 1]) & 0xFFFF;
                         break;
@@ -1073,8 +1155,15 @@ function Step(steps, clockspeed) {
                         //sb
                         rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
                         rindex = (ins >> 20) & 0x1F;
-                        paddr = TranslateVM(rs1 + imm|0,VM_WRITE)|0;
-                        if((paddr|0) == -1) break;
+                        if(!((store8tlb_index ^ (rs1 + imm|0)) & 0xFFFFF000)) paddr = (store8tlb_entry ^ (rs1 + imm|0));
+                        else{
+
+                            paddr = TranslateVM(rs1 + imm|0, VM_WRITE)|0;
+                            if((paddr|0) == -1) break;
+
+                            store8tlb_index = paddr;
+                            store8tlb_entry = ((paddr ^ (rs1 + imm|0)) & 0xFFFFF000);
+                        }
                         ram_index = paddr|0;
                         ram8[(ramp + ram_index) >> 0] = (r[(rindex << 2) >> 2] & 0xFF); 
                         break;
@@ -1083,8 +1172,15 @@ function Step(steps, clockspeed) {
                         //sh
                         rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
                         rindex = (ins >> 20) & 0x1F;
-                        paddr = TranslateVM(rs1 + imm|0,VM_WRITE)|0;
-                        if((paddr|0) == -1) break;
+                        if(!((store16tlb_index ^ (rs1 + imm|0)) & 0xFFFFF000)) paddr = (store16tlb_entry ^ (rs1 + imm|0));
+                        else{
+
+                            paddr = TranslateVM(rs1 + imm|0, VM_WRITE)|0;
+                            if((paddr|0) == -1) break;
+
+                            store16tlb_index = paddr;
+                            store16tlb_entry = ((paddr ^ (rs1 + imm|0)) & 0xFFFFF000);
+                        }
                         ram_index = paddr|0;
                         ram16[(ramp + ram_index) >> 1] = (r[(rindex << 2) >> 2] & 0xFFFF);
                         break;
@@ -1097,8 +1193,15 @@ function Step(steps, clockspeed) {
                              DebugMessage(ERROR_STORE_WORD|0);
                              abort();
                         }
-                        paddr = TranslateVM(rs1 + imm|0,VM_WRITE)|0;
-                        if((paddr|0) == -1) break;
+                        if(!((store32tlb_index ^ (rs1 + imm|0)) & 0xFFFFF000)) paddr = (store32tlb_entry ^ (rs1 + imm|0));
+                        else{
+
+                            paddr = TranslateVM(rs1 + imm|0, VM_WRITE)|0;
+                            if((paddr|0) == -1) break;
+
+                            store32tlb_index = paddr;
+                            store32tlb_entry = ((paddr ^ (rs1 + imm|0)) & 0xFFFFF000);
+                        }
                         ram_index = paddr|0;
                         ram[(ramp + ram_index) >> 2] = r[(rindex << 2) >> 2]|0;
                         break;
@@ -1578,6 +1681,7 @@ function Step(steps, clockspeed) {
                                         break;
                                 }
                                 fence = 1;
+                                InvalidateTLB();
                                 break;
 
                             case 0x102:
@@ -1601,6 +1705,7 @@ function Step(steps, clockspeed) {
 
                             case 0x101:
                                 //sfence.vm
+                                InvalidateTLB();
                                 break;
 
                             default:
