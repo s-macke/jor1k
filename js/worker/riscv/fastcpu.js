@@ -196,6 +196,8 @@ var store16tlb_entry = -1;
 var store32tlb_index = -1; //tlb index for sw ins
 var store32tlb_entry = -1;
 
+var queue_status = 0; // 1 means queue is full
+
 function Init() {
     Reset();
 }
@@ -223,9 +225,6 @@ function Reset() {
     amovalue = 0x00;
 }
 
-function InvalidateTLB() {
-}
-
 function GetTimeToNextInterrupt() {
     return 10;
 }
@@ -251,6 +250,7 @@ function RaiseInterrupt(line, cpuid) {
     line = line|0;
     cpuid = cpuid|0;
     //DebugMessage("raise int " + line);
+    queue_status = 1;
 };
 
 function ClearInterrupt(line, cpuid) {
@@ -1011,8 +1011,9 @@ function Step(steps, clockspeed) {
                     Trap(CAUSE_SOFTWARE_INTERRUPT, pc);
                     continue;
                 } else
-                if (!(IsQueueEmpty()|0)) {
+                if (queue_status|0) {
                     Trap(CAUSE_HOST_INTERRUPT, pc);
+                    queue_status = 0;
                     continue;
                 }
             }
