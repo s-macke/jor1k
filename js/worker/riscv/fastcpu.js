@@ -171,11 +171,14 @@ var ram8 = new stdlib.Int8Array(heap);
 var ram16 = new stdlib.Int16Array(heap);
 
 var pc = 0x200;
+var pcorigin = 0x200;
+var pc_change = 1; //1 implies pc has been changed by an instruction
 var ticks = 0;
 var amoaddr = 0,amovalue = 0;
 
-var fence = 0x01;
+var fence = 0x200;
 var ppc = 0x200;
+var ppcorigin = 0x200;
 
 var instlb_index = -1; //tlb index for pc
 var instlb_entry = -1;
@@ -269,7 +272,8 @@ function Trap(cause, current_pc) {
     csr[(csrp + CSR_MEPC)>>2] = current_pc;
     csr[(csrp + CSR_MCAUSE)>>2] = cause;
     pc = (offset + (current_privilege_level << 6))|0;
-    fence = 1;
+    fence = ppc;
+    pc_change = 1;
     InvalidateTLB();
 };
 
@@ -277,6 +281,7 @@ function MemTrap(addr, op) {
 
     addr = addr|0;
     op = op|0;
+    if((op|0) != (VM_FETCH|0)) pc = pcorigin + (ppc-ppcorigin)|0;
     csr[(csrp + CSR_MBADADDR)>>2] = addr;
     switch(op|0) {
         case 0: //VM_READ
@@ -291,6 +296,7 @@ function MemTrap(addr, op) {
             Trap(CAUSE_INSTRUCTION_ACCESS_FAULT, pc);
             break;
     }
+
 }
 
 
@@ -973,6 +979,7 @@ function Step(steps, clockspeed) {
     var fs2 = 0.0;
     var fs3 = 0.0;
     
+    var delta = 0;
     var paddr = 0;
     var current_privilege_level = 0;
     var interrupts = 0;
@@ -989,19 +996,34 @@ function Step(steps, clockspeed) {
             csr[(csrp + CSR_MIP)>>2] = csr[(csrp + CSR_MIP)>>2] | 0x20;
         }
 
-        if(((pc|0) & 0xFFF) == 0) fence = 1; //Checking if the physical pc has reached a page boundary
+        //if(((pc|0) & 0xFFF) == 0) fence = 1; //Checking if the physical pc has reached a page boundary
  
-        if((fence|0) == 1) {
+        if((fence|0) == (ppc|0)) {
+
+            //delta = (csr[(csrp + CSR_MTIMECMP)>>2]|0) - ticks | 0;
+            //delta = delta + (delta<0?0xFFFFFFFF:0x0) | 0;
+            //ticks = ticks +  ((ppc - ppcorigin)>>2)| 0;
+            //if (delta < ((ppc - ppcorigin)>>2)) {
+            //    csr[(csrp + CSR_MIP)>>2] = csr[(csrp + CSR_MIP)>>2] | 0x20;
+            //}
+            if(!(pc_change|0)) pc = pcorigin + (ppc-ppcorigin)|0; 
 
             if(!((instlb_index ^ pc) & 0xFFFFF000)) ppc = (instlb_entry ^ pc);
             else {
                 ppc = TranslateVM(pc,VM_FETCH)|0;
-                if((ppc|0) == -1)
+                if((ppc|0) == -1){
+                    ppc = fence;
                     continue;
+                }
 
                 instlb_index = pc;
                 instlb_entry = ((ppc ^ pc) & 0xFFFFF000);
             }
+
+            ppcorigin = ppc;
+            pcorigin = pc;
+            fence  = ((ppc >> 12) + 1) << 12; // next page
+            pc_change = 0;
 
             interrupts = csr[(csrp + CSR_MIE)>>2] & csr[(csrp + CSR_MIP)>>2];
             ie = csr[(csrp + CSR_MSTATUS)>>2] & 0x01;
@@ -1028,13 +1050,12 @@ function Step(steps, clockspeed) {
                 }
             }
 
-            fence = 0;
         }
 
         ram_index = ppc|0;
         ins = ram[(ramp + ram_index) >> 2]|0;
         //DebugIns.Disassemble(ins,r,csr,pc);
-        pc = pc + 4|0;
+        //pc = pc + 4|0;
         ppc = ppc + 4|0;
 
         switch(ins&0x7F) {
@@ -1472,13 +1493,17 @@ function Step(steps, clockspeed) {
 
             case 0x17:
                 //auipc
+                pc = pcorigin + (ppc-ppcorigin)|0;
                 imm = (ins & 0xFFFFF000);
                 rindex = (ins >> 7) & 0x1F;
                 r[(rindex << 2) >> 2] = (imm + pc - 4)|0;
+                fence = ppc;
+                pc_change = 1;
                 break;
 
             case 0x6F:
                 //jal
+                pc = pcorigin + (ppc-ppcorigin)|0;
                 imm1 = (ins >> 21) & 0x3FF;
                 imm2 = ((ins >> 20) & 0x1) << 10;
                 imm3 = ((ins >> 12) & 0xFF) << 11;
@@ -1487,23 +1512,27 @@ function Step(steps, clockspeed) {
                 rindex = (ins >> 7) & 0x1F;
                 r[(rindex << 2) >> 2] = pc;
                 pc = pc + imm - 4|0;
-                fence = 1;
+                fence = ppc;
+                pc_change = 1;
                 r[0] = 0;
                 break; 
 
             case 0x67:
                 //jalr
+                pc = pcorigin + (ppc-ppcorigin)|0;
                 imm = (ins >> 20);
                 rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
                 rindex = (ins >> 7) & 0x1F;
                 r[(rindex << 2) >> 2] = pc;
                 pc = ((rs1 + imm) & 0xFFFFFFFE)|0;
-                fence = 1;
+                fence = ppc;
+                pc_change = 1;
                 r[0] = 0;
                 break;
 
             case 0x63:
                 //beq, bne, blt, bge, bltu, bgeu
+                pc = pcorigin + (ppc-ppcorigin)|0;
                 imm1 = (ins >> 31) << 11;
                 imm2 = ((ins >> 25) & 0x3F) << 4;
                 imm3 = (ins >> 8) & 0x0F;
@@ -1560,7 +1589,8 @@ function Step(steps, clockspeed) {
                         break;
 
                 }
-                fence = 1;
+                fence = ppc;
+                pc_change = 1;
                 break;
 
             case 0x73:
@@ -1616,6 +1646,7 @@ function Step(steps, clockspeed) {
                         switch((ins >> 20)&0xFFF) {
                             case 0x00:
                                 //ecall
+                                pc = pcorigin + (ppc-ppcorigin)|0;
                                 switch(current_privilege_level|0)
                                 {
                                     case 0x00: //PRV_U
@@ -1644,12 +1675,14 @@ function Step(steps, clockspeed) {
 
                             case 0x001:
                                 //ebreak
+                                pc = pcorigin + (ppc-ppcorigin)|0;
                                 Trap(CAUSE_BREAKPOINT, pc - 4|0);
                                 break;
 
                             case 0x100:
                                 //eret
                                 current_privilege_level = (csr[(csrp + CSR_MSTATUS)>>2] & 0x06) >> 1;
+                                pc = pcorigin + (ppc-ppcorigin)|0;
                                 if((current_privilege_level|0) < (PRV_S|0)) {
                                     DebugMessage(ERROR_ERET_PRIV|0);
                                     abort();
@@ -1681,7 +1714,8 @@ function Step(steps, clockspeed) {
                                         abort();
                                         break;
                                 }
-                                fence = 1;
+                                //fence = ppc;
+                                pc_change = 1;
                                 InvalidateTLB();
                                 break;
 
@@ -1690,7 +1724,8 @@ function Step(steps, clockspeed) {
                                 break;
 
                             case 0x305:
-                                //mrts     
+                                //mrts
+                                pc = pcorigin + (ppc-ppcorigin)|0;    
                                 if((current_privilege_level|0) != (PRV_M|0)) {
                                     DebugMessage(ERROR_MRTS|0);
                                     abort();
@@ -1701,7 +1736,8 @@ function Step(steps, clockspeed) {
                                 csr[(csrp + CSR_SCAUSE)>>2] = csr[(csrp + CSR_MCAUSE)>>2];
                                 csr[(csrp + CSR_SEPC)>>2] = csr[(csrp + CSR_MEPC)>>2];
                                 pc = csr[(csrp + CSR_STVEC)>>2]|0;
-                                fence = 1;
+                                //fence = ppc;
+                                pc_change = 1;
                                 break;
 
                             case 0x101:
@@ -1715,6 +1751,7 @@ function Step(steps, clockspeed) {
                                 break;
 
                         }
+                        fence = ppc;
                         break; 
 
                     default:
