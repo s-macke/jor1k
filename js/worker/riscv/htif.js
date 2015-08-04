@@ -5,6 +5,7 @@
 "use strict";
 var message = require('../messagehandler');
 var utils = require('../utils');
+var bzip2 = require('../bzip2.js');
 var syscalls = require('./syscalls.js');
 
 // -------------------------------------------------
@@ -127,9 +128,14 @@ function HTIFDisk(ram, SendFunc) {
     this.buffer = new Uint8Array(1024*1024);
     this.identify = "disk size="+this.buffer.length;
     
-    utils.LoadBinaryResourceII("riscv/ext2fsimage", 
+    utils.LoadBinaryResourceII("riscv/ext2fsimage.bz2", 
     function(buffer) {
-        this.buffer = new Uint8Array(buffer);
+        this.buffer = new Uint8Array(20*1024*1024);
+
+        var length = 0;
+        var buffer8 = new Uint8Array(buffer);
+	bzip2.simple(buffer8, function(x){this.buffer[length++] = x;}.bind(this));
+
         this.identify = "disk size="+this.buffer.length;   
     }.bind(this)
     , false, function(error){message.Abort();});
