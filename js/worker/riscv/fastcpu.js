@@ -989,23 +989,13 @@ function Step(steps, clockspeed) {
     
     do {
 
-        current_privilege_level = (csr[(csrp + CSR_MSTATUS)>>2] & 0x06) >> 1;
-
-        ticks = ticks + 1|0;
-        if ((ticks|0) == (csr[(csrp + CSR_MTIMECMP)>>2]|0)) {
-            csr[(csrp + CSR_MIP)>>2] = csr[(csrp + CSR_MIP)>>2] | 0x20;
-        }
-
-        //if(((pc|0) & 0xFFF) == 0) fence = 1; //Checking if the physical pc has reached a page boundary
+        //ticks = ticks + 1|0;
+        //if ((ticks|0) == (csr[(csrp + CSR_MTIMECMP)>>2]|0)) {
+        //    csr[(csrp + CSR_MIP)>>2] = csr[(csrp + CSR_MIP)>>2] | 0x20;
+        //}
  
         if((fence|0) == (ppc|0)) {
 
-            //delta = (csr[(csrp + CSR_MTIMECMP)>>2]|0) - ticks | 0;
-            //delta = delta + (delta<0?0xFFFFFFFF:0x0) | 0;
-            //ticks = ticks +  ((ppc - ppcorigin)>>2)| 0;
-            //if (delta < ((ppc - ppcorigin)>>2)) {
-            //    csr[(csrp + CSR_MIP)>>2] = csr[(csrp + CSR_MIP)>>2] | 0x20;
-            //}
             if(!(pc_change|0)) pc = pcorigin + (ppc-ppcorigin)|0; 
 
             if(!((instlb_index ^ pc) & 0xFFFFF000)) ppc = (instlb_entry ^ pc);
@@ -1024,6 +1014,15 @@ function Step(steps, clockspeed) {
             pcorigin = pc;
             fence  = ((ppc >> 12) + 1) << 12; // next page
             pc_change = 0;
+
+            current_privilege_level = (csr[(csrp + CSR_MSTATUS)>>2] & 0x06) >> 1;
+
+            delta = (csr[(csrp + CSR_MTIMECMP)>>2]|0) - ticks | 0;
+            delta = delta + ((delta|0)<0?0xFFFFFFFF:0x0) | 0;
+            ticks = ticks +  (clockspeed)| 0;
+            if ((delta|0) < (clockspeed|0)) {
+                csr[(csrp + CSR_MIP)>>2] = csr[(csrp + CSR_MIP)>>2] | 0x20;
+            }
 
             interrupts = csr[(csrp + CSR_MIE)>>2] & csr[(csrp + CSR_MIP)>>2];
             ie = csr[(csrp + CSR_MSTATUS)>>2] & 0x01;
@@ -1054,6 +1053,7 @@ function Step(steps, clockspeed) {
 
         ram_index = ppc|0;
         ins = ram[(ramp + ram_index) >> 2]|0;
+        //ins = ram[(ramp + ppc) >> 2]|0;
         //DebugIns.Disassemble(ins,r,csr,pc);
         //pc = pc + 4|0;
         ppc = ppc + 4|0;
@@ -1533,54 +1533,80 @@ function Step(steps, clockspeed) {
             case 0x63:
                 //beq, bne, blt, bge, bltu, bgeu
                 pc = pcorigin + (ppc-ppcorigin)|0;
-                imm1 = (ins >> 31) << 11;
-                imm2 = ((ins >> 25) & 0x3F) << 4;
-                imm3 = (ins >> 8) & 0x0F;
-                imm4 = ((ins >> 7) & 0x01) << 10;
-                imm =  ((imm1 | imm2 | imm3 | imm4) << 1 );
-
+                rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
+                rs2 = r[(((ins >> 20) & 0x1F) << 2) >> 2]|0;
                 switch((ins >> 12)&0x7) {
                     
                     case 0x00:
                         //beq
-                        rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
-                        rs2 = r[(((ins >> 20) & 0x1F) << 2) >> 2]|0;
-                        if((rs1|0) == (rs2|0)) pc = pc + imm - 4|0;//-4 temporary hack
+                        if((rs1|0) == (rs2|0)){
+                            imm1 = (ins >> 31) << 11;
+                            imm2 = ((ins >> 25) & 0x3F) << 4;
+                            imm3 = (ins >> 8) & 0x0F;
+                            imm4 = ((ins >> 7) & 0x01) << 10;
+                            imm =  ((imm1 | imm2 | imm3 | imm4) << 1 );
+                            pc = pc + imm - 4|0;//-4 temporary hack
+                        }
                         break;
 
                     case 0x01:
                         //bne
-                        rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
-                        rs2 = r[(((ins >> 20) & 0x1F) << 2) >> 2]|0;
-                        if((rs1|0) != (rs2|0)) pc = pc + imm - 4|0;//-4 temporary hack
+                        if((rs1|0) != (rs2|0)){
+                            imm1 = (ins >> 31) << 11;
+                            imm2 = ((ins >> 25) & 0x3F) << 4;
+                            imm3 = (ins >> 8) & 0x0F;
+                            imm4 = ((ins >> 7) & 0x01) << 10;
+                            imm =  ((imm1 | imm2 | imm3 | imm4) << 1 );
+                            pc = pc + imm - 4|0;//-4 temporary hack
+                        }
                         break;
 
                     case 0x04:
                         //blt
-                        rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
-                        rs2 = r[(((ins >> 20) & 0x1F) << 2) >> 2]|0;
-                        if((rs1|0) < (rs2|0)) pc = pc + imm - 4|0;//-4 temporary hack
+                        if((rs1|0) < (rs2|0)){
+                            imm1 = (ins >> 31) << 11;
+                            imm2 = ((ins >> 25) & 0x3F) << 4;
+                            imm3 = (ins >> 8) & 0x0F;
+                            imm4 = ((ins >> 7) & 0x01) << 10;
+                            imm =  ((imm1 | imm2 | imm3 | imm4) << 1 );
+                            pc = pc + imm - 4|0;//-4 temporary hack
+                        }
                         break;
 
                     case 0x05:
                         //bge
-                        rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
-                        rs2 = r[(((ins >> 20) & 0x1F) << 2) >> 2]|0;
-                        if((rs1|0) >= (rs2|0)) pc = pc + imm - 4|0;//-4 temporary hack
+                        if((rs1|0) >= (rs2|0)){
+                            imm1 = (ins >> 31) << 11;
+                            imm2 = ((ins >> 25) & 0x3F) << 4;
+                            imm3 = (ins >> 8) & 0x0F;
+                            imm4 = ((ins >> 7) & 0x01) << 10;
+                            imm =  ((imm1 | imm2 | imm3 | imm4) << 1 );
+                            pc = pc + imm - 4|0;//-4 temporary hack
+                        }
                         break;
 
                     case 0x06:
                         //bltu
-                        rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
-                        rs2 = r[(((ins >> 20) & 0x1F) << 2) >> 2]|0;
-                        if((rs1 >>> 0) < (rs2 >>> 0)) pc = pc + imm - 4|0;//-4 temporary hack
+                        if((rs1 >>> 0) < (rs2 >>> 0)){
+                            imm1 = (ins >> 31) << 11;
+                            imm2 = ((ins >> 25) & 0x3F) << 4;
+                            imm3 = (ins >> 8) & 0x0F;
+                            imm4 = ((ins >> 7) & 0x01) << 10;
+                            imm =  ((imm1 | imm2 | imm3 | imm4) << 1 );
+                            pc = pc + imm - 4|0;//-4 temporary hack
+                        }
                         break;
 
                     case 0x07:
                         //bgeu
-                        rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
-                        rs2 = r[(((ins >> 20) & 0x1F) << 2) >> 2]|0;
-                        if((rs1 >>> 0) >= (rs2 >>> 0)) pc = pc + imm - 4|0;//-4 temporary hack
+                        if((rs1 >>> 0) >= (rs2 >>> 0)){
+                            imm1 = (ins >> 31) << 11;
+                            imm2 = ((ins >> 25) & 0x3F) << 4;
+                            imm3 = (ins >> 8) & 0x0F;
+                            imm4 = ((ins >> 7) & 0x01) << 10;
+                            imm =  ((imm1 | imm2 | imm3 | imm4) << 1 );
+                            pc = pc + imm - 4|0;//-4 temporary hack
+                        }
                         break;
 
                     default:
@@ -1643,6 +1669,7 @@ function Step(steps, clockspeed) {
                     
                     case 0x00:
                         //ecall, eret, ebreak, mrts, wfi
+                        current_privilege_level = (csr[(csrp + CSR_MSTATUS)>>2] & 0x06) >> 1;
                         switch((ins >> 20)&0xFFF) {
                             case 0x00:
                                 //ecall
