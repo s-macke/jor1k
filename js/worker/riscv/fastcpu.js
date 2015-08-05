@@ -987,16 +987,14 @@ function Step(steps, clockspeed) {
     var ins = 0;
     var ram_index = 0;
     
-    do {
-
-        //ticks = ticks + 1|0;
-        //if ((ticks|0) == (csr[(csrp + CSR_MTIMECMP)>>2]|0)) {
-        //    csr[(csrp + CSR_MIP)>>2] = csr[(csrp + CSR_MIP)>>2] | 0x20;
-        //}
+     while(1){
  
         if((fence|0) == (ppc|0)) {
 
-            if(!(pc_change|0)) pc = pcorigin + (ppc-ppcorigin)|0; 
+            if(!(pc_change|0)) pc = pcorigin + (ppc-ppcorigin)|0;
+
+            steps = steps - (ppc-ppcorigin)|0;
+            if((steps|0) < 0) return 0;
 
             if(!((instlb_index ^ pc) & 0xFFFFF000)) ppc = (instlb_entry ^ pc);
             else {
@@ -1051,11 +1049,7 @@ function Step(steps, clockspeed) {
 
         }
 
-        ram_index = ppc|0;
-        ins = ram[(ramp + ram_index) >> 2]|0;
-        //ins = ram[(ramp + ppc) >> 2]|0;
-        //DebugIns.Disassemble(ins,r,csr,pc);
-        //pc = pc + 4|0;
+        ins = ram[(ramp + ppc) >> 2]|0;
         ppc = ppc + 4|0;
 
         switch(ins&0x7F) {
@@ -2210,7 +2204,7 @@ function Step(steps, clockspeed) {
                 break;
         }
 
-    } while(steps = steps - 1|0);
+    }
     return 0;
 };
 
