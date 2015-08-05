@@ -199,6 +199,15 @@ var store16tlb_entry = -1;
 var store32tlb_index = -1; //tlb index for sw ins
 var store32tlb_entry = -1;
 
+var float_read32tlb_index = -1; //tlb index for flw ins
+var float_read32tlb_entry = -1;
+var float_read64tlb_index = -1; //tlb index for fld ins
+var float_read64tlb_entry = -1;
+var float_store32tlb_index = -1; //tlb index for fsw ins
+var float_store32tlb_entry = -1;
+var float_store64tlb_index = -1; //tlb index for fsd ins
+var float_store64tlb_entry = -1;
+
 var queue_status = 0; // 1 means queue is full
 
 function Init() {
@@ -937,6 +946,15 @@ function InvalidateTLB(){
     store32tlb_index = -1;
     store32tlb_entry = -1;
 
+    float_read32tlb_index = -1;
+    float_read32tlb_entry = -1;
+    float_read64tlb_index = -1;
+    float_read64tlb_entry = -1;
+    float_store32tlb_index = -1;
+    float_store32tlb_entry = -1;
+    float_store64tlb_index = -1;
+    float_store64tlb_entry = -1;
+
 }
 
 function PushPrivilegeStack(){
@@ -985,7 +1003,6 @@ function Step(steps, clockspeed) {
     var interrupts = 0;
     var ie = 0;
     var ins = 0;
-    var ram_index = 0;
     
      while(1){
  
@@ -1072,8 +1089,7 @@ function Step(steps, clockspeed) {
                             read8tlb_index = paddr;
                             read8tlb_entry = ((paddr ^ (rs1 + imm|0)) & 0xFFFFF000);
                         }
-                        ram_index = paddr|0;
-                        r[(rindex << 2) >> 2] = ((ram8[(ramp + ram_index) >> 0]) << 24) >> 24;
+                        r[(rindex << 2) >> 2] = ((ram8[(ramp + paddr) >> 0]) << 24) >> 24;
                         break;
 
                     case 0x01:
@@ -1090,8 +1106,7 @@ function Step(steps, clockspeed) {
                             read16tlb_index = paddr;
                             read16tlb_entry = ((paddr ^ (rs1 + imm|0)) & 0xFFFFF000);
                         }
-                        ram_index = paddr|0;
-                        r[(rindex << 2) >> 2] = ((ram16[(ramp + ram_index) >> 1]) << 16) >> 16;
+                        r[(rindex << 2) >> 2] = ((ram16[(ramp + paddr) >> 1]) << 16) >> 16;
                         break;
 
                     case 0x02:
@@ -1112,8 +1127,7 @@ function Step(steps, clockspeed) {
                             read32tlb_index = paddr;
                             read32tlb_entry = ((paddr ^ (rs1 + imm|0)) & 0xFFFFF000);
                         }
-                        ram_index = paddr|0;
-                        r[(rindex << 2) >> 2] = ram[(ramp + ram_index) >> 2]|0;
+                        r[(rindex << 2) >> 2] = ram[(ramp + paddr) >> 2]|0;
                         break;
 
                     case 0x04:
@@ -1130,8 +1144,7 @@ function Step(steps, clockspeed) {
                             read8utlb_index = paddr;
                             read8utlb_entry = ((paddr ^ (rs1 + imm|0)) & 0xFFFFF000);
                         }
-                        ram_index = paddr|0;
-                        r[(rindex << 2) >> 2] = (ram8[(ramp + ram_index) >> 0]) & 0xFF;
+                        r[(rindex << 2) >> 2] = (ram8[(ramp + paddr) >> 0]) & 0xFF;
                         break;
 
                     case 0x05:
@@ -1148,8 +1161,7 @@ function Step(steps, clockspeed) {
                             read16utlb_index = paddr;
                             read16utlb_entry = ((paddr ^ (rs1 + imm|0)) & 0xFFFFF000);
                         }
-                        ram_index = paddr|0;
-                        r[(rindex << 2) >> 2] = (ram16[(ramp + ram_index) >> 1]) & 0xFFFF;
+                        r[(rindex << 2) >> 2] = (ram16[(ramp + paddr) >> 1]) & 0xFFFF;
                         break;
 
                     default:
@@ -1180,8 +1192,7 @@ function Step(steps, clockspeed) {
                             store8tlb_index = paddr;
                             store8tlb_entry = ((paddr ^ (rs1 + imm|0)) & 0xFFFFF000);
                         }
-                        ram_index = paddr|0;
-                        ram8[(ramp + ram_index) >> 0] = (r[(rindex << 2) >> 2] & 0xFF); 
+                        ram8[(ramp + paddr) >> 0] = (r[(rindex << 2) >> 2] & 0xFF); 
                         break;
 
                     case 0x01:
@@ -1197,8 +1208,7 @@ function Step(steps, clockspeed) {
                             store16tlb_index = paddr;
                             store16tlb_entry = ((paddr ^ (rs1 + imm|0)) & 0xFFFFF000);
                         }
-                        ram_index = paddr|0;
-                        ram16[(ramp + ram_index) >> 1] = (r[(rindex << 2) >> 2] & 0xFFFF);
+                        ram16[(ramp + paddr) >> 1] = (r[(rindex << 2) >> 2] & 0xFFFF);
                         break;
 
                     case 0x02:
@@ -1218,8 +1228,7 @@ function Step(steps, clockspeed) {
                             store32tlb_index = paddr;
                             store32tlb_entry = ((paddr ^ (rs1 + imm|0)) & 0xFFFFF000);
                         }
-                        ram_index = paddr|0;
-                        ram[(ramp + ram_index) >> 2] = r[(rindex << 2) >> 2]|0;
+                        ram[(ramp + paddr) >> 2] = r[(rindex << 2) >> 2]|0;
                         break;
 
                     default:
@@ -1527,6 +1536,8 @@ function Step(steps, clockspeed) {
             case 0x63:
                 //beq, bne, blt, bge, bltu, bgeu
                 pc = pcorigin + (ppc-ppcorigin)|0;
+                fence = ppc;
+                pc_change = 1;
                 rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
                 rs2 = r[(((ins >> 20) & 0x1F) << 2) >> 2]|0;
                 switch((ins >> 12)&0x7) {
@@ -1609,8 +1620,6 @@ function Step(steps, clockspeed) {
                         break;
 
                 }
-                fence = ppc;
-                pc_change = 1;
                 break;
 
             case 0x73:
@@ -1664,6 +1673,7 @@ function Step(steps, clockspeed) {
                     case 0x00:
                         //ecall, eret, ebreak, mrts, wfi
                         current_privilege_level = (csr[(csrp + CSR_MSTATUS)>>2] & 0x06) >> 1;
+                        fence = ppc;
                         switch((ins >> 20)&0xFFF) {
                             case 0x00:
                                 //ecall
@@ -1735,7 +1745,6 @@ function Step(steps, clockspeed) {
                                         abort();
                                         break;
                                 }
-                                //fence = ppc;
                                 pc_change = 1;
                                 InvalidateTLB();
                                 break;
@@ -1757,7 +1766,6 @@ function Step(steps, clockspeed) {
                                 csr[(csrp + CSR_SCAUSE)>>2] = csr[(csrp + CSR_MCAUSE)>>2];
                                 csr[(csrp + CSR_SEPC)>>2] = csr[(csrp + CSR_MEPC)>>2];
                                 pc = csr[(csrp + CSR_STVEC)>>2]|0;
-                                //fence = ppc;
                                 pc_change = 1;
                                 break;
 
@@ -1772,7 +1780,6 @@ function Step(steps, clockspeed) {
                                 break;
 
                         }
-                        fence = ppc;
                         break; 
 
                     default:
@@ -1793,10 +1800,16 @@ function Step(steps, clockspeed) {
                         imm = (ins >> 20);
                         rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
                         findex = ((ins >> 7) & 0x1F);
-                        paddr = TranslateVM(rs1 + imm|0,VM_READ)|0;
-                        if((paddr|0) == -1) break;
-                        ram_index = paddr|0;
-                        r[0] = ram[(ramp + ram_index) >> 2]|0;
+                        if(!((float_read32tlb_index ^ (rs1 + imm|0)) & 0xFFFFF000)) paddr = (float_read32tlb_entry ^ (rs1 + imm|0));
+                        else{
+
+                            paddr = TranslateVM(rs1 + imm|0, VM_READ)|0;
+                            if((paddr|0) == -1) break;
+
+                            float_read32tlb_index = paddr;
+                            float_read32tlb_entry = ((paddr ^ (rs1 + imm|0)) & 0xFFFFF000);
+                        }
+                        r[0] = ram[(ramp + paddr) >> 2]|0;
                         f[(fp + (findex << 3)) >> 3] = +ff[0];
                         r[0] = 0;
                         break;
@@ -1806,11 +1819,17 @@ function Step(steps, clockspeed) {
                         imm = (ins >> 20);
                         rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
                         findex = ((ins >> 7) & 0x1F) << 1;
-                        paddr = TranslateVM(rs1 + imm|0,VM_READ)|0;
-                        if((paddr|0) == -1) break;
-                        ram_index = paddr|0;
-                        fi[(fip + ((findex + 0) << 2)) >> 2] = ram[(ramp + ram_index + 0) >> 2]|0;
-                        fi[(fip + ((findex + 1) << 2)) >> 2] = ram[(ramp + ram_index + 4) >> 2]|0;
+                        if(!((float_read64tlb_index ^ (rs1 + imm|0)) & 0xFFFFF000)) paddr = (float_read64tlb_entry ^ (rs1 + imm|0));
+                        else{
+
+                            paddr = TranslateVM(rs1 + imm|0, VM_READ)|0;
+                            if((paddr|0) == -1) break;
+
+                            float_read64tlb_index = paddr;
+                            float_read64tlb_entry = ((paddr ^ (rs1 + imm|0)) & 0xFFFFF000);
+                        }
+                        fi[(fip + ((findex + 0) << 2)) >> 2] = ram[(ramp + paddr + 0) >> 2]|0;
+                        fi[(fip + ((findex + 1) << 2)) >> 2] = ram[(ramp + paddr + 4) >> 2]|0;
                         break;
 
                     default:
@@ -1834,10 +1853,16 @@ function Step(steps, clockspeed) {
                         rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
                         findex = (ins >> 20) & 0x1F;
                         ff[0] = f[(fp + (findex << 3)) >> 3];
-                        paddr = TranslateVM(rs1 + imm|0, VM_WRITE)|0;
-                        if((paddr|0) == -1) break;
-                        ram_index = paddr|0;
-                        ram[(ramp + ram_index) >> 2] = r[0]|0;
+                        if(!((float_store32tlb_index ^ (rs1 + imm|0)) & 0xFFFFF000)) paddr = (float_store32tlb_entry ^ (rs1 + imm|0));
+                        else{
+
+                            paddr = TranslateVM(rs1 + imm|0, VM_READ)|0;
+                            if((paddr|0) == -1) break;
+
+                            float_store32tlb_index = paddr;
+                            float_store32tlb_entry = ((paddr ^ (rs1 + imm|0)) & 0xFFFFF000);
+                        }
+                        ram[(ramp + paddr) >> 2] = r[0]|0;
                         r[0] = 0;
                         break;
 
@@ -1848,11 +1873,17 @@ function Step(steps, clockspeed) {
                         imm = ((imm1 << 5) + imm2)|0;
                         rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
                         findex = ((ins >> 20) & 0x1F) << 1;
-                        paddr = TranslateVM(rs1 + imm + 0|0, VM_WRITE)|0;
-                        if((paddr|0) == -1) break;
-                        ram_index = paddr|0;
-                        ram[(ramp + ram_index + 0) >> 2] = fi[(fip + ((findex + 0) << 2)) >> 2]|0;
-                        ram[(ramp + ram_index + 4) >> 2] = fi[(fip + ((findex + 1) << 2)) >> 2]|0; 
+                        if(!((float_store64tlb_index ^ (rs1 + imm|0)) & 0xFFFFF000)) paddr = (float_store64tlb_entry ^ (rs1 + imm|0));
+                        else{
+
+                            paddr = TranslateVM(rs1 + imm|0, VM_READ)|0;
+                            if((paddr|0) == -1) break;
+
+                            float_store64tlb_index = paddr;
+                            float_store64tlb_entry = ((paddr ^ (rs1 + imm|0)) & 0xFFFFF000);
+                        }
+                        ram[(ramp + paddr + 0) >> 2] = fi[(fip + ((findex + 0) << 2)) >> 2]|0;
+                        ram[(ramp + paddr + 4) >> 2] = fi[(fip + ((findex + 1) << 2)) >> 2]|0; 
                         break;
 
                     default:
@@ -1893,19 +1924,19 @@ function Step(steps, clockspeed) {
                         switch((ins >> 12) & 0x7) {
                             case 0x0:
                                 //fle
-                                if((~~fs1) <= (~~fs2)) r[(rindex << 2) >> 2] = 1;
+                                if((+fs1) <= (+fs2)) r[(rindex << 2) >> 2] = 1;
                                 else r[(rindex << 2) >> 2] = 0;
                                 break;
 
                             case 0x1:
                                 //flt
-                                if((~~fs1) < (~~fs2)) r[(rindex << 2) >> 2] = 1;
+                                if((+fs1) < (+fs2)) r[(rindex << 2) >> 2] = 1;
                                 else r[(rindex << 2) >> 2] = 0;
                                 break;
 
                             case 0x2:
                                 //fle
-                                if((~~fs1) == (~~fs2)) r[(rindex << 2) >> 2] = 1;
+                                if((+fs1) == (+fs2)) r[(rindex << 2) >> 2] = 1;
                                 else r[(rindex << 2) >> 2] = 0;
                                 break;
 
@@ -1947,17 +1978,17 @@ function Step(steps, clockspeed) {
                         switch((ins >> 12) & 7) {
                             case 0:
                                 //fsgnj.d, also used for fmv.d
-                                f[(fp + (rindex << 3)) >> 3] = ((~~fs2)<0)?-MathAbs(fs1):MathAbs(fs1);
+                                f[(fp + (rindex << 3)) >> 3] = ((+fs2)<0.0)?-MathAbs(fs1):MathAbs(fs1);
                                 break;
  
                             case 1:
                                 //fsgnjn.d
-                                f[(fp + (rindex << 3)) >> 3] = ((~~fs2)<0)?MathAbs(fs1):-MathAbs(fs1);
+                                f[(fp + (rindex << 3)) >> 3] = ((+fs2)<0.0)?MathAbs(fs1):-MathAbs(fs1);
                                 break;
  
                             case 3:
                                 //fsgnjx.d
-                                f[(fp + (rindex << 3)) >> 3] = (((~~fs2|0)<0 & (~~fs1)<0) | ((~~fs2)>0 & (~~fs1)>0))?-MathAbs(fs1):MathAbs(fs1);
+                                f[(fp + (rindex << 3)) >> 3] = (((+fs2)<0.0 & (+fs1)<0.0) | ((+fs2)>0.0 & (+fs1)>0.0))?-MathAbs(fs1):MathAbs(fs1);
                                 break;
  
                             default:
@@ -1989,7 +2020,6 @@ function Step(steps, clockspeed) {
                         abort();
                         break;
                 }
-                r[0] = 0;
                 break;
 
             case 0x43:
@@ -2039,116 +2069,98 @@ function Step(steps, clockspeed) {
                         //amoswap
                         paddr = TranslateVM(rs1|0, VM_READ)|0;
                         if((paddr|0) == -1) break;
-                        ram_index = paddr|0;
-                        r[(rindex << 2) >> 2] = ram[(ramp + ram_index) >> 2]|0;
+                        r[(rindex << 2) >> 2] = ram[(ramp + paddr) >> 2]|0;
                         paddr = TranslateVM(rs1|0, VM_WRITE)|0;
                         if((paddr|0) == -1) break;
-                        ram_index = paddr|0;
-                        ram[(ramp + ram_index) >> 2] = rs2|0;
+                        ram[(ramp + paddr) >> 2] = rs2|0;
                         break;
 
                     case 0x00:
                         //amoadd
                         paddr = TranslateVM(rs1|0, VM_READ)|0;
                         if((paddr|0) == -1) break;
-                        ram_index = paddr|0;
-                        r[(rindex << 2) >> 2] = ram[(ramp + ram_index) >> 2]|0;
+                        r[(rindex << 2) >> 2] = ram[(ramp + paddr) >> 2]|0;
                         paddr = TranslateVM(rs1|0,VM_WRITE)|0;
                         if((paddr|0) == -1) break;
-                        ram_index = paddr|0;
-                        ram[(ramp + ram_index) >> 2] = ((r[(rindex << 2) >> 2]|0) + (rs2|0))|0;
+                        ram[(ramp + paddr) >> 2] = ((r[(rindex << 2) >> 2]|0) + (rs2|0))|0;
                         break;
 
                     case 0x04:
                         //amoxor
                         paddr = TranslateVM(rs1|0, VM_READ)|0;
                         if((paddr|0) == -1) break;
-                        ram_index = paddr|0;
-                        r[(rindex << 2) >> 2] = ram[(ramp + ram_index) >> 2]|0;
+                        r[(rindex << 2) >> 2] = ram[(ramp + paddr) >> 2]|0;
                         paddr = TranslateVM(rs1|0,VM_WRITE)|0;
                         if((paddr|0) == -1) break;
-                        ram_index = paddr|0;
-                        ram[(ramp + ram_index) >> 2] = ((r[(rindex << 2) >> 2]|0) ^ (rs2|0))|0;
+                        ram[(ramp + paddr) >> 2] = ((r[(rindex << 2) >> 2]|0) ^ (rs2|0))|0;
                         break;
 
                     case 0x0C:
                         //amoand
                         paddr = TranslateVM(rs1|0, VM_READ)|0;
                         if((paddr|0) == -1) break;
-                        ram_index = paddr|0;
-                        r[(rindex << 2) >> 2] = ram[(ramp + ram_index) >> 2]|0;
+                        r[(rindex << 2) >> 2] = ram[(ramp + paddr) >> 2]|0;
                         paddr = TranslateVM(rs1|0,VM_WRITE)|0;
                         if((paddr|0) == -1) break;
-                        ram_index = paddr|0;
-                        ram[(ramp + ram_index) >> 2] = ((r[(rindex << 2) >> 2]|0) & (rs2|0))|0;
+                        ram[(ramp + paddr) >> 2] = ((r[(rindex << 2) >> 2]|0) & (rs2|0))|0;
                         break;
 
                     case 0x08:
                         //amoor
                         paddr = TranslateVM(rs1|0, VM_READ)|0;
                         if((paddr|0) == -1) break;
-                        ram_index = paddr|0;
-                        r[(rindex << 2) >> 2] = ram[(ramp + ram_index) >> 2]|0;
+                        r[(rindex << 2) >> 2] = ram[(ramp + paddr) >> 2]|0;
                         paddr = TranslateVM(rs1|0,VM_WRITE)|0;
                         if((paddr|0) == -1) break;
-                        ram_index = paddr|0;
-                        ram[(ramp + ram_index) >> 2] = ((r[(rindex << 2) >> 2]|0) | (rs2|0))|0;
+                        ram[(ramp + paddr) >> 2] = ((r[(rindex << 2) >> 2]|0) | (rs2|0))|0;
                         break;
 
                     case 0x10:
                         //amomin
                         paddr = TranslateVM(rs1|0, VM_READ)|0;
                         if((paddr|0) == -1) break;
-                        ram_index = paddr|0;
-                        r[(rindex << 2) >> 2] = ram[(ramp + ram_index) >> 2]|0;
+                        r[(rindex << 2) >> 2] = ram[(ramp + paddr) >> 2]|0;
                         if((rs2 >> 0) > (r[(rindex << 2) >> 2] >> 0)) r[0] = r[(rindex << 2) >> 2];
                         else r[0] = rs2;
                         paddr = TranslateVM(rs1|0,VM_WRITE)|0;
                         if((paddr|0) == -1) break;
-                        ram_index = paddr|0;
-                        ram[(ramp + ram_index) >> 2] = r[0]|0;
+                        ram[(ramp + paddr) >> 2] = r[0]|0;
                         break;
 
                    case 0x14:
                         //amomax
                         paddr = TranslateVM(rs1|0,VM_READ)|0;
                         if((paddr|0) == -1) break;
-                        ram_index = paddr|0;
-                        r[(rindex << 2) >> 2] = ram[(ramp + ram_index) >> 2]|0;
+                        r[(rindex << 2) >> 2] = ram[(ramp + paddr) >> 2]|0;
                         if((rs2 >> 0) < (r[(rindex << 2) >> 2] >> 0)) r[0] = r[(rindex << 2) >> 2];
                         else r[0] = rs2;
                         paddr = TranslateVM(rs1|0,VM_WRITE)|0;
                         if((paddr|0) == -1) break;
-                        ram_index = paddr|0;
-                        ram[(ramp + ram_index) >> 2] = r[0]|0;
+                        ram[(ramp + paddr) >> 2] = r[0]|0;
                         break;
 
                     case 0x18:
                         //amominu
                         paddr = TranslateVM(rs1|0,VM_READ)|0;
                         if((paddr|0) == -1) break;
-                        ram_index = paddr|0;
-                        r[(rindex << 2) >> 2] = ram[(ramp + ram_index) >> 2]|0;
+                        r[(rindex << 2) >> 2] = ram[(ramp + paddr) >> 2]|0;
                         if((rs2 >>> 0) > (r[(rindex << 2) >> 2] >>> 0)) r[0] = r[(rindex << 2) >> 2];
                         else r[0] = rs2;
                         paddr = TranslateVM(rs1|0,VM_WRITE)|0;
                         if((paddr|0) == -1) break;
-                        ram_index = paddr|0;
-                        ram[(ramp + ram_index) >> 2] = r[0]|0;
+                        ram[(ramp + paddr) >> 2] = r[0]|0;
                         break;
 
                     case 0x1C:
                         //amomaxu
                         paddr = TranslateVM(rs1|0,VM_READ)|0;
                         if((paddr|0) == -1) break;
-                        ram_index = paddr|0;
-                        r[(rindex << 2) >> 2] = ram[(ramp + ram_index) >> 2]|0;
+                        r[(rindex << 2) >> 2] = ram[(ramp + paddr) >> 2]|0;
                         if((rs2 >>> 0) < (r[(rindex << 2) >> 2] >>> 0)) r[0] = r[(rindex << 2) >> 2];
                         else r[0] = rs2;
                         paddr = TranslateVM(rs1|0,VM_WRITE)|0;
                         if((paddr|0) == -1) break;
-                        ram_index = paddr|0;
-                        ram[(ramp + ram_index) >> 2] = r[0]|0;
+                        ram[(ramp + paddr) >> 2] = r[0]|0;
                         break;
 
                     case 0x02:
@@ -2156,8 +2168,7 @@ function Step(steps, clockspeed) {
                         rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
                         paddr = TranslateVM(rs1|0,VM_READ)|0;
                         if((paddr|0) == -1) break;
-                        ram_index = paddr|0;
-                        r[(rindex << 2) >> 2] = ram[(ramp + ram_index) >> 2]|0;
+                        r[(rindex << 2) >> 2] = ram[(ramp + paddr) >> 2]|0;
                         amoaddr = rs1;
                         amovalue = r[(rindex << 2) >> 2]|0;
                         break;
@@ -2172,16 +2183,14 @@ function Step(steps, clockspeed) {
                         }
                         paddr = TranslateVM(rs1, VM_READ)|0;
                         if((paddr|0) == -1) break;
-                        ram_index = paddr|0;
-                        if((ram[(ramp + ram_index) >> 2]|0) != (amovalue|0)) {
+                        if((ram[(ramp + paddr) >> 2]|0) != (amovalue|0)) {
                             r[(rindex << 2) >> 2] = 0x01;
                             break;
                         }
                         r[(rindex << 2) >> 2] = 0x00;
                         paddr = TranslateVM(rs1, VM_WRITE)|0;
                         if ((paddr|0) == -1) break;
-                        ram_index = paddr|0;
-                        ram[(ramp + ram_index) >> 2] = rs2|0;
+                        ram[(ramp + paddr) >> 2] = rs2|0;
                         break;
 
                     default:
