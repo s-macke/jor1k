@@ -1004,7 +1004,7 @@ function Step(steps, clockspeed) {
     var ie = 0;
     var ins = 0;
     
-     while(1){
+    while(1){
  
         if((fence|0) == (ppc|0)) {
 
@@ -1090,7 +1090,7 @@ function Step(steps, clockspeed) {
                             read8tlb_entry = ((paddr ^ (rs1 + imm|0)) & 0xFFFFF000);
                         }
                         r[(rindex << 2) >> 2] = ((ram8[(ramp + paddr) >> 0]) << 24) >> 24;
-                        break;
+                        continue;
 
                     case 0x01:
                         //lh
@@ -1107,7 +1107,7 @@ function Step(steps, clockspeed) {
                             read16tlb_entry = ((paddr ^ (rs1 + imm|0)) & 0xFFFFF000);
                         }
                         r[(rindex << 2) >> 2] = ((ram16[(ramp + paddr) >> 1]) << 16) >> 16;
-                        break;
+                        continue;
 
                     case 0x02:
                         //lw
@@ -1128,7 +1128,7 @@ function Step(steps, clockspeed) {
                             read32tlb_entry = ((paddr ^ (rs1 + imm|0)) & 0xFFFFF000);
                         }
                         r[(rindex << 2) >> 2] = ram[(ramp + paddr) >> 2]|0;
-                        break;
+                        continue;
 
                     case 0x04:
                         //lbu
@@ -1145,7 +1145,7 @@ function Step(steps, clockspeed) {
                             read8utlb_entry = ((paddr ^ (rs1 + imm|0)) & 0xFFFFF000);
                         }
                         r[(rindex << 2) >> 2] = (ram8[(ramp + paddr) >> 0]) & 0xFF;
-                        break;
+                        continue;
 
                     case 0x05:
                         //lhu
@@ -1162,7 +1162,7 @@ function Step(steps, clockspeed) {
                             read16utlb_entry = ((paddr ^ (rs1 + imm|0)) & 0xFFFFF000);
                         }
                         r[(rindex << 2) >> 2] = (ram16[(ramp + paddr) >> 1]) & 0xFFFF;
-                        break;
+                        continue;
 
                     default:
                         DebugMessage(ERROR_INSTRUCTION_NOT_FOUND|0);
@@ -1170,7 +1170,7 @@ function Step(steps, clockspeed) {
                         break;
 
                 }
-                break;
+                continue;
 
             case 0x23:
                 //sb, sh, sw
@@ -1193,7 +1193,7 @@ function Step(steps, clockspeed) {
                             store8tlb_entry = ((paddr ^ (rs1 + imm|0)) & 0xFFFFF000);
                         }
                         ram8[(ramp + paddr) >> 0] = (r[(rindex << 2) >> 2] & 0xFF); 
-                        break;
+                        continue;
 
                     case 0x01:
                         //sh
@@ -1209,7 +1209,7 @@ function Step(steps, clockspeed) {
                             store16tlb_entry = ((paddr ^ (rs1 + imm|0)) & 0xFFFFF000);
                         }
                         ram16[(ramp + paddr) >> 1] = (r[(rindex << 2) >> 2] & 0xFFFF);
-                        break;
+                        continue;
 
                     case 0x02:
                         //sw
@@ -1229,7 +1229,7 @@ function Step(steps, clockspeed) {
                             store32tlb_entry = ((paddr ^ (rs1 + imm|0)) & 0xFFFFF000);
                         }
                         ram[(ramp + paddr) >> 2] = r[(rindex << 2) >> 2]|0;
-                        break;
+                        continue;
 
                     default:
                         DebugMessage(ERROR_INSTRUCTION_NOT_FOUND|0);
@@ -1237,7 +1237,7 @@ function Step(steps, clockspeed) {
                         break;
 
                 }
-                break;
+                continue;
 
             case 0x13:
                 //addi,slti,sltiu,xori,ori,andi,slli,srli,srai
@@ -1249,7 +1249,7 @@ function Step(steps, clockspeed) {
                         rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
                         rindex = (ins >> 7) & 0x1F;
                         r[(rindex << 2) >> 2] = rs1 + imm;
-                        break;
+                        continue;
 
                     case 0x02:
                         //slti
@@ -1258,7 +1258,7 @@ function Step(steps, clockspeed) {
                         rindex = (ins >> 7) & 0x1F;
                         if((rs1|0) < (imm|0)) r[(rindex << 2) >> 2] = 0x01;
                         else r[(rindex << 2) >> 2] = 0x00;
-                        break;
+                        continue;
 
                     case 0x03:
                         //sltiu
@@ -1267,7 +1267,7 @@ function Step(steps, clockspeed) {
                         rindex = (ins >> 7) & 0x1F;
                         if((rs1 >>> 0) < (imm >>> 0)) r[(rindex << 2) >> 2] = 0x01;
                         else r[(rindex << 2) >> 2] = 0x00;
-                        break;
+                        continue;
 
                     case 0x04:
                         //xori
@@ -1275,7 +1275,7 @@ function Step(steps, clockspeed) {
                         rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
                         rindex = (ins >> 7) & 0x1F;
                         r[(rindex << 2) >> 2] = rs1 ^ imm;
-                        break;
+                        continue;
 
                     case 0x06:
                         //ori
@@ -1283,7 +1283,7 @@ function Step(steps, clockspeed) {
                         rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
                         rindex = (ins >> 7) & 0x1F;
                         r[(rindex << 2) >> 2] = rs1 | imm;
-                        break;
+                        continue;
 
                     case 0x07:
                         //andi
@@ -1291,7 +1291,7 @@ function Step(steps, clockspeed) {
                         rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
                         rindex = (ins >> 7) & 0x1F;
                         r[(rindex << 2) >> 2] = rs1 & imm;
-                        break;
+                        continue;
 
                     case 0x01:
                         //slli
@@ -1299,7 +1299,7 @@ function Step(steps, clockspeed) {
                         rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
                         rindex = (ins >> 7) & 0x1F;
                         r[(rindex << 2) >> 2] = rs1 << imm;
-                        break;
+                        continue;
 
                     case 0x05:
                         if(((ins >> 25) & 0x7F) == 0x00){
@@ -1316,7 +1316,7 @@ function Step(steps, clockspeed) {
                             rindex = (ins >> 7) & 0x1F;
                             r[(rindex << 2) >> 2] = rs1 >> imm;
                         }
-                        break;
+                        continue;
 
                     default:
                         DebugMessage(ERROR_INSTRUCTION_NOT_FOUND|0);
@@ -1324,7 +1324,7 @@ function Step(steps, clockspeed) {
                         break;
 
                 }
-                break;
+                continue;
 
             case 0x33:
                 //add,sub,sll,slt,sltu,xor,srl,sra,or,and
@@ -1339,53 +1339,53 @@ function Step(steps, clockspeed) {
                                 //add
                                 rindex = (ins >> 7) & 0x1F;
                                 r[(rindex << 2) >> 2] = rs1 + rs2;
-                                break;
+                                continue;
 
                             case 0x02:
                                 //slt
                                 rindex = (ins >> 7) & 0x1F;
                                 if((rs1|0) < (rs2|0)) r[(rindex << 2) >> 2] = 0x01;
                                 else r[(rindex << 2) >> 2] = 0x00;
-                                break;
+                                continue;
 
                             case 0x03:
                                 //sltu
                                 rindex = (ins >> 7) & 0x1F;
                                 if((rs1 >>> 0) < (rs2 >>> 0)) r[(rindex << 2) >> 2] = 0x01;
                                 else r[(rindex << 2) >> 2] = 0x00;
-                                break;
+                                continue;
 
                             case 0x07:
                                 //and
                                 rindex = (ins >> 7) & 0x1F;
                                 r[(rindex << 2) >> 2] = rs1 & rs2;
-                                break;
+                                continue;
 
                             case 0x06:
                                 //or
                                 rindex = (ins >> 7) & 0x1F;
                                 r[(rindex << 2) >> 2] = rs1 | rs2;
-                                break;
+                                continue;
 
                             case 0x04:
                                 //xor
                                 rindex = (ins >> 7) & 0x1F;
                                 r[(rindex << 2) >> 2] = rs1 ^ rs2;
-                                break;
+                                continue;
 
                             case 0x01:
                                 //sll
                                 rindex = (ins >> 7) & 0x1F;
                                 r[(rindex << 2) >> 2] = rs1 << (rs2 & 0x1F);
-                                break;
+                                continue;
 
                             case 0x05:
                                 //srl
                                 rindex = (ins >> 7) & 0x1F;
                                 r[(rindex << 2) >> 2] = rs1 >>> (rs2 & 0x1F);
-                                break;
+                                continue;
                         }
-                        break;
+                        continue;
 
                     case 0x20:
                         //sub
@@ -1396,14 +1396,14 @@ function Step(steps, clockspeed) {
                             case 0x00:
                                 //sub
                                 r[(rindex << 2) >> 2] = rs1 - rs2;
-                                break;
+                                continue;
 
                             case 0x05:
                                 //sra
                                 r[(rindex << 2) >> 2] = rs1 >> (rs2 & 0x1F);
-                                break;
+                                continue;
                         }
-                        break;
+                        continue;
 
                     case 0x01:
                         //mul,mulh,mulhsu,mulhu,div,divu,rem,remu
@@ -1415,28 +1415,28 @@ function Step(steps, clockspeed) {
                                 rindex = (ins >> 7) & 0x1F;
                                 mult = mul(rs1|0,rs2|0)|0;
                                 r[(rindex << 2) >> 2] = mult & 0xFFFFFFFF;
-                                break;
+                                continue;
 
                             case 0x01:
                                 //mulh
                                 rindex = (ins >> 7) & 0x1F;
                                 result = UMul(rs1,rs2, 1)|0;
                                 r[(rindex << 2) >> 2] = result;
-                                break;
+                                continue;
 
                             case 0x02:
                                 //mulhsu
                                 rindex = (ins >> 7) & 0x1F;
                                 result = SUMul(rs1,rs2>>>0, 1)|0;
                                 r[(rindex << 2) >> 2] = result;
-                                break;
+                                continue;
 
                             case 0x03:
                                 //mulhu
                                 rindex = (ins >> 7) & 0x1F;
                                 result = IMul(rs1>>>0, rs2>>>0, 1)|0;
                                 r[(rindex << 2) >> 2] = result;
-                                break;
+                                continue;
 
                             case 0x04:
                                 //div
@@ -1446,7 +1446,7 @@ function Step(steps, clockspeed) {
                                 else
                                     quo = ((rs1|0) / (rs2|0))|0;
                                 r[(rindex << 2) >> 2] = quo;
-                                break;
+                                continue;
 
                             case 0x05:
                                 //divu
@@ -1456,7 +1456,7 @@ function Step(steps, clockspeed) {
                                 else
                                     quo = ((rs1 >>> 0) / (rs2 >>> 0))|0;
                                 r[(rindex << 2) >> 2] = quo;
-                                break;
+                                continue;
 
                             case 0x06:
                                 //rem
@@ -1466,7 +1466,7 @@ function Step(steps, clockspeed) {
                                 else
                                     rem = ((rs1|0) % (rs2|0))|0;
                                 r[(rindex << 2) >> 2] = rem;
-                                break;
+                                continue;
 
                             case 0x07:
                                 //remu
@@ -1476,9 +1476,9 @@ function Step(steps, clockspeed) {
                                 else
                                     rem = ((rs1 >>> 0) % (rs2 >>> 0))|0;
                                 r[(rindex << 2) >> 2] = rem;
-                                break;
+                                continue;
                         }
-                        break;
+                        continue;
 
                     default:
                         DebugMessage(ERROR_INSTRUCTION_NOT_FOUND|0);
@@ -1486,13 +1486,13 @@ function Step(steps, clockspeed) {
                         break;
 
                 }
-                break;
+                continue;
 
             case 0x37:
                 //lui
                 rindex = (ins >> 7) & 0x1F;
                 r[(rindex << 2) >> 2] = (ins & 0xFFFFF000);
-                break;
+                continue;
 
             case 0x17:
                 //auipc
@@ -1502,7 +1502,7 @@ function Step(steps, clockspeed) {
                 r[(rindex << 2) >> 2] = (imm + pc - 4)|0;
                 fence = ppc;
                 pc_change = 1;
-                break;
+                continue;
 
             case 0x6F:
                 //jal
@@ -1518,7 +1518,7 @@ function Step(steps, clockspeed) {
                 fence = ppc;
                 pc_change = 1;
                 r[0] = 0;
-                break; 
+                continue; 
 
             case 0x67:
                 //jalr
@@ -1531,7 +1531,7 @@ function Step(steps, clockspeed) {
                 fence = ppc;
                 pc_change = 1;
                 r[0] = 0;
-                break;
+                continue;
 
             case 0x63:
                 //beq, bne, blt, bge, bltu, bgeu
@@ -1552,7 +1552,7 @@ function Step(steps, clockspeed) {
                             imm =  ((imm1 | imm2 | imm3 | imm4) << 1 );
                             pc = pc + imm - 4|0;//-4 temporary hack
                         }
-                        break;
+                        continue;
 
                     case 0x01:
                         //bne
@@ -1564,7 +1564,7 @@ function Step(steps, clockspeed) {
                             imm =  ((imm1 | imm2 | imm3 | imm4) << 1 );
                             pc = pc + imm - 4|0;//-4 temporary hack
                         }
-                        break;
+                        continue;
 
                     case 0x04:
                         //blt
@@ -1576,7 +1576,7 @@ function Step(steps, clockspeed) {
                             imm =  ((imm1 | imm2 | imm3 | imm4) << 1 );
                             pc = pc + imm - 4|0;//-4 temporary hack
                         }
-                        break;
+                        continue;
 
                     case 0x05:
                         //bge
@@ -1588,7 +1588,7 @@ function Step(steps, clockspeed) {
                             imm =  ((imm1 | imm2 | imm3 | imm4) << 1 );
                             pc = pc + imm - 4|0;//-4 temporary hack
                         }
-                        break;
+                        continue;
 
                     case 0x06:
                         //bltu
@@ -1600,7 +1600,7 @@ function Step(steps, clockspeed) {
                             imm =  ((imm1 | imm2 | imm3 | imm4) << 1 );
                             pc = pc + imm - 4|0;//-4 temporary hack
                         }
-                        break;
+                        continue;
 
                     case 0x07:
                         //bgeu
@@ -1612,7 +1612,7 @@ function Step(steps, clockspeed) {
                             imm =  ((imm1 | imm2 | imm3 | imm4) << 1 );
                             pc = pc + imm - 4|0;//-4 temporary hack
                         }
-                        break;
+                        continue;
 
                     default:
                         DebugMessage(ERROR_INSTRUCTION_NOT_FOUND|0);
@@ -1620,7 +1620,7 @@ function Step(steps, clockspeed) {
                         break;
 
                 }
-                break;
+                continue;
 
             case 0x73:
                 //csrrw, csrrs, csrrc, csrrwi, csrrsi, csrrci, ecall, eret, ebreak, mrts, wfi
@@ -1812,7 +1812,7 @@ function Step(steps, clockspeed) {
                         r[0] = ram[(ramp + paddr) >> 2]|0;
                         f[(fp + (findex << 3)) >> 3] = +ff[0];
                         r[0] = 0;
-                        break;
+                        continue;
 
                     case 0x03:
                         //fld
@@ -1830,7 +1830,7 @@ function Step(steps, clockspeed) {
                         }
                         fi[(fip + ((findex + 0) << 2)) >> 2] = ram[(ramp + paddr + 0) >> 2]|0;
                         fi[(fip + ((findex + 1) << 2)) >> 2] = ram[(ramp + paddr + 4) >> 2]|0;
-                        break;
+                        continue;
 
                     default:
                         DebugMessage(ERROR_INSTRUCTION_NOT_FOUND|0);
@@ -1839,7 +1839,7 @@ function Step(steps, clockspeed) {
                         break;
 
                 }
-                break;
+                continue;
 
             case 0x27:
                 //fsw, fsd
@@ -1864,7 +1864,7 @@ function Step(steps, clockspeed) {
                         }
                         ram[(ramp + paddr) >> 2] = r[0]|0;
                         r[0] = 0;
-                        break;
+                        continue;
 
                     case 0x03:
                         //fsd
@@ -1884,7 +1884,7 @@ function Step(steps, clockspeed) {
                         }
                         ram[(ramp + paddr + 0) >> 2] = fi[(fip + ((findex + 0) << 2)) >> 2]|0;
                         ram[(ramp + paddr + 4) >> 2] = fi[(fip + ((findex + 1) << 2)) >> 2]|0; 
-                        break;
+                        continue;
 
                     default:
                         DebugMessage(ERROR_INSTRUCTION_NOT_FOUND|0);
@@ -1893,7 +1893,7 @@ function Step(steps, clockspeed) {
                         break;
 
                 }
-                break;
+                continue;
 
             case 0x53:
                 //fadd.s, fsub.s
@@ -1905,7 +1905,7 @@ function Step(steps, clockspeed) {
                         fs2 = (+f[(fp + (((ins >> 20) & 0x1F) << 3)) >> 3]);
                         rindex = (ins >> 7) & 0x1F;
                         f[(fp + (rindex << 3)) >> 3] = fs1 + fs2;
-                        break;
+                        continue;
 
                     case 0x04: //fsub.s 
                     case 0x05: //fsub.d
@@ -1913,7 +1913,7 @@ function Step(steps, clockspeed) {
                         fs2 = (+f[(fp + (((ins >> 20) & 0x1F) << 3)) >> 3]);
                         rindex = (ins >> 7) & 0x1F;
                         f[(fp + (rindex << 3)) >> 3] = fs1 - fs2;
-                        break;
+                        continue;
 
                     case 0x50:
                     case 0x51:
@@ -1926,19 +1926,19 @@ function Step(steps, clockspeed) {
                                 //fle
                                 if((+fs1) <= (+fs2)) r[(rindex << 2) >> 2] = 1;
                                 else r[(rindex << 2) >> 2] = 0;
-                                break;
+                                continue;
 
                             case 0x1:
                                 //flt
                                 if((+fs1) < (+fs2)) r[(rindex << 2) >> 2] = 1;
                                 else r[(rindex << 2) >> 2] = 0;
-                                break;
+                                continue;
 
                             case 0x2:
                                 //fle
                                 if((+fs1) == (+fs2)) r[(rindex << 2) >> 2] = 1;
                                 else r[(rindex << 2) >> 2] = 0;
-                                break;
+                                continue;
 
                             default:
                                 DebugMessage(ERROR_INSTRUCTION_NOT_FOUND|0);
@@ -1946,20 +1946,20 @@ function Step(steps, clockspeed) {
                                 abort();
                                 break;
                         }
-                        break;
+                        continue;
 
                     case 0x60:
                         //fcvt.w.s
                         rindex = (ins >> 7) & 0x1F;
                         r[(rindex << 2) >> 2] = (~~+f[(fp + (((ins >> 15) & 0x1F) << 3)) >> 3]);
-                        break;
+                        continue;
 
                     case 0x68: //fcvt.s.w
                     case 0x69:
                         //fcvt.d.w
                         rindex = (ins >> 7) & 0x1F;
                         f[(fp + (rindex << 3)) >> 3] = (+~~r[(((ins >> 15) & 0x1F) << 2) >> 2]);
-                        break;
+                        continue;
 
                     case 0x08: //fmul.s
                     case 0x09: //fmul.d
@@ -1967,7 +1967,7 @@ function Step(steps, clockspeed) {
                         fs2 = (+f[(fp + (((ins >> 20) & 0x1F) << 3)) >> 3]);
                         rindex = (ins >> 7) & 0x1F;
                         f[(fp + (rindex << 3)) >> 3] = (+mul(fs1,fs2));
-                        break;
+                        continue;
  
                     case 0x10: // single precision
                     case 0x11: // double precision
@@ -1979,30 +1979,30 @@ function Step(steps, clockspeed) {
                             case 0:
                                 //fsgnj.d, also used for fmv.d
                                 f[(fp + (rindex << 3)) >> 3] = ((+fs2)<0.0)?-MathAbs(fs1):MathAbs(fs1);
-                                break;
+                                continue;
  
                             case 1:
                                 //fsgnjn.d
                                 f[(fp + (rindex << 3)) >> 3] = ((+fs2)<0.0)?MathAbs(fs1):-MathAbs(fs1);
-                                break;
+                                continue;
  
                             case 3:
                                 //fsgnjx.d
                                 f[(fp + (rindex << 3)) >> 3] = (((+fs2)<0.0 & (+fs1)<0.0) | ((+fs2)>0.0 & (+fs1)>0.0))?-MathAbs(fs1):MathAbs(fs1);
-                                break;
+                                continue;
  
                             default:
                                 DebugMessage(ERROR_INSTRUCTION_NOT_FOUND|0);
                                 DebugMessage(ins|0);
                                 abort();
                         }
-                        break;
+                        continue;
 
                     case 0x61:
                         //fcvt.w.d
                         rindex = (ins >> 7) & 0x1F;
                         r[(rindex << 2) >> 2] = (~~+f[(fp + (((ins >> 15) & 0x1F) << 3)) >> 3]);
-                        break;
+                        continue;
 
                     case 0x78:
                         //fmv.s.x
@@ -2011,7 +2011,7 @@ function Step(steps, clockspeed) {
                         findex = (ins >> 7) & 0x1F;
                         f[(fp + (rindex << 3)) >> 3] = ff[0];
                         r[0] = 0;
-                        break;
+                        continue;
 
 
                     default:
@@ -2020,7 +2020,7 @@ function Step(steps, clockspeed) {
                         abort();
                         break;
                 }
-                break;
+                continue;
 
             case 0x43:
                 //fmadd.d,fmadd.s
@@ -2029,7 +2029,7 @@ function Step(steps, clockspeed) {
                 fs3 = (+f[(fp + (((ins >> 27) & 0x1F) << 3)) >> 3]);
                 rindex = (ins >> 7) & 0x1F;
                 f[(fp + (rindex << 3)) >> 3] = fs1 * fs2 + fs3;
-                break;
+                continue;
  
             case 0x47:
                 //fmsub.d,fmsub.s
@@ -2038,7 +2038,7 @@ function Step(steps, clockspeed) {
                 fs3 = (+f[(fp + (((ins >> 27) & 0x1F) << 3)) >> 3]);
                 rindex = (ins >> 7) & 0x1F;
                 f[(fp + (rindex << 3)) >> 3] = fs1 * fs2 - fs3;
-                break;
+                continue;
  
             case 0x4B:
                 //fnmadd.d,fnmadd.s
@@ -2047,7 +2047,7 @@ function Step(steps, clockspeed) {
                 fs3 = (+f[(fp + (((ins >> 27) & 0x1F) << 3)) >> 3]);
                 rindex = (ins >> 7) & 0x1F;
                 f[(fp + (rindex << 3)) >> 3] = -(fs1 * fs2 + fs3);
-                break;
+                continue;
  
             case 0x4F:
                 //fnmsub.d,fnmsub.s
@@ -2056,7 +2056,7 @@ function Step(steps, clockspeed) {
                 fs3 = (+f[(fp + (((ins >> 27) & 0x1F) << 3)) >> 3]);
                 rindex = (ins >> 7) & 0x1F;
                 f[(fp + (rindex << 3)) >> 3] = -(fs1 * fs2 - fs3);
-                break;
+                continue;
 
             case 0x2F:
                 //amoswap, amoadd, amoxor, amoand, amoor, amomin, amomax, amominu, amomaxu
@@ -2204,7 +2204,7 @@ function Step(steps, clockspeed) {
 
             case 0x0F:
                 //fence
-                break;
+                continue;
 
             default:
                 DebugMessage(ERROR_INSTRUCTION_NOT_FOUND|0);
