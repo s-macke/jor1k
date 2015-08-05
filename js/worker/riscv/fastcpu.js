@@ -1013,6 +1013,13 @@ function Step(steps, clockspeed) {
             steps = steps - (ppc-ppcorigin)|0;
             if((steps|0) < 0) return 0;
 
+            delta = (csr[(csrp + CSR_MTIMECMP)>>2]|0) - ticks | 0;
+            delta = delta + ((delta|0)<0?0xFFFFFFFF:0x0) | 0;
+            ticks = ticks +  ((ppc-ppcorigin) >> 2)| 0;
+            if ((delta|0) < ((ppc-ppcorigin) >> 2)) {
+                csr[(csrp + CSR_MIP)>>2] = csr[(csrp + CSR_MIP)>>2] | 0x20;
+            }
+
             if(!((instlb_index ^ pc) & 0xFFFFF000)) ppc = (instlb_entry ^ pc);
             else {
                 ppc = TranslateVM(pc,VM_FETCH)|0;
@@ -1031,13 +1038,6 @@ function Step(steps, clockspeed) {
             pc_change = 0;
 
             current_privilege_level = (csr[(csrp + CSR_MSTATUS)>>2] & 0x06) >> 1;
-
-            delta = (csr[(csrp + CSR_MTIMECMP)>>2]|0) - ticks | 0;
-            delta = delta + ((delta|0)<0?0xFFFFFFFF:0x0) | 0;
-            ticks = ticks +  (clockspeed)| 0;
-            if ((delta|0) < (clockspeed|0)) {
-                csr[(csrp + CSR_MIP)>>2] = csr[(csrp + CSR_MIP)>>2] | 0x20;
-            }
 
             interrupts = csr[(csrp + CSR_MIE)>>2] & csr[(csrp + CSR_MIP)>>2];
             ie = csr[(csrp + CSR_MSTATUS)>>2] & 0x01;
