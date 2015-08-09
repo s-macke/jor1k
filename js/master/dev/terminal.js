@@ -19,7 +19,7 @@ var Colors = new Array(
     "#000000", "#770000", "#007700", "#777700",
     "#000077", "#770077", "#007777", "#777777"
 );
-
+var userScroll = 0;
 
 // constructor
 function Terminal(nrows, ncolumns, elemId) {
@@ -58,6 +58,7 @@ function Terminal(nrows, ncolumns, elemId) {
 
     this.pauseblink = false;
     this.OnCharReceived = function (){};
+    this.Table.onwheel = function(){ userScroll = 1; };
 
     this.framerequested = false;
     this.timeout = 30; // the time in ms when the next frame is drawn
@@ -233,8 +234,8 @@ Terminal.prototype.UpdateRowTable = function(row) {
 };
 
 Terminal.prototype.UpdateScreen = function() {
-    var nupdated = 0;
-    for (var i = 0; i < this.nrows; i++) {
+    var nupdated = 0,i = 0;
+    for (i = 0; i < this.nrows; i++) {
         if (!this.updaterow[i]) continue;
         if (this.canvas) {
             this.UpdateRowCanvas(i);
@@ -250,6 +251,8 @@ Terminal.prototype.UpdateScreen = function() {
     } else {
         this.timeout = 30;
     }
+    var elem = document.getElementById('terminal-div');
+    if(userScroll != 1) elem.scrollTop = this.cursory*12;
 }
 
 Terminal.prototype.PrepareUpdateRow = function(row) {
@@ -669,6 +672,7 @@ Terminal.prototype.HandleEscapeSequence = function() {
 
 Terminal.prototype.PutChar = function(c) {
     var i = 0;
+    userScroll = 0;
     //message.Debug("Char:" + c + " " +  String.fromCharCode(c));
     // escape sequence (CS)
     if (this.escapetype == 2) {
