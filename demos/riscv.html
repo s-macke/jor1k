@@ -29,8 +29,10 @@ Restart with new binary image:
 <span id="stats"></span>
 <br>
 
+<div style="overflow: auto;height: 400px; width: 600px;" id="terminal-div">
 <table id="tty" class="terminal">
 </table>
+</div>
 
 <script src="../bin/jor1k-master-min.js"></script>
 
@@ -193,7 +195,7 @@ var jor1kgui = new Jor1k(
         system: {
             kernelURL: "riscv/" + tests[1],
             arch: "riscv",
-            cpu: "safe",
+            cpu: "asm",
             memorysize: 32,
         }
     }
@@ -226,8 +228,6 @@ function OnNewImage(files)
     }.bind(this);
     reader.readAsArrayBuffer(files[0]);
 }
-
-
 
 </script>
 

@@ -5,7 +5,7 @@ function LinuxTerm(termElementId) {
 }
 
 LinuxTerm.prototype.Init = function(jor1kGUI, tty) {
-    this.term = new Terminal(24, 80, this.termElementId);
+    this.term = new Terminal(90, 80, this.termElementId);
     jor1kGUI.message.Register(tty, function(d) {
        d.forEach(function(c) {
            this.term.PutChar(c&0xFF);
