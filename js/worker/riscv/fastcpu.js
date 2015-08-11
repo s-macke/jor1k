@@ -1007,73 +1007,7 @@ function Step(steps, clockspeed) {
     
     for(;;) {
  
-        if((fence|0) == (ppc|0)) {
-
-            if(!(pc_change|0)) pc = pcorigin + (ppc-ppcorigin)|0;
-
-            dsteps = dsteps - ((ppc-ppcorigin) >> 2)|0;
-            if ((dsteps|0) < 0) {
-
-                dsteps = dsteps + 64|0;
-                steps =  steps - 64|0;
-
-                if((steps|0) < 0) return 0;
-
-                delta = (csr[(csrp + CSR_MTIMECMP)>>2]|0) - ticks | 0;
-                delta = delta + ((delta|0)<0?0xFFFFFFFF:0x0) | 0;
-                ticks = ticks + clockspeed| 0;
-                if ((delta|0) < (clockspeed|0)) {
-                    csr[(csrp + CSR_MIP)>>2] = csr[(csrp + CSR_MIP)>>2] | 0x20;
-                }
-
-                // check for interrupts
-                current_privilege_level = (csr[(csrp + CSR_MSTATUS)>>2] & 0x06) >> 1;
-
-                interrupts = csr[(csrp + CSR_MIE)>>2] & csr[(csrp + CSR_MIP)>>2];
-                ie = csr[(csrp + CSR_MSTATUS)>>2] & 0x01;
-
-                if (((current_privilege_level|0) < 3) | (((current_privilege_level|0) == 3) & (ie|0))) {
-                    if (((interrupts|0) & 0x8)) {
-                        Trap(CAUSE_SOFTWARE_INTERRUPT, pc);
-                        continue;
-                    } else
-                    if (queue_status|0) {
-                        Trap(CAUSE_HOST_INTERRUPT, pc);
-                        queue_status = 0;
-                        continue;
-                    }
-                }
-                if (((current_privilege_level|0) < 1) | (((current_privilege_level|0) == 1) & (ie|0))) {
-                    if (((interrupts|0) & 0x2)) {
-                        Trap(CAUSE_SOFTWARE_INTERRUPT, pc);
-                        continue;
-                    } else
-                    if (((interrupts|0) & 0x20)) {
-                         Trap(CAUSE_TIMER_INTERRUPT, pc);
-                         continue;
-                    }
-                }
-            } // dsteps
-
-
-            // get new instruction pointer
-            if ((instlb_index ^ pc) & 0xFFFFF000) {
-                ppc = TranslateVM(pc,VM_FETCH)|0;
-                if((ppc|0) == -1) {
-                    ppc = fence;
-                    continue;
-                }
-                instlb_index = pc;
-                instlb_entry = ((ppc ^ pc) & 0xFFFFF000);
-            }
-
-            ppc = ramp + (instlb_entry ^ pc)| 0;
-            ppcorigin = ppc;
-            pcorigin = pc;
-            fence  = ((ppc >> 12) + 1) << 12; // next page
-            pc_change = 0;
-
-        } // end of fence
+    if ((fence|0) != (ppc|0)) {
 
         ins = ram[ppc >> 2]|0;
         ppc = ppc + 4|0;
@@ -2228,9 +2162,77 @@ function Step(steps, clockspeed) {
                 DebugMessage(ins|0);
                 abort();
                 break;
-        }
+        } // end of switch
 
-    }
+    } else // fence
+    {
+
+            if(!(pc_change|0)) pc = pcorigin + (ppc-ppcorigin)|0;
+
+            dsteps = dsteps - ((ppc-ppcorigin) >> 2)|0;
+            if ((dsteps|0) < 0) {
+
+                dsteps = dsteps + 64|0;
+                steps =  steps - 64|0;
+
+                if((steps|0) < 0) return 0;
+
+                delta = (csr[(csrp + CSR_MTIMECMP)>>2]|0) - ticks | 0;
+                delta = delta + ((delta|0)<0?0xFFFFFFFF:0x0) | 0;
+                ticks = ticks + clockspeed| 0;
+                if ((delta|0) < (clockspeed|0)) {
+                    csr[(csrp + CSR_MIP)>>2] = csr[(csrp + CSR_MIP)>>2] | 0x20;
+                }
+
+                // check for interrupts
+                current_privilege_level = (csr[(csrp + CSR_MSTATUS)>>2] & 0x06) >> 1;
+
+                interrupts = csr[(csrp + CSR_MIE)>>2] & csr[(csrp + CSR_MIP)>>2];
+                ie = csr[(csrp + CSR_MSTATUS)>>2] & 0x01;
+
+                if (((current_privilege_level|0) < 3) | (((current_privilege_level|0) == 3) & (ie|0))) {
+                    if (((interrupts|0) & 0x8)) {
+                        Trap(CAUSE_SOFTWARE_INTERRUPT, pc);
+                        continue;
+                    } else
+                    if (queue_status|0) {
+                        Trap(CAUSE_HOST_INTERRUPT, pc);
+                        queue_status = 0;
+                        continue;
+                    }
+                }
+                if (((current_privilege_level|0) < 1) | (((current_privilege_level|0) == 1) & (ie|0))) {
+                    if (((interrupts|0) & 0x2)) {
+                        Trap(CAUSE_SOFTWARE_INTERRUPT, pc);
+                        continue;
+                    } else
+                    if (((interrupts|0) & 0x20)) {
+                         Trap(CAUSE_TIMER_INTERRUPT, pc);
+                         continue;
+                    }
+                }
+            } // dsteps
+
+            // get new instruction pointer
+            if ((instlb_index ^ pc) & 0xFFFFF000) {
+                ppc = TranslateVM(pc,VM_FETCH)|0;
+                if((ppc|0) == -1) {
+                    ppc = fence;
+                    continue;
+                }
+                instlb_index = pc;
+                instlb_entry = ((ppc ^ pc) & 0xFFFFF000);
+            }
+
+            ppc = ramp + (instlb_entry ^ pc)| 0;
+            ppcorigin = ppc;
+            pcorigin = pc;
+            fence  = ((ppc >> 12) + 1) << 12; // next page
+            pc_change = 0;
+
+        } // end of fence
+
+    } // main loop
 
     return 0;
 };
