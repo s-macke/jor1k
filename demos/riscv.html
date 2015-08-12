@@ -1,40 +1,71 @@
 <!doctype html>
+<head>
 
-<style>
+    <title>RISC-V Emulator</title>
+    <link href="./bootstrap/css/bootstrap.min.css" rel="stylesheet">
+    <link href='http://fonts.googleapis.com/css?family=Raleway:400,300,700' rel='stylesheet' type='text/css'>
 
-.terminal {
-border: 0px solid black;
-font-family: courier,fixed,swiss,monospace,sans-serif;
-font-size: 12px;
-color: #bbbbbb;
-background: #000000;
-border-collapse: collapse
-}
+    <style>
 
-</style>
+    .terminal {
+    border: 0px solid black;
+    font-family: courier,fixed,swiss,monospace,sans-serif;
+    font-size: 12px;
+    color: #bbbbbb;
+    background: #000000;
+    border-collapse: collapse
+    }
 
+    </style>
+</head>
 
+<body>
+     <!-- Fixed navbar -->
+    <nav class="navbar navbar-default navbar-fixed-top" role="navigation"   >
+      <div class="container" >
+        <div class="navbar-header">
+        <img class="mainlogo" src="images/riscv_logo.png" height="38px" style="margin-top: 5px; padding-top: 5px;"/>
+        </div>
+      </div>
+    </nav>
 
-<h1>riscv simple demo</h1>
-
-<select id="myselect" onchange="OnSelectChange(this)">
-</select> 
-<br>
-<label>
-Restart with new binary image:
-<img src="images/upload.png" width="20px" height="20px" title="Restart with new binary image" />
-<input type="file" id="files" style="visibility:hidden;width:0; height:0;" name="files[]" onchange='OnNewImage(this.files)' />
-</label>
-<br>
-<span id="stats"></span>
-<br>
-
-<div style="overflow: auto;height: 400px; width: 600px;" id="terminal-div">
-<table id="tty" class="terminal">
-</table>
-</div>
+    <div class="container" style="margin-top: 40px;">
+        <div class="col-sm-12">
+            <div class="text-center">
+                <h1 style="font-family:'Raleway';">RISC-V Simple Demo</h1>
+            </div>
+            <div class="row" style="margin-top:5px">
+                <div class="col-sm-2">
+                    <select id="myselect" onchange="OnSelectChange(this)" class="form-control">
+                    </select> 
+                </div>
+            </div>
+            <div class="row" style="margin-top:10px">
+                <div class="col-sm-6">
+                    <label>
+                    Restart with new binary image:
+                    <img src="images/upload.png" width="20px" height="20px" title="Restart with new binary image" />
+                    <input type="file" id="files" style="visibility:hidden;width:0; height:0;" name="files[]" onchange='OnNewImage(this.files)' />
+                    </label>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-sm-6">
+                    <span id="stats" class="label label-success"></span>
+                </div>
+            </div>
+            <div class="row" style="margin-top:5px">
+                <div class="col-sm-12">
+                    <table id="tty" class="terminal">
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
 
 <script src="../bin/jor1k-master-min.js"></script>
+<script src="./bootstrap/js/bootstrap.min.js"></script>
 
 <script>
 
