@@ -1025,7 +1025,7 @@ function Step(steps, clockspeed) {
                             read8tlb_index = paddr;
                             read8tlb_entry = ((paddr ^ (rs1 + imm|0)) & 0xFFFFF000);
                         }
-                        r[(((ins >> 7) & 0x1F) << 2) >> 2] = ((ram8[(ramp + paddr) >> 0]) << 24) >> 24;
+                        r[((ins >> 5) & 0x7C) >> 2] = ((ram8[(ramp + paddr) >> 0]) << 24) >> 24;
                         continue;
 
                     case 0x01:
@@ -1041,7 +1041,7 @@ function Step(steps, clockspeed) {
                             read16tlb_index = paddr;
                             read16tlb_entry = ((paddr ^ (rs1 + imm|0)) & 0xFFFFF000);
                         }
-                        r[(((ins >> 7) & 0x1F) << 2) >> 2] = ((ram16[(ramp + paddr) >> 1]) << 16) >> 16;
+                        r[((ins >> 5) & 0x7C) >> 2] = ((ram16[(ramp + paddr) >> 1]) << 16) >> 16;
                         continue;
 
                     case 0x02:
@@ -1061,7 +1061,7 @@ function Step(steps, clockspeed) {
                             read32tlb_index = paddr;
                             read32tlb_entry = ((paddr ^ (rs1 + imm|0)) & 0xFFFFF000);
                         }
-                        r[(((ins >> 7) & 0x1F) << 2) >> 2] = ram[(ramp + paddr) >> 2]|0;
+                        r[((ins >> 5) & 0x7C) >> 2] = ram[(ramp + paddr) >> 2]|0;
                         continue;
 
                     case 0x04:
@@ -1077,7 +1077,7 @@ function Step(steps, clockspeed) {
                             read8utlb_index = paddr;
                             read8utlb_entry = ((paddr ^ (rs1 + imm|0)) & 0xFFFFF000);
                         }
-                        r[(((ins >> 7) & 0x1F) << 2) >> 2] = (ram8[(ramp + paddr) >> 0]) & 0xFF;
+                        r[((ins >> 5) & 0x7C) >> 2] = (ram8[(ramp + paddr) >> 0]) & 0xFF;
                         continue;
 
                     case 0x05:
@@ -1093,7 +1093,7 @@ function Step(steps, clockspeed) {
                             read16utlb_index = paddr;
                             read16utlb_entry = ((paddr ^ (rs1 + imm|0)) & 0xFFFFF000);
                         }
-                        r[(((ins >> 7) & 0x1F) << 2) >> 2] = (ram16[(ramp + paddr) >> 1]) & 0xFFFF;
+                        r[((ins >> 5) & 0x7C) >> 2] = (ram16[(ramp + paddr) >> 1]) & 0xFFFF;
                         continue;
 
                     default:
@@ -1121,7 +1121,7 @@ function Step(steps, clockspeed) {
                             store8tlb_index = paddr;
                             store8tlb_entry = ((paddr ^ (rs1 + imm|0)) & 0xFFFFF000);
                         }
-                        ram8[(ramp + paddr) >> 0] = (r[(((ins >> 20) & 0x1F) << 2) >> 2] & 0xFF); 
+                        ram8[(ramp + paddr) >> 0] = (r[((ins >> 18) & 0x7C) >> 2] & 0xFF); 
                         continue;
 
                     case 0x01:
@@ -1136,7 +1136,7 @@ function Step(steps, clockspeed) {
                             store16tlb_index = paddr;
                             store16tlb_entry = ((paddr ^ (rs1 + imm|0)) & 0xFFFFF000);
                         }
-                        ram16[(ramp + paddr) >> 1] = (r[(((ins >> 20) & 0x1F) << 2) >> 2] & 0xFFFF);
+                        ram16[(ramp + paddr) >> 1] = (r[((ins >> 18) & 0x7C) >> 2] & 0xFFFF);
                         continue;
 
                     case 0x02:
@@ -1155,7 +1155,7 @@ function Step(steps, clockspeed) {
                             store32tlb_index = paddr;
                             store32tlb_entry = ((paddr ^ (rs1 + imm|0)) & 0xFFFFF000);
                         }
-                        ram[(ramp + paddr) >> 2] = r[(((ins >> 20) & 0x1F) << 2) >> 2]|0;
+                        ram[(ramp + paddr) >> 2] = r[((ins >> 18) & 0x7C) >> 2]|0;
                         continue;
 
                     default:
@@ -1173,58 +1173,58 @@ function Step(steps, clockspeed) {
                     case 0x00:
                         //addi
                         rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
-                        r[(((ins >> 7) & 0x1F) << 2) >> 2] = rs1 + (ins >> 20)|0;
+                        r[((ins >> 5) & 0x7C) >> 2] = rs1 + (ins >> 20)|0;
                         continue;
 
                     case 0x02:
                         //slti
                         rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
-                        if((rs1|0) < (ins >> 20)) r[(((ins >> 7) & 0x1F) << 2) >> 2] = 0x01;
-                        else r[(((ins >> 7) & 0x1F) << 2) >> 2] = 0x00;
+                        if((rs1|0) < (ins >> 20)) r[((ins >> 5) & 0x7C) >> 2] = 0x01;
+                        else r[((ins >> 5) & 0x7C) >> 2] = 0x00;
                         continue;
 
                     case 0x03:
                         //sltiu
                         rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
-                        if((rs1 >>> 0) < ((ins >> 20) >>> 0)) r[(((ins >> 7) & 0x1F) << 2) >> 2] = 0x01;
-                        else r[(((ins >> 7) & 0x1F) << 2) >> 2] = 0x00;
+                        if((rs1 >>> 0) < ((ins >> 20) >>> 0)) r[((ins >> 5) & 0x7C) >> 2] = 0x01;
+                        else r[((ins >> 5) & 0x7C) >> 2] = 0x00;
                         continue;
 
                     case 0x04:
                         //xori
                         imm = (ins >> 20);
                         rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
-                        r[(((ins >> 7) & 0x1F) << 2) >> 2] = rs1 ^ (ins >> 20);
+                        r[((ins >> 5) & 0x7C) >> 2] = rs1 ^ (ins >> 20);
                         continue;
 
                     case 0x06:
                         //ori
                         rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
-                        r[(((ins >> 7) & 0x1F) << 2) >> 2] = rs1 | (ins >> 20);
+                        r[((ins >> 5) & 0x7C) >> 2] = rs1 | (ins >> 20);
                         continue;
 
                     case 0x07:
                         //andi
                         rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
-                        r[(((ins >> 7) & 0x1F) << 2) >> 2] = rs1 & (ins >> 20);
+                        r[((ins >> 5) & 0x7C) >> 2] = rs1 & (ins >> 20);
                         continue;
 
                     case 0x01:
                         //slli
                         rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
-                        r[(((ins >> 7) & 0x1F) << 2) >> 2] = rs1 << ((ins >> 20) & 0x1F);
+                        r[((ins >> 5) & 0x7C) >> 2] = rs1 << ((ins >> 20) & 0x1F);
                         continue;
 
                     case 0x05:
                         if(((ins >> 25) & 0x7F) == 0x00){
                             //srli
                             rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
-                            r[(((ins >> 7) & 0x1F) << 2) >> 2] = rs1 >>> ((ins >> 20) & 0x1F);
+                            r[((ins >> 5) & 0x7C) >> 2] = rs1 >>> ((ins >> 20) & 0x1F);
                         }
                         else if(((ins >> 25) & 0x7F) == 0x20){
                             //srai
                             rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
-                            r[(((ins >> 7) & 0x1F) << 2) >> 2] = rs1 >> ((ins >> 20) & 0x1F);
+                            r[((ins >> 5) & 0x7C) >> 2] = rs1 >> ((ins >> 20) & 0x1F);
                         }
                         continue;
 
@@ -1243,48 +1243,48 @@ function Step(steps, clockspeed) {
                     case 0x00:
                         //add,slt,sltu,add,or,xor,sll,srl
                         rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
-                        rs2 = r[(((ins >> 20) & 0x1F) << 2) >> 2]|0;
+                        rs2 = r[((ins >> 18) & 0x7C) >> 2]|0;
                         switch((ins >> 12)&0x7) {
                             case 0x00:
                                 //add
-                                r[(((ins >> 7) & 0x1F) << 2) >> 2] = rs1 + rs2;
+                                r[((ins >> 5) & 0x7C) >> 2] = rs1 + rs2;
                                 continue;
 
                             case 0x02:
                                 //slt
-                                if((rs1|0) < (rs2|0)) r[(((ins >> 7) & 0x1F) << 2) >> 2] = 0x01;
-                                else r[(((ins >> 7) & 0x1F) << 2) >> 2] = 0x00;
+                                if((rs1|0) < (rs2|0)) r[((ins >> 5) & 0x7C) >> 2] = 0x01;
+                                else r[((ins >> 5) & 0x7C) >> 2] = 0x00;
                                 continue;
 
                             case 0x03:
                                 //sltu
-                                if((rs1 >>> 0) < (rs2 >>> 0)) r[(((ins >> 7) & 0x1F) << 2) >> 2] = 0x01;
-                                else r[(((ins >> 7) & 0x1F) << 2) >> 2] = 0x00;
+                                if((rs1 >>> 0) < (rs2 >>> 0)) r[((ins >> 5) & 0x7C) >> 2] = 0x01;
+                                else r[((ins >> 5) & 0x7C) >> 2] = 0x00;
                                 continue;
 
                             case 0x07:
                                 //and
-                                r[(((ins >> 7) & 0x1F) << 2) >> 2] = rs1 & rs2;
+                                r[((ins >> 5) & 0x7C) >> 2] = rs1 & rs2;
                                 continue;
 
                             case 0x06:
                                 //or
-                                r[(((ins >> 7) & 0x1F) << 2) >> 2] = rs1 | rs2;
+                                r[((ins >> 5) & 0x7C) >> 2] = rs1 | rs2;
                                 continue;
 
                             case 0x04:
                                 //xor
-                                r[(((ins >> 7) & 0x1F) << 2) >> 2] = rs1 ^ rs2;
+                                r[((ins >> 5) & 0x7C) >> 2] = rs1 ^ rs2;
                                 continue;
 
                             case 0x01:
                                 //sll
-                                r[(((ins >> 7) & 0x1F) << 2) >> 2] = rs1 << (rs2 & 0x1F);
+                                r[((ins >> 5) & 0x7C) >> 2] = rs1 << (rs2 & 0x1F);
                                 continue;
 
                             case 0x05:
                                 //srl
-                                r[(((ins >> 7) & 0x1F) << 2) >> 2] = rs1 >>> (rs2 & 0x1F);
+                                r[((ins >> 5) & 0x7C) >> 2] = rs1 >>> (rs2 & 0x1F);
                                 continue;
                         }
                         continue;
@@ -1292,16 +1292,16 @@ function Step(steps, clockspeed) {
                     case 0x20:
                         //sub, sra
                         rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
-                        rs2 = r[(((ins >> 20) & 0x1F) << 2) >> 2]|0;
+                        rs2 = r[((ins >> 18) & 0x7C) >> 2]|0;
                         switch((ins >> 12)&0x7) {
                             case 0x00:
                                 //sub
-                                r[(((ins >> 7) & 0x1F) << 2) >> 2] = rs1 - rs2;
+                                r[((ins >> 5) & 0x7C) >> 2] = rs1 - rs2;
                                 continue;
 
                             case 0x05:
                                 //sra
-                                r[(((ins >> 7) & 0x1F) << 2) >> 2] = rs1 >> (rs2 & 0x1F);
+                                r[((ins >> 5) & 0x7C) >> 2] = rs1 >> (rs2 & 0x1F);
                                 continue;
                         }
                         continue;
@@ -1309,30 +1309,30 @@ function Step(steps, clockspeed) {
                     case 0x01:
                         //mul,mulh,mulhsu,mulhu,div,divu,rem,remu
                         rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
-                        rs2 = r[(((ins >> 20) & 0x1F) << 2) >> 2]|0;
+                        rs2 = r[((ins >> 18) & 0x7C) >> 2]|0;
                         switch((ins >> 12)&0x7) {
                             case 0x00:
                                 //mul
                                 mult = mul(rs1|0,rs2|0)|0;
-                                r[(((ins >> 7) & 0x1F) << 2) >> 2] = mult & 0xFFFFFFFF;
+                                r[((ins >> 5) & 0x7C) >> 2] = mult & 0xFFFFFFFF;
                                 continue;
 
                             case 0x01:
                                 //mulh
                                 result = UMul(rs1,rs2, 1)|0;
-                                r[(((ins >> 7) & 0x1F) << 2) >> 2] = result;
+                                r[((ins >> 5) & 0x7C) >> 2] = result;
                                 continue;
 
                             case 0x02:
                                 //mulhsu
                                 result = SUMul(rs1,rs2>>>0, 1)|0;
-                                r[(((ins >> 7) & 0x1F) << 2) >> 2] = result;
+                                r[((ins >> 5) & 0x7C) >> 2] = result;
                                 continue;
 
                             case 0x03:
                                 //mulhu
                                 result = IMul(rs1>>>0, rs2>>>0, 1)|0;
-                                r[(((ins >> 7) & 0x1F) << 2) >> 2] = result;
+                                r[((ins >> 5) & 0x7C) >> 2] = result;
                                 continue;
 
                             case 0x04:
@@ -1341,7 +1341,7 @@ function Step(steps, clockspeed) {
                                     quo = -1;
                                 else
                                     quo = ((rs1|0) / (rs2|0))|0;
-                                r[(((ins >> 7) & 0x1F) << 2) >> 2] = quo;
+                                r[((ins >> 5) & 0x7C) >> 2] = quo;
                                 continue;
 
                             case 0x05:
@@ -1350,7 +1350,7 @@ function Step(steps, clockspeed) {
                                     quo = 0xFFFFFFFF;
                                 else
                                     quo = ((rs1 >>> 0) / (rs2 >>> 0))|0;
-                                r[(((ins >> 7) & 0x1F) << 2) >> 2] = quo;
+                                r[((ins >> 5) & 0x7C) >> 2] = quo;
                                 continue;
 
                             case 0x06:
@@ -1359,7 +1359,7 @@ function Step(steps, clockspeed) {
                                     rem = rs1;
                                 else
                                     rem = ((rs1|0) % (rs2|0))|0;
-                                r[(((ins >> 7) & 0x1F) << 2) >> 2] = rem;
+                                r[((ins >> 5) & 0x7C) >> 2] = rem;
                                 continue;
 
                             case 0x07:
@@ -1368,7 +1368,7 @@ function Step(steps, clockspeed) {
                                     rem = (rs1 >>> 0);
                                 else
                                     rem = ((rs1 >>> 0) % (rs2 >>> 0))|0;
-                                r[(((ins >> 7) & 0x1F) << 2) >> 2] = rem;
+                                r[((ins >> 5) & 0x7C) >> 2] = rem;
                                 continue;
                         }
                         continue;
@@ -1383,14 +1383,14 @@ function Step(steps, clockspeed) {
 
             case 0x37:
                 //lui
-                r[(((ins >> 7) & 0x1F) << 2) >> 2] = (ins & 0xFFFFF000);
+                r[((ins >> 5) & 0x7C) >> 2] = (ins & 0xFFFFF000);
                 continue;
 
             case 0x17:
                 //auipc
                 pc = pcorigin + (ppc-ppcorigin)|0;
                 imm = (ins & 0xFFFFF000);
-                r[(((ins >> 7) & 0x1F) << 2) >> 2] = (imm + pc - 4)|0;
+                r[((ins >> 5) & 0x7C) >> 2] = (imm + pc - 4)|0;
                 fence = ppc;
                 pc_change = 1;
                 continue;
@@ -1399,7 +1399,7 @@ function Step(steps, clockspeed) {
                 //jal
                 pc = pcorigin + (ppc-ppcorigin)|0;
                 imm =  (((ins >> 21) & 0x3FF) | (((ins >> 20) & 0x1) << 10) | (((ins >> 12) & 0xFF) << 11) | ((ins >> 31) << 19) ) << 1; 
-                r[(((ins >> 7) & 0x1F) << 2) >> 2] = pc;
+                r[((ins >> 5) & 0x7C) >> 2] = pc;
                 pc = pc + imm - 4|0;
                 fence = ppc;
                 pc_change = 1;
@@ -1411,7 +1411,7 @@ function Step(steps, clockspeed) {
                 pc = pcorigin + (ppc-ppcorigin)|0;
                 imm = (ins >> 20);
                 rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
-                r[(((ins >> 7) & 0x1F) << 2) >> 2] = pc;
+                r[((ins >> 5) & 0x7C) >> 2] = pc;
                 pc = ((rs1 + imm) & 0xFFFFFFFE)|0;
                 fence = ppc;
                 pc_change = 1;
@@ -1424,7 +1424,7 @@ function Step(steps, clockspeed) {
                 fence = ppc;
                 pc_change = 1;
                 rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
-                rs2 = r[(((ins >> 20) & 0x1F) << 2) >> 2]|0;
+                rs2 = r[((ins >> 18) & 0x7C) >> 2]|0;
                 switch((ins >> 12)&0x7) {
                     
                     case 0x00:
@@ -1491,7 +1491,7 @@ function Step(steps, clockspeed) {
                     
                     case 0x01:
                         //csrrw
-                        r[(((ins >> 7) & 0x1F) << 2) >> 2] = GetCSR(imm)|0;
+                        r[((ins >> 5) & 0x7C) >> 2] = GetCSR(imm)|0;
                         //if (rindex != ((ins >> 15) & 0x1F))
                         SetCSR(imm, rs1);
                         r[0] = 0;
@@ -1499,21 +1499,21 @@ function Step(steps, clockspeed) {
 
                     case 0x02:
                         //csrrs
-                        r[(((ins >> 7) & 0x1F) << 2) >> 2] = GetCSR(imm)|0;
+                        r[((ins >> 5) & 0x7C) >> 2] = GetCSR(imm)|0;
                         SetCSR(imm, (GetCSR(imm)|0) | rs1);
                         r[0] = 0;
                         continue;
 
                     case 0x03:
                         //csrrc
-                        r[(((ins >> 7) & 0x1F) << 2) >> 2] = GetCSR(imm)|0;
+                        r[((ins >> 5) & 0x7C) >> 2] = GetCSR(imm)|0;
                         SetCSR(imm, (GetCSR(imm)|0) & (~rs1));
                         r[0] = 0;
                         continue;
 
                     case 0x05:
                         //csrrwi
-                        r[(((ins >> 7) & 0x1F) << 2) >> 2] = GetCSR(imm)|0;
+                        r[((ins >> 5) & 0x7C) >> 2] = GetCSR(imm)|0;
                         zimm = (ins >> 15) & 0x1F;
                         if((zimm|0) != 0) SetCSR(imm, (zimm >> 0));
                         r[0] = 0;
@@ -1521,7 +1521,7 @@ function Step(steps, clockspeed) {
                         
                     case 0x06:
                         //csrrsi
-                        r[(((ins >> 7) & 0x1F) << 2) >> 2] = GetCSR(imm)|0;
+                        r[((ins >> 5) & 0x7C) >> 2] = GetCSR(imm)|0;
                         zimm = (ins >> 15) & 0x1F;
                         if((zimm|0) != 0) SetCSR(imm, (GetCSR(imm)|0) | (zimm >> 0));
                         r[0] = 0;
@@ -1529,7 +1529,7 @@ function Step(steps, clockspeed) {
 
                     case 0x07:
                         //csrrci
-                        r[(((ins >> 7) & 0x1F) << 2) >> 2] = GetCSR(imm)|0;
+                        r[((ins >> 5) & 0x7C) >> 2] = GetCSR(imm)|0;
                         zimm = (ins >> 15) & 0x1F;
                         if((zimm|0) != 0) SetCSR(imm, (GetCSR(imm)|0) & ~(zimm >> 0));
                         r[0] = 0;
@@ -1777,20 +1777,20 @@ function Step(steps, clockspeed) {
                         switch((ins >> 12) & 0x7) {
                             case 0x0:
                                 //fle
-                                if((+fs1) <= (+fs2)) r[(((ins >> 7) & 0x1F) << 2) >> 2] = 1;
-                                else r[(((ins >> 7) & 0x1F) << 2) >> 2] = 0;
+                                if((+fs1) <= (+fs2)) r[((ins >> 5) & 0x7C) >> 2] = 1;
+                                else r[((ins >> 5) & 0x7C) >> 2] = 0;
                                 continue;
 
                             case 0x1:
                                 //flt
-                                if((+fs1) < (+fs2)) r[(((ins >> 7) & 0x1F) << 2) >> 2] = 1;
-                                else r[(((ins >> 7) & 0x1F) << 2) >> 2] = 0;
+                                if((+fs1) < (+fs2)) r[((ins >> 5) & 0x7C) >> 2] = 1;
+                                else r[((ins >> 5) & 0x7C) >> 2] = 0;
                                 continue;
 
                             case 0x2:
                                 //fle
-                                if((+fs1) == (+fs2)) r[(((ins >> 7) & 0x1F) << 2) >> 2] = 1;
-                                else r[(((ins >> 7) & 0x1F) << 2) >> 2] = 0;
+                                if((+fs1) == (+fs2)) r[((ins >> 5) & 0x7C) >> 2] = 1;
+                                else r[((ins >> 5) & 0x7C) >> 2] = 0;
                                 continue;
 
                             default:
@@ -1803,7 +1803,7 @@ function Step(steps, clockspeed) {
 
                     case 0x60:
                         //fcvt.w.s
-                        r[(((ins >> 7) & 0x1F) << 2) >> 2] = (~~+f[(fp + (((ins >> 15) & 0x1F) << 3)) >> 3]);
+                        r[((ins >> 5) & 0x7C) >> 2] = (~~+f[(fp + (((ins >> 15) & 0x1F) << 3)) >> 3]);
                         continue;
 
                     case 0x68: //fcvt.s.w
@@ -1853,7 +1853,7 @@ function Step(steps, clockspeed) {
 
                     case 0x61:
                         //fcvt.w.d
-                        r[(((ins >> 7) & 0x1F) << 2) >> 2] = (~~+f[(fp + (((ins >> 15) & 0x1F) << 3)) >> 3]);
+                        r[((ins >> 5) & 0x7C) >> 2] = (~~+f[(fp + (((ins >> 15) & 0x1F) << 3)) >> 3]);
                         continue;
 
                     case 0x78:
@@ -1908,14 +1908,14 @@ function Step(steps, clockspeed) {
             case 0x2F:
                 //amoswap, amoadd, amoxor, amoand, amoor, amomin, amomax, amominu, amomaxu
                 rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
-                rs2 = r[(((ins >> 20) & 0x1F) << 2) >> 2]|0;
+                rs2 = r[((ins >> 18) & 0x7C) >> 2]|0;
                 switch((ins >> 27)&0x1F) {
                     
                     case 0x01:
                         //amoswap
                         paddr = TranslateVM(rs1|0, VM_READ)|0;
                         if((paddr|0) == -1) break;
-                        r[(((ins >> 7) & 0x1F) << 2) >> 2] = ram[(ramp + paddr) >> 2]|0;
+                        r[((ins >> 5) & 0x7C) >> 2] = ram[(ramp + paddr) >> 2]|0;
                         paddr = TranslateVM(rs1|0, VM_WRITE)|0;
                         if((paddr|0) == -1) break;
                         ram[(ramp + paddr) >> 2] = rs2|0;
@@ -1926,10 +1926,10 @@ function Step(steps, clockspeed) {
                         //amoadd
                         paddr = TranslateVM(rs1|0, VM_READ)|0;
                         if((paddr|0) == -1) break;
-                        r[(((ins >> 7) & 0x1F) << 2) >> 2] = ram[(ramp + paddr) >> 2]|0;
+                        r[((ins >> 5) & 0x7C) >> 2] = ram[(ramp + paddr) >> 2]|0;
                         paddr = TranslateVM(rs1|0,VM_WRITE)|0;
                         if((paddr|0) == -1) break;
-                        ram[(ramp + paddr) >> 2] = ((r[(((ins >> 7) & 0x1F) << 2) >> 2]|0) + (rs2|0))|0;
+                        ram[(ramp + paddr) >> 2] = ((r[((ins >> 5) & 0x7C) >> 2]|0) + (rs2|0))|0;
                         r[0] = 0;
                         continue;
 
@@ -1937,10 +1937,10 @@ function Step(steps, clockspeed) {
                         //amoxor
                         paddr = TranslateVM(rs1|0, VM_READ)|0;
                         if((paddr|0) == -1) break;
-                        r[(((ins >> 7) & 0x1F) << 2) >> 2] = ram[(ramp + paddr) >> 2]|0;
+                        r[((ins >> 5) & 0x7C) >> 2] = ram[(ramp + paddr) >> 2]|0;
                         paddr = TranslateVM(rs1|0,VM_WRITE)|0;
                         if((paddr|0) == -1) break;
-                        ram[(ramp + paddr) >> 2] = ((r[(((ins >> 7) & 0x1F) << 2) >> 2]|0) ^ (rs2|0))|0;
+                        ram[(ramp + paddr) >> 2] = ((r[((ins >> 5) & 0x7C) >> 2]|0) ^ (rs2|0))|0;
                         r[0] = 0;
                         continue;
 
@@ -1948,10 +1948,10 @@ function Step(steps, clockspeed) {
                         //amoand
                         paddr = TranslateVM(rs1|0, VM_READ)|0;
                         if((paddr|0) == -1) break;
-                        r[(((ins >> 7) & 0x1F) << 2) >> 2] = ram[(ramp + paddr) >> 2]|0;
+                        r[((ins >> 5) & 0x7C) >> 2] = ram[(ramp + paddr) >> 2]|0;
                         paddr = TranslateVM(rs1|0,VM_WRITE)|0;
                         if((paddr|0) == -1) break;
-                        ram[(ramp + paddr) >> 2] = ((r[(((ins >> 7) & 0x1F) << 2) >> 2]|0) & (rs2|0))|0;
+                        ram[(ramp + paddr) >> 2] = ((r[((ins >> 5) & 0x7C) >> 2]|0) & (rs2|0))|0;
                         r[0] = 0;
                         continue;
 
@@ -1959,10 +1959,10 @@ function Step(steps, clockspeed) {
                         //amoor
                         paddr = TranslateVM(rs1|0, VM_READ)|0;
                         if((paddr|0) == -1) break;
-                        r[(((ins >> 7) & 0x1F) << 2) >> 2] = ram[(ramp + paddr) >> 2]|0;
+                        r[((ins >> 5) & 0x7C) >> 2] = ram[(ramp + paddr) >> 2]|0;
                         paddr = TranslateVM(rs1|0,VM_WRITE)|0;
                         if((paddr|0) == -1) break;
-                        ram[(ramp + paddr) >> 2] = ((r[(((ins >> 7) & 0x1F) << 2) >> 2]|0) | (rs2|0))|0;
+                        ram[(ramp + paddr) >> 2] = ((r[((ins >> 5) & 0x7C) >> 2]|0) | (rs2|0))|0;
                         r[0] = 0;
                         continue;
 
@@ -1970,8 +1970,8 @@ function Step(steps, clockspeed) {
                         //amomin
                         paddr = TranslateVM(rs1|0, VM_READ)|0;
                         if((paddr|0) == -1) break;
-                        r[(((ins >> 7) & 0x1F) << 2) >> 2] = ram[(ramp + paddr) >> 2]|0;
-                        if((rs2 >> 0) > (r[(((ins >> 7) & 0x1F) << 2) >> 2] >> 0)) r[0] = r[(((ins >> 7) & 0x1F) << 2) >> 2];
+                        r[((ins >> 5) & 0x7C) >> 2] = ram[(ramp + paddr) >> 2]|0;
+                        if((rs2 >> 0) > (r[((ins >> 5) & 0x7C) >> 2] >> 0)) r[0] = r[((ins >> 5) & 0x7C) >> 2];
                         else r[0] = rs2;
                         paddr = TranslateVM(rs1|0,VM_WRITE)|0;
                         if((paddr|0) == -1) break;
@@ -1983,8 +1983,8 @@ function Step(steps, clockspeed) {
                         //amomax
                         paddr = TranslateVM(rs1|0,VM_READ)|0;
                         if((paddr|0) == -1) break;
-                        r[(((ins >> 7) & 0x1F) << 2) >> 2] = ram[(ramp + paddr) >> 2]|0;
-                        if((rs2 >> 0) < (r[(((ins >> 7) & 0x1F) << 2) >> 2] >> 0)) r[0] = r[(((ins >> 7) & 0x1F) << 2) >> 2];
+                        r[((ins >> 5) & 0x7C) >> 2] = ram[(ramp + paddr) >> 2]|0;
+                        if((rs2 >> 0) < (r[((ins >> 5) & 0x7C) >> 2] >> 0)) r[0] = r[((ins >> 5) & 0x7C) >> 2];
                         else r[0] = rs2;
                         paddr = TranslateVM(rs1|0,VM_WRITE)|0;
                         if((paddr|0) == -1) break;
@@ -1996,8 +1996,8 @@ function Step(steps, clockspeed) {
                         //amominu
                         paddr = TranslateVM(rs1|0,VM_READ)|0;
                         if((paddr|0) == -1) break;
-                        r[(((ins >> 7) & 0x1F) << 2) >> 2] = ram[(ramp + paddr) >> 2]|0;
-                        if((rs2 >>> 0) > (r[(((ins >> 7) & 0x1F) << 2) >> 2] >>> 0)) r[0] = r[(((ins >> 7) & 0x1F) << 2) >> 2];
+                        r[((ins >> 5) & 0x7C) >> 2] = ram[(ramp + paddr) >> 2]|0;
+                        if((rs2 >>> 0) > (r[((ins >> 5) & 0x7C) >> 2] >>> 0)) r[0] = r[((ins >> 5) & 0x7C) >> 2];
                         else r[0] = rs2;
                         paddr = TranslateVM(rs1|0,VM_WRITE)|0;
                         if((paddr|0) == -1) break;
@@ -2009,8 +2009,8 @@ function Step(steps, clockspeed) {
                         //amomaxu
                         paddr = TranslateVM(rs1|0,VM_READ)|0;
                         if((paddr|0) == -1) break;
-                        r[(((ins >> 7) & 0x1F) << 2) >> 2] = ram[(ramp + paddr) >> 2]|0;
-                        if((rs2 >>> 0) < (r[(((ins >> 7) & 0x1F) << 2) >> 2] >>> 0)) r[0] = r[(((ins >> 7) & 0x1F) << 2) >> 2];
+                        r[((ins >> 5) & 0x7C) >> 2] = ram[(ramp + paddr) >> 2]|0;
+                        if((rs2 >>> 0) < (r[((ins >> 5) & 0x7C) >> 2] >>> 0)) r[0] = r[((ins >> 5) & 0x7C) >> 2];
                         else r[0] = rs2;
                         paddr = TranslateVM(rs1|0,VM_WRITE)|0;
                         if((paddr|0) == -1) break;
@@ -2023,27 +2023,27 @@ function Step(steps, clockspeed) {
                         rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
                         paddr = TranslateVM(rs1|0,VM_READ)|0;
                         if((paddr|0) == -1) break;
-                        r[(((ins >> 7) & 0x1F) << 2) >> 2] = ram[(ramp + paddr) >> 2]|0;
+                        r[((ins >> 5) & 0x7C) >> 2] = ram[(ramp + paddr) >> 2]|0;
                         amoaddr = rs1;
-                        amovalue = r[(((ins >> 7) & 0x1F) << 2) >> 2]|0;
+                        amovalue = r[((ins >> 5) & 0x7C) >> 2]|0;
                         r[0] = 0;
                         continue;
 
                     case 0x03:
                         //sc.d
                         rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
-                        rs2 = r[(((ins >> 20) & 0x1F) << 2) >> 2]|0;
+                        rs2 = r[((ins >> 18) & 0x7C) >> 2]|0;
                         if((rs1|0) != (amoaddr|0)) {
-                            r[(((ins >> 7) & 0x1F) << 2) >> 2] = 0x01;
+                            r[((ins >> 5) & 0x7C) >> 2] = 0x01;
                             continue;
                         }
                         paddr = TranslateVM(rs1, VM_READ)|0;
                         if((paddr|0) == -1) break;
                         if((ram[(ramp + paddr) >> 2]|0) != (amovalue|0)) {
-                            r[(((ins >> 7) & 0x1F) << 2) >> 2] = 0x01;
+                            r[((ins >> 5) & 0x7C) >> 2] = 0x01;
                             continue;
                         }
-                        r[(((ins >> 7) & 0x1F) << 2) >> 2] = 0x00;
+                        r[((ins >> 5) & 0x7C) >> 2] = 0x00;
                         paddr = TranslateVM(rs1, VM_WRITE)|0;
                         if ((paddr|0) == -1) break;
                         ram[(ramp + paddr) >> 2] = rs2|0;
