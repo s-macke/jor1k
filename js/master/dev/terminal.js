@@ -57,7 +57,7 @@ function Terminal(nrows, ncolumns, elemId) {
 
     this.pauseblink = false;
     this.OnCharReceived = function (){};
-    this.Table.addEventListener("wheel", this.UpdateScreenForScroll);
+    if (!this.canvas) this.Table.addEventListener("wheel", this.UpdateScreenForScroll);
     //this.Table.onwheel = function(){};
 
     this.framerequested = false;
