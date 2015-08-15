@@ -1441,6 +1441,7 @@ function Step(steps, clockspeed) {
                             imm =  ((((ins >> 31) << 11) | (((ins >> 25) & 0x3F) << 4) | ((ins >> 8) & 0x0F) | (((ins >> 7) & 0x01) << 10)) << 1 );
                             pc = pc + imm - 4|0;
                         }
+                        ram[(ppc - 4) >> 2] = ((ins >> 7) << 7) | 0x68;
                         continue;
 
                     case 0x01:
@@ -1449,6 +1450,7 @@ function Step(steps, clockspeed) {
                             imm =  ((((ins >> 31) << 11) | (((ins >> 25) & 0x3F) << 4) | ((ins >> 8) & 0x0F) | (((ins >> 7) & 0x01) << 10)) << 1 );
                             pc = pc + imm - 4|0;
                         }
+                        ram[(ppc - 4) >> 2] = ((ins >> 7) << 7) | 0x69;
                         continue;
 
                     case 0x04:
@@ -1457,6 +1459,7 @@ function Step(steps, clockspeed) {
                             imm =  ((((ins >> 31) << 11) | (((ins >> 25) & 0x3F) << 4) | ((ins >> 8) & 0x0F) | (((ins >> 7) & 0x01) << 10)) << 1 );
                             pc = pc + imm - 4|0;
                         }
+                        ram[(ppc - 4) >> 2] = ((ins >> 7) << 7) | 0x6A;
                         continue;
 
                     case 0x05:
@@ -1465,6 +1468,7 @@ function Step(steps, clockspeed) {
                             imm =  ((((ins >> 31) << 11) | (((ins >> 25) & 0x3F) << 4) | ((ins >> 8) & 0x0F) | (((ins >> 7) & 0x01) << 10)) << 1 );
                             pc = pc + imm - 4|0;
                         }
+                        ram[(ppc - 4) >> 2] = ((ins >> 7) << 7) | 0x6B;
                         continue;
 
                     case 0x06:
@@ -1473,6 +1477,7 @@ function Step(steps, clockspeed) {
                             imm =  ((((ins >> 31) << 11) | (((ins >> 25) & 0x3F) << 4) | ((ins >> 8) & 0x0F) | (((ins >> 7) & 0x01) << 10)) << 1 );
                             pc = pc + imm - 4|0;
                         }
+                        ram[(ppc - 4) >> 2] = ((ins >> 7) << 7) | 0x6C;
                         continue;
 
                     case 0x07:
@@ -1481,6 +1486,7 @@ function Step(steps, clockspeed) {
                             imm =  ((((ins >> 31) << 11) | (((ins >> 25) & 0x3F) << 4) | ((ins >> 8) & 0x0F) | (((ins >> 7) & 0x01) << 10)) << 1 );
                             pc = pc + imm - 4|0;
                         }
+                        ram[(ppc - 4) >> 2] = ((ins >> 7) << 7) | 0x6D;
                         continue;
 
                     default:
@@ -2205,6 +2211,84 @@ function Step(steps, clockspeed) {
                     store32tlb_entry = ((paddr ^ (rs1 + imm|0)) & 0xFFFFF000);
                 }
                 ram[(ramp + paddr) >> 2] = r[((ins >> 18) & 0x7C) >> 2]|0;
+                continue;
+
+            case 0x68:
+                //beq
+                pc = pcorigin + (ppc-ppcorigin)|0;
+                fence = ppc;
+                pc_change = 1;
+                rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
+                rs2 = r[((ins >> 18) & 0x7C) >> 2]|0;
+                if((rs1|0) == (rs2|0)){
+                    imm =  ((((ins >> 31) << 11) | (((ins >> 25) & 0x3F) << 4) | ((ins >> 8) & 0x0F) | (((ins >> 7) & 0x01) << 10)) << 1 );
+                    pc = pc + imm - 4|0;
+                }
+                continue;
+
+            case 0x69:
+                //bne
+                pc = pcorigin + (ppc-ppcorigin)|0;
+                fence = ppc;
+                pc_change = 1;
+                rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
+                rs2 = r[((ins >> 18) & 0x7C) >> 2]|0;
+                if((rs1|0) != (rs2|0)){
+                    imm =  ((((ins >> 31) << 11) | (((ins >> 25) & 0x3F) << 4) | ((ins >> 8) & 0x0F) | (((ins >> 7) & 0x01) << 10)) << 1 );
+                    pc = pc + imm - 4|0;
+                }
+                continue;
+
+            case 0x6A:
+                //blt
+                pc = pcorigin + (ppc-ppcorigin)|0;
+                fence = ppc;
+                pc_change = 1;
+                rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
+                rs2 = r[((ins >> 18) & 0x7C) >> 2]|0;
+                if((rs1|0) < (rs2|0)){
+                    imm =  ((((ins >> 31) << 11) | (((ins >> 25) & 0x3F) << 4) | ((ins >> 8) & 0x0F) | (((ins >> 7) & 0x01) << 10)) << 1 );
+                    pc = pc + imm - 4|0;
+                }
+                continue;
+
+            case 0x6B:
+                //bge
+                pc = pcorigin + (ppc-ppcorigin)|0;
+                fence = ppc;
+                pc_change = 1;
+                rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
+                rs2 = r[((ins >> 18) & 0x7C) >> 2]|0;
+                if((rs1|0) >= (rs2|0)){
+                    imm =  ((((ins >> 31) << 11) | (((ins >> 25) & 0x3F) << 4) | ((ins >> 8) & 0x0F) | (((ins >> 7) & 0x01) << 10)) << 1 );
+                    pc = pc + imm - 4|0;
+                }
+                continue;
+
+            case 0x6C:
+                //bltu
+                pc = pcorigin + (ppc-ppcorigin)|0;
+                fence = ppc;
+                pc_change = 1;
+                rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
+                rs2 = r[((ins >> 18) & 0x7C) >> 2]|0;
+                if((rs1 >>> 0) < (rs2 >>> 0)){
+                    imm =  ((((ins >> 31) << 11) | (((ins >> 25) & 0x3F) << 4) | ((ins >> 8) & 0x0F) | (((ins >> 7) & 0x01) << 10)) << 1 );
+                    pc = pc + imm - 4|0;
+                }
+                continue;
+
+            case 0x6D:
+                //bgeu
+                pc = pcorigin + (ppc-ppcorigin)|0;
+                fence = ppc;
+                pc_change = 1;
+                rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
+                rs2 = r[((ins >> 18) & 0x7C) >> 2]|0;
+                if((rs1 >>> 0) >= (rs2 >>> 0)){
+                    imm =  ((((ins >> 31) << 11) | (((ins >> 25) & 0x3F) << 4) | ((ins >> 8) & 0x0F) | (((ins >> 7) & 0x01) << 10)) << 1 );
+                    pc = pc + imm - 4|0;
+                }
                 continue;
 
 

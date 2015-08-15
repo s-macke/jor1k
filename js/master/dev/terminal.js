@@ -127,8 +127,8 @@ Terminal.prototype.DeleteRow = function(row) {
 
 Terminal.prototype.DeleteArea = function(row, column, row2, column2) {
     for (var i = row; i <= row2; i++) {
-        for(var i = 0;i <= this.brows;i++)
-            this.screen[i] = this.screen[i + 1];
+        for(var k = 0;k <= this.brows;k++)
+            this.screen[k] = this.screen[k + 1];
         for (var j = column; j <= column2; j++) {
             this.screen[this.brows + i][j] = 0x20;
             this.color[this.brows + i][j] = this.attr_color;
@@ -331,7 +331,7 @@ Terminal.prototype.ScrollUp = function(draw) {
     for (var i = this.scrolltop+1; i <= this.scrollbottom; i++) {
         if (i == 0) continue;
         this.screen[this.brows + i - 1] = this.screen[this.brows + i];
-        this.color[this.brows + i - 1] = this.color[i];
+        this.color[this.brows + i - 1] = this.color[this.brows + i];
         if (draw) this.PrepareUpdateRow(i-1);
     }
 
