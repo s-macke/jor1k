@@ -823,111 +823,14 @@ function Step(steps, clockspeed) {
 
     for(;;) {
 
-        if ((ppc|0) == (fence|0)) {
-            pc = nextpc;
-
-            if ((!delayedins_at_page_boundary|0)) {
-                delayedins = 0;
-            } 
-
-            dsteps = dsteps + ((ppc - ppcorigin) >> 2)|0;
-
-        // do this not so often
-        if ((dsteps|0) >= 64)
-        if (!(delayedins_at_page_boundary|0)) { // for now. Not sure if we need this
-
-            dsteps = dsteps - 64|0;
-            steps = steps - 64|0;
-            if ((steps|0) < 0) return 0x0; // return to main loop
-
-            // ---------- TICK ----------
-            // timer enabled
-            if ((TTMR >> 30) != 0) {
-                delta = (TTMR & 0xFFFFFFF) - (TTCR & 0xFFFFFFF) |0;
-                if ((delta|0) < 0) {
-                    delta = delta + 0xFFFFFFF | 0;
-                }
-                TTCR = (TTCR + clockspeed|0);
-                if ((delta|0) < (clockspeed|0)) {
-                    // if interrupt enabled
-                    if (TTMR & (1 << 29)) {
-                        TTMR = TTMR | (1 << 28); // set pending interrupt
-                    }
-                }
-            }
-
-            // check if pending and check if interrupt must be triggered
-            if (TTMR & (1 << 28)) {
-                if (SR_TEE) {
-                    Exception(EXCEPT_TICK, h[group0p + (SPR_EEAR_BASE<<2) >> 2]|0);
-                    // treat exception directly here
-                    pc = nextpc;
-                }
-            } else
-            if (SR_IEE|0) 
-            if (raise_interrupt|0) {
-                raise_interrupt = 0;
-                Exception(EXCEPT_INT, h[group0p + (SPR_EEAR_BASE<<2)>>2]|0);
-                pc = nextpc;
-            }
-        }
-
-        // Get Instruction Fast version
-        if ((instlbcheck ^ pc) & 0xFFFFE000) // short check if it is still the correct page
-        {
-            instlbcheck = pc; // save the new page, lower 11 bits are ignored
-            if (!SR_IME) {
-                instlblookup = 0x0;
-            } else {
-                setindex = (pc >> 13) & 63; // check this values
-                tlmbr = h[group2p + ((0x200 | setindex) << 2) >> 2]|0;
-                // test if tlmbr is valid
-                if ((tlmbr & 1) == 0) {
-                    if (ITLBRefill(pc, 64)|0) {
-                        tlmbr = h[group2p + ((0x200 | setindex)<<2) >> 2]|0; // reload the new value
-                    } else {
-                        // just make sure he doesn't count this 'continue' as steps
-                        ppcorigin = ppc;
-                        delayedins_at_page_boundary = 0;
-                        continue;
-                    }
-                }
-                if ((tlmbr >> 19) != (pc >> 19)) {
-                    if (ITLBRefill(pc, 64)|0) {
-                        tlmbr = h[group2p + ((0x200 | setindex)<<2) >> 2]|0; // reload the new value
-                    } else {
-                        // just make sure he doesn't count this 'continue' as steps
-                        ppcorigin = ppc;
-                        delayedins_at_page_boundary = 0;
-                        continue;
-                    }
-                }
-                tlbtr = h[group2p + ((0x280 | setindex) << 2) >> 2]|0;
-                instlblookup = ((tlbtr ^ tlmbr) >> 13) << 13;
-            }
-        }
-
-            // set pc and set the correcponding physical pc pointer
-            //pc = pc;
-            ppc = ramp + (instlblookup ^ pc)|0;
-            ppcorigin = ppc;
-            pcbase = pc - 4 - ppcorigin|0;
-
-           if (delayedins_at_page_boundary|0) {
-               delayedins_at_page_boundary = 0;
-               fence = ppc + 4|0;
-               nextpc = jump;
-           } else {
-               fence  = ((ppc >> 13) + 1) << 13; // next page
-               nextpc = ((pc  >> 13) + 1) << 13;
-           }
-        }
+        if ((ppc|0) != (fence|0)) {
 
         ins = h[ppc >> 2]|0;
         ppc = ppc + 4|0;
 
 // --------------------------------------------
         switch ((ins >> 26)&0x3F) {
+
         case 0x0:
             // j
             pc = pcbase + ppc|0;
@@ -939,7 +842,7 @@ function Step(steps, clockspeed) {
                 nextpc = jump|0;
             }
             delayedins = 1;
-            break;
+            continue;
 
         case 0x1:
             // jal
@@ -953,7 +856,7 @@ function Step(steps, clockspeed) {
                 nextpc = jump|0;
             }
             delayedins = 1;
-            break;
+            continue;
 
         case 0x3:
             // bnf
@@ -969,12 +872,12 @@ function Step(steps, clockspeed) {
                 nextpc = jump|0;
             }
             delayedins = 1;
-            break;
+            continue;
 
         case 0x4:
             // bf
             if (!SR_F) {
-                break;
+                continue;
             }
             pc = pcbase + ppc|0;
             jump = pc + ((ins << 6) >> 4)|0;
@@ -985,17 +888,17 @@ function Step(steps, clockspeed) {
                 nextpc = jump|0;
             }
             delayedins = 1;
-            break;
+            continue;
 
         case 0x5:
             // nop
-            break;
+            continue;
 
         case 0x6:
             // movhi
             rindex = (ins >> 21) & 0x1F;
             r[rindex << 2 >> 2] = ((ins & 0xFFFF) << 16); // movhi
-            break;
+            continue;
 
         case 0x8:
             //sys and trap
@@ -1004,7 +907,7 @@ function Step(steps, clockspeed) {
             } else {
                 Exception(EXCEPT_SYSCALL, h[group0p+SPR_EEAR_BASE >> 2]|0);
             }
-            break;
+            continue;
 
         case 0x9:
             // rfe
@@ -1015,7 +918,7 @@ function Step(steps, clockspeed) {
             //pc = jump; // set the correct pc in case of an EXCEPT_INT
             //delayedins = 0;
             SetFlags(GetSPR(SPR_ESR_BASE)|0); // could raise an exception
-            break;
+            continue;
 
         case 0x11:
             // jr
@@ -1027,7 +930,7 @@ function Step(steps, clockspeed) {
                 nextpc = jump|0;
             }
             delayedins = 1;
-            break;
+            continue;
 
         case 0x12:
             // jalr
@@ -1041,7 +944,7 @@ function Step(steps, clockspeed) {
                 nextpc = jump|0;
             }
             delayedins = 1;
-            break;
+            continue;
 
         case 0x1B: 
             // lwa
@@ -1057,7 +960,7 @@ function Step(steps, clockspeed) {
             paddr = read32tlblookup ^ vaddr;
             EA = paddr;
             r[((ins >> 19) & 0x7C)>>2] = (paddr|0)>0?h[ramp+paddr >> 2]|0:Read32(paddr|0)|0;
-            break;
+            continue;
 
         case 0x21:
             // lwz
@@ -1072,7 +975,7 @@ function Step(steps, clockspeed) {
             }
             paddr = read32tlblookup ^ vaddr;
             r[((ins >> 19) & 0x7C)>>2] = (paddr|0)>0?h[ramp+paddr >> 2]|0:Read32(paddr|0)|0;
-            break;
+            continue;
 
         case 0x23:
             // lbz
@@ -1091,7 +994,7 @@ function Step(steps, clockspeed) {
             } else {
                 r[((ins >> 19) & 0x7C)>>2] = Read8(paddr|0)|0;
             }
-            break;
+            continue;
 
         case 0x24:
             // lbs 
@@ -1110,7 +1013,7 @@ function Step(steps, clockspeed) {
             } else {
                 r[((ins >> 19) & 0x7C)>>2] = ((Read8(paddr|0)|0) << 24) >> 24;
             }
-            break;
+            continue;
 
         case 0x25:
             // lhz 
@@ -1124,18 +1027,12 @@ function Step(steps, clockspeed) {
                 read16utlblookup = ((paddr^vaddr) >> 13) << 13;
             }
             paddr = read16utlblookup ^ vaddr;
-/*
-            paddr = DTLBLookup(vaddr, 0)|0;
-            if ((paddr|0) == -1) {
-                break;
-            }
-*/
             if ((paddr|0) >= 0) {
                 r[((ins >> 19) & 0x7C)>>2] = w[ramp + (paddr ^ 2) >> 1];
             } else {
                 r[((ins >> 19) & 0x7C)>>2] = (Read16(paddr|0)|0);
             }
-            break;
+            continue;
 
         case 0x26:
             // lhs
@@ -1149,68 +1046,60 @@ function Step(steps, clockspeed) {
                 read16stlblookup = ((paddr^vaddr) >> 13) << 13;
             }
             paddr = read16stlblookup ^ vaddr;
-/*
-            paddr = DTLBLookup(vaddr, 0)|0;
-            if ((paddr|0) == -1) {
-                break;
-            }
-*/
             if ((paddr|0) >= 0) {
                 r[((ins >> 19) & 0x7C)>>2] =  (w[ramp + (paddr ^ 2) >> 1] << 16) >> 16;
             } else {
                 r[((ins >> 19) & 0x7C)>>2] = ((Read16(paddr|0)|0) << 16) >> 16;
             }
-            break;
-
+            continue;
 
         case 0x27:
             // addi signed 
-            imm = (ins << 16) >> 16;
             rA = r[((ins >> 14) & 0x7C)>>2]|0;
-            r[((ins >> 19) & 0x7C) >> 2] = rA + imm|0;
+            r[((ins >> 19) & 0x7C) >> 2] = rA + ((ins << 16) >> 16)|0;
             //rindex = ((ins >> 19) & 0x7C);
             //SR_CY = r[rindex] < rA;
             //SR_OV = (((rA ^ imm ^ -1) & (rA ^ r[rindex])) & 0x80000000)?true:false;
             //TODO overflow and carry
             // maybe wrong
-            break;
+            continue;
 
         case 0x29:
             // andi
             r[((ins >> 19) & 0x7C)>>2] = r[((ins >> 14) & 0x7C)>>2] & (ins & 0xFFFF);
-            break;
+            continue;
 
 
         case 0x2A:
             // ori
             r[((ins >> 19) & 0x7C)>>2] = r[((ins >> 14) & 0x7C)>>2] | (ins & 0xFFFF);
-            break;
+            continue;
 
         case 0x2B:
             // xori            
             rA = r[((ins >> 14) & 0x7C)>>2]|0;
             r[((ins >> 19) & 0x7C)>>2] = rA ^ ((ins << 16) >> 16);
-            break;
+            continue;
 
         case 0x2D:
             // mfspr
             r[((ins >> 19) & 0x7C)>>2] = GetSPR(r[((ins >> 14) & 0x7C)>>2] | (ins & 0xFFFF))|0;
-            break;
+            continue;
 
         case 0x2E:
             switch ((ins >> 6) & 0x3) {
             case 0:
                 // slli
                 r[((ins >> 19) & 0x7C)>>2] = r[((ins >> 14) & 0x7C)>>2] << (ins & 0x1F);
-                break;
+                continue;
             case 1:
                 // rori
                 r[((ins >> 19) & 0x7C)>>2] = r[((ins >> 14) & 0x7C)>>2] >>> (ins & 0x1F);
-                break;
+                continue;
             case 2:
                 // srai
                 r[((ins >> 19) & 0x7C)>>2] = r[((ins >> 14) & 0x7C)>>2] >> (ins & 0x1F);
-                break;
+                continue;
             default:
                 DebugMessage(ERROR_UNKNOWN|0);
                 //DebugMessage("Error: opcode 2E function not implemented");
@@ -1226,43 +1115,43 @@ function Step(steps, clockspeed) {
             case 0x0:
                 // sfnei
                 SR_F = (r[((ins >> 14) & 0x7C)>>2]|0) == (imm|0);
-                break;
+                continue;
             case 0x1:
                 // sfnei
                 SR_F = (r[((ins >> 14) & 0x7C)>>2]|0) != (imm|0);
-                break;
+                continue;
             case 0x2:
                 // sfgtui
                 SR_F = (r[((ins >> 14) & 0x7C)>>2]>>>0) > (imm >>> 0);
-                break;
+                continue;
             case 0x3:
                 // sfgeui
                 SR_F = (r[((ins >> 14) & 0x7C)>>2]>>>0) >= (imm >>> 0);
-                break;
+                continue;
             case 0x4:
                 // sfltui
                 SR_F = (r[((ins >> 14) & 0x7C)>>2]>>>0) < (imm >>> 0);
-                break;
+                continue;
             case 0x5:
                 // sfleui
                 SR_F = (r[((ins >> 14) & 0x7C)>>2]>>>0) <= (imm >>> 0);
-                break;
+                continue;
             case 0xa:
                 // sfgtsi
                 SR_F = (r[((ins >> 14) & 0x7C)>>2]|0) > (imm|0);
-                break;
+                continue;
             case 0xb:
                 // sfgesi
                 SR_F = (r[((ins >> 14) & 0x7C)>>2]|0) >= (imm|0);
-                break;
+                continue;
             case 0xc:
                 // sfltsi
                 SR_F = (r[((ins >> 14) & 0x7C)>>2]|0) < (imm|0);
-                break;
+                continue;
             case 0xd:
                 // sflesi
                 SR_F = (r[((ins >> 14) & 0x7C)>>2]|0) <= (imm|0);
-                break;
+                continue;
             default:
                 //DebugMessage("Error: sf...i not supported yet");
                 DebugMessage(ERROR_UNKNOWN|0);
@@ -1283,7 +1172,7 @@ function Step(steps, clockspeed) {
                     return steps|0;
                 }
             }
-            break;
+            continue;
 
        case 0x32:
             // floating point
@@ -1295,55 +1184,55 @@ function Step(steps, clockspeed) {
             case 0x0:
                 // lf.add.s
                 f[rD >> 2] = (+f[rA >> 2]) + (+f[rB >> 2]);
-                break;
+                continue;
             case 0x1:
                 // lf.sub.s
                 f[rD >> 2] = (+f[rA >> 2]) - (+f[rB >> 2]);
-                break;
+                continue;
             case 0x2:
                 // lf.mul.s
                 f[rD >> 2] = (+f[rA >> 2]) * (+f[rB >> 2]);
-                break;
+                continue;
             case 0x3:
                 // lf.div.s
                 f[rD >> 2] = (+f[rA >> 2]) / (+f[rB >> 2]);
-                break;
+                continue;
             case 0x4:
                 // lf.itof.s
                 f[rD >> 2] = +(r[rA >> 2]|0);
-                break;
+                continue;
             case 0x5:
                 // lf.ftoi.s
                 r[rD >> 2] = ~~(+floor(+f[rA >> 2]));
-                break;
+                continue;
             case 0x7:
                 // lf.madd.s
                 f[rD >> 2] = (+f[rD >> 2]) + (+f[rA >> 2]) * (+f[rB >> 2]);
-                break;
+                continue;
             case 0x8:
                 // lf.sfeq.s
                 SR_F = (+f[rA >> 2]) == (+f[rB >> 2]);
-                break;
+                continue;
             case 0x9:
                 // lf.sfne.s
                 SR_F = (+f[rA >> 2]) != (+f[rB >> 2]);
-                break;
+                continue;
             case 0xa:
                 // lf.sfgt.s
                 SR_F = (+f[rA >> 2]) > (+f[rB >> 2]);
-                break;
+                continue;
             case 0xb:
                 // lf.sfge.s
                 SR_F = (+f[rA >> 2]) >= (+f[rB >> 2]);
-                break;
+                continue;
             case 0xc:
                 // lf.sflt.s
                 SR_F = (+f[rA >> 2]) < (+f[rB >> 2]);
-                break;
+                continue;
             case 0xd:
                 // lf.sfle.s
                 SR_F = (+f[rA >> 2]) <= (+f[rB >> 2]);
-                break;
+                continue;
             default:
                 DebugMessage(ERROR_UNKNOWN|0);
                 abort();
@@ -1374,7 +1263,7 @@ function Step(steps, clockspeed) {
             } else {
                 Write32(paddr|0, r[((ins >> 9) & 0x7C)>>2]|0);
             }
-            break;
+            continue;
 
         case 0x35:
             // sw
@@ -1394,7 +1283,7 @@ function Step(steps, clockspeed) {
             } else {
                 Write32(paddr|0, r[((ins >> 9) & 0x7C)>>2]|0);
             }
-            break;
+            continue;
 
         case 0x36:
             // sb
@@ -1415,7 +1304,7 @@ function Step(steps, clockspeed) {
             } else {
                 Write8(paddr|0, r[((ins >> 9) & 0x7C)>>2]|0);
             }
-            break;
+            continue;
 
         case 0x37:
             // sh
@@ -1430,17 +1319,12 @@ function Step(steps, clockspeed) {
                 write16tlblookup = ((paddr^vaddr) >> 13) << 13;
             }
             paddr = write16tlblookup ^ vaddr;
-/*
-            paddr = DTLBLookup(vaddr|0, 1)|0;
-            if ((paddr|0) == -1) {
-                break;
-            }*/
             if ((paddr|0) >= 0) {
                 w[ramp + (paddr ^ 2) >> 1] = r[((ins >> 9) & 0x7C)>>2];
             } else {
                 Write16(paddr|0, r[((ins >> 9) & 0x7C)>>2]|0);
             }
-            break;
+            continue;
 
         case 0x38:
             // three operands commands
@@ -1454,26 +1338,26 @@ function Step(steps, clockspeed) {
                 //SR_CY = r[rindex] < rA;
                 //SR_OV = (((rA ^ rB ^ -1) & (rA ^ r[rindex])) & 0x80000000)?true:false;
                 //TODO overflow and carry
-                break;
+                continue;
             case 0x2:
                 // sub signed
                 r[rindex>>2] = rA - rB;
                 //TODO overflow and carry
                 //SR_CY = (rB > rA);
                 //SR_OV = (((rA ^ rB) & (rA ^ r[rindex])) & 0x80000000)?true:false;                
-                break;
+                continue;
             case 0x3:
                 // and
                 r[rindex>>2] = rA & rB;
-                break;
+                continue;
             case 0x4:
                 // or
                 r[rindex>>2] = rA | rB;
-                break;
+                continue;
             case 0x5:
                 // or
                 r[rindex>>2] = rA ^ rB;
-                break;
+                continue;
             case 0x8:
                 // sll
                 r[rindex>>2] = rA << (rB & 0x1F);
@@ -1481,7 +1365,7 @@ function Step(steps, clockspeed) {
             case 0x48:
                 // srl not signed
                 r[rindex>>2] = rA >>> (rB & 0x1F);
-                break;
+                continue;
             case 0xf:
                 // ff1
                 r[rindex>>2] = 0;
@@ -1491,12 +1375,12 @@ function Step(steps, clockspeed) {
                         break;
                     }
                 }
-                break;
+                continue;
             case 0x88:
                 // sra signed
                 r[rindex>>2] = rA >> (rB & 0x1F);
                 // be carefull here and check
-                break;
+                continue;
             case 0x10f:
                 // fl1
                 r[rindex>>2] = 0;
@@ -1506,7 +1390,7 @@ function Step(steps, clockspeed) {
                         break;
                     }
                 }
-                break;
+                continue;
             case 0x306:
                 // mul signed (specification seems to be wrong)
                 {                    
@@ -1524,7 +1408,8 @@ function Step(steps, clockspeed) {
                     */
                     
                 }
-                break;
+                continue;
+
             case 0x30a:
                 // divu (specification seems to be wrong)
                 SR_CY = (rB|0) == 0;
@@ -1532,7 +1417,8 @@ function Step(steps, clockspeed) {
                 if (!SR_CY) {
                     r[rindex>>2] = /*Math.floor*/((rA>>>0) / (rB>>>0));
                 }
-                break;
+                continue;
+
             case 0x309:
                 // div (specification seems to be wrong)
                 SR_CY = (rB|0) == 0;
@@ -1540,8 +1426,8 @@ function Step(steps, clockspeed) {
                 if (!SR_CY) {
                     r[rindex>>2] = (rA|0) / (rB|0);
                 }
+                continue;
 
-                break;
             default:
                 //DebugMessage("Error: op38 opcode not supported yet");
                 DebugMessage(ERROR_UNKNOWN|0);
@@ -1556,43 +1442,43 @@ function Step(steps, clockspeed) {
             case 0x0:
                 // sfeq
                 SR_F = (r[((ins >> 14) & 0x7C)>>2]|0) == (r[((ins >> 9) & 0x7C)>>2]|0);
-                break;
+                continue;
             case 0x1:
                 // sfne
                 SR_F = (r[((ins >> 14) & 0x7C)>>2]|0) != (r[((ins >> 9) & 0x7C)>>2]|0);
-                break;
+                continue;
             case 0x2:
                 // sfgtu
                 SR_F = ((r[((ins >> 14) & 0x7C)>>2]>>>0) > (r[((ins >> 9) & 0x7C)>>2]>>>0));
-                break;
+                continue;
             case 0x3:
                 // sfgeu
                 SR_F = ((r[((ins >> 14) & 0x7C)>>2]>>>0) >= (r[((ins >> 9) & 0x7C)>>2]>>>0));
-                break;
+                continue;
             case 0x4:
                 // sfltu
                 SR_F = ((r[((ins >> 14) & 0x7C)>>2]>>>0) < (r[((ins >> 9) & 0x7C)>>2]>>>0));
-                break;
+                continue;
             case 0x5:
                 // sfleu
                 SR_F = ((r[((ins >> 14) & 0x7C)>>2]>>>0) <= (r[((ins >> 9) & 0x7C)>>2]>>>0));
-                break;
+                continue;
             case 0xa:
                 // sfgts
                 SR_F = (r[((ins >> 14) & 0x7C)>>2]|0) > (r[((ins >> 9) & 0x7C)>>2]|0);
-                break;
+                continue;
             case 0xb:
                 // sfges
                 SR_F = (r[((ins >> 14) & 0x7C)>>2]|0) >= (r[((ins >> 9) & 0x7C)>>2]|0);
-                break;
+                continue;
             case 0xc:
                 // sflts
                 SR_F = (r[((ins >> 14) & 0x7C)>>2]|0) < (r[((ins >> 9) & 0x7C)>>2]|0);
-                break;
+                continue;
             case 0xd:
                 // sfles
                 SR_F = (r[((ins >> 14) & 0x7C)>>2]|0) <= (r[((ins >> 9) & 0x7C)>>2]|0);
-                break;
+                continue;
             default:
                 //DebugMessage("Error: sf.... function supported yet");
                 DebugMessage(ERROR_UNKNOWN|0);
@@ -1606,6 +1492,108 @@ function Step(steps, clockspeed) {
             abort();
             break;
         }
+
+        } else { // fence
+
+            pc = nextpc;
+
+            if ((!delayedins_at_page_boundary|0)) {
+                delayedins = 0;
+            } 
+
+            dsteps = dsteps + ((ppc - ppcorigin) >> 2)|0;
+
+            // do this not so often
+            if ((dsteps|0) >= 64)
+            if (!(delayedins_at_page_boundary|0)) { // for now. Not sure if we need this
+
+                dsteps = dsteps - 64|0;
+                steps = steps - 64|0;
+                if ((steps|0) < 0) return 0x0; // return to main loop
+
+                // ---------- TICK ----------
+                // timer enabled
+                if ((TTMR >> 30) != 0) {
+                    delta = (TTMR & 0xFFFFFFF) - (TTCR & 0xFFFFFFF) |0;
+                    if ((delta|0) < 0) {
+                        delta = delta + 0xFFFFFFF | 0;
+                    }
+                    TTCR = (TTCR + clockspeed|0);
+                    if ((delta|0) < (clockspeed|0)) {
+                        // if interrupt enabled
+                        if (TTMR & (1 << 29)) {
+                            TTMR = TTMR | (1 << 28); // set pending interrupt
+                        }
+                    }
+                }
+
+                // check if pending and check if interrupt must be triggered
+                if (TTMR & (1 << 28)) {
+                    if (SR_TEE) {
+                        Exception(EXCEPT_TICK, h[group0p + (SPR_EEAR_BASE<<2) >> 2]|0);
+                        // treat exception directly here
+                        pc = nextpc;
+                    }
+                } else
+                if (SR_IEE|0) 
+                if (raise_interrupt|0) {
+                    raise_interrupt = 0;
+                    Exception(EXCEPT_INT, h[group0p + (SPR_EEAR_BASE<<2)>>2]|0);
+                    pc = nextpc;
+                }
+            } // dsteps
+
+            // Get Instruction Fast version
+            if ((instlbcheck ^ pc) & 0xFFFFE000) // short check if it is still the correct page
+            {
+                instlbcheck = pc; // save the new page, lower 11 bits are ignored
+                if (!SR_IME) {
+                    instlblookup = 0x0;
+                } else {
+                    setindex = (pc >> 13) & 63; // check this values
+                    tlmbr = h[group2p + ((0x200 | setindex) << 2) >> 2]|0;
+                    // test if tlmbr is valid
+                    if ((tlmbr & 1) == 0) {
+                        if (ITLBRefill(pc, 64)|0) {
+                            tlmbr = h[group2p + ((0x200 | setindex)<<2) >> 2]|0; // reload the new value
+                        } else {
+                            // just make sure he doesn't count this 'continue' as steps
+                            ppcorigin = ppc;
+                            delayedins_at_page_boundary = 0;
+                            continue;
+                        }
+                    }
+                    if ((tlmbr >> 19) != (pc >> 19)) {
+                        if (ITLBRefill(pc, 64)|0) {
+                            tlmbr = h[group2p + ((0x200 | setindex)<<2) >> 2]|0; // reload the new value
+                        } else {
+                            // just make sure he doesn't count this 'continue' as steps
+                            ppcorigin = ppc;
+                            delayedins_at_page_boundary = 0;
+                            continue;
+                        }
+                    }
+                    tlbtr = h[group2p + ((0x280 | setindex) << 2) >> 2]|0;
+                    instlblookup = ((tlbtr ^ tlmbr) >> 13) << 13;
+                }
+            }
+
+            // set pc and set the correcponding physical pc pointer
+            //pc = pc;
+            ppc = ramp + (instlblookup ^ pc)|0;
+            ppcorigin = ppc;
+            pcbase = pc - 4 - ppcorigin|0;
+
+            if (delayedins_at_page_boundary|0) {
+                delayedins_at_page_boundary = 0;
+                fence = ppc + 4|0;
+                nextpc = jump;
+            } else {
+                fence  = ((ppc >> 13) + 1) << 13; // next page
+                nextpc = ((pc  >> 13) + 1) << 13;
+            }
+
+        } // fence
 
     }; // main loop
 
