@@ -11,6 +11,7 @@ var mul = require('../mul');
 // CPUs
 var SafeCPU = require('./safecpu.js');
 var FastCPU = require('./fastcpu.js');
+var UFastCPU = require('./ultrafastcpu.js');
 
 var stdlib = {
     Int32Array : Int32Array,
@@ -54,6 +55,11 @@ function createCPU(cpuname, ram, htif, heap, ncores) {
     }
     else if (cpuname === "asm") {
         cpu = FastCPU(stdlib, foreign, heap);
+        cpu.Init();
+        return cpu;
+    }
+    else if (cpuname === "ufast") {
+        cpu = UFastCPU(stdlib, foreign, heap);
         cpu.Init();
         return cpu;
     }
