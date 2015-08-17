@@ -7,7 +7,7 @@ var DebugIns = require('./disassemble.js');
 
 
 // constructor
-function FastCPU(stdlib, foreign, heap) {
+function DynamicCPU(stdlib, foreign, heap) {
 "use asm";
 
 var DebugMessage = foreign.DebugMessage;
@@ -2400,4 +2400,4 @@ return {
 
 }
 
-module.exports = FastCPU;
+module.exports = DynamicCPU;
