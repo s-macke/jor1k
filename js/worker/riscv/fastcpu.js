@@ -1424,57 +1424,72 @@ function Step(steps, clockspeed) {
 
             case 0x63:
                 //beq, bne, blt, bge, bltu, bgeu
-                pc = pcorigin + (ppc-ppcorigin)|0;
-                fence = ppc;
-                pc_change = 1;
                 rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
                 rs2 = r[((ins >> 18) & 0x7C) >> 2]|0;
                 switch((ins >> 12)&0x7) {
                     
                     case 0x00:
                         //beq
-                        if((rs1|0) == (rs2|0)){
+                        if ((rs1|0) == (rs2|0)) {
+                            fence = ppc;
+                            pc_change = 1;
                             imm =  ((((ins >> 31) << 11) | (((ins >> 25) & 0x3F) << 4) | ((ins >> 8) & 0x0F) | (((ins >> 7) & 0x01) << 10)) << 1 );
+                            pc = pcorigin + (ppc-ppcorigin)|0;
                             pc = pc + imm - 4|0;
                         }
                         continue;
 
                     case 0x01:
                         //bne
-                        if((rs1|0) != (rs2|0)){
+                        if ((rs1|0) != (rs2|0)) {
+                            fence = ppc;
+                            pc_change = 1;
                             imm =  ((((ins >> 31) << 11) | (((ins >> 25) & 0x3F) << 4) | ((ins >> 8) & 0x0F) | (((ins >> 7) & 0x01) << 10)) << 1 );
+                            pc = pcorigin + (ppc-ppcorigin)|0;
                             pc = pc + imm - 4|0;
                         }
                         continue;
 
                     case 0x04:
                         //blt
-                        if((rs1|0) < (rs2|0)){
+                        if ((rs1|0) < (rs2|0)) {
+                            fence = ppc;
+                            pc_change = 1;
                             imm =  ((((ins >> 31) << 11) | (((ins >> 25) & 0x3F) << 4) | ((ins >> 8) & 0x0F) | (((ins >> 7) & 0x01) << 10)) << 1 );
+                            pc = pcorigin + (ppc-ppcorigin)|0;
                             pc = pc + imm - 4|0;
                         }
                         continue;
 
                     case 0x05:
                         //bge
-                        if((rs1|0) >= (rs2|0)){
+                        if ((rs1|0) >= (rs2|0)) {
+                            fence = ppc;
+                            pc_change = 1;
                             imm =  ((((ins >> 31) << 11) | (((ins >> 25) & 0x3F) << 4) | ((ins >> 8) & 0x0F) | (((ins >> 7) & 0x01) << 10)) << 1 );
+                            pc = pcorigin + (ppc-ppcorigin)|0;
                             pc = pc + imm - 4|0;
                         }
                         continue;
 
                     case 0x06:
                         //bltu
-                        if((rs1 >>> 0) < (rs2 >>> 0)){
+                        if ((rs1 >>> 0) < (rs2 >>> 0)) {
+                            fence = ppc;
+                            pc_change = 1;
                             imm =  ((((ins >> 31) << 11) | (((ins >> 25) & 0x3F) << 4) | ((ins >> 8) & 0x0F) | (((ins >> 7) & 0x01) << 10)) << 1 );
+                            pc = pcorigin + (ppc-ppcorigin)|0;
                             pc = pc + imm - 4|0;
                         }
                         continue;
 
                     case 0x07:
                         //bgeu
-                        if((rs1 >>> 0) >= (rs2 >>> 0)){
+                        if ((rs1 >>> 0) >= (rs2 >>> 0)) {
+                            fence = ppc;
+                            pc_change = 1;
                             imm =  ((((ins >> 31) << 11) | (((ins >> 25) & 0x3F) << 4) | ((ins >> 8) & 0x0F) | (((ins >> 7) & 0x01) << 10)) << 1 );
+                            pc = pcorigin + (ppc-ppcorigin)|0;
                             pc = pc + imm - 4|0;
                         }
                         continue;
