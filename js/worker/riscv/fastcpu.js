@@ -526,6 +526,7 @@ function SetCSR(addr,value) {
 
         case 0xC00: //CSR_MSTATUS
             csr[(csrp + addr)>>2] = value;
+            InvalidateTLB();
             break;
 
         case 0x3C00: //CSR_MCPUID
@@ -941,33 +942,33 @@ function SUMul(a,b,index) {
 
 function InvalidateTLB(){
 
-    // the sbi is at -1 for the insstruction tlb.
-    instlb_index = -0x8000;
-    instlb_entry = -0x8000;
-    read8tlb_index = -1;
+    // the highest address migh be used by the sbi
+    instlb_index = 0xFFFF0000;
+    instlb_entry = -1;
+    read8tlb_index = 0xFFFF0000;
     read8tlb_entry = -1;
-    read8utlb_index = -1;
+    read8utlb_index = 0xFFFF0000;
     read8utlb_entry = -1;
-    read16tlb_index = -1;
+    read16tlb_index = 0xFFFF0000;
     read16tlb_entry = -1;
-    read16utlb_index = -1;
+    read16utlb_index = 0xFFFF0000;
     read16utlb_entry = -1;
-    read32tlb_index = -1;
+    read32tlb_index = 0xFFFF0000;
     read32tlb_entry = -1;
-    store8tlb_index = -1;
+    store8tlb_index = 0xFFFF0000;
     store8tlb_entry = -1;
-    store16tlb_index = -1;
+    store16tlb_index = 0xFFFF0000;
     store16tlb_entry = -1;
-    store32tlb_index = -1;
+    store32tlb_index = 0xFFFF0000;
     store32tlb_entry = -1;
 
-    float_read32tlb_index = -1;
+    float_read32tlb_index = 0xFFFF0000;
     float_read32tlb_entry = -1;
-    float_read64tlb_index = -1;
+    float_read64tlb_index = 0xFFFF0000;
     float_read64tlb_entry = -1;
-    float_store32tlb_index = -1;
+    float_store32tlb_index = 0xFFFF0000;
     float_store32tlb_entry = -1;
-    float_store64tlb_index = -1;
+    float_store64tlb_index = 0xFFFF0000;
     float_store64tlb_entry = -1;
 
 }
