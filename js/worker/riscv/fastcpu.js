@@ -1931,120 +1931,101 @@ function Step(steps, clockspeed) {
                 //amoswap, amoadd, amoxor, amoand, amoor, amomin, amomax, amominu, amomaxu
                 rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
                 rs2 = r[((ins >> 18) & 0x7C) >> 2]|0;
+                paddr = TranslateVM(rs1|0, VM_READ)|0;
+                if((paddr|0) == -1) continue;
                 switch((ins >> 27)&0x1F) {
                     
                     case 0x01:
                         //amoswap
-                        paddr = TranslateVM(rs1|0, VM_READ)|0;
-                        if((paddr|0) == -1) break;
                         r[((ins >> 5) & 0x7C) >> 2] = ram[(ramp + paddr) >> 2]|0;
-                        paddr = TranslateVM(rs1|0, VM_WRITE)|0;
-                        if((paddr|0) == -1) break;
                         ram[(ramp + paddr) >> 2] = rs2|0;
+                        paddr = TranslateVM(rs1|0, VM_WRITE)|0;
+                        if((paddr|0) == -1) continue;
                         r[0] = 0;
                         continue;
 
                     case 0x00:
                         //amoadd
-                        paddr = TranslateVM(rs1|0, VM_READ)|0;
-                        if((paddr|0) == -1) break;
                         r[((ins >> 5) & 0x7C) >> 2] = ram[(ramp + paddr) >> 2]|0;
-                        paddr = TranslateVM(rs1|0,VM_WRITE)|0;
-                        if((paddr|0) == -1) break;
+                        paddr = TranslateVM(rs1|0, VM_WRITE)|0;
+                        if((paddr|0) == -1) continue;
                         ram[(ramp + paddr) >> 2] = ((r[((ins >> 5) & 0x7C) >> 2]|0) + (rs2|0))|0;
                         r[0] = 0;
                         continue;
 
                     case 0x04:
                         //amoxor
-                        paddr = TranslateVM(rs1|0, VM_READ)|0;
-                        if((paddr|0) == -1) break;
                         r[((ins >> 5) & 0x7C) >> 2] = ram[(ramp + paddr) >> 2]|0;
-                        paddr = TranslateVM(rs1|0,VM_WRITE)|0;
-                        if((paddr|0) == -1) break;
+                        paddr = TranslateVM(rs1|0, VM_WRITE)|0;
+                        if((paddr|0) == -1) continue;
                         ram[(ramp + paddr) >> 2] = ((r[((ins >> 5) & 0x7C) >> 2]|0) ^ (rs2|0))|0;
                         r[0] = 0;
                         continue;
 
                     case 0x0C:
                         //amoand
-                        paddr = TranslateVM(rs1|0, VM_READ)|0;
-                        if((paddr|0) == -1) break;
                         r[((ins >> 5) & 0x7C) >> 2] = ram[(ramp + paddr) >> 2]|0;
-                        paddr = TranslateVM(rs1|0,VM_WRITE)|0;
-                        if((paddr|0) == -1) break;
+                        paddr = TranslateVM(rs1|0, VM_WRITE)|0;
+                        if((paddr|0) == -1) continue;
                         ram[(ramp + paddr) >> 2] = ((r[((ins >> 5) & 0x7C) >> 2]|0) & (rs2|0))|0;
                         r[0] = 0;
                         continue;
 
                     case 0x08:
                         //amoor
-                        paddr = TranslateVM(rs1|0, VM_READ)|0;
-                        if((paddr|0) == -1) break;
                         r[((ins >> 5) & 0x7C) >> 2] = ram[(ramp + paddr) >> 2]|0;
-                        paddr = TranslateVM(rs1|0,VM_WRITE)|0;
-                        if((paddr|0) == -1) break;
+                        paddr = TranslateVM(rs1|0, VM_WRITE)|0;
+                        if((paddr|0) == -1) continue;
                         ram[(ramp + paddr) >> 2] = ((r[((ins >> 5) & 0x7C) >> 2]|0) | (rs2|0))|0;
                         r[0] = 0;
                         continue;
 
                     case 0x10:
                         //amomin
-                        paddr = TranslateVM(rs1|0, VM_READ)|0;
-                        if((paddr|0) == -1) break;
                         r[((ins >> 5) & 0x7C) >> 2] = ram[(ramp + paddr) >> 2]|0;
                         if((rs2 >> 0) > (r[((ins >> 5) & 0x7C) >> 2] >> 0)) r[0] = r[((ins >> 5) & 0x7C) >> 2];
                         else r[0] = rs2;
-                        paddr = TranslateVM(rs1|0,VM_WRITE)|0;
-                        if((paddr|0) == -1) break;
+                        paddr = TranslateVM(rs1|0, VM_WRITE)|0;
+                        if((paddr|0) == -1) continue;
                         ram[(ramp + paddr) >> 2] = r[0]|0;
                         r[0] = 0;
                         continue;
 
                    case 0x14:
                         //amomax
-                        paddr = TranslateVM(rs1|0,VM_READ)|0;
-                        if((paddr|0) == -1) break;
                         r[((ins >> 5) & 0x7C) >> 2] = ram[(ramp + paddr) >> 2]|0;
                         if((rs2 >> 0) < (r[((ins >> 5) & 0x7C) >> 2] >> 0)) r[0] = r[((ins >> 5) & 0x7C) >> 2];
                         else r[0] = rs2;
-                        paddr = TranslateVM(rs1|0,VM_WRITE)|0;
-                        if((paddr|0) == -1) break;
+                        paddr = TranslateVM(rs1|0, VM_WRITE)|0;
+                        if((paddr|0) == -1) continue;
                         ram[(ramp + paddr) >> 2] = r[0]|0;
                         r[0] = 0;
                         continue;
 
                     case 0x18:
                         //amominu
-                        paddr = TranslateVM(rs1|0,VM_READ)|0;
-                        if((paddr|0) == -1) break;
                         r[((ins >> 5) & 0x7C) >> 2] = ram[(ramp + paddr) >> 2]|0;
                         if((rs2 >>> 0) > (r[((ins >> 5) & 0x7C) >> 2] >>> 0)) r[0] = r[((ins >> 5) & 0x7C) >> 2];
                         else r[0] = rs2;
-                        paddr = TranslateVM(rs1|0,VM_WRITE)|0;
-                        if((paddr|0) == -1) break;
+                        paddr = TranslateVM(rs1|0, VM_WRITE)|0;
+                        if((paddr|0) == -1) continue;
                         ram[(ramp + paddr) >> 2] = r[0]|0;
                         r[0] = 0;
                         continue;
 
                     case 0x1C:
                         //amomaxu
-                        paddr = TranslateVM(rs1|0,VM_READ)|0;
-                        if((paddr|0) == -1) break;
                         r[((ins >> 5) & 0x7C) >> 2] = ram[(ramp + paddr) >> 2]|0;
                         if((rs2 >>> 0) < (r[((ins >> 5) & 0x7C) >> 2] >>> 0)) r[0] = r[((ins >> 5) & 0x7C) >> 2];
                         else r[0] = rs2;
-                        paddr = TranslateVM(rs1|0,VM_WRITE)|0;
-                        if((paddr|0) == -1) break;
+                        paddr = TranslateVM(rs1|0, VM_WRITE)|0;
+                        if((paddr|0) == -1) continue;
                         ram[(ramp + paddr) >> 2] = r[0]|0;
                         r[0] = 0;
                         continue;
 
                     case 0x02:
                         //lr.d
-                        rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
-                        paddr = TranslateVM(rs1|0,VM_READ)|0;
-                        if((paddr|0) == -1) break;
                         r[((ins >> 5) & 0x7C) >> 2] = ram[(ramp + paddr) >> 2]|0;
                         amoaddr = rs1;
                         amovalue = r[((ins >> 5) & 0x7C) >> 2]|0;
@@ -2053,21 +2034,17 @@ function Step(steps, clockspeed) {
 
                     case 0x03:
                         //sc.d
-                        rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
-                        rs2 = r[((ins >> 18) & 0x7C) >> 2]|0;
                         if((rs1|0) != (amoaddr|0)) {
                             r[((ins >> 5) & 0x7C) >> 2] = 0x01;
                             continue;
                         }
-                        paddr = TranslateVM(rs1, VM_READ)|0;
-                        if((paddr|0) == -1) break;
                         if((ram[(ramp + paddr) >> 2]|0) != (amovalue|0)) {
                             r[((ins >> 5) & 0x7C) >> 2] = 0x01;
                             continue;
                         }
                         r[((ins >> 5) & 0x7C) >> 2] = 0x00;
                         paddr = TranslateVM(rs1, VM_WRITE)|0;
-                        if ((paddr|0) == -1) break;
+                        if ((paddr|0) == -1) continue;
                         ram[(ramp + paddr) >> 2] = rs2|0;
                         r[0] = 0;
                         continue;
