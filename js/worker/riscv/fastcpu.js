@@ -1715,8 +1715,8 @@ function Step(steps, clockspeed) {
                             float_read64tlb_index = vaddr|0;
                             float_read64tlb_entry = (paddr ^ vaddr) & 0xFFFFF000;
                         }
-                        fi[(fip + ((((ins >> 7) & 0x1F) + 0) << 2)) >> 2] = ram[(ramp + paddr + 0) >> 2]|0;
-                        fi[(fip + ((((ins >> 7) & 0x1F) + 1) << 2)) >> 2] = ram[(ramp + paddr + 4) >> 2]|0;
+                        fi[(fip + ((((ins >> 7) & 0x1F) + 0) << 3)) >> 2] = ram[(ramp + paddr + 0) >> 2]|0;
+                        fi[(fip + ((((ins >> 7) & 0x1F) + 1) << 3)) >> 2] = ram[(ramp + paddr + 4) >> 2]|0;
                         continue;
 
                     default:
@@ -1760,8 +1760,8 @@ function Step(steps, clockspeed) {
                             float_store64tlb_index = vaddr|0;
                             float_store64tlb_entry = (paddr ^ vaddr) & 0xFFFFF000;
                         }
-                        ram[(ramp + paddr + 0) >> 2] = fi[(fip + ((((ins >> 20) & 0x1F) + 0) << 2)) >> 2]|0;
-                        ram[(ramp + paddr + 4) >> 2] = fi[(fip + ((((ins >> 20) & 0x1F) + 1) << 2)) >> 2]|0; 
+                        ram[(ramp + paddr + 0) >> 2] = fi[(fip + ((((ins >> 20) & 0x1F) + 0) << 3)) >> 2]|0;
+                        ram[(ramp + paddr + 4) >> 2] = fi[(fip + ((((ins >> 20) & 0x1F) + 1) << 3)) >> 2]|0; 
                         continue;
 
                     default:
@@ -1828,9 +1828,9 @@ function Step(steps, clockspeed) {
                         r[((ins >> 5) & 0x7C) >> 2] = (~~+f[(fp + (((ins >> 15) & 0x1F) << 3)) >> 3]);
                         continue;
 
-                    case 0x68: //fcvt.s.w
+                    case 0x68:
                     case 0x69:
-                        //fcvt.d.w
+                        //fcvt.s.w, fcvt.d.w
                         f[(fp + (((ins >> 7) & 0x1F) << 3)) >> 3] = (+~~r[(((ins >> 15) & 0x1F) << 2) >> 2]);
                         continue;
 
