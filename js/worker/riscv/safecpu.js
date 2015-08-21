@@ -301,9 +301,8 @@ SafeCPU.prototype.TranslateVM = function (addr, op) {
 
     // LEVEL 1
     var offset = addr & 0xFFF;
-    var page_num = (addr >>> 22);
 
-    var frame_num = this.ram.Read32(this.csr[CSR_SPTBR] + (page_num << 2));
+    var frame_num = this.ram.Read32(this.csr[CSR_SPTBR] + ((addr >>> 22) << 2));
     var type = ((frame_num >> 1) & 0xF);
     var valid = (frame_num & 0x01);
 
@@ -313,6 +312,7 @@ SafeCPU.prototype.TranslateVM = function (addr, op) {
         this.MemTrap(addr, op);
         return -1;
     }
+
     if (type >= 2) {
 
         if (!this.CheckVMPrivilege(type,op)) {
@@ -329,7 +329,7 @@ SafeCPU.prototype.TranslateVM = function (addr, op) {
             updated_frame_num = (frame_num | 0x60);
         this.ram.Write32(this.csr[CSR_SPTBR] + (page_num << 2),updated_frame_num);
 */
-        return (((frame_num >> 10) | ((addr >> 12) & 0x3FF)) << 12) | offset;
+        return ((frame_num >> 10) << 12) | (addr&0x3FFFFF);
     }
 
     // LEVEL 2
@@ -722,7 +722,7 @@ SafeCPU.prototype.GetCSR = function (addr) {
 
 SafeCPU.prototype.IMul = function (a,b) {
 
-    var result = [0,0];
+    var result = [0, 0];
 
     a >>>= 0;
     b >>>= 0;
@@ -815,18 +815,18 @@ SafeCPU.prototype.PushPrivilegeStack = function () {
 
     var csr = this.csr;
     var mstatus = csr[CSR_MSTATUS];
-    var privilege_level_stack =  (mstatus & 0xFFF);
-    var new_privilege_level_stack = (((privilege_level_stack << 2) | PRV_M) << 1) & 0xFFF;
-    csr[CSR_MSTATUS] = (((mstatus >> 12) << 12) + new_privilege_level_stack) & 0xFFFEFFFF; //Last "and" to set mprv(bit 16) to zero
+    var privilege_level_stack = mstatus & 0x1FF;
+    var new_privilege_level_stack = (((privilege_level_stack << 2) | PRV_M) << 1) & 0x1FF;
+    csr[CSR_MSTATUS] = ((mstatus & (~0xFFF)) + new_privilege_level_stack) & 0xFFFEFFFF; //Last "and" to set mprv(bit 16) to zero
 };
 
 SafeCPU.prototype.PopPrivilegeStack = function () {
 
     var csr = this.csr;
     var mstatus = csr[CSR_MSTATUS];
-    var privilege_level_stack =  (mstatus & 0xFFF);
-    var new_privilege_level_stack = ((privilege_level_stack >>> 3) | ((PRV_U << 1) | 0x1) << 9);
-    csr[CSR_MSTATUS] = ((mstatus >> 12) << 12) + new_privilege_level_stack;
+    var privilege_level_stack =  (mstatus & 0x1FF);
+    var new_privilege_level_stack = ((privilege_level_stack >>> 3) | ((PRV_U << 1) | 0x1) << 6);
+    csr[CSR_MSTATUS] = (mstatus & (~0xFFF)) + new_privilege_level_stack;
 };
 
 SafeCPU.prototype.Step = function (steps, clockspeed) {
@@ -836,16 +836,14 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
     var f = this.f;
     var csr = this.csr;
     var rindex = 0x00;
-    var findex = 0x00;
     var imm = 0x00;
     var imm1 = 0x00;
     var imm2 = 0x00;
     var imm3 = 0x00;
     var imm4 = 0x00;
     var zimm = 0x00;
-    var mul=0x00;
-    var quo=0x00;
-    var rem=0x00;
+    var quo = 0x00;
+    var rem = 0x00;
     var rs1 = 0x0;
     var rs2 = 0x0;
     var fs1 = 0.0;
@@ -853,6 +851,8 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
     var fs3 = 0.0;
     var interrupts = 0x0;
     var ie = 0x0;
+    var ins = 0x0;
+    var paddr = 0x0;
 
     steps = steps | 0;
     clockspeed = clockspeed | 0;
@@ -879,7 +879,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                 if (interrupts & 0x8) {
                     this.Trap(CAUSE_SOFTWARE_INTERRUPT, this.pc);
                     continue;
-                }
+                } else
                 if (!this.htif.IsQueueEmpty()) {
                     this.Trap(CAUSE_HOST_INTERRUPT, this.pc);
                     continue;
@@ -895,39 +895,36 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                      continue;
                 }
             }
-
         }
 
 
-        var paddr = this.TranslateVM(this.pc, VM_FETCH);
+        paddr = this.TranslateVM(this.pc, VM_FETCH);
         if(paddr == -1) {
             continue;
         }
-        var ins = this.ram.Read32(paddr);
+
+        ins = this.ram.Read32(paddr);
         this.pc = this.pc + 4|0;
         //DebugIns.Disassemble(ins,r,csr,this.pc);
 
         switch(ins&0x7F) {
 
             case 0x03:
-                //lb, lh, lw, lbu, lhu
+                // lb, lh, lw, lbu, lhu
+                imm = (ins >> 20);
+                rs1 = r[(ins >> 15) & 0x1F];
+                rindex = (ins >> 7) & 0x1F;
                 switch((ins >> 12)&0x7) {
                     
                     case 0x00:
-                        //lb
-                        imm = (ins >> 20);
-                        rs1 = r[(ins >> 15) & 0x1F];
-                        rindex = (ins >> 7) & 0x1F;
+                        // lb
                         paddr = this.TranslateVM(rs1 + imm|0, VM_READ);
                         if(paddr == -1) break;
                         r[rindex] = (this.ram.Read8(paddr) << 24) >> 24;
                         break;
 
                     case 0x01:
-                        //lh
-                        imm = (ins >> 20);
-                        rs1 = r[(ins >> 15) & 0x1F];
-                        rindex = (ins >> 7) & 0x1F;
+                        // lh
                         if (rs1+imm & 1) {
                              message.Debug("Error in lh: unaligned address");
                              message.Abort();
@@ -938,10 +935,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                         break;
 
                     case 0x02:
-                        //lw
-                        imm = (ins >> 20);
-                        rs1 = r[(ins >> 15) & 0x1F];
-                        rindex = (ins >> 7) & 0x1F;
+                        // lw
                         if (rs1+imm & 3) {
                              message.Debug("Error in lw: unaligned address");
                              message.Abort();
@@ -952,20 +946,14 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                         break;
 
                     case 0x04:
-                        //lbu
-                        imm = (ins >> 20);
-                        rs1 = r[(ins >> 15) & 0x1F];
-                        rindex = (ins >> 7) & 0x1F;
+                        // lbu
                         paddr = this.TranslateVM(rs1 + imm|0, VM_READ);
                         if(paddr == -1) break;
                         r[rindex] = this.ram.Read8(paddr) & 0xFF;
                         break;
 
                     case 0x05:
-                        //lhu
-                        imm = (ins >> 20);
-                        rs1 = r[(ins >> 15) & 0x1F];
-                        rindex = (ins >> 7) & 0x1F;
+                        // lhu
                         if (rs1+imm & 1) {
                              message.Debug("Error in lhu: unaligned address");
                              message.Abort();
@@ -976,7 +964,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                         break;
 
                     default:
-                        message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + "not found");
+                        message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + " not found");
                         message.Abort();
                         break;
 
@@ -984,25 +972,23 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                 break;
 
             case 0x23:
-                //sb, sh, sw
+                // sb, sh, sw
                 imm1 = (ins >> 25);
                 imm2 = (ins >> 7) & 0x1F;
                 imm = (imm1 << 5) | imm2;
+                rs1 = r[(ins >> 15) & 0x1F];
+                rindex = (ins >> 20) & 0x1F;
                 switch((ins >> 12)&0x7) {
                     
                     case 0x00:
-                        //sb
-                        rs1 = r[(ins >> 15) & 0x1F];
-                        rindex = (ins >> 20) & 0x1F;
+                        // sb
                         paddr = this.TranslateVM(rs1 + imm|0,VM_WRITE);
                         if(paddr == -1) break;
                         this.ram.Write8(paddr,(r[rindex] & 0xFF));
                         break;
 
                     case 0x01:
-                        //sh
-                        rs1 = r[(ins >> 15) & 0x1F];
-                        rindex = (ins >> 20) & 0x1F;
+                        // sh
                         if (rs1+imm & 1) {
                              message.Debug("Error in sh: unaligned address");
                              message.Abort();
@@ -1013,9 +999,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                         break;
 
                     case 0x02:
-                        //sw
-                        rs1 = r[(ins >> 15) & 0x1F];
-                        rindex = (ins >> 20) & 0x1F;
+                        // sw
                         if (rs1+imm & 3) {
                              message.Debug("Error in sw: unaligned address");
                              message.Abort();
@@ -1026,7 +1010,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                         break;
 
                     default:
-                        message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + "not found");
+                        message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + " not found");
                         message.Abort();
                         break;
 
@@ -1034,86 +1018,65 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                 break;
 
             case 0x13:
-                //addi,slti,sltiu,xori,ori,andi,slli,srli,srai
+                // addi, slti, sltiu, xori, ori, andi, slli, srli, srai
+                rindex = (ins >> 7) & 0x1F;
+                rs1 = r[(ins >> 15) & 0x1F];
+                imm = (ins >> 20);
                 switch((ins >> 12)&0x7) {
                     
                     case 0x00:
-                        //addi
-                        imm = (ins >> 20);
-                        rs1 = r[(ins >> 15) & 0x1F];
-                        rindex = (ins >> 7) & 0x1F;
+                        // addi
                         r[rindex] = rs1 + imm;
                         break;
 
                     case 0x02:
-                        //slti
-                        imm = (ins >> 20);
-                        rs1 = r[(ins >> 15) & 0x1F];
-                        rindex = (ins >> 7) & 0x1F;
+                        // slti
                         if(rs1 < imm) r[rindex] = 0x01;
                         else r[rindex] = 0x00;
                         break;
 
                     case 0x03:
-                        //sltiu
-                        imm = (ins >> 20) >>> 0;
-                        rs1 = r[(ins >> 15) & 0x1F] >>> 0;
-                        rindex = (ins >> 7) & 0x1F;
-                        if(rs1 < imm) r[rindex] = 0x01;
+                        // sltiu
+                        if((rs1>>>0) < (imm>>>0)) r[rindex] = 0x01;
                         else r[rindex] = 0x00;
                         break;
 
                     case 0x04:
-                        //xori
-                        imm = (ins >> 20);
-                        rs1 = r[(ins >> 15) & 0x1F];
-                        rindex = (ins >> 7) & 0x1F;
+                        // xori
                         r[rindex] = rs1 ^ imm;
                         break;
 
                     case 0x06:
-                        //ori
-                        imm = (ins >> 20);
-                        rs1 = r[(ins >> 15) & 0x1F];
-                        rindex = (ins >> 7) & 0x1F;
+                        // ori
                         r[rindex] = rs1 | imm;
                         break;
 
                     case 0x07:
-                        //andi
-                        imm = (ins >> 20);
-                        rs1 = r[(ins >> 15) & 0x1F];
-                        rindex = (ins >> 7) & 0x1F;
+                        // andi
                         r[rindex] = rs1 & imm;
                         break;
 
                     case 0x01:
-                        //slli
-                        imm = (ins >> 20) & 0x1F;
-                        rs1 = r[(ins >> 15) & 0x1F];
-                        rindex = (ins >> 7) & 0x1F;
+                        // slli
                         r[rindex] = rs1 << imm;
                         break;
 
                     case 0x05:
                         if(((ins >> 25) & 0x7F) == 0x00){
-                            //srli
-                            imm = (ins >> 20) & 0x1F;
-                            rs1 = r[(ins >> 15) & 0x1F];
-                            rindex = (ins >> 7) & 0x1F;
+                            // srli
                             r[rindex] = rs1 >>> imm;
                         }
                         else if(((ins >> 25) & 0x7F) == 0x20){
-                            //srai
-                            imm = (ins >> 20) & 0x1F;
-                            rs1 = r[(ins >> 15) & 0x1F];
-                            rindex = (ins >> 7) & 0x1F;
+                            // srai
                             r[rindex] = rs1 >> imm;
+                        } else {
+                            message.Debug("Error in safecpu: Instruction (sra, srl)" + utils.ToHex(ins) + " not found");
+                            message.Abort();
                         }
                         break;
 
                     default:
-                        message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + "not found");
+                        message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + " not found");
                         message.Abort();
                         break;
 
@@ -1121,61 +1084,54 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                 break;
 
             case 0x33:
-                //add,sub,sll,slt,sltu,xor,srl,sra,or,and
+                // add, sub, sll, slt, sltu, xor, srl, sra, or, and
                 switch((ins >> 25)&0x7F) {
                     
                     case 0x00:
-                        //add,slt,sltu,add,or,xor,sll,srl
+                        // add, slt, sltu, or, xor, sll, srl
                         rs1 = r[(ins >> 15) & 0x1F];
                         rs2 = r[(ins >> 20) & 0x1F];
+                        rindex = (ins >> 7) & 0x1F;
                         switch((ins >> 12)&0x7) {
                             case 0x00:
-                                //add
-                                rindex = (ins >> 7) & 0x1F;
+                                // add
                                 r[rindex] = rs1 + rs2;
                                 break;
 
                             case 0x02:
-                                //slt
-                                rindex = (ins >> 7) & 0x1F;
+                                // slt
                                 if(rs1 < rs2) r[rindex] = 0x01;
                                 else r[rindex] = 0x00;
                                 break;
 
                             case 0x03:
-                                //sltu
-                                rindex = (ins >> 7) & 0x1F;
+                                // sltu
                                 if((rs1>>>0) < (rs2>>>0)) r[rindex] = 0x01;
                                 else r[rindex] = 0x00;
                                 break;
 
                             case 0x07:
-                                //and
-                                rindex = (ins >> 7) & 0x1F;
+                                // and
                                 r[rindex] = rs1 & rs2;
                                 break;
 
                             case 0x06:
-                                //or
-                                rindex = (ins >> 7) & 0x1F;
+                                // or
                                 r[rindex] = rs1 | rs2;
                                 break;
 
                             case 0x04:
-                                //xor
-                                rindex = (ins >> 7) & 0x1F;
+                                // xor
                                 r[rindex] = rs1 ^ rs2;
                                 break;
 
                             case 0x01:
-                                //sll
-                                rindex = (ins >> 7) & 0x1F;
+                                // sll
                                 r[rindex] = rs1 << (rs2 & 0x1F);
                                 break;
 
                             case 0x05:
-                                //srl
-                                rindex = (ins >> 7) & 0x1F;
+                                // srl
                                 r[rindex] = rs1 >>> (rs2 & 0x1F);
                                 break;
                         }
@@ -1188,53 +1144,52 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                         rindex = (ins >> 7) & 0x1F;
                         switch((ins >> 12)&0x7) {
                             case 0x00:
-                                //sub
+                                // sub
                                 r[rindex] = rs1 - rs2;
                                 break;
 
                             case 0x05:
-                                //sra
+                                // sra
                                 r[rindex] = rs1 >> (rs2 & 0x1F);
                                 break;
+
+                            default:
+                                message.Debug("Error in safecpu: Instruction (sub,sra) " + utils.ToHex(ins) + " not found");
+                                message.Abort();
                         }
                         break;
 
                     case 0x01:
-                        //mul,mulh,mulhsu,mulhu,div,divu,rem,remu
+                        // mul, mulh, mulhsu, mulhu, div, divu, rem, remu
                         rs1 = r[(ins >> 15) & 0x1F];
                         rs2 = r[(ins >> 20) & 0x1F];
+                        rindex = (ins >> 7) & 0x1F;
                         switch((ins >> 12)&0x7) {
                             case 0x00:
-                                //mul
-                                rindex = (ins >> 7) & 0x1F;
-                                mul = rs1 * rs2;
-                                r[rindex] = mul & 0xFFFFFFFF;
+                                // mul
+                                r[rindex] = rs1 * rs2;
                                 break;
 
                             case 0x01:
-                                //mulh
-                                rindex = (ins >> 7) & 0x1F;
-                                var result = this.UMul(rs1,rs2);
+                                // mulh
+                                var result = this.UMul(rs1, rs2);
                                 r[rindex] = result[1];
                                 break;
 
                             case 0x02:
-                                //mulhsu
-                                rindex = (ins >> 7) & 0x1F;
-                                var result = this.SUMul(rs1,rs2>>>0);
+                                // mulhsu
+                                var result = this.SUMul(rs1, rs2>>>0);
                                 r[rindex] = result[1];
                                 break;
 
                             case 0x03:
-                                //mulhu
-                                rindex = (ins >> 7) & 0x1F;
+                                // mulhu
                                 var result = this.IMul(rs1>>>0, rs2>>>0);
                                 r[rindex] = result[1];
                                 break;
 
                             case 0x04:
-                                //div
-                                rindex = (ins >> 7) & 0x1F;
+                                // div
                                 if(rs2 == 0)
                                     quo = -1;
                                 else
@@ -1243,8 +1198,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                                 break;
 
                             case 0x05:
-                                //divu
-                                rindex = (ins >> 7) & 0x1F;
+                                // divu
                                 if(rs2 == 0)
                                     quo = 0xFFFFFFFF;
                                 else
@@ -1253,8 +1207,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                                 break;
 
                             case 0x06:
-                                //rem
-                                rindex = (ins >> 7) & 0x1F;
+                                // rem
                                 if(rs2 == 0)
                                     rem = rs1;
                                 else
@@ -1263,8 +1216,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                                 break;
 
                             case 0x07:
-                                //remu
-                                rindex = (ins >> 7) & 0x1F;
+                                // remu
                                 if(rs2 == 0)
                                     rem = (rs1 >>> 0);
                                 else
@@ -1274,10 +1226,8 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                         }
                         break;
 
-                    
-
                     default:
-                        message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + "not found");
+                        message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + " not found");
                         message.Abort();
                         break;
 
@@ -1285,20 +1235,20 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                 break;
 
             case 0x37:
-                //lui
+                // lui
                 rindex = (ins >> 7) & 0x1F;
-                r[rindex] = (ins & 0xFFFFF000);
+                r[rindex] = ins & 0xFFFFF000;
                 break;
 
             case 0x17:
-                //auipc
-                imm = (ins & 0xFFFFF000);
+                // auipc
+                imm = ins & 0xFFFFF000;
                 rindex = (ins >> 7) & 0x1F;
-                r[rindex] = (imm + this.pc - 4)|0;
+                r[rindex] = this.pc + imm - 4|0;
                 break;
 
             case 0x6F:
-                //jal
+                // jal
                 imm1 = (ins >> 21) & 0x3FF;
                 imm2 = ((ins >> 20) & 0x1) << 10;
                 imm3 = ((ins >> 12) & 0xFF) << 11;
@@ -1310,68 +1260,58 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                 break; 
 
             case 0x67:
-                //jalr
-                imm = (ins >> 20);
+                // jalr
+                imm = ins >> 20;
                 rs1 = r[(ins >> 15) & 0x1F];
                 rindex = (ins >> 7) & 0x1F;
                 r[rindex] = this.pc;
-                this.pc = ((rs1 + imm) & 0xFFFFFFFE)|0;
+                this.pc = (rs1 + imm) & 0xFFFFFFFE;
                 break;
 
             case 0x63:
-                //beq, bne, blt, bge, bltu, bgeu
+                // beq, bne, blt, bge, bltu, bgeu
                 imm1 = (ins >> 31) << 11;
                 imm2 = ((ins >> 25) & 0x3F) << 4;
                 imm3 = (ins >> 8) & 0x0F;
                 imm4 = ((ins >> 7) & 0x01) << 10;
                 imm =  ((imm1 | imm2 | imm3 | imm4) << 1 );
+                rs1 = r[(ins >> 15) & 0x1F];
+                rs2 = r[(ins >> 20) & 0x1F];
 
                 switch((ins >> 12)&0x7) {
                     
                     case 0x00:
-                        //beq
-                        rs1 = r[(ins >> 15) & 0x1F];
-                        rs2 = r[(ins >> 20) & 0x1F];
-                        if(rs1 == rs2) this.pc = this.pc + imm - 4|0;//-4 temporary hack
+                        // beq
+                        if(rs1 == rs2) this.pc = this.pc + imm - 4|0;
                         break;
 
                     case 0x01:
-                        //bne
-                        rs1 = r[(ins >> 15) & 0x1F];
-                        rs2 = r[(ins >> 20) & 0x1F];
-                        if(rs1 != rs2) this.pc = this.pc + imm - 4|0;//-4 temporary hack
+                        // bne
+                        if(rs1 != rs2) this.pc = this.pc + imm - 4|0;
                         break;
 
                     case 0x04:
-                        //blt
-                        rs1 = r[(ins >> 15) & 0x1F];
-                        rs2 = r[(ins >> 20) & 0x1F];
-                        if(rs1 < rs2) this.pc = this.pc + imm - 4|0;//-4 temporary hack
+                        // blt
+                        if(rs1 < rs2) this.pc = this.pc + imm - 4|0;
                         break;
 
                     case 0x05:
-                        //bge
-                        rs1 = r[(ins >> 15) & 0x1F];
-                        rs2 = r[(ins >> 20) & 0x1F];
-                        if(rs1 >= rs2) this.pc = this.pc + imm - 4|0;//-4 temporary hack
+                        // bge
+                        if(rs1 >= rs2) this.pc = this.pc + imm - 4|0;
                         break;
 
                     case 0x06:
-                        //bltu
-                        rs1 = r[(ins >> 15) & 0x1F] >>> 0;
-                        rs2 = r[(ins >> 20) & 0x1F] >>> 0;
-                        if(rs1 < rs2) this.pc = this.pc + imm - 4|0;//-4 temporary hack
+                        // bltu
+                        if((rs1>>>0) < (rs2>>>0)) this.pc = this.pc + imm - 4|0;
                         break;
 
                     case 0x07:
-                        //bgeu
-                        rs1 = r[(ins >> 15) & 0x1F] >>> 0;
-                        rs2 = r[(ins >> 20) & 0x1F] >>> 0;
-                        if(rs1 >= rs2) this.pc = this.pc + imm - 4|0;//-4 temporary hack
+                        // bgeu
+                        if((rs1>>>0) >= (rs2>>>0)) this.pc = this.pc + imm - 4|0;
                         break;
 
                     default:
-                        message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + "not found");
+                        message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + " not found");
                         message.Abort();
                         break;
 
@@ -1379,33 +1319,33 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                 break;
 
             case 0x73:
-                //csrrw, csrrs, csrrc, csrrwi, csrrsi, csrrci, ecall, eret, ebreak, mrts, wfi
+                // csrrw, csrrs, csrrc, csrrwi, csrrsi, csrrci, ecall, eret, ebreak, mrts, wfi
                 imm = (ins >>> 20);
                 rs1 = r[(ins >> 15) & 0x1F];
                 rindex = (ins >> 7) & 0x1F;
                 switch((ins >> 12)&0x7) {
                     
                     case 0x01:
-                        //csrrw
+                        // csrrw
                         r[rindex] = this.GetCSR(imm);
                         //if (rindex != ((ins >> 15) & 0x1F))
                         this.SetCSR(imm, rs1);
                         break;
 
                     case 0x02:
-                        //csrrs
+                        // csrrs
                         r[rindex] = this.GetCSR(imm);
                         this.SetCSR(imm, this.GetCSR(imm) | rs1);
                         break;
 
                     case 0x03:
-                        //csrrc
+                        // csrrc
                         r[rindex] = this.GetCSR(imm);
                         this.SetCSR(imm, this.GetCSR(imm) & (~rs1));
                         break;
 
                     case 0x05:
-                        //csrrwi
+                        // csrrwi
                         r[rindex] = this.GetCSR(imm);
                         zimm = (ins >> 15) & 0x1F;
                         if(zimm != 0) this.SetCSR(imm, (zimm >> 0));
@@ -1413,24 +1353,24 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                         
 
                     case 0x06:
-                        //csrrsi
+                        // csrrsi
                         r[rindex] = this.GetCSR(imm);
                         zimm = (ins >> 15) & 0x1F;
                         if(zimm != 0) this.SetCSR(imm, this.GetCSR(imm) | (zimm >> 0));
                         break;
 
                     case 0x07:
-                        //csrrci
+                        // csrrci
                         r[rindex] = this.GetCSR(imm);
                         zimm = (ins >> 15) & 0x1F;
                         if(zimm != 0) this.SetCSR(imm, this.GetCSR(imm) & ~(zimm >> 0));
                         break;
                     
                     case 0x00:
-                        //ecall, eret, ebreak, mrts, wfi
+                        // ecall, eret, ebreak, mrts, wfi
                         switch((ins >> 20)&0xFFF) {
                             case 0x00:
-                                //ecall
+                                // ecall
                                 switch(current_privilege_level)
                                 {
                                     case PRV_U:
@@ -1458,12 +1398,12 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                                 break;
 
                             case 0x001:
-                                //ebreak
+                                // ebreak
                                 this.Trap(CAUSE_BREAKPOINT, this.pc - 4|0);
                                 break;
 
                             case 0x100:
-                                //eret
+                                // eret
                                 var current_privilege_level = (csr[CSR_MSTATUS] & 0x06) >> 1;
                                 if(current_privilege_level < PRV_S) {
                                     message.Debug("Error in eret: current_privilege_level isn't allowed access");
@@ -1474,7 +1414,6 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
 
                                 switch(current_privilege_level)
                                 {
-                                    
                                     case PRV_S:
                                         this.pc = csr[CSR_SEPC]|0;
                                         break;
@@ -1504,8 +1443,8 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                                 break;
 
                             case 0x305:
-                                //mrts     
-                                if(current_privilege_level != PRV_M) {
+                                // mrts
+                                if (current_privilege_level != PRV_M) {
                                     message.Debug("Error in mrts: current_privilege_level isn't allowed access");
                                     message.Abort();
                                     break;   
@@ -1518,11 +1457,11 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                                 break;
 
                             case 0x101:
-                                //sfence.vm
+                                // sfence.vm
                                 break;
 
                             default:
-                                message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + "not found");
+                                message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + " not found");
                                 message.Abort();
                                 break;
 
@@ -1530,7 +1469,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                         break; 
 
                     default:
-                        message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + "not found");
+                        message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + " not found");
                         message.Abort();
                         break;
 
@@ -1538,14 +1477,14 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                 break;
 
             case 0x07:
-                //flw,fld
+                // flw, fld
+                imm = (ins >> 20);
+                rs1 = r[(ins >> 15) & 0x1F];
+                rindex = ((ins >> 7) & 0x1F);
                 switch((ins >> 12)&0x7) {
                     
                     case 0x02:
-                        //flw
-                        imm = (ins >> 20);
-                        rs1 = r[(ins >> 15) & 0x1F];
-                        findex = ((ins >> 7) & 0x1F);
+                        // flw
                         if (rs1+imm & 3) {
                              message.Debug("Error in flw: unaligned address");
                              message.Abort();
@@ -1553,26 +1492,23 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                         paddr = this.TranslateVM(rs1 + imm|0,VM_READ);
                         if(paddr == -1) break;
                         r[0] = this.ram.Read32(paddr);
-                        f[findex] = ff[0];
+                        f[rindex] = ff[0];
                         break;
 
                     case 0x03:
-                        //fld
-                        imm = (ins >> 20);
-                        rs1 = r[(ins >> 15) & 0x1F];
-                        findex = ((ins >> 7) & 0x1F) << 1;
+                        // fld
                         if (rs1+imm & 7) {
                              message.Debug("Error in flw: unaligned address");
                              message.Abort();
                         }
                         paddr = this.TranslateVM(rs1 + imm|0,VM_READ);
                         if(paddr == -1) break;
-                        fi[findex + 0] = this.ram.Read32(paddr+0);
-                        fi[findex + 1] = this.ram.Read32(paddr+4);
+                        fi[(rindex<<1) + 0] = this.ram.Read32(paddr+0);
+                        fi[(rindex<<1) + 1] = this.ram.Read32(paddr+4);
                         break;
 
                     default:
-                        message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + "not found");
+                        message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + " not found");
                         message.Abort();
                         break;
 
@@ -1580,17 +1516,17 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                 break;
 
             case 0x27:
-                //fsw, fsd
+                // fsw, fsd
+                imm1 = (ins >> 25);
+                imm2 = (ins >> 7) & 0x1F;
+                imm = (imm1 << 5) + imm2;
+                rs1 = r[(ins >> 15) & 0x1F];
+                rindex = (ins >> 20) & 0x1F;
                 switch((ins >> 12)&0x7) {
 
                     case 0x02:
-                        //fsw
-                        imm1 = (ins >> 25);
-                        imm2 = (ins >> 7) & 0x1F;
-                        imm = (imm1 << 5) + imm2;
-                        rs1 = r[(ins >> 15) & 0x1F];
-                        findex = (ins >> 20) & 0x1F;
-                        ff[0] = f[findex];
+                        // fsw
+                        ff[0] = f[rindex];
                         if (rs1+imm & 3) {
                              message.Debug("Error in fsw: unaligned address");
                              message.Abort();
@@ -1601,24 +1537,19 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                         break;
 
                     case 0x03:
-                        //fsd
-                        imm1 = (ins >> 25);
-                        imm2 = (ins >> 7) & 0x1F;
-                        imm = (imm1 << 5) + imm2;
-                        rs1 = r[(ins >> 15) & 0x1F];
-                        findex = ((ins >> 20) & 0x1F) << 1;
+                        // fsd
                         if (rs1+imm & 7) {
                              message.Debug("Error in fsd: unaligned address");
                              message.Abort();
                         }
-                        paddr = this.TranslateVM(rs1 + imm + 0|0, VM_WRITE);
+                        paddr = this.TranslateVM(rs1 + imm|0, VM_WRITE);
                         if (paddr == -1) break;
-                        this.ram.Write32(paddr+0, fi[findex + 0]);
-                        this.ram.Write32(paddr+4, fi[findex + 1]);
+                        this.ram.Write32(paddr+0, fi[(rindex<<1) + 0]);
+                        this.ram.Write32(paddr+4, fi[(rindex<<1) + 1]);
                         break;
 
                     default:
-                        message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + "not found");
+                        message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + " not found");
                         message.Abort();
                         break;
 
@@ -1626,33 +1557,31 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                 break;
 
             case 0x53:
-                //fadd.s, fsub.s
+                // fadd, fsub
+                rindex = (ins >> 7) & 0x1F;
                 switch((ins >> 25)&0x7F) {
                     
                     case 0x00:
                     case 0x01:
-                        //fadd.s, fadd.d
+                        // fadd.s, fadd.d
                         fs1 = f[(ins >> 15) & 0x1F];
                         fs2 = f[(ins >> 20) & 0x1F];
-                        rindex = (ins >> 7) & 0x1F;
                         f[rindex] = fs1 + fs2;
                         break;
 
                     case 0x04:
                     case 0x05:
-                        //fsub.s, fsub.d
+                        // fsub.s, fsub.d
                         fs1 = f[(ins >> 15) & 0x1F];
                         fs2 = f[(ins >> 20) & 0x1F];
-                        rindex = (ins >> 7) & 0x1F;
                         f[rindex] = fs1 - fs2;
                         break;
 
                     case 0x50:
                     case 0x51:
-                        //fcmp.s, fcmp.d
+                        // fcmp.s, fcmp.d
                         fs1 = f[(ins >> 15) & 0x1F];
                         fs2 = f[(ins >> 20) & 0x1F];
-                        rindex = (ins >> 7) & 0x1F;
                         switch((ins >> 12) & 0x7) {
                             case 0x0:
                                 if (fs1 <= fs2) r[rindex] = 1;
@@ -1678,19 +1607,21 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
 
                     case 0x60:
                         //fcvt.w.s
-                        rindex = (ins >> 7) & 0x1F;
+                        r[rindex] = f[(ins >> 15) & 0x1F];
+                        break;
+
+                    case 0x61:
+                        //fcvt.w.d
                         r[rindex] = f[(ins >> 15) & 0x1F];
                         break;
 
                     case 0x68:
                         //fcvt.s.w
-                        rindex = (ins >> 7) & 0x1F;
                         f[rindex] = r[(ins >> 15) & 0x1F];
                         break;
 
                     case 0x69:
                         //fcvt.d.w
-                        rindex = (ins >> 7) & 0x1F;
                         f[rindex] = r[(ins >> 15) & 0x1F];
                         break;
 
@@ -1700,29 +1631,27 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                         //fmul.s, fmul.d
                         fs1 = f[(ins >> 15) & 0x1F];
                         fs2 = f[(ins >> 20) & 0x1F];
-                        rindex = (ins >> 7) & 0x1F;
                         f[rindex] = fs1 * fs2;
                         break;
 
                     case 0x10: // single precision
                     case 0x11: // double precision
-                        //#fsgnj
-                        rindex = (ins >> 7) & 0x1F;
+                        // fsgnj
                         fs1 = f[(ins >> 15) & 0x1F];
                         fs2 = f[(ins >> 20) & 0x1F];
                         switch((ins >> 12) & 7) {
                             case 0:
-                                //fsgnj.d, also used for fmv.d
+                                // fsgnj.d, also used for fmv.d
                                 f[rindex] = (fs2<0)?-Math.abs(fs1):Math.abs(fs1);
                                 break;
 
                             case 1:
-                                //fsgnjn.d
+                                // fsgnjn.d
                                 f[rindex] = (fs2<0)?Math.abs(fs1):-Math.abs(fs1);
                                 break;
 
                             case 3:
-                                //fsgnjx.d
+                                // fsgnjx.d
                                 f[rindex] = ((fs2<0 && fs1<0) || (fs2>0 && fs1>0))?Math.abs(fs1):-Math.abs(fs1);
                                 break;
 
@@ -1732,30 +1661,23 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                         }
                         break;
 
-                    case 0x61:
-                        //fcvt.w.d
-                        rindex = (ins >> 7) & 0x1F;
-                        r[rindex] = f[(ins >> 15) & 0x1F];
-                        break;
-
                     case 0x78:
-                        //fmv.s.x
+                        // fmv.s.x
                         rs1 = r[(ins >> 15) & 0x1F];
                         r[0] = rs1;
-                        findex = (ins >> 7) & 0x1F;
-                        f[findex] = ff[0]; 
+                        f[rindex] = ff[0]; 
                         break;
 
 
                     default:
-                        message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + "not found");
+                        message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + " not found");
                         message.Abort();
                         break;
                 }
                 break;
 
             case 0x43:
-                //fmadd.d,fmadd.s
+                // fmadd.d, fmadd.s
                 fs1 = f[(ins >> 15) & 0x1F];
                 fs2 = f[(ins >> 20) & 0x1F];
                 fs3 = f[(ins >> 27) & 0x1F];
@@ -1764,7 +1686,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                 break;
 
             case 0x47:
-                //fmsub.d,fmsub.s
+                // fmsub.d, fmsub.s
                 fs1 = f[(ins >> 15) & 0x1F];
                 fs2 = f[(ins >> 20) & 0x1F];
                 fs3 = f[(ins >> 27) & 0x1F];
@@ -1773,7 +1695,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                 break;
 
             case 0x4B:
-                //fnmadd.d,fnmadd.s
+                // fnmadd.d, fnmadd.s
                 fs1 = f[(ins >> 15) & 0x1F];
                 fs2 = f[(ins >> 20) & 0x1F];
                 fs3 = f[(ins >> 27) & 0x1F];
@@ -1782,7 +1704,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                 break;
 
             case 0x4F:
-                //fnmsub.d,fnmsub.s
+                // fnmsub.d, fnmsub.s
                 fs1 = f[(ins >> 15) & 0x1F];
                 fs2 = f[(ins >> 20) & 0x1F];
                 fs3 = f[(ins >> 27) & 0x1F];
@@ -1791,16 +1713,17 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                 break;
 
             case 0x2F:
-                //amoswap, amoadd, amoxor, amoand, amoor, amomin, amomax, amominu, amomaxu
+                // amoswap, amoadd, amoxor, amoand, amoor, amomin, amomax, amominu, amomaxu
                 rs1 = r[(ins >> 15) & 0x1F];
                 rs2 = r[(ins >> 20) & 0x1F];
                 rindex = (ins >> 7) & 0x1F;
+                paddr = this.TranslateVM(rs1|0, VM_READ);
+                if (paddr == -1) break;
+
                 switch((ins >> 27)&0x1F) {
                     
                     case 0x01:
-                        //amoswap
-                        paddr = this.TranslateVM(rs1|0, VM_READ);
-                        if(paddr == -1) break;
+                        // amoswap
                         r[rindex] = this.ram.Read32(paddr);
                         paddr = this.TranslateVM(rs1|0, VM_WRITE);
                         if(paddr == -1) break;
@@ -1808,111 +1731,90 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                         break;
 
                     case 0x00:
-                        //amoadd
-                        paddr = this.TranslateVM(rs1|0,VM_READ);
-                        if(paddr == -1) break;
+                        // amoadd
                         r[rindex] = this.ram.Read32(paddr);
-                        paddr = this.TranslateVM(rs1|0,VM_WRITE);
+                        paddr = this.TranslateVM(rs1|0, VM_WRITE);
                         if(paddr == -1) break;
                         this.ram.Write32(paddr,r[rindex] + rs2);
                         break;
 
                     case 0x04:
-                        //amoxor
-                        paddr = this.TranslateVM(rs1|0,VM_READ);
-                        if(paddr == -1) break;
+                        // amoxor
                         r[rindex] = this.ram.Read32(paddr);
-                        paddr = this.TranslateVM(rs1|0,VM_WRITE);
+                        paddr = this.TranslateVM(rs1|0, VM_WRITE);
                         if(paddr == -1) break;
                         this.ram.Write32(paddr,r[rindex] ^ rs2);
                         break;
 
                     case 0x0C:
-                        //amoand
-                        paddr = this.TranslateVM(rs1|0,VM_READ);
-                        if(paddr == -1) break;
+                        // amoand
                         r[rindex] = this.ram.Read32(paddr);
-                        paddr = this.TranslateVM(rs1|0,VM_WRITE);
+                        paddr = this.TranslateVM(rs1|0, VM_WRITE);
                         if(paddr == -1) break;
-                        this.ram.Write32(paddr,r[rindex] & rs2);
+                        this.ram.Write32(paddr, r[rindex] & rs2);
                         break;
 
                     case 0x08:
-                        //amoor
-                        paddr = this.TranslateVM(rs1|0,VM_READ);
-                        if(paddr == -1) break;
+                        // amoor
                         r[rindex] = this.ram.Read32(paddr);
-                        paddr = this.TranslateVM(rs1|0,VM_WRITE);
+                        paddr = this.TranslateVM(rs1|0, VM_WRITE);
                         if(paddr == -1) break;
-                        this.ram.Write32(paddr,r[rindex] | rs2);
+                        this.ram.Write32(paddr, r[rindex] | rs2);
                         break;
 
                     case 0x10:
-                        //amomin
-                        paddr = this.TranslateVM(rs1|0,VM_READ);
-                        if(paddr == -1) break;
+                        // amomin
                         r[rindex] = this.ram.Read32(paddr);
                         if((rs2 >> 0) > (r[rindex] >> 0)) r[0] = r[rindex];
                         else r[0] = rs2;
-                        paddr = this.TranslateVM(rs1|0,VM_WRITE);
+                        paddr = this.TranslateVM(rs1|0, VM_WRITE);
                         if(paddr == -1) break;
-                        this.ram.Write32(paddr,r[0]);
+                        this.ram.Write32(paddr, r[0]);
                         break;
 
                    case 0x14:
-                        //amomax
-                        paddr = this.TranslateVM(rs1,VM_READ);
-                        if(paddr == -1) break;
+                        // amomax
                         r[rindex] = this.ram.Read32(paddr);
-                        if((rs2 >> 0) < (r[rindex] >> 0)) r[0] = r[rindex];
+                        if(rs2 < r[rindex]) r[0] = r[rindex];
                         else r[0] = rs2;
-                        paddr = this.TranslateVM(rs1,VM_WRITE);
+                        paddr = this.TranslateVM(rs1, VM_WRITE);
                         if(paddr == -1) break;
-                        this.ram.Write32(paddr,r[0]);
+                        this.ram.Write32(paddr, r[0]);
                         break;
 
                     case 0x18:
-                        //amominu
+                        // amominu
                         r[rindex] = this.ram.Read32(paddr);
                         if((rs2 >>> 0) > (r[rindex] >>> 0)) r[0] = r[rindex];
                         else r[0] = rs2;
-                        paddr = this.TranslateVM(rs1,VM_WRITE);
+                        paddr = this.TranslateVM(rs1, VM_WRITE);
                         if(paddr == -1) break;
-                        this.ram.Write32(paddr,r[0]);
+                        this.ram.Write32(paddr, r[0]);
                         break;
 
                     case 0x1C:
-                        //amomaxu
-                        paddr = this.TranslateVM(rs1,VM_READ);
-                        if(paddr == -1) break;
+                        // amomaxu
                         r[rindex] = this.ram.Read32(paddr);
                         if((rs2 >>> 0) < (r[rindex] >>> 0)) r[0] = r[rindex];
                         else r[0] = rs2;
-                        paddr = this.TranslateVM(rs1,VM_WRITE);
+                        paddr = this.TranslateVM(rs1, VM_WRITE);
                         if(paddr == -1) break;
-                        this.ram.Write32(paddr,r[0]);
+                        this.ram.Write32(paddr, r[0]);
                         break;
 
                     case 0x02:
-                        //lr.d
-                        rs1 = r[(ins >> 15) & 0x1F];
-                        paddr = this.TranslateVM(rs1,VM_READ);
-                        if(paddr == -1) break;
+                        // lr.d
                         r[rindex] = this.ram.Read32(paddr);
                         this.amoaddr = rs1;
                         this.amovalue = r[rindex];
                         break;
 
                     case 0x03:
-                        //sc.d
-                        rs1 = r[(ins >> 15) & 0x1F];
-                        rs2 = r[(ins >> 20) & 0x1F];
+                        // sc.d
                         if(rs1 != this.amoaddr) {
                             r[rindex] = 0x01;
                             break;
                         }
-                        paddr = this.TranslateVM(rs1, VM_READ);
-                        if(paddr == -1) break;
                         if(this.ram.Read32(paddr) != this.amovalue) {
                             r[rindex] = 0x01;
                             break;
@@ -1924,7 +1826,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                         break;
 
                     default:
-                        message.Debug("Error in Atomic Memory Instruction " + utils.ToHex(ins) + "not found");
+                        message.Debug("Error in Atomic Memory Instruction " + utils.ToHex(ins) + " not found");
                         message.Abort();
                         break;
 
@@ -1932,7 +1834,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                 break;
 
             case 0x0F:
-                //fence
+                // fence
                 break;
 
             default:
@@ -1942,7 +1844,6 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
         }
 
     } while(steps=steps-1|0);
-
 
     return 0;
 };
