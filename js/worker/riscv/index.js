@@ -66,8 +66,8 @@ function createCPU(cpuname, ram, htif, heap, ncores) {
     throw new Error("invalid CPU name:" + cpuname);
 }
 
-function CPU(cpuname, ram, heap, ncores) {
-    this.cpu = createCPU(cpuname, ram, heap, ncores);
+function CPU(cpuname, ram, htif, heap, ncores) {
+    this.cpu = createCPU(cpuname, ram, htif, heap, ncores);
     this.name = cpuname;
     this.ncores = ncores;
     this.ram = ram;
@@ -81,11 +81,17 @@ CPU.prototype.switchImplementation = function(cpuname) {
 };
 
 CPU.prototype.toString = function() {
-    var r = new Uint32Array(this.heap);
+    var r = new Int32Array(this.heap, 0x0);
     var csr = new Uint32Array(this.heap, 0x2000);
     var str = '';
     str += "Current state of the machine\n";
-    str += "PC: " + utils.ToHex(this.cpu.pc) + "\n";
+
+
+    if (this.cpu.pc) {
+        str += "PC: " + utils.ToHex(this.cpu.pc) + "\n"; 
+    } else {
+        str += "PC: " + utils.ToHex(this.cpu.GetPC()) + "\n"; 
+    }
 
     for (var i = 0; i < 32; i += 4) {
         str += "   r" + (i + 0) + ": " +
@@ -94,7 +100,7 @@ CPU.prototype.toString = function() {
             utils.ToHex(r[i + 2]) + "   r" + (i + 3) + ": " +
             utils.ToHex(r[i + 3]) + "\n";
     }
-    str += "mstatus: " + utils.ToBin(this.cpu.csr[0x300]) + "\n";
+    str += "mstatus: " + utils.ToBin(csr[0x300]) + "\n";
     str += 
         "mcause: " + utils.ToHex(csr[0x342]) + 
         " mbadaddress: " + utils.ToHex(csr[0x343]) + 

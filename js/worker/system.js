@@ -251,6 +251,7 @@ System.prototype.ClearSoftInterrupt = function (line, cpuid) {
 };
 
 System.prototype.PrintState = function() {
+    // Flush the buffer of the terminal
     this.uartdev0 && this.uartdev0.Step();
     this.uartdev1 && this.uartdev1.Step();
     message.Debug(this.cpu.toString());
