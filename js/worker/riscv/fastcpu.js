@@ -30,6 +30,7 @@ var IsQueueEmpty = foreign.IsQueueEmpty;
 var mul = foreign.mul;
 var MathAbs = stdlib.Math.abs;
 
+//One of the following error ids are printed to the console in case of an abort()
 var ERROR_INCOMPLETE_VMPRIVILEGE = 0;
 var ERROR_VMPRIVILEGE = 1;
 var ERROR_VMMODE = 2;
@@ -44,15 +45,18 @@ var ERROR_ERET_PRIV = 10;
 var ERROR_MRTS = 11;
 var ERROR_ATOMIC_INSTRUCTION = 12;
 
+//Privilege Modes
 var PRV_U = 0x00;
 var PRV_S = 0x01;
 var PRV_H = 0x02;
 var PRV_M = 0x03;
 
+//Various operations on the page table
 var VM_READ  = 0;
 var VM_WRITE = 1;
 var VM_FETCH = 2;
 
+//Various Causes which need to be written to MCAUSE Register in case of a Trap 
 var CAUSE_TIMER_INTERRUPT          = 0x80000001;
 var CAUSE_HOST_INTERRUPT           = 0x80000002;
 var CAUSE_SOFTWARE_INTERRUPT       = 0x80000000;
@@ -66,7 +70,7 @@ var CAUSE_ENVCALL_SMODE            = 0x09;
 var CAUSE_ENVCALL_HMODE            = 0x0A;
 var CAUSE_ENVCALL_MMODE            = 0x0B;
 
-
+//All CSR addresses have been multiplied for implementing in the asm.js way
 var CSR_CYCLES = 0x3000;
 var CSR_CYCLEW = 0x2400;
 
@@ -149,11 +153,24 @@ var CSR_UARCH13   = 0x33334;
 var CSR_UARCH14   = 0x33338;
 var CSR_UARCH15   = 0x3333C;
 
+/* 
+    Heap Layout
+    ===========
+    The heap is needed by the asm.js CPU. 
+
+    0x0       32 CPU registers 
+    0x80      Floating Point Registers
+    0x2000    CSR Registers
+    ------- RAM --------
+    0x100000  RAM
+*/
+
+
 var r = new stdlib.Int32Array(heap); // registers
 var rp = 0x00; //Never used
 
 var f = new stdlib.Float64Array(heap); // registers
-var fp = 0x80;
+var fp = 0x80; //Offset to floating point registers in the Heap
 
 var fi = new stdlib.Int32Array(heap); // for copying operations
 var fip = 0x80;
@@ -162,24 +179,27 @@ var ff = new stdlib.Float32Array(heap); // the zero register is used to convert 
 var ffp = 0x00; //Never used
 
 var csr = new stdlib.Int32Array(heap);
-var csrp = 0x2000;
+var csrp = 0x2000; //Offset to CSRs in the Heap
 
 var ram = new stdlib.Int32Array(heap);
-var ramp = 0x100000;
+var ramp = 0x100000; //Offset to Ram in the Heap
 
-var ram8 = new stdlib.Int8Array(heap);
-var ram16 = new stdlib.Int16Array(heap);
+var ram8 = new stdlib.Int8Array(heap); //8bit view of heap
+var ram16 = new stdlib.Int16Array(heap);//16bit view of heap
 
-var pc = 0x200;
+var pc = 0x200; //Virutal PC
 var pcorigin = 0x200;
 var pc_change = 1; //1 implies pc has been changed by an instruction
 var ticks = 0;
 var amoaddr = 0,amovalue = 0;
 
-var fence = 0x200;
-var ppc = 0x200;
+var fence = 0x200; //Has the next page address in case of normal operation, it is made equal to ppc in insts like branch, jump etc
+var ppc = 0x200; //Physical PC
 var ppcorigin = 0x200;
 
+
+//tlb_index contains the virutal address and tlb_entry will have the correponding Phsysical Address
+//If the page number of vaddr matches with the tlb_index then we directly read the tlb_entry to get the Physical Frame Number
 var instlb_index = -0x8000; //tlb index for pc
 var instlb_entry = -0x8000;
 var read8tlb_index = -1; //tlb index for lb ins
@@ -280,6 +300,7 @@ function ClearInterrupt(line, cpuid) {
 
 function Trap(cause, current_pc) {
 
+    //Store the current_pc, set the mcause register and point PC to the Trap Handler
     cause = cause|0;
     current_pc = current_pc|0;
     var current_privilege_level = 0;
@@ -320,6 +341,7 @@ function MemTrap(addr, op) {
 
 function CheckVMPrivilege(type, op) {
 
+    //Checks if the Privilages of a Page Table Entry are being violated
     type = type|0;
     op = op|0;
     var priv = 0;
@@ -380,6 +402,7 @@ function CheckVMPrivilege(type, op) {
 
 function TranslateVM(addr, op) {
 
+    //Converts Virtual Address to Physical Address
     addr = addr|0;
     op = op|0;
     var vm = 0;
@@ -487,6 +510,7 @@ function TranslateVM(addr, op) {
 
 function SetCSR(addr,value) {
 
+    //Handles write to CSR Registers appropriately
     addr = addr|0;
     value = value|0;
     var mask = 0;
@@ -664,6 +688,7 @@ function SetCSR(addr,value) {
 
 function GetCSR(addr) {
 
+    //Handles Read operation on CSR Registers appropriately
     addr = addr|0;
     var current_privilege_level = 0;
     current_privilege_level = (csr[(csrp + CSR_MSTATUS)>>2] & 0x06) >> 1;
@@ -827,6 +852,7 @@ function GetCSR(addr) {
 
 function IMul(a,b,index) {
 
+    //Special Method for 64 Bit Multiplication for Unsigned*Unsigned
     a = a|0;
     b = b|0;
     index = index|0;
@@ -870,6 +896,7 @@ function IMul(a,b,index) {
 
 function UMul(a,b,index) {
 
+    //Special Method for 64 Bit Multiplication for Signed*Signed
     a = a|0;
     b = b|0;
     index = index|0;
@@ -906,6 +933,7 @@ function UMul(a,b,index) {
 
 function SUMul(a,b,index) {
 
+    //Special Method for 64 Bit Multiplication for Signed*Unsigned
     a = a|0;
     b = b|0;
     index = index|0;
@@ -975,6 +1003,9 @@ function InvalidateTLB(){
 
 function PushPrivilegeStack(){
 
+    //0 to 11 bits of mstatus register is considered as the stack.
+    //Pushing implies just right shifting the 0 to 11 bits by 3 and then setting PRV[1:0] to Machine
+    //Also set MPRV bit in mstatus register to zero
     var mstatus = 0,privilege_level_stack = 0, new_privilege_level_stack = 0;
     mstatus = csr[(csrp + CSR_MSTATUS)>>2]|0;
     privilege_level_stack =  (mstatus & 0xFFF);
@@ -984,6 +1015,9 @@ function PushPrivilegeStack(){
 
 function PopPrivilegeStack(){
 
+    //0 to 11 bits of mstatus register is considered as the stack.
+    //Pop implies just left shifting the 0 to 11 bits by 3 and then setting PRV3[1:0] to lowest supported privilege mode(User in this case) with IE3 = 1 
+    //Also set MPRV bit in mstatus register to zero
     var mstatus = 0,privilege_level_stack = 0, new_privilege_level_stack = 0;
     mstatus = csr[(csrp + CSR_MSTATUS)>>2]|0;
     privilege_level_stack =  (mstatus & 0xFFF);
@@ -1033,6 +1067,7 @@ function Step(steps, clockspeed) {
                     
                     case 0x00:
                         //lb
+                        //If the page number of vaddr matches with the tlb_index then we directly read the tlb_entry to get the Physical Frame Number
                         if (!((read8tlb_index ^ vaddr) & 0xFFFFF000)) paddr = read8tlb_entry ^ vaddr;
                         else {
 
@@ -2071,7 +2106,7 @@ function Step(steps, clockspeed) {
     } else // fence
     {
 
-            if(!(pc_change|0)) pc = pcorigin + (ppc-ppcorigin)|0;
+            if(!(pc_change|0)) pc = pcorigin + (ppc-ppcorigin)|0; //pc_change is set to one when pc is calculated in instrctions like branch, jump etc
 
             dsteps = dsteps - ((ppc-ppcorigin) >> 2)|0;
             if ((dsteps|0) < 0) {
