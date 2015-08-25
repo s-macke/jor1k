@@ -118,7 +118,7 @@ Terminal.prototype.Blink = function() {
 Terminal.prototype.DeleteRow = function(row) {
     for(var i = 0;i <= this.brows;i++){
         this.screen[i] = this.screen[i + 1];
-            this.color[i] = this.color[i + 1];
+        this.color[i] = this.color[i + 1];
     }
     for (var j = 0; j < this.ncolumns; j++) {
         this.screen[this.brows + row][j] = 0x20;
@@ -150,7 +150,7 @@ Terminal.prototype.UpdateRowCanvas = function(row) {
 
     for (var column = 0; column < this.ncolumns; column++) {
 
-        var cnew = this.color[row][column]|0;
+        var cnew = this.color[this.brows + row][column]|0;
 
         if (this.cursorvisible)
         if (row == this.cursory)
