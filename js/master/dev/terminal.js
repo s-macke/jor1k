@@ -116,8 +116,10 @@ Terminal.prototype.Blink = function() {
 };
 
 Terminal.prototype.DeleteRow = function(row) {
-    for(var i = 0;i <= this.brows;i++)
+    for(var i = 0;i <= this.brows;i++){
         this.screen[i] = this.screen[i + 1];
+        this.color[i] = this.color[i + 1];
+    }
     for (var j = 0; j < this.ncolumns; j++) {
         this.screen[this.brows + row][j] = 0x20;
         this.color[this.brows + row][j] = this.attr_color;
@@ -127,8 +129,10 @@ Terminal.prototype.DeleteRow = function(row) {
 
 Terminal.prototype.DeleteArea = function(row, column, row2, column2) {
     for (var i = row; i <= row2; i++) {
-        for(var k = 0;k <= this.brows;k++)
+        for(var k = 0;k <= this.brows;k++){
             this.screen[k] = this.screen[k + 1];
+            this.color[k] = this.color[k + 1];
+        }
         for (var j = column; j <= column2; j++) {
             this.screen[this.brows + i][j] = 0x20;
             this.color[this.brows + i][j] = this.attr_color;
@@ -146,7 +150,7 @@ Terminal.prototype.UpdateRowCanvas = function(row) {
 
     for (var column = 0; column < this.ncolumns; column++) {
 
-        var cnew = this.color[row][column]|0;
+        var cnew = this.color[this.brows + row][column]|0;
 
         if (this.cursorvisible)
         if (row == this.cursory)
@@ -219,7 +223,7 @@ Terminal.prototype.UpdateRowTable = function(row) {
 
     for (var column = 0; column < this.ncolumns; column++) {
 
-        var cnew = this.color[row][column]|0;
+        var cnew = this.color[this.brows + row][column]|0;
 
         if (this.cursorvisible)
         if (row == this.cursory)
@@ -249,7 +253,7 @@ Terminal.prototype.UpdateRowTableForScroll = function(row) {
 
     for (var column = 0; column < this.ncolumns; column++) {
 
-        var cnew = this.color[row][column]|0;
+        var cnew = this.color[row - sensitivity][column]|0;
 
         if (this.cursorvisible)
         if (row == this.cursory)
