@@ -223,7 +223,7 @@ Terminal.prototype.UpdateRowTable = function(row) {
 
     for (var column = 0; column < this.ncolumns; column++) {
 
-        var cnew = this.color[row][column]|0;
+        var cnew = this.color[this.brows + row][column]|0;
 
         if (this.cursorvisible)
         if (row == this.cursory)
@@ -253,7 +253,7 @@ Terminal.prototype.UpdateRowTableForScroll = function(row) {
 
     for (var column = 0; column < this.ncolumns; column++) {
 
-        var cnew = this.color[row][column]|0;
+        var cnew = this.color[row - sensitivity][column]|0;
 
         if (this.cursorvisible)
         if (row == this.cursory)
