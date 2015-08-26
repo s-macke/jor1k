@@ -31,8 +31,9 @@ chmod a+rw /dev/fb0
 chmod a+rw /dev/dsp*
 chmod -R a+rw /dev/snd
 
-#set rows of terminal
+#set rows and columns of terminal
 stty rows 24
+stty columns 80
 
 #echo "Configuring loopback device"
 #ifconfig lo 127.0.0.1
