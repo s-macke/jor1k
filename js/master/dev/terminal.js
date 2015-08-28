@@ -131,14 +131,9 @@ Terminal.prototype.deepCopy = function(oldObj) {
 }
 
 Terminal.prototype.DeleteRow = function(row) {
-    var deletedScreenRow = this.deepCopy(this.screen[this.brows + 23]);
-    var deletedColorRow = this.deepCopy(this.color[this.brows + 23]);
+    var deletedScreenRow = this.deepCopy(this.screen[this.brows + row]);
+    var deletedColorRow = this.deepCopy(this.color[this.brows + row]);
     if(row == 23){
-        var str = "";
-        for (var j = 0; j < this.ncolumns; j++) {
-            str += String.fromCharCode(this.screen[this.brows + row][j]);
-        }
-        message.Debug(str);
         for(var i = 0;i < this.brows - 1;i++){
             this.screen[i] = this.screen[i + 1];
             this.color[i] = this.color[i + 1];
