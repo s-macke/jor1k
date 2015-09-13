@@ -57,8 +57,6 @@ function Terminal(nrows, ncolumns, elemId) {
 
     this.pauseblink = false;
     this.OnCharReceived = function (){};
-    if (!this.canvas) this.Table.addEventListener("wheel", this.UpdateScreenForScroll);
-    //this.Table.onwheel = function(){};
 
     this.framerequested = false;
     this.timeout = 30; // the time in ms when the next frame is drawn
@@ -67,8 +65,9 @@ function Terminal(nrows, ncolumns, elemId) {
 
     this.utf8converter = new UTF8.UTF8StreamToUnicode();
 
-    this.trows = 50;
+    this.trows = 40;
     this.brows = this.trows - this.nrows;
+    this.bufferp = 0;
     this.screen = new Array(this.trows);
     this.color = new Array(this.trows);
     for (var i = 0; i < this.trows; i++) {
@@ -81,8 +80,13 @@ function Terminal(nrows, ncolumns, elemId) {
             this.color[i][j] = this.attr_color;
         }
     }
+    this.deletedScreenRow = this.screen[0];
+    this.deletedColorRow = this.color[0];
+    message.Debug("Inside constructor");
     this.UpdateScreen();
     this.Blink();
+
+    if (!this.canvas) this.Table.addEventListener("wheel", this.UpdateScreenForScroll.bind(this));
 }
 
 // Stop blinking cursor when the VM is paused
@@ -115,10 +119,27 @@ Terminal.prototype.Blink = function() {
     window.setTimeout(this.Blink.bind(this), 500); // update every half second
 };
 
+Terminal.prototype.deepCopy = function(oldObj) {
+    var newObj = oldObj;
+    if (oldObj && typeof oldObj === 'object') {
+        newObj = Object.prototype.toString.call(oldObj) === "[object Array]" ? [] : {};
+        for (var i in oldObj) {
+            newObj[i] = this.deepCopy(oldObj[i]);
+        }
+    }
+    return newObj;
+}
+
 Terminal.prototype.DeleteRow = function(row) {
-    for(var i = 0;i <= this.brows;i++){
-        this.screen[i] = this.screen[i + 1];
-        this.color[i] = this.color[i + 1];
+    var deletedScreenRow = this.deepCopy(this.screen[this.brows + row]);
+    var deletedColorRow = this.deepCopy(this.color[this.brows + row]);
+    if(row == 23){
+        for(var i = 0;i < this.brows - 1;i++){
+            this.screen[i] = this.screen[i + 1];
+            this.color[i] = this.color[i + 1];
+        }
+        this.screen[this.brows - 1] = deletedScreenRow;
+        this.color[this.brows - 1] = deletedColorRow;
     }
     for (var j = 0; j < this.ncolumns; j++) {
         this.screen[this.brows + row][j] = 0x20;
@@ -129,10 +150,6 @@ Terminal.prototype.DeleteRow = function(row) {
 
 Terminal.prototype.DeleteArea = function(row, column, row2, column2) {
     for (var i = row; i <= row2; i++) {
-        for(var k = 0;k <= this.brows;k++){
-            this.screen[k] = this.screen[k + 1];
-            this.color[k] = this.color[k + 1];
-        }
         for (var j = column; j <= column2; j++) {
             this.screen[this.brows + i][j] = 0x20;
             this.color[this.brows + i][j] = this.attr_color;
@@ -244,16 +261,15 @@ Terminal.prototype.UpdateRowTable = function(row) {
 };
 
 Terminal.prototype.UpdateRowTableForScroll = function(row) {
-    var sensitivity = 5;
     var y = row << 4;
-    var line = this.screen[row - sensitivity];
-    var c = this.color[row - sensitivity][0]|0;
+    var line = this.screen[this.brows + row - this.bufferp];
+    var c = this.color[this.brows + row - this.bufferp][0]|0;
     var n = 0;
     var html = "";
 
     for (var column = 0; column < this.ncolumns; column++) {
 
-        var cnew = this.color[row - sensitivity][column]|0;
+        var cnew = this.color[this.brows + row - this.bufferp][column]|0;
 
         if (this.cursorvisible)
         if (row == this.cursory)
@@ -294,14 +310,11 @@ Terminal.prototype.UpdateScreen = function() {
 }
 
 Terminal.prototype.UpdateScreenForScroll = function() {
-    var nupdated = 0,sensitivity = 10, i = 0;
-    for (i = 0; i < this.nrows; i++) {
-        if (this.canvas) {
-            this.UpdateRowCanvas(i);
-        } else {
-            this.UpdateRowTableForScroll(i);
-        }
-        nupdated++;
+    var i;
+    if(this.bufferp < this.brows) this.bufferp++;
+    else this.bufferp = 0; //show the original state before the scrolling started
+    for (i = this.nrows - 1; i >= 0; i--){
+        this.UpdateRowTableForScroll(i);
     }
 }
 
@@ -785,7 +798,7 @@ Terminal.prototype.PutChar = function(c) {
                 this.cursorx = 0;
             }
             this.screen[this.brows + this.cursory][this.cursorx] = 0x20;
-            this.color[this.brows + this.cursory][this.cursorx] = this.attr_color;	
+            this.color[this.brows + this.cursory][this.cursorx] = this.attr_color;  
             this.cursorx++;
         } while(spaces--);
         this.PrepareUpdateRow(this.cursory);
