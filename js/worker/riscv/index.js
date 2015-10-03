@@ -44,8 +44,6 @@ function createCPU(cpuname, ram, htif, heap, ncores) {
         ReadFromHost : htif.ReadFromHost.bind(htif),
         WriteToHost : htif.WriteToHost.bind(htif),
         WriteFromHost : htif.WriteFromHost.bind(htif),
-        //HandleRequest: htif.HandleRequest.bind(htif),
-        IsQueueEmpty: htif.IsQueueEmpty.bind(htif)
     };
 
     if (cpuname === "safe") {
