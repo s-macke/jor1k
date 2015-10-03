@@ -98,9 +98,12 @@ Theme<select onchange='editor.setTheme("ace/theme/"+this.options[this.selectedIn
         </div>
 
 <script src="../js/lib/ace-editor-src-min-noconflict/ace.js"></script>
-<script src="../bin/jor1k-master-min.js"></script>
+<script src="jor1k-master-min.js"></script>
 
 <script>
+
+var Jor1k = require("Jor1k");
+var LinuxTerm = require("LinuxTerm");
 
 
 function OnUploadFiles(files)
@@ -184,6 +187,7 @@ function Start() {
             }
         }
     }
+
     if (userid == "") {
         if (loc[1])
               window.history.pushState([], "", location + "&user="+jor1kparameters.userid);
@@ -192,9 +196,6 @@ function Start() {
     }
 
     // --------------------------------------------------------
-
-    var Jor1k = require("Jor1k");
-    var LinuxTerm = require("LinuxTerm");
 
     jor1kgui = new Jor1k(jor1kparameters);
     term.SetCharReceiveListener(terminalPutCharListener);
