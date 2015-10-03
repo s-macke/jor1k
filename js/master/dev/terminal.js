@@ -82,11 +82,11 @@ function Terminal(nrows, ncolumns, elemId) {
     }
     this.deletedScreenRow = this.screen[0];
     this.deletedColorRow = this.color[0];
-    message.Debug("Inside constructor");
+    //message.Debug("Inside constructor");
     this.UpdateScreen();
     this.Blink();
 
-    if (!this.canvas) this.Table.addEventListener("wheel", this.UpdateScreenForScroll.bind(this));
+    //if (!this.canvas) this.Table.addEventListener("wheel", this.UpdateScreenForScroll.bind(this));
 }
 
 // Stop blinking cursor when the VM is paused
