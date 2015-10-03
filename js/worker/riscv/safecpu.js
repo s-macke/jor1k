@@ -720,7 +720,7 @@ SafeCPU.prototype.GetCSR = function (addr) {
    
 };
 
-SafeCPU.prototype.IMul = function (a,b) {
+SafeCPU.prototype.UMul64 = function (a,b) {
 
     var result = [0, 0];
 
@@ -750,7 +750,7 @@ SafeCPU.prototype.IMul = function (a,b) {
     return result;
 };
 
-SafeCPU.prototype.UMul = function (a,b) {
+SafeCPU.prototype.IMul64 = function (a,b) {
 
     var result = [0,0];
 
@@ -768,7 +768,7 @@ SafeCPU.prototype.UMul = function (a,b) {
 
     var doNegate = (a < 0) ^ (b < 0);
 
-    result = this.IMul(Math.abs(a), Math.abs(b));
+    result = this.UMul64(Math.abs(a), Math.abs(b));
 
     if (doNegate) {
         result[0] = ~result[0];
@@ -780,7 +780,7 @@ SafeCPU.prototype.UMul = function (a,b) {
     return result;
 };
 
-SafeCPU.prototype.SUMul = function (a,b) {
+SafeCPU.prototype.SUMul64 = function (a,b) {
 
     var result = [0,0];
 
@@ -798,7 +798,7 @@ SafeCPU.prototype.SUMul = function (a,b) {
 
     var doNegate = (a < 0) ^ (b < 0);
 
-    result = this.IMul(Math.abs(a), Math.abs(b));
+    result = this.UMul64(Math.abs(a), Math.abs(b));
 
     if (doNegate) {
         result[0] = ~result[0];
@@ -1167,24 +1167,25 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                         switch((ins >> 12)&0x7) {
                             case 0x00:
                                 // mul
-                                r[rindex] = rs1 * rs2;
+                                var result = this.IMul64(rs1, rs2);
+                                r[rindex] = result[0];
                                 break;
 
                             case 0x01:
                                 // mulh
-                                var result = this.UMul(rs1, rs2);
+                                var result = this.IMul64(rs1, rs2);
                                 r[rindex] = result[1];
                                 break;
 
                             case 0x02:
                                 // mulhsu
-                                var result = this.SUMul(rs1, rs2>>>0);
+                                var result = this.SUMul64(rs1, rs2>>>0);
                                 r[rindex] = result[1];
                                 break;
 
                             case 0x03:
                                 // mulhu
-                                var result = this.IMul(rs1>>>0, rs2>>>0);
+                                var result = this.UMul64(rs1>>>0, rs2>>>0);
                                 r[rindex] = result[1];
                                 break;
 

@@ -27,7 +27,7 @@ var ReadFromHost = foreign.ReadFromHost;
 var WriteToHost = foreign.WriteToHost;
 var WriteFromHost = foreign.WriteFromHost;
 var IsQueueEmpty = foreign.IsQueueEmpty;
-var mul = foreign.mul;
+var imul = foreign.imul;
 var MathAbs = stdlib.Math.abs;
 
 //One of the following error ids are printed to the console in case of an abort()
@@ -237,7 +237,7 @@ function Init() {
 function Reset() {
     ticks = 0;
     csr[(csrp + CSR_MSTATUS)>>2]  = 0x96; // 1001 0110 - All Interrupts Disabled, FPU disabled 
-    csr[(csrp + CSR_MTOHOST)>>2]  =  0x780;
+    csr[(csrp + CSR_MTOHOST)>>2]  = 0x780;
     csr[(csrp + CSR_MCPUID)>>2]   = 0x4112D;
     csr[(csrp + CSR_MIMPID)>>2]   = 0x01;
     csr[(csrp + CSR_MHARTID)>>2]  = 0x00;
@@ -850,7 +850,7 @@ function GetCSR(addr) {
    
 };
 
-function IMul(a,b,index) {
+function UMul64(a, b, index) {
 
     //Special Method for 64 Bit Multiplication for Unsigned*Unsigned
     a = a|0;
@@ -866,35 +866,35 @@ function IMul(a,b,index) {
     var c32 = 0;
     var c48 = 0;
 
-    if (((a >>> 0) < 32767) & ((b >>> 0) < 65536)) {
-        result0 = mul(a|0,b|0)|0;
+    if ((a >>> 0) < 32767) 
+    if ((b >>> 0) < 65536) {
+        result0 = imul((a|0),(b|0))|0;
         result1 = ((result0|0) < 0) ? -1 : 0;
         if((index|0) == 0) return result0|0;
-        else return result1|0;
+        return result1|0;
     }
 
     a00 = a & 0xFFFF;
     a16 = a >>> 16;
     b00 = b & 0xFFFF;
-
     b16 = b >>> 16;
 
-    c00 = mul(a00|0,b00|0)|0;
-    c16 = ((c00 >>> 16) + (mul(a16|0,b00|0)|0))|0;
+    c00 = imul((a00|0), (b00|0))|0;
+    c16 = (c00 >>> 16) + (imul((a16|0),(b00|0))|0)|0;
     c32 = c16 >>> 16;
-    c16 = ((c16 & 0xFFFF) + (mul(a00|0,b16|0)|0))|0;
+    c16 = (c16 & 0xFFFF) + (imul((a00|0),(b16|0))|0)|0;
     c32 = (c32 + (c16 >>> 16))|0;
     c48 = c32 >>> 16;
-    c32 = ((c32 & 0xFFFF) + (mul(a16|0,b16|0)|0))|0;
+    c32 = (c32 & 0xFFFF) + (imul((a16|0),(b16|0))|0)|0;
     c48 = (c48 + (c32 >>> 16))|0;
 
     result0 = ((c16 & 0xFFFF) << 16) | (c00 & 0xFFFF);
     result1 = ((c48 & 0xFFFF) << 16) | (c32 & 0xFFFF);
-    if((index|0) == 0) return result0|0;
+    if ((index|0) == 0) return result0|0;
     return result1|0;
 };
 
-function UMul(a,b,index) {
+function IMul64(a,b,index) {
 
     //Special Method for 64 Bit Multiplication for Signed*Signed
     a = a|0;
@@ -907,18 +907,18 @@ function UMul(a,b,index) {
     if ((b|0) == 0) return 0;
 
     if ((((a|0) >= -32768) & ((a|0) <= 32767)) & (((b|0) >= -32768) & ((b|0) <= 32767))) {
-        result0 = mul(a|0,b|0)|0;
+        result0 = imul((a|0),(b|0))|0;
         result1 = ((result0|0) < 0) ? -1 : 0;
         if((index|0) == 0) return result0|0;
-        else return result1|0;
+        return result1|0;
     }
 
     doNegate = ((a|0) < 0) ^ ((b|0) < 0);
 
     a = MathAbs(a|0)|0;
     b = MathAbs(b|0)|0;
-    result0 = IMul(a, b, 0)|0;
-    result1 = IMul(a, b, 1)|0;
+    result0 = UMul64(a, b, 0)|0;
+    result1 = UMul64(a, b, 1)|0;
 
     if (doNegate) {
         result0 = ~result0;
@@ -927,11 +927,11 @@ function UMul(a,b,index) {
         if ((result0|0) == 0) result1 = (result1 + 1) | 0;
     }
 
-    if((index|0) == 0) return result0|0;
+    if((index|0) == 0) return result0|0; 
     return result1|0;
 };
 
-function SUMul(a,b,index) {
+function SUMul64(a,b,index) {
 
     //Special Method for 64 Bit Multiplication for Signed*Unsigned
     a = a|0;
@@ -944,18 +944,18 @@ function SUMul(a,b,index) {
     if ((b|0) == 0) return 0;
 
     if ((((a|0) >= -32768) & ((a|0) <= 32767)) & (((b|0) >= -32768) & ((b >>> 0) <= 32767))) {
-        result0 = mul(a|0,b|0)|0;
+        result0 = imul((a|0),(b|0))|0;
         result1 = ((result0|0) < 0) ? -1 : 0;
         if((index|0) == 0) return result0|0;
-        else return result1|0;
+        return result1|0;
     }
 
     doNegate = ((a|0) < 0) ^ ((b|0) < 0);
 
     a = MathAbs(a|0)|0;
     b = MathAbs(b|0)|0;
-    result0 = IMul(a, b, 0)|0;
-    result1 = IMul(a, b, 1)|0;
+    result0 = UMul64(a, b, 0)|0;
+    result1 = UMul64(a, b, 1)|0;
 
     if (doNegate) {
         result0 = ~result0;
@@ -1353,25 +1353,25 @@ function Step(steps, clockspeed) {
                         switch((ins >> 12)&0x7) {
                             case 0x00:
                                 //mul
-                                mult = mul(rs1|0,rs2|0)|0;
-                                r[((ins >> 5) & 0x7C) >> 2] = mult & 0xFFFFFFFF;
+                                result = imul(rs1|0, rs2|0)|0;
+                                r[((ins >> 5) & 0x7C) >> 2] = result;
                                 continue;
 
                             case 0x01:
                                 //mulh
-                                result = UMul(rs1,rs2, 1)|0;
+                                result = IMul64(rs1,rs2, 1)|0;
                                 r[((ins >> 5) & 0x7C) >> 2] = result;
                                 continue;
 
                             case 0x02:
                                 //mulhsu
-                                result = SUMul(rs1,rs2>>>0, 1)|0;
+                                result = SUMul64(rs1,rs2>>>0, 1)|0;
                                 r[((ins >> 5) & 0x7C) >> 2] = result;
                                 continue;
 
                             case 0x03:
                                 //mulhu
-                                result = IMul(rs1>>>0, rs2>>>0, 1)|0;
+                                result = UMul64(rs1>>>0, rs2>>>0, 1)|0;
                                 r[((ins >> 5) & 0x7C) >> 2] = result;
                                 continue;
 
@@ -1873,7 +1873,7 @@ function Step(steps, clockspeed) {
                     case 0x09: //fmul.d
                         fs1 = (+f[(fp + (((ins >> 15) & 0x1F) << 3)) >> 3]);
                         fs2 = (+f[(fp + (((ins >> 20) & 0x1F) << 3)) >> 3]);
-                        f[(fp + (((ins >> 7) & 0x1F) << 3)) >> 3] = (+mul(fs1,fs2));
+                        f[(fp + (((ins >> 7) & 0x1F) << 3)) >> 3] = +(+fs1)*(+fs2);
                         continue;
  
                     case 0x10: // single precision
@@ -2189,9 +2189,6 @@ return {
     MemTrap: MemTrap,
     PopPrivilegeStack: PopPrivilegeStack,
     PushPrivilegeStack: PushPrivilegeStack,
-    IMul: IMul,
-    UMul: UMul,
-    SUMul: SUMul,
     CheckVMPrivilege: CheckVMPrivilege,  
     GetTimeToNextInterrupt: GetTimeToNextInterrupt,
     ProgressTime: ProgressTime,

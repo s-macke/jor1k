@@ -6,7 +6,6 @@
 var message = require('../messagehandler'); // global variable
 var utils = require('../utils');
 var imul = require('../imul');
-var mul = require('../mul');
 
 // CPUs
 var SafeCPU = require('./safecpu.js');
@@ -29,8 +28,7 @@ function createCPU(cpuname, ram, htif, heap, ncores) {
     var foreign = {
         DebugMessage: message.Debug,
         abort : message.Abort,
-        imul : imul,
-        mul : mul,
+        imul : Math.imul || imul,
         MathAbs : Math.abs,
         Read32 : ram.Read32Little.bind(ram),
         Write32 : ram.Write32Little.bind(ram),
