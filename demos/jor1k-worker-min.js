@@ -913,7 +913,7 @@ ATADev.prototype.WriteReg32 = function(addr, x) {
 
 module.exports = ATADev;
 
-},{"../messagehandler":28,"../utils":44}],4:[function(require,module,exports){
+},{"../messagehandler":28,"../utils":43}],4:[function(require,module,exports){
 // -------------------------------------------------
 // ----------------- Ethernet ----------------------
 // -------------------------------------------------
@@ -1669,7 +1669,7 @@ function EthDev(ram, intdev, mac) {
 
 module.exports = EthDev;
 
-},{"../messagehandler":28,"../utils":44}],5:[function(require,module,exports){
+},{"../messagehandler":28,"../utils":43}],5:[function(require,module,exports){
 // -------------------------------------------------
 // ---------------- Framebuffer --------------------
 // -------------------------------------------------
@@ -1729,7 +1729,7 @@ FBDev.prototype.GetBuffer = function () {
 
 module.exports = FBDev;
 
-},{"../messagehandler":28,"../utils":44}],6:[function(require,module,exports){
+},{"../messagehandler":28,"../utils":43}],6:[function(require,module,exports){
 // -------------------------------------------------
 // ---------------------- IRQ ----------------------
 // -------------------------------------------------
@@ -1835,7 +1835,7 @@ IRQDev.prototype.WriteReg32 = function (addr, value) {
 
 module.exports = IRQDev;
 
-},{"../messagehandler":28,"../utils":44}],7:[function(require,module,exports){
+},{"../messagehandler":28,"../utils":43}],7:[function(require,module,exports){
 // -------------------------------------------------
 // ------------------ KEYBOARD ---------------------
 // -------------------------------------------------
@@ -2245,7 +2245,7 @@ RTCDev.prototype.WriteReg32 = function (addr, value) {
 
 module.exports = RTCDev;
 
-},{"../messagehandler":28,"../utils":44}],9:[function(require,module,exports){
+},{"../messagehandler":28,"../utils":43}],9:[function(require,module,exports){
 // -------------------------------------------------
 // --------------------- SOUND ---------------------
 // -------------------------------------------------
@@ -2418,7 +2418,7 @@ SoundDev.prototype.WriteReg32 = function (addr, value) {
 
 module.exports = SoundDev;
 
-},{"../messagehandler":28,"../utils":44}],10:[function(require,module,exports){
+},{"../messagehandler":28,"../utils":43}],10:[function(require,module,exports){
 // -------------------------------------------------
 // -------------------- Timer ----------------------
 // -------------------------------------------------
@@ -2591,7 +2591,7 @@ TouchscreenDev.prototype.WriteReg32 = function (addr, value) {
 
 module.exports = TouchscreenDev;
 
-},{"../messagehandler":28,"../utils":44}],12:[function(require,module,exports){
+},{"../messagehandler":28,"../utils":43}],12:[function(require,module,exports){
 // -------------------------------------------------
 // -------------------- UART -----------------------
 // -------------------------------------------------
@@ -2888,7 +2888,7 @@ UARTDev.prototype.WriteReg8 = function(addr, x) {
 
 module.exports = UARTDev;
 
-},{"../messagehandler":28,"../utils":44}],13:[function(require,module,exports){
+},{"../messagehandler":28,"../utils":43}],13:[function(require,module,exports){
 // -------------------------------------------------
 // ------------------- VIRTIO ----------------------
 // -------------------------------------------------
@@ -3391,7 +3391,7 @@ VirtIODev.prototype.WriteReg32 = function (addr, val) {
 
 module.exports = VirtIODev;
 
-},{"../messagehandler":28,"../utils":44,"./virtio/marshall":20}],14:[function(require,module,exports){
+},{"../messagehandler":28,"../utils":43,"./virtio/marshall":20}],14:[function(require,module,exports){
 // -------------------------------------------------
 // --------------------- 9P ------------------------
 // -------------------------------------------------
@@ -3951,7 +3951,7 @@ Virtio9p.prototype.ReceiveRequest = function (ringidx, index, GetByte) {
 
 module.exports = Virtio9p;
 
-},{"../../messagehandler":28,"../../utils":44,"./marshall":20}],15:[function(require,module,exports){
+},{"../../messagehandler":28,"../../utils":43,"./marshall":20}],15:[function(require,module,exports){
 // -------------------------------------------------
 // ------------- Block Virtio Device ---------------
 // -------------------------------------------------
@@ -4036,7 +4036,7 @@ VirtioBlock.prototype.ReceiveRequest = function (queueidx, index, GetByte, size)
 
 module.exports = VirtioBlock;
 
-},{"../../messagehandler":28,"../../utils":44,"./marshall":20}],16:[function(require,module,exports){
+},{"../../messagehandler":28,"../../utils":43,"./marshall":20}],16:[function(require,module,exports){
 // -------------------------------------------------
 // ------------ Console Virtio Device --------------
 // -------------------------------------------------
@@ -4123,7 +4123,7 @@ VirtioConsole.prototype.ReceiveRequest = function (queueidx, index, GetByte, siz
 
 module.exports = VirtioConsole;
 
-},{"../../messagehandler":28,"../../utils":44,"./marshall":20}],17:[function(require,module,exports){
+},{"../../messagehandler":28,"../../utils":43,"./marshall":20}],17:[function(require,module,exports){
 // -------------------------------------------------
 // ------------- Dummy Virtio Device ---------------
 // -------------------------------------------------
@@ -4148,7 +4148,7 @@ VirtioDummy.prototype.ReceiveRequest = function (index, GetByte) {
 
 module.exports = VirtioDummy;
 
-},{"../../messagehandler":28,"../../utils":44}],18:[function(require,module,exports){
+},{"../../messagehandler":28,"../../utils":43}],18:[function(require,module,exports){
 // -------------------------------------------------
 // -------------- GPU Virtio Device ----------------
 // -------------------------------------------------
@@ -4357,7 +4357,7 @@ VirtioGPU.prototype.ReceiveRequest = function (queueidx, index, GetByte, size) {
 
 module.exports = VirtioGPU;
 
-},{"../../messagehandler":28,"../../utils":44,"./marshall":20}],19:[function(require,module,exports){
+},{"../../messagehandler":28,"../../utils":43,"./marshall":20}],19:[function(require,module,exports){
 // -------------------------------------------------
 // ------------- Input Virtio Device ---------------
 // -------------------------------------------------
@@ -4538,7 +4538,7 @@ VirtioInput.prototype.ReceiveRequest = function (queueidx, index, GetByte, size)
 
 module.exports = VirtioInput;
 
-},{"../../messagehandler":28,"../../utils":44,"./marshall":20}],20:[function(require,module,exports){
+},{"../../messagehandler":28,"../../utils":43,"./marshall":20}],20:[function(require,module,exports){
 // -------------------------------------------------
 // ------------------ Marshall ---------------------
 // -------------------------------------------------
@@ -4822,7 +4822,7 @@ VirtioNET.prototype.ReceiveRequest = function (queueidx, index, GetByte, size) {
 
 module.exports = VirtioNET;
 
-},{"../../messagehandler":28,"../../utils":44,"./marshall":20}],22:[function(require,module,exports){
+},{"../../messagehandler":28,"../../utils":43,"./marshall":20}],22:[function(require,module,exports){
 var message = require('./messagehandler');
 var utils = require('./utils');
 var marshall = require('./dev/virtio/marshall');
@@ -4919,7 +4919,7 @@ elf.Extract = function(srcbuffer, destbuffer) {
 
 module.exports = elf;
 
-},{"./dev/virtio/marshall":20,"./messagehandler":28,"./utils":44}],23:[function(require,module,exports){
+},{"./dev/virtio/marshall":20,"./messagehandler":28,"./utils":43}],23:[function(require,module,exports){
 // -------------------------------------------------
 // ----------------- FILESYSTEM---------------------
 // -------------------------------------------------
@@ -5681,7 +5681,7 @@ FS.prototype.PrepareCAPs = function(id) {
 
 module.exports = FS;
 
-},{"../../lib/utf8.js":1,"../bzip2.js":2,"../dev/virtio/marshall.js":20,"../messagehandler":28,"../utils.js":44,"./fsloader.js":24,"./lazyUint8Array.js":25,"./tar.js":26}],24:[function(require,module,exports){
+},{"../../lib/utf8.js":1,"../bzip2.js":2,"../dev/virtio/marshall.js":20,"../messagehandler":28,"../utils.js":43,"./fsloader.js":24,"./lazyUint8Array.js":25,"./tar.js":26}],24:[function(require,module,exports){
 // -------------------------------------------------
 // ------------- FILESYSTEM LOADER -----------------
 // -------------------------------------------------
@@ -5782,7 +5782,7 @@ FSLoader.prototype.LoadJSON = function(url)
 
 module.exports = FSLoader;
 
-},{"../messagehandler":28,"../utils":44}],25:[function(require,module,exports){
+},{"../messagehandler":28,"../utils":43}],25:[function(require,module,exports){
 "use strict";
 
 var message = require("../messagehandler");
@@ -6093,6 +6093,9 @@ TAR.prototype.Pack = function(path) {
 module.exports = TAR;
 
 },{"../messagehandler":28}],27:[function(require,module,exports){
+// In case math.imul doesn't exists: 
+// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/imul
+
 module.exports = Math.imul || function(a, b) {
     var ah  = (a >>> 16) & 0xffff;
     var al = a & 0xffff;
@@ -6177,11 +6180,6 @@ module.exports.Send = Send;
 
 
 },{}],29:[function(require,module,exports){
-module.exports = function(a, b) {
-    
-    return (a * b)|0;
-};
-},{}],30:[function(require,module,exports){
 var message = require('../messagehandler');
 
 function FastCPU(stdlib, foreign, heap) {
@@ -7577,21 +7575,7 @@ function Step(steps, clockspeed) {
                 continue;
             case 0x306:
                 // mul signed (specification seems to be wrong)
-                {                    
-                    // this is a hack to do 32 bit signed multiply. Seems to work but needs to be tested. 
-                    //r[rindex<<2>>2] = (rA >> 0) * (rB >> 0);
-                    r[rindex>>2] = imul(rA|0, rB|0)|0;
-                    /*
-                    var rAl = rA & 0xFFFF;
-                    var rBl = rB & 0xFFFF;
-                    r[rindex<<2>>2] = r[rindex<<2>>2] & 0xFFFF0000 | ((rAl * rBl) & 0xFFFF);
-                    var result = Number(int32(rA)) * Number(int32(rB));
-                    SR_OV = (result < (-2147483647 - 1)) || (result > (2147483647));
-                    var uresult = uint32(rA) * uint32(rB);
-                    SR_CY = (uresult > (4294967295));
-                    */
-                    
-                }
+                r[rindex>>2] = imul(rA|0, rB|0)|0;
                 continue;
 
             case 0x30a:
@@ -7806,7 +7790,7 @@ return {
 
 module.exports = FastCPU;
 
-},{"../messagehandler":28}],31:[function(require,module,exports){
+},{"../messagehandler":28}],30:[function(require,module,exports){
 /* this is a unified, abstract interface (a facade) to the different
  * CPU implementations
  */
@@ -7838,7 +7822,7 @@ function createCPUSingleton(cpuname, ram, heap, ncores) {
     var foreign = {
         DebugMessage: message.Debug,
         abort : message.Abort,
-        imul : imul,
+        imul : Math.imul || imul,
         Read32 : ram.Read32Big.bind(ram),
         Write32 : ram.Write32Big.bind(ram),
         Read16 : ram.Read16Big.bind(ram),
@@ -8021,7 +8005,7 @@ forwardedMethods.forEach(function(m) {
 
 module.exports = CPU;
 
-},{"../imul":27,"../messagehandler":28,"../utils":44,"./fastcpu.js":30,"./safecpu.js":32,"./smpcpu.js":33}],32:[function(require,module,exports){
+},{"../imul":27,"../messagehandler":28,"../utils":43,"./fastcpu.js":29,"./safecpu.js":31,"./smpcpu.js":32}],31:[function(require,module,exports){
 // -------------------------------------------------
 // -------------------- CPU ------------------------
 // -------------------------------------------------
@@ -9137,7 +9121,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
 
 module.exports = SafeCPU;
 
-},{"../messagehandler":28,"../utils":44}],33:[function(require,module,exports){
+},{"../messagehandler":28,"../utils":43}],32:[function(require,module,exports){
 var message = require('../messagehandler');
 
 function SMPCPU(stdlib, foreign, heap) {
@@ -10955,14 +10939,13 @@ return {
 
 module.exports = SMPCPU;
 
-},{"../messagehandler":28}],34:[function(require,module,exports){
+},{"../messagehandler":28}],33:[function(require,module,exports){
 // -------------------------------------------------
 // -------------------- RAM ------------------------
 // -------------------------------------------------
 
 
-// The access is assumed to be aligned. A check is neither performed on the alignment nor on the
-// memory boundary, which would usually lead to a bus error. These checks have to be performed elsewere.
+// The access is assumed to be aligned. The check have to be performed elsewere.
 // Consider that the data in Javascript is saved in 32-Bit little endian format
 // for big endian emulations we flip each 32-Bit for faster access
 
@@ -11041,6 +11024,10 @@ RAM.prototype.Little2Big = function(length) {
 RAM.prototype.Read32BigTemplate = function(addr) {
     addr = addr | 0;
     if (addr >= 0) {
+        if (this.int32mem.byteLength <= addr) {
+            message.Debug("Error in Read32Big: read above upper boundary");
+            message.Abort();
+        }
         return this.int32mem[addr >> 2];
     }
     return this.devices[(addr>>24)&0xFF].ReadReg32(addr & 0xFFFFFF);
@@ -11049,6 +11036,10 @@ RAM.prototype.Read32BigTemplate = function(addr) {
 RAM.prototype.Read32LittleTemplate = function(addr) {
     addr = addr | 0;
     if (addr >= 0) {
+        if (this.int32mem.byteLength <= addr) {
+            message.Debug("Error in Read32Little: read above upper boundary");
+            message.Abort();
+        }
         return this.int32mem[addr >> 2];
     }
     return this.devices[(addr>>24)&0xFF].ReadReg32(addr & 0xFFFFFF);
@@ -11057,6 +11048,10 @@ RAM.prototype.Read32LittleTemplate = function(addr) {
 RAM.prototype.Write32BigTemplate = function(addr, x) {
     addr = addr | 0;
     if (addr >= 0) {
+        if (this.int32mem.byteLength <= addr) {
+            message.Debug("Error in Write32Big: write above upper boundary");
+            message.Abort();
+        }
         this.int32mem[addr >> 2] = x|0;
         return;
     }
@@ -11066,6 +11061,10 @@ RAM.prototype.Write32BigTemplate = function(addr, x) {
 RAM.prototype.Write32LittleTemplate = function(addr, x) {
     addr = addr | 0;
     if (addr >= 0) {
+        if (this.int32mem.byteLength <= addr) {
+            message.Debug("Error in Write32Little: write above upper boundary");
+            message.Abort();
+        }
         this.int32mem[addr >> 2] = x|0;
         return;
     }
@@ -11075,6 +11074,10 @@ RAM.prototype.Write32LittleTemplate = function(addr, x) {
 RAM.prototype.Read8BigTemplate = function(addr) {
     addr = addr | 0;
     if (addr >= 0) {
+        if (this.uint8mem.byteLength <= addr) {
+            message.Debug("Error in Read8Big: read above upper boundary");
+            message.Abort();
+        }
         return this.uint8mem[addr ^ 3];
     }
     return this.devices[(addr>>24)&0xFF].ReadReg8(addr & 0xFFFFFF);
@@ -11083,6 +11086,10 @@ RAM.prototype.Read8BigTemplate = function(addr) {
 RAM.prototype.Read8LittleTemplate = function(addr) {
     addr = addr | 0;
     if (addr >= 0) {
+        if (this.uint8mem.byteLength <= addr) {
+            message.Debug("Error in Read8Little: read above upper boundary");
+            message.Abort();
+        }
         return this.uint8mem[addr];
     }
     return this.devices[(addr>>24)&0xFF].ReadReg8(addr & 0xFFFFFF);
@@ -11091,6 +11098,10 @@ RAM.prototype.Read8LittleTemplate = function(addr) {
 RAM.prototype.Write8BigTemplate = function(addr, x) {
     addr = addr | 0;
     if (addr >= 0) {
+        if (this.uint8mem.byteLength <= addr) {
+            message.Debug("Error in Write8Big: write above upper boundary");
+            message.Abort();
+        }
         this.uint8mem[addr ^ 3] = x|0;
         return;
     }
@@ -11100,6 +11111,10 @@ RAM.prototype.Write8BigTemplate = function(addr, x) {
 RAM.prototype.Write8LittleTemplate = function(addr, x) {
     addr = addr | 0;
     if (addr >= 0) {
+        if (this.uint8mem.byteLength <= addr) {
+            message.Debug("Error in Write8Little: write above upper boundary");
+            message.Abort();
+        }
         this.uint8mem[addr] = x|0;
         return;
     }
@@ -11109,6 +11124,10 @@ RAM.prototype.Write8LittleTemplate = function(addr, x) {
 RAM.prototype.Read16BigTemplate = function(addr) {
     addr = addr | 0;
     if (addr >= 0) {
+        if (this.uint8mem.byteLength <= addr) {
+            message.Debug("Error in Read16Big: read above upper boundary");
+            message.Abort();
+        }
         return (this.uint8mem[(addr ^ 2)+1] << 8) | this.uint8mem[(addr ^ 2)];
     }
     return this.devices[(addr>>24)&0xFF].ReadReg16(addr & 0xFFFFFF);
@@ -11117,6 +11136,10 @@ RAM.prototype.Read16BigTemplate = function(addr) {
 RAM.prototype.Read16LittleTemplate = function(addr) {
     addr = addr | 0;
     if (addr >= 0) {
+        if (this.uint8mem.byteLength <= addr) {
+            message.Debug("Error in Read16Little: read above upper boundary");
+            message.Abort();
+        }
         return (this.uint8mem[addr+1] << 8) | this.uint8mem[addr];
     }
     return this.devices[(addr>>24)&0xFF].ReadReg16(addr & 0xFFFFFF);
@@ -11125,6 +11148,10 @@ RAM.prototype.Read16LittleTemplate = function(addr) {
 RAM.prototype.Write16BigTemplate = function(addr, x) {
     addr = addr | 0;
     if (addr >= 0) {
+        if (this.uint8mem.byteLength <= addr) {
+            message.Debug("Error in Write16Big: write above upper boundary");
+            message.Abort();
+        }
         this.uint8mem[(addr ^ 2)+1] = (x >> 8) & 0xFF;
         this.uint8mem[(addr ^ 2)  ] = x & 0xFF;
         return;
@@ -11135,6 +11162,10 @@ RAM.prototype.Write16BigTemplate = function(addr, x) {
 RAM.prototype.Write16LittleTemplate = function(addr, x) {
     addr = addr | 0;
     if (addr >= 0) {
+        if (this.uint8mem.byteLength <= addr) {
+            message.Debug("Error in Write16Little: write above upper boundary");
+            message.Abort();
+        }
         this.uint8mem[addr+1] = (x >> 8) & 0xFF;
         this.uint8mem[addr  ] =  x & 0xFF;
         return;
@@ -11146,7 +11177,7 @@ RAM.prototype.Write16LittleTemplate = function(addr, x) {
 
 module.exports = RAM;
 
-},{"./messagehandler":28,"./utils":44}],35:[function(require,module,exports){
+},{"./messagehandler":28,"./utils":43}],34:[function(require,module,exports){
 
 "use strict";
 var message = require('../messagehandler');
@@ -11754,7 +11785,7 @@ function Disassemble(ins,r,csr,pc) {
 };
 
 module.exports.Disassemble = Disassemble;
-},{"../messagehandler":28,"../utils":44}],36:[function(require,module,exports){
+},{"../messagehandler":28,"../utils":43}],35:[function(require,module,exports){
 // -------------------------------------------------
 // -------------------- CPU ------------------------
 // -------------------------------------------------
@@ -14159,7 +14190,7 @@ return {
 
 module.exports = DynamicCPU;
 
-},{"../messagehandler":28,"../utils":44,"./disassemble.js":35}],37:[function(require,module,exports){
+},{"../messagehandler":28,"../utils":43,"./disassemble.js":34}],36:[function(require,module,exports){
 // -------------------------------------------------
 // -------------------- CPU ------------------------
 // -------------------------------------------------
@@ -14189,7 +14220,7 @@ var ReadFromHost = foreign.ReadFromHost;
 var WriteToHost = foreign.WriteToHost;
 var WriteFromHost = foreign.WriteFromHost;
 var IsQueueEmpty = foreign.IsQueueEmpty;
-var mul = foreign.mul;
+var imul = foreign.imul;
 var MathAbs = stdlib.Math.abs;
 
 //One of the following error ids are printed to the console in case of an abort()
@@ -14399,7 +14430,7 @@ function Init() {
 function Reset() {
     ticks = 0;
     csr[(csrp + CSR_MSTATUS)>>2]  = 0x96; // 1001 0110 - All Interrupts Disabled, FPU disabled 
-    csr[(csrp + CSR_MTOHOST)>>2]  =  0x780;
+    csr[(csrp + CSR_MTOHOST)>>2]  = 0x780;
     csr[(csrp + CSR_MCPUID)>>2]   = 0x4112D;
     csr[(csrp + CSR_MIMPID)>>2]   = 0x01;
     csr[(csrp + CSR_MHARTID)>>2]  = 0x00;
@@ -15012,7 +15043,7 @@ function GetCSR(addr) {
    
 };
 
-function IMul(a,b,index) {
+function UMul64(a, b, index) {
 
     //Special Method for 64 Bit Multiplication for Unsigned*Unsigned
     a = a|0;
@@ -15028,35 +15059,35 @@ function IMul(a,b,index) {
     var c32 = 0;
     var c48 = 0;
 
-    if (((a >>> 0) < 32767) & ((b >>> 0) < 65536)) {
-        result0 = mul(a|0,b|0)|0;
+    if ((a >>> 0) < 32767) 
+    if ((b >>> 0) < 65536) {
+        result0 = imul((a|0),(b|0))|0;
         result1 = ((result0|0) < 0) ? -1 : 0;
         if((index|0) == 0) return result0|0;
-        else return result1|0;
+        return result1|0;
     }
 
     a00 = a & 0xFFFF;
     a16 = a >>> 16;
     b00 = b & 0xFFFF;
-
     b16 = b >>> 16;
 
-    c00 = mul(a00|0,b00|0)|0;
-    c16 = ((c00 >>> 16) + (mul(a16|0,b00|0)|0))|0;
+    c00 = imul((a00|0), (b00|0))|0;
+    c16 = (c00 >>> 16) + (imul((a16|0),(b00|0))|0)|0;
     c32 = c16 >>> 16;
-    c16 = ((c16 & 0xFFFF) + (mul(a00|0,b16|0)|0))|0;
+    c16 = (c16 & 0xFFFF) + (imul((a00|0),(b16|0))|0)|0;
     c32 = (c32 + (c16 >>> 16))|0;
     c48 = c32 >>> 16;
-    c32 = ((c32 & 0xFFFF) + (mul(a16|0,b16|0)|0))|0;
+    c32 = (c32 & 0xFFFF) + (imul((a16|0),(b16|0))|0)|0;
     c48 = (c48 + (c32 >>> 16))|0;
 
     result0 = ((c16 & 0xFFFF) << 16) | (c00 & 0xFFFF);
     result1 = ((c48 & 0xFFFF) << 16) | (c32 & 0xFFFF);
-    if((index|0) == 0) return result0|0;
+    if ((index|0) == 0) return result0|0;
     return result1|0;
 };
 
-function UMul(a,b,index) {
+function IMul64(a,b,index) {
 
     //Special Method for 64 Bit Multiplication for Signed*Signed
     a = a|0;
@@ -15069,18 +15100,18 @@ function UMul(a,b,index) {
     if ((b|0) == 0) return 0;
 
     if ((((a|0) >= -32768) & ((a|0) <= 32767)) & (((b|0) >= -32768) & ((b|0) <= 32767))) {
-        result0 = mul(a|0,b|0)|0;
+        result0 = imul((a|0),(b|0))|0;
         result1 = ((result0|0) < 0) ? -1 : 0;
         if((index|0) == 0) return result0|0;
-        else return result1|0;
+        return result1|0;
     }
 
     doNegate = ((a|0) < 0) ^ ((b|0) < 0);
 
     a = MathAbs(a|0)|0;
     b = MathAbs(b|0)|0;
-    result0 = IMul(a, b, 0)|0;
-    result1 = IMul(a, b, 1)|0;
+    result0 = UMul64(a, b, 0)|0;
+    result1 = UMul64(a, b, 1)|0;
 
     if (doNegate) {
         result0 = ~result0;
@@ -15089,11 +15120,11 @@ function UMul(a,b,index) {
         if ((result0|0) == 0) result1 = (result1 + 1) | 0;
     }
 
-    if((index|0) == 0) return result0|0;
+    if((index|0) == 0) return result0|0; 
     return result1|0;
 };
 
-function SUMul(a,b,index) {
+function SUMul64(a,b,index) {
 
     //Special Method for 64 Bit Multiplication for Signed*Unsigned
     a = a|0;
@@ -15106,18 +15137,18 @@ function SUMul(a,b,index) {
     if ((b|0) == 0) return 0;
 
     if ((((a|0) >= -32768) & ((a|0) <= 32767)) & (((b|0) >= -32768) & ((b >>> 0) <= 32767))) {
-        result0 = mul(a|0,b|0)|0;
+        result0 = imul((a|0),(b|0))|0;
         result1 = ((result0|0) < 0) ? -1 : 0;
         if((index|0) == 0) return result0|0;
-        else return result1|0;
+        return result1|0;
     }
 
     doNegate = ((a|0) < 0) ^ ((b|0) < 0);
 
     a = MathAbs(a|0)|0;
     b = MathAbs(b|0)|0;
-    result0 = IMul(a, b, 0)|0;
-    result1 = IMul(a, b, 1)|0;
+    result0 = UMul64(a, b, 0)|0;
+    result1 = UMul64(a, b, 1)|0;
 
     if (doNegate) {
         result0 = ~result0;
@@ -15515,25 +15546,25 @@ function Step(steps, clockspeed) {
                         switch((ins >> 12)&0x7) {
                             case 0x00:
                                 //mul
-                                mult = mul(rs1|0,rs2|0)|0;
-                                r[((ins >> 5) & 0x7C) >> 2] = mult & 0xFFFFFFFF;
+                                result = imul(rs1|0, rs2|0)|0;
+                                r[((ins >> 5) & 0x7C) >> 2] = result;
                                 continue;
 
                             case 0x01:
                                 //mulh
-                                result = UMul(rs1,rs2, 1)|0;
+                                result = IMul64(rs1,rs2, 1)|0;
                                 r[((ins >> 5) & 0x7C) >> 2] = result;
                                 continue;
 
                             case 0x02:
                                 //mulhsu
-                                result = SUMul(rs1,rs2>>>0, 1)|0;
+                                result = SUMul64(rs1,rs2>>>0, 1)|0;
                                 r[((ins >> 5) & 0x7C) >> 2] = result;
                                 continue;
 
                             case 0x03:
                                 //mulhu
-                                result = IMul(rs1>>>0, rs2>>>0, 1)|0;
+                                result = UMul64(rs1>>>0, rs2>>>0, 1)|0;
                                 r[((ins >> 5) & 0x7C) >> 2] = result;
                                 continue;
 
@@ -16035,7 +16066,7 @@ function Step(steps, clockspeed) {
                     case 0x09: //fmul.d
                         fs1 = (+f[(fp + (((ins >> 15) & 0x1F) << 3)) >> 3]);
                         fs2 = (+f[(fp + (((ins >> 20) & 0x1F) << 3)) >> 3]);
-                        f[(fp + (((ins >> 7) & 0x1F) << 3)) >> 3] = (+mul(fs1,fs2));
+                        f[(fp + (((ins >> 7) & 0x1F) << 3)) >> 3] = +(+fs1)*(+fs2);
                         continue;
  
                     case 0x10: // single precision
@@ -16351,9 +16382,6 @@ return {
     MemTrap: MemTrap,
     PopPrivilegeStack: PopPrivilegeStack,
     PushPrivilegeStack: PushPrivilegeStack,
-    IMul: IMul,
-    UMul: UMul,
-    SUMul: SUMul,
     CheckVMPrivilege: CheckVMPrivilege,  
     GetTimeToNextInterrupt: GetTimeToNextInterrupt,
     ProgressTime: ProgressTime,
@@ -16369,7 +16397,7 @@ return {
 
 module.exports = FastCPU;
 
-},{"../messagehandler":28,"../utils":44,"./disassemble.js":35}],38:[function(require,module,exports){
+},{"../messagehandler":28,"../utils":43,"./disassemble.js":34}],37:[function(require,module,exports){
 // -------------------------------------------------
 // -------------------- HTIF -----------------------
 // -------------------------------------------------
@@ -16692,7 +16720,7 @@ HTIF.prototype.HandleRequest = function() {
 
 module.exports = HTIF;
 
-},{"../bzip2.js":2,"../messagehandler":28,"../utils":44,"./syscalls.js":41}],39:[function(require,module,exports){
+},{"../bzip2.js":2,"../messagehandler":28,"../utils":43,"./syscalls.js":40}],38:[function(require,module,exports){
 /* this is a unified, abstract interface (a facade) to the different
  * CPU implementations
  */
@@ -16701,7 +16729,6 @@ module.exports = HTIF;
 var message = require('../messagehandler'); // global variable
 var utils = require('../utils');
 var imul = require('../imul');
-var mul = require('../mul');
 
 // CPUs
 var SafeCPU = require('./safecpu.js');
@@ -16724,8 +16751,7 @@ function createCPU(cpuname, ram, htif, heap, ncores) {
     var foreign = {
         DebugMessage: message.Debug,
         abort : message.Abort,
-        imul : imul,
-        mul : mul,
+        imul : Math.imul || imul,
         MathAbs : Math.abs,
         Read32 : ram.Read32Little.bind(ram),
         Write32 : ram.Write32Little.bind(ram),
@@ -16822,7 +16848,7 @@ forwardedMethods.forEach(function(m) {
 
 module.exports = CPU;
 
-},{"../imul":27,"../messagehandler":28,"../mul":29,"../utils":44,"./dynamiccpu.js":36,"./fastcpu.js":37,"./safecpu.js":40}],40:[function(require,module,exports){
+},{"../imul":27,"../messagehandler":28,"../utils":43,"./dynamiccpu.js":35,"./fastcpu.js":36,"./safecpu.js":39}],39:[function(require,module,exports){
 // -------------------------------------------------
 // -------------------- CPU ------------------------
 // -------------------------------------------------
@@ -17545,7 +17571,7 @@ SafeCPU.prototype.GetCSR = function (addr) {
    
 };
 
-SafeCPU.prototype.IMul = function (a,b) {
+SafeCPU.prototype.UMul64 = function (a,b) {
 
     var result = [0, 0];
 
@@ -17575,7 +17601,7 @@ SafeCPU.prototype.IMul = function (a,b) {
     return result;
 };
 
-SafeCPU.prototype.UMul = function (a,b) {
+SafeCPU.prototype.IMul64 = function (a,b) {
 
     var result = [0,0];
 
@@ -17593,7 +17619,7 @@ SafeCPU.prototype.UMul = function (a,b) {
 
     var doNegate = (a < 0) ^ (b < 0);
 
-    result = this.IMul(Math.abs(a), Math.abs(b));
+    result = this.UMul64(Math.abs(a), Math.abs(b));
 
     if (doNegate) {
         result[0] = ~result[0];
@@ -17605,7 +17631,7 @@ SafeCPU.prototype.UMul = function (a,b) {
     return result;
 };
 
-SafeCPU.prototype.SUMul = function (a,b) {
+SafeCPU.prototype.SUMul64 = function (a,b) {
 
     var result = [0,0];
 
@@ -17623,7 +17649,7 @@ SafeCPU.prototype.SUMul = function (a,b) {
 
     var doNegate = (a < 0) ^ (b < 0);
 
-    result = this.IMul(Math.abs(a), Math.abs(b));
+    result = this.UMul64(Math.abs(a), Math.abs(b));
 
     if (doNegate) {
         result[0] = ~result[0];
@@ -17992,24 +18018,25 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                         switch((ins >> 12)&0x7) {
                             case 0x00:
                                 // mul
-                                r[rindex] = rs1 * rs2;
+                                var result = this.IMul64(rs1, rs2);
+                                r[rindex] = result[0];
                                 break;
 
                             case 0x01:
                                 // mulh
-                                var result = this.UMul(rs1, rs2);
+                                var result = this.IMul64(rs1, rs2);
                                 r[rindex] = result[1];
                                 break;
 
                             case 0x02:
                                 // mulhsu
-                                var result = this.SUMul(rs1, rs2>>>0);
+                                var result = this.SUMul64(rs1, rs2>>>0);
                                 r[rindex] = result[1];
                                 break;
 
                             case 0x03:
                                 // mulhu
-                                var result = this.IMul(rs1>>>0, rs2>>>0);
+                                var result = this.UMul64(rs1>>>0, rs2>>>0);
                                 r[rindex] = result[1];
                                 break;
 
@@ -18675,7 +18702,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
 
 module.exports = SafeCPU;
 
-},{"../messagehandler":28,"../utils":44,"./disassemble.js":35}],41:[function(require,module,exports){
+},{"../messagehandler":28,"../utils":43,"./disassemble.js":34}],40:[function(require,module,exports){
 // -------------------------------------------------
 // ----------------- SYSCALLS ----------------------
 // -------------------------------------------------
@@ -18853,7 +18880,7 @@ message.Debug("On File Loaded " + length);
 
 module.exports = SysCalls;
 
-},{"../messagehandler":28,"../utils":44}],42:[function(require,module,exports){
+},{"../messagehandler":28,"../utils":43}],41:[function(require,module,exports){
 // -------------------------------------------------
 // ------------------- SYSTEM ----------------------
 // -------------------------------------------------
@@ -19250,7 +19277,7 @@ System.prototype.MainLoop = function() {
 
 module.exports = System;
 
-},{"./bzip2":2,"./dev/ata":3,"./dev/ethmac":4,"./dev/framebuffer":5,"./dev/irq":6,"./dev/keyboard":7,"./dev/rtc":8,"./dev/sound":9,"./dev/timer":10,"./dev/touchscreen":11,"./dev/uart":12,"./dev/virtio":13,"./dev/virtio/9p":14,"./dev/virtio/block":15,"./dev/virtio/console":16,"./dev/virtio/dummy":17,"./dev/virtio/gpu":18,"./dev/virtio/input":19,"./dev/virtio/net":21,"./elf":22,"./filesystem/filesystem":23,"./messagehandler":28,"./or1k":31,"./ram":34,"./riscv":39,"./riscv/htif":38,"./timer":43,"./utils":44}],43:[function(require,module,exports){
+},{"./bzip2":2,"./dev/ata":3,"./dev/ethmac":4,"./dev/framebuffer":5,"./dev/irq":6,"./dev/keyboard":7,"./dev/rtc":8,"./dev/sound":9,"./dev/timer":10,"./dev/touchscreen":11,"./dev/uart":12,"./dev/virtio":13,"./dev/virtio/9p":14,"./dev/virtio/block":15,"./dev/virtio/console":16,"./dev/virtio/dummy":17,"./dev/virtio/gpu":18,"./dev/virtio/input":19,"./dev/virtio/net":21,"./elf":22,"./filesystem/filesystem":23,"./messagehandler":28,"./or1k":30,"./ram":33,"./riscv":38,"./riscv/htif":37,"./timer":42,"./utils":43}],42:[function(require,module,exports){
 // -------------------------------------------------
 // ------------------- TIMER -----------------------
 // -------------------------------------------------
@@ -19390,7 +19417,7 @@ Timer.prototype.GlobalUpdate = function(ticks) {
 
 module.exports = Timer;
 
-},{"./messagehandler.js":28,"./utils.js":44}],44:[function(require,module,exports){
+},{"./messagehandler.js":28,"./utils.js":43}],43:[function(require,module,exports){
 // -------------------------------------------------
 // ------------------ Utils ------------------------
 // -------------------------------------------------
@@ -19606,7 +19633,7 @@ module.exports.LoadBinaryResourceII = LoadBinaryResourceII;
 module.exports.LoadTextResource = LoadTextResource;
 
 
-},{}],45:[function(require,module,exports){
+},{}],44:[function(require,module,exports){
 // -------------------------------------------------
 // -------------------- Worker ---------------------
 // -------------------------------------------------
@@ -19614,4 +19641,4 @@ module.exports.LoadTextResource = LoadTextResource;
 var System = require('./system.js');
 var sys = new System();
 
-},{"./system.js":42}]},{},[45]);
+},{"./system.js":41}]},{},[44]);
