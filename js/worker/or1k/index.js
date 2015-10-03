@@ -29,7 +29,7 @@ function createCPUSingleton(cpuname, ram, heap, ncores) {
     var foreign = {
         DebugMessage: message.Debug,
         abort : message.Abort,
-        imul : imul,
+        imul : Math.imul || imul,
         Read32 : ram.Read32Big.bind(ram),
         Write32 : ram.Write32Big.bind(ram),
         Read16 : ram.Read16Big.bind(ram),

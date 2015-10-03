@@ -1,3 +1,6 @@
+// In case math.imul doesn't exists: 
+// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/imul
+
 module.exports = Math.imul || function(a, b) {
     var ah  = (a >>> 16) & 0xffff;
     var al = a & 0xffff;

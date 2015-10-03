@@ -1393,21 +1393,7 @@ function Step(steps, clockspeed) {
                 continue;
             case 0x306:
                 // mul signed (specification seems to be wrong)
-                {                    
-                    // this is a hack to do 32 bit signed multiply. Seems to work but needs to be tested. 
-                    //r[rindex<<2>>2] = (rA >> 0) * (rB >> 0);
-                    r[rindex>>2] = imul(rA|0, rB|0)|0;
-                    /*
-                    var rAl = rA & 0xFFFF;
-                    var rBl = rB & 0xFFFF;
-                    r[rindex<<2>>2] = r[rindex<<2>>2] & 0xFFFF0000 | ((rAl * rBl) & 0xFFFF);
-                    var result = Number(int32(rA)) * Number(int32(rB));
-                    SR_OV = (result < (-2147483647 - 1)) || (result > (2147483647));
-                    var uresult = uint32(rA) * uint32(rB);
-                    SR_CY = (uresult > (4294967295));
-                    */
-                    
-                }
+                r[rindex>>2] = imul(rA|0, rB|0)|0;
                 continue;
 
             case 0x30a:
