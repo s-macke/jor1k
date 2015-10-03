@@ -46,7 +46,7 @@ SoundDev.prototype.GetTimeToNextInterrupt = function() {
 
 SoundDev.prototype.Progress = function() {
     return;
-
+/*
     if (!this.playing) return;
     var currenttime = utils.GetMilliseconds();
 
@@ -72,6 +72,7 @@ SoundDev.prototype.Progress = function() {
         this.nextperiod += this.period_size;
         //if (this.nextperiod < 0) message.Debug("Error in sound device: Buffer underrun");
     }
+*/
 }
 
 SoundDev.prototype.Elapsed = function() {

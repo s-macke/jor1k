@@ -123,7 +123,7 @@
             
         </div>
 
-    <script src="../bin/jor1k-master-min.js"></script> 
+    <script src="jor1k-master-min.js"></script> 
 
 <script>
 var Jor1k = require("Jor1k");
@@ -173,14 +173,14 @@ function Start() {
 
     jor1kparameters = {
         system: {
-            kernelURL: "or1k/vmlinux.bin.bz2", // kernel image
+            kernelURL: "vmlinux.bin.bz2", // kernel image
             memorysize: 32, // in MB, must be a power of two
             cpu: "asm", // short name for the cpu to use
             ncores: 1,
         },
         fs: {
             basefsURL: "basefs.json", // json file with the basic filesystem configuration.
-            extendedfsURL: "../../jor1k-sysroot/fs.json", // json file with extended filesystem informations. Loaded after the basic filesystem has been loaded.
+            extendedfsURL: "../fs.json", // json file with extended filesystem informations. Loaded after the basic filesystem has been loaded.
             earlyload: [], // list of files which should be loaded immediately after they appear in the filesystem
             lazyloadimages: [
             ] // list of automatically loaded images after the basic filesystem has been loaded
@@ -194,7 +194,7 @@ function Start() {
         relayURL: "wss://relay.widgetry.org/", // relay url for the network
         userid: userid, // unique user id string. Empty, choosen randomly, from a url, or from a cookie.
         syncURL: "http://jor1k.com/sync/upload.php", // url to sync a certain folder
-        path: "../bin/",
+        path: "../sys/or1k/",
     }
 
     // --------------------------------------------------------
@@ -213,7 +213,7 @@ function Start() {
                 jor1kparameters.system.cpu = params[i].split('=')[1];
                 if (jor1kparameters.system.cpu == "smp") {
                     console.log("Load smp kernel");
-                    jor1kparameters.system.kernelURL = "or1k/vmlinuxsmp.bin.bz2";
+                    jor1kparameters.system.kernelURL = "vmlinuxsmp.bin.bz2";
                     jor1kparameters.system.ncores = 4;
                 }
             }

@@ -12,14 +12,14 @@
 </ul>
 
 
-<script src="../bin/jor1k-master-min.js"></script>
+<script src="jor1k-master-min.js"></script>
 
 <script>
 
 var Jor1k = require("Jor1k");
 var LinuxTerm = require("LinuxTerm");
 
-jor1kgui = new Jor1k({term: new LinuxTerm("tty"), path: "../bin/"});
+jor1kgui = new Jor1k({term: new LinuxTerm("tty"), path: "../sys/or1k/"});
 
     var readFile = (function(fileName) {
         var report = (function(file) {

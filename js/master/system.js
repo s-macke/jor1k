@@ -26,7 +26,7 @@ function jor1kGUI(parameters)
 
     this.params.path = this.params.path || "";
 
-    this.params.system.kernelURL = this.params.system.kernelURL || "or1k/vmlinux.bin.bz2";
+    this.params.system.kernelURL = this.params.system.kernelURL || "vmlinux.bin.bz2";
     this.params.system.memorysize = this.params.system.memorysize || 32;
     this.params.system.arch = this.params.system.arch || "or1k";
     this.params.system.cpu = this.params.system.cpu || "asm";
@@ -34,17 +34,22 @@ function jor1kGUI(parameters)
     this.params.syncURL = this.params.syncURL || "";
 
     this.params.fs = this.params.fs  || {};
-    this.params.fs.basefsURL = this.params.fs.basefsURL  || "basefs.json";
-    // this.params.fs.extendedfsURL = this.params.fs.extendedfsURL  || "";
+    this.params.fs.basefsURL = this.params.fs.basefsURL || "basefs.json";
     this.params.fs.earlyload = this.params.fs.earlyload  || [];
     this.params.fs.lazyloadimages = this.params.fs.lazyloadimages  || [];
 
+    // add path to every URL
+    this.params.system.kernelURL = this.params.path + this.params.system.kernelURL;
+    this.params.fs.basefsURL = this.params.path + this.params.fs.basefsURL;
+    if (this.params.fs.extendedfsURL) {
+        this.params.fs.extendedfsURL = this.params.path + this.params.fs.extendedfsURL;
+    }
+
     this.params.userid = this.params.userid || "";
-    this.params.path = this.params.path || "";
 
     // ----------------------
 
-    this.worker = new Worker(this.params.path + "../bin/jor1k-worker-min.js");
+    this.worker = new Worker("jor1k-worker-min.js");
     message.SetWorker(this.worker);
 
     // ----
@@ -206,11 +211,12 @@ jor1kGUI.prototype.Reset = function () {
     this.stop = false; // VM Stopped/Aborted
     this.userpaused = false;
     this.executepending = false; // if we rec an execute message while paused      
+
     message.Send("Init", this.params.system);
     message.Send("Reset");
-      
     message.Send("LoadAndStart", this.params.system.kernelURL);
     message.Send("LoadFilesystem", this.params.fs);
+
     if (this.terms.length > 0) {
         this.terms.forEach(function (term) {
             term.PauseBlink(false);

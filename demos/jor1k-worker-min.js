@@ -913,7 +913,7 @@ ATADev.prototype.WriteReg32 = function(addr, x) {
 
 module.exports = ATADev;
 
-},{"../messagehandler":28,"../utils":43}],4:[function(require,module,exports){
+},{"../messagehandler":28,"../utils":44}],4:[function(require,module,exports){
 // -------------------------------------------------
 // ----------------- Ethernet ----------------------
 // -------------------------------------------------
@@ -1669,7 +1669,7 @@ function EthDev(ram, intdev, mac) {
 
 module.exports = EthDev;
 
-},{"../messagehandler":28,"../utils":43}],5:[function(require,module,exports){
+},{"../messagehandler":28,"../utils":44}],5:[function(require,module,exports){
 // -------------------------------------------------
 // ---------------- Framebuffer --------------------
 // -------------------------------------------------
@@ -1729,7 +1729,7 @@ FBDev.prototype.GetBuffer = function () {
 
 module.exports = FBDev;
 
-},{"../messagehandler":28,"../utils":43}],6:[function(require,module,exports){
+},{"../messagehandler":28,"../utils":44}],6:[function(require,module,exports){
 // -------------------------------------------------
 // ---------------------- IRQ ----------------------
 // -------------------------------------------------
@@ -1835,7 +1835,7 @@ IRQDev.prototype.WriteReg32 = function (addr, value) {
 
 module.exports = IRQDev;
 
-},{"../messagehandler":28,"../utils":43}],7:[function(require,module,exports){
+},{"../messagehandler":28,"../utils":44}],7:[function(require,module,exports){
 // -------------------------------------------------
 // ------------------ KEYBOARD ---------------------
 // -------------------------------------------------
@@ -2245,7 +2245,7 @@ RTCDev.prototype.WriteReg32 = function (addr, value) {
 
 module.exports = RTCDev;
 
-},{"../messagehandler":28,"../utils":43}],9:[function(require,module,exports){
+},{"../messagehandler":28,"../utils":44}],9:[function(require,module,exports){
 // -------------------------------------------------
 // --------------------- SOUND ---------------------
 // -------------------------------------------------
@@ -2294,7 +2294,7 @@ SoundDev.prototype.GetTimeToNextInterrupt = function() {
 
 SoundDev.prototype.Progress = function() {
     return;
-
+/*
     if (!this.playing) return;
     var currenttime = utils.GetMilliseconds();
 
@@ -2320,6 +2320,7 @@ SoundDev.prototype.Progress = function() {
         this.nextperiod += this.period_size;
         //if (this.nextperiod < 0) message.Debug("Error in sound device: Buffer underrun");
     }
+*/
 }
 
 SoundDev.prototype.Elapsed = function() {
@@ -2417,7 +2418,7 @@ SoundDev.prototype.WriteReg32 = function (addr, value) {
 
 module.exports = SoundDev;
 
-},{"../messagehandler":28,"../utils":43}],10:[function(require,module,exports){
+},{"../messagehandler":28,"../utils":44}],10:[function(require,module,exports){
 // -------------------------------------------------
 // -------------------- Timer ----------------------
 // -------------------------------------------------
@@ -2590,7 +2591,7 @@ TouchscreenDev.prototype.WriteReg32 = function (addr, value) {
 
 module.exports = TouchscreenDev;
 
-},{"../messagehandler":28,"../utils":43}],12:[function(require,module,exports){
+},{"../messagehandler":28,"../utils":44}],12:[function(require,module,exports){
 // -------------------------------------------------
 // -------------------- UART -----------------------
 // -------------------------------------------------
@@ -2887,7 +2888,7 @@ UARTDev.prototype.WriteReg8 = function(addr, x) {
 
 module.exports = UARTDev;
 
-},{"../messagehandler":28,"../utils":43}],13:[function(require,module,exports){
+},{"../messagehandler":28,"../utils":44}],13:[function(require,module,exports){
 // -------------------------------------------------
 // ------------------- VIRTIO ----------------------
 // -------------------------------------------------
@@ -3390,7 +3391,7 @@ VirtIODev.prototype.WriteReg32 = function (addr, val) {
 
 module.exports = VirtIODev;
 
-},{"../messagehandler":28,"../utils":43,"./virtio/marshall":20}],14:[function(require,module,exports){
+},{"../messagehandler":28,"../utils":44,"./virtio/marshall":20}],14:[function(require,module,exports){
 // -------------------------------------------------
 // --------------------- 9P ------------------------
 // -------------------------------------------------
@@ -3950,7 +3951,7 @@ Virtio9p.prototype.ReceiveRequest = function (ringidx, index, GetByte) {
 
 module.exports = Virtio9p;
 
-},{"../../messagehandler":28,"../../utils":43,"./marshall":20}],15:[function(require,module,exports){
+},{"../../messagehandler":28,"../../utils":44,"./marshall":20}],15:[function(require,module,exports){
 // -------------------------------------------------
 // ------------- Block Virtio Device ---------------
 // -------------------------------------------------
@@ -4035,7 +4036,7 @@ VirtioBlock.prototype.ReceiveRequest = function (queueidx, index, GetByte, size)
 
 module.exports = VirtioBlock;
 
-},{"../../messagehandler":28,"../../utils":43,"./marshall":20}],16:[function(require,module,exports){
+},{"../../messagehandler":28,"../../utils":44,"./marshall":20}],16:[function(require,module,exports){
 // -------------------------------------------------
 // ------------ Console Virtio Device --------------
 // -------------------------------------------------
@@ -4122,7 +4123,7 @@ VirtioConsole.prototype.ReceiveRequest = function (queueidx, index, GetByte, siz
 
 module.exports = VirtioConsole;
 
-},{"../../messagehandler":28,"../../utils":43,"./marshall":20}],17:[function(require,module,exports){
+},{"../../messagehandler":28,"../../utils":44,"./marshall":20}],17:[function(require,module,exports){
 // -------------------------------------------------
 // ------------- Dummy Virtio Device ---------------
 // -------------------------------------------------
@@ -4147,7 +4148,7 @@ VirtioDummy.prototype.ReceiveRequest = function (index, GetByte) {
 
 module.exports = VirtioDummy;
 
-},{"../../messagehandler":28,"../../utils":43}],18:[function(require,module,exports){
+},{"../../messagehandler":28,"../../utils":44}],18:[function(require,module,exports){
 // -------------------------------------------------
 // -------------- GPU Virtio Device ----------------
 // -------------------------------------------------
@@ -4356,7 +4357,7 @@ VirtioGPU.prototype.ReceiveRequest = function (queueidx, index, GetByte, size) {
 
 module.exports = VirtioGPU;
 
-},{"../../messagehandler":28,"../../utils":43,"./marshall":20}],19:[function(require,module,exports){
+},{"../../messagehandler":28,"../../utils":44,"./marshall":20}],19:[function(require,module,exports){
 // -------------------------------------------------
 // ------------- Input Virtio Device ---------------
 // -------------------------------------------------
@@ -4537,7 +4538,7 @@ VirtioInput.prototype.ReceiveRequest = function (queueidx, index, GetByte, size)
 
 module.exports = VirtioInput;
 
-},{"../../messagehandler":28,"../../utils":43,"./marshall":20}],20:[function(require,module,exports){
+},{"../../messagehandler":28,"../../utils":44,"./marshall":20}],20:[function(require,module,exports){
 // -------------------------------------------------
 // ------------------ Marshall ---------------------
 // -------------------------------------------------
@@ -4821,7 +4822,7 @@ VirtioNET.prototype.ReceiveRequest = function (queueidx, index, GetByte, size) {
 
 module.exports = VirtioNET;
 
-},{"../../messagehandler":28,"../../utils":43,"./marshall":20}],22:[function(require,module,exports){
+},{"../../messagehandler":28,"../../utils":44,"./marshall":20}],22:[function(require,module,exports){
 var message = require('./messagehandler');
 var utils = require('./utils');
 var marshall = require('./dev/virtio/marshall');
@@ -4918,7 +4919,7 @@ elf.Extract = function(srcbuffer, destbuffer) {
 
 module.exports = elf;
 
-},{"./dev/virtio/marshall":20,"./messagehandler":28,"./utils":43}],23:[function(require,module,exports){
+},{"./dev/virtio/marshall":20,"./messagehandler":28,"./utils":44}],23:[function(require,module,exports){
 // -------------------------------------------------
 // ----------------- FILESYSTEM---------------------
 // -------------------------------------------------
@@ -5680,7 +5681,7 @@ FS.prototype.PrepareCAPs = function(id) {
 
 module.exports = FS;
 
-},{"../../lib/utf8.js":1,"../bzip2.js":2,"../dev/virtio/marshall.js":20,"../messagehandler":28,"../utils.js":43,"./fsloader.js":24,"./lazyUint8Array.js":25,"./tar.js":26}],24:[function(require,module,exports){
+},{"../../lib/utf8.js":1,"../bzip2.js":2,"../dev/virtio/marshall.js":20,"../messagehandler":28,"../utils.js":44,"./fsloader.js":24,"./lazyUint8Array.js":25,"./tar.js":26}],24:[function(require,module,exports){
 // -------------------------------------------------
 // ------------- FILESYSTEM LOADER -----------------
 // -------------------------------------------------
@@ -5781,7 +5782,7 @@ FSLoader.prototype.LoadJSON = function(url)
 
 module.exports = FSLoader;
 
-},{"../messagehandler":28,"../utils":43}],25:[function(require,module,exports){
+},{"../messagehandler":28,"../utils":44}],25:[function(require,module,exports){
 "use strict";
 
 var message = require("../messagehandler");
@@ -7006,111 +7007,14 @@ function Step(steps, clockspeed) {
 
     for(;;) {
 
-        if ((ppc|0) == (fence|0)) {
-            pc = nextpc;
-
-            if ((!delayedins_at_page_boundary|0)) {
-                delayedins = 0;
-            } 
-
-            dsteps = dsteps + ((ppc - ppcorigin) >> 2)|0;
-
-        // do this not so often
-        if ((dsteps|0) >= 64)
-        if (!(delayedins_at_page_boundary|0)) { // for now. Not sure if we need this
-
-            dsteps = dsteps - 64|0;
-            steps = steps - 64|0;
-            if ((steps|0) < 0) return 0x0; // return to main loop
-
-            // ---------- TICK ----------
-            // timer enabled
-            if ((TTMR >> 30) != 0) {
-                delta = (TTMR & 0xFFFFFFF) - (TTCR & 0xFFFFFFF) |0;
-                if ((delta|0) < 0) {
-                    delta = delta + 0xFFFFFFF | 0;
-                }
-                TTCR = (TTCR + clockspeed|0);
-                if ((delta|0) < (clockspeed|0)) {
-                    // if interrupt enabled
-                    if (TTMR & (1 << 29)) {
-                        TTMR = TTMR | (1 << 28); // set pending interrupt
-                    }
-                }
-            }
-
-            // check if pending and check if interrupt must be triggered
-            if (TTMR & (1 << 28)) {
-                if (SR_TEE) {
-                    Exception(EXCEPT_TICK, h[group0p + (SPR_EEAR_BASE<<2) >> 2]|0);
-                    // treat exception directly here
-                    pc = nextpc;
-                }
-            } else
-            if (SR_IEE|0) 
-            if (raise_interrupt|0) {
-                raise_interrupt = 0;
-                Exception(EXCEPT_INT, h[group0p + (SPR_EEAR_BASE<<2)>>2]|0);
-                pc = nextpc;
-            }
-        }
-
-        // Get Instruction Fast version
-        if ((instlbcheck ^ pc) & 0xFFFFE000) // short check if it is still the correct page
-        {
-            instlbcheck = pc; // save the new page, lower 11 bits are ignored
-            if (!SR_IME) {
-                instlblookup = 0x0;
-            } else {
-                setindex = (pc >> 13) & 63; // check this values
-                tlmbr = h[group2p + ((0x200 | setindex) << 2) >> 2]|0;
-                // test if tlmbr is valid
-                if ((tlmbr & 1) == 0) {
-                    if (ITLBRefill(pc, 64)|0) {
-                        tlmbr = h[group2p + ((0x200 | setindex)<<2) >> 2]|0; // reload the new value
-                    } else {
-                        // just make sure he doesn't count this 'continue' as steps
-                        ppcorigin = ppc;
-                        delayedins_at_page_boundary = 0;
-                        continue;
-                    }
-                }
-                if ((tlmbr >> 19) != (pc >> 19)) {
-                    if (ITLBRefill(pc, 64)|0) {
-                        tlmbr = h[group2p + ((0x200 | setindex)<<2) >> 2]|0; // reload the new value
-                    } else {
-                        // just make sure he doesn't count this 'continue' as steps
-                        ppcorigin = ppc;
-                        delayedins_at_page_boundary = 0;
-                        continue;
-                    }
-                }
-                tlbtr = h[group2p + ((0x280 | setindex) << 2) >> 2]|0;
-                instlblookup = ((tlbtr ^ tlmbr) >> 13) << 13;
-            }
-        }
-
-            // set pc and set the correcponding physical pc pointer
-            //pc = pc;
-            ppc = ramp + (instlblookup ^ pc)|0;
-            ppcorigin = ppc;
-            pcbase = pc - 4 - ppcorigin|0;
-
-           if (delayedins_at_page_boundary|0) {
-               delayedins_at_page_boundary = 0;
-               fence = ppc + 4|0;
-               nextpc = jump;
-           } else {
-               fence  = ((ppc >> 13) + 1) << 13; // next page
-               nextpc = ((pc  >> 13) + 1) << 13;
-           }
-        }
+        if ((ppc|0) != (fence|0)) {
 
         ins = h[ppc >> 2]|0;
         ppc = ppc + 4|0;
 
 // --------------------------------------------
         switch ((ins >> 26)&0x3F) {
+
         case 0x0:
             // j
             pc = pcbase + ppc|0;
@@ -7122,7 +7026,7 @@ function Step(steps, clockspeed) {
                 nextpc = jump|0;
             }
             delayedins = 1;
-            break;
+            continue;
 
         case 0x1:
             // jal
@@ -7136,7 +7040,7 @@ function Step(steps, clockspeed) {
                 nextpc = jump|0;
             }
             delayedins = 1;
-            break;
+            continue;
 
         case 0x3:
             // bnf
@@ -7152,12 +7056,12 @@ function Step(steps, clockspeed) {
                 nextpc = jump|0;
             }
             delayedins = 1;
-            break;
+            continue;
 
         case 0x4:
             // bf
             if (!SR_F) {
-                break;
+                continue;
             }
             pc = pcbase + ppc|0;
             jump = pc + ((ins << 6) >> 4)|0;
@@ -7168,17 +7072,17 @@ function Step(steps, clockspeed) {
                 nextpc = jump|0;
             }
             delayedins = 1;
-            break;
+            continue;
 
         case 0x5:
             // nop
-            break;
+            continue;
 
         case 0x6:
             // movhi
             rindex = (ins >> 21) & 0x1F;
             r[rindex << 2 >> 2] = ((ins & 0xFFFF) << 16); // movhi
-            break;
+            continue;
 
         case 0x8:
             //sys and trap
@@ -7187,7 +7091,7 @@ function Step(steps, clockspeed) {
             } else {
                 Exception(EXCEPT_SYSCALL, h[group0p+SPR_EEAR_BASE >> 2]|0);
             }
-            break;
+            continue;
 
         case 0x9:
             // rfe
@@ -7198,7 +7102,7 @@ function Step(steps, clockspeed) {
             //pc = jump; // set the correct pc in case of an EXCEPT_INT
             //delayedins = 0;
             SetFlags(GetSPR(SPR_ESR_BASE)|0); // could raise an exception
-            break;
+            continue;
 
         case 0x11:
             // jr
@@ -7210,7 +7114,7 @@ function Step(steps, clockspeed) {
                 nextpc = jump|0;
             }
             delayedins = 1;
-            break;
+            continue;
 
         case 0x12:
             // jalr
@@ -7224,7 +7128,7 @@ function Step(steps, clockspeed) {
                 nextpc = jump|0;
             }
             delayedins = 1;
-            break;
+            continue;
 
         case 0x1B: 
             // lwa
@@ -7240,7 +7144,7 @@ function Step(steps, clockspeed) {
             paddr = read32tlblookup ^ vaddr;
             EA = paddr;
             r[((ins >> 19) & 0x7C)>>2] = (paddr|0)>0?h[ramp+paddr >> 2]|0:Read32(paddr|0)|0;
-            break;
+            continue;
 
         case 0x21:
             // lwz
@@ -7255,7 +7159,7 @@ function Step(steps, clockspeed) {
             }
             paddr = read32tlblookup ^ vaddr;
             r[((ins >> 19) & 0x7C)>>2] = (paddr|0)>0?h[ramp+paddr >> 2]|0:Read32(paddr|0)|0;
-            break;
+            continue;
 
         case 0x23:
             // lbz
@@ -7274,7 +7178,7 @@ function Step(steps, clockspeed) {
             } else {
                 r[((ins >> 19) & 0x7C)>>2] = Read8(paddr|0)|0;
             }
-            break;
+            continue;
 
         case 0x24:
             // lbs 
@@ -7293,7 +7197,7 @@ function Step(steps, clockspeed) {
             } else {
                 r[((ins >> 19) & 0x7C)>>2] = ((Read8(paddr|0)|0) << 24) >> 24;
             }
-            break;
+            continue;
 
         case 0x25:
             // lhz 
@@ -7307,18 +7211,12 @@ function Step(steps, clockspeed) {
                 read16utlblookup = ((paddr^vaddr) >> 13) << 13;
             }
             paddr = read16utlblookup ^ vaddr;
-/*
-            paddr = DTLBLookup(vaddr, 0)|0;
-            if ((paddr|0) == -1) {
-                break;
-            }
-*/
             if ((paddr|0) >= 0) {
                 r[((ins >> 19) & 0x7C)>>2] = w[ramp + (paddr ^ 2) >> 1];
             } else {
                 r[((ins >> 19) & 0x7C)>>2] = (Read16(paddr|0)|0);
             }
-            break;
+            continue;
 
         case 0x26:
             // lhs
@@ -7332,68 +7230,60 @@ function Step(steps, clockspeed) {
                 read16stlblookup = ((paddr^vaddr) >> 13) << 13;
             }
             paddr = read16stlblookup ^ vaddr;
-/*
-            paddr = DTLBLookup(vaddr, 0)|0;
-            if ((paddr|0) == -1) {
-                break;
-            }
-*/
             if ((paddr|0) >= 0) {
                 r[((ins >> 19) & 0x7C)>>2] =  (w[ramp + (paddr ^ 2) >> 1] << 16) >> 16;
             } else {
                 r[((ins >> 19) & 0x7C)>>2] = ((Read16(paddr|0)|0) << 16) >> 16;
             }
-            break;
-
+            continue;
 
         case 0x27:
             // addi signed 
-            imm = (ins << 16) >> 16;
             rA = r[((ins >> 14) & 0x7C)>>2]|0;
-            r[((ins >> 19) & 0x7C) >> 2] = rA + imm|0;
+            r[((ins >> 19) & 0x7C) >> 2] = rA + ((ins << 16) >> 16)|0;
             //rindex = ((ins >> 19) & 0x7C);
             //SR_CY = r[rindex] < rA;
             //SR_OV = (((rA ^ imm ^ -1) & (rA ^ r[rindex])) & 0x80000000)?true:false;
             //TODO overflow and carry
             // maybe wrong
-            break;
+            continue;
 
         case 0x29:
             // andi
             r[((ins >> 19) & 0x7C)>>2] = r[((ins >> 14) & 0x7C)>>2] & (ins & 0xFFFF);
-            break;
+            continue;
 
 
         case 0x2A:
             // ori
             r[((ins >> 19) & 0x7C)>>2] = r[((ins >> 14) & 0x7C)>>2] | (ins & 0xFFFF);
-            break;
+            continue;
 
         case 0x2B:
             // xori            
             rA = r[((ins >> 14) & 0x7C)>>2]|0;
             r[((ins >> 19) & 0x7C)>>2] = rA ^ ((ins << 16) >> 16);
-            break;
+            continue;
 
         case 0x2D:
             // mfspr
             r[((ins >> 19) & 0x7C)>>2] = GetSPR(r[((ins >> 14) & 0x7C)>>2] | (ins & 0xFFFF))|0;
-            break;
+            continue;
 
         case 0x2E:
             switch ((ins >> 6) & 0x3) {
             case 0:
                 // slli
                 r[((ins >> 19) & 0x7C)>>2] = r[((ins >> 14) & 0x7C)>>2] << (ins & 0x1F);
-                break;
+                continue;
             case 1:
                 // rori
                 r[((ins >> 19) & 0x7C)>>2] = r[((ins >> 14) & 0x7C)>>2] >>> (ins & 0x1F);
-                break;
+                continue;
             case 2:
                 // srai
                 r[((ins >> 19) & 0x7C)>>2] = r[((ins >> 14) & 0x7C)>>2] >> (ins & 0x1F);
-                break;
+                continue;
             default:
                 DebugMessage(ERROR_UNKNOWN|0);
                 //DebugMessage("Error: opcode 2E function not implemented");
@@ -7409,43 +7299,43 @@ function Step(steps, clockspeed) {
             case 0x0:
                 // sfnei
                 SR_F = (r[((ins >> 14) & 0x7C)>>2]|0) == (imm|0);
-                break;
+                continue;
             case 0x1:
                 // sfnei
                 SR_F = (r[((ins >> 14) & 0x7C)>>2]|0) != (imm|0);
-                break;
+                continue;
             case 0x2:
                 // sfgtui
                 SR_F = (r[((ins >> 14) & 0x7C)>>2]>>>0) > (imm >>> 0);
-                break;
+                continue;
             case 0x3:
                 // sfgeui
                 SR_F = (r[((ins >> 14) & 0x7C)>>2]>>>0) >= (imm >>> 0);
-                break;
+                continue;
             case 0x4:
                 // sfltui
                 SR_F = (r[((ins >> 14) & 0x7C)>>2]>>>0) < (imm >>> 0);
-                break;
+                continue;
             case 0x5:
                 // sfleui
                 SR_F = (r[((ins >> 14) & 0x7C)>>2]>>>0) <= (imm >>> 0);
-                break;
+                continue;
             case 0xa:
                 // sfgtsi
                 SR_F = (r[((ins >> 14) & 0x7C)>>2]|0) > (imm|0);
-                break;
+                continue;
             case 0xb:
                 // sfgesi
                 SR_F = (r[((ins >> 14) & 0x7C)>>2]|0) >= (imm|0);
-                break;
+                continue;
             case 0xc:
                 // sfltsi
                 SR_F = (r[((ins >> 14) & 0x7C)>>2]|0) < (imm|0);
-                break;
+                continue;
             case 0xd:
                 // sflesi
                 SR_F = (r[((ins >> 14) & 0x7C)>>2]|0) <= (imm|0);
-                break;
+                continue;
             default:
                 //DebugMessage("Error: sf...i not supported yet");
                 DebugMessage(ERROR_UNKNOWN|0);
@@ -7466,7 +7356,7 @@ function Step(steps, clockspeed) {
                     return steps|0;
                 }
             }
-            break;
+            continue;
 
        case 0x32:
             // floating point
@@ -7478,55 +7368,55 @@ function Step(steps, clockspeed) {
             case 0x0:
                 // lf.add.s
                 f[rD >> 2] = (+f[rA >> 2]) + (+f[rB >> 2]);
-                break;
+                continue;
             case 0x1:
                 // lf.sub.s
                 f[rD >> 2] = (+f[rA >> 2]) - (+f[rB >> 2]);
-                break;
+                continue;
             case 0x2:
                 // lf.mul.s
                 f[rD >> 2] = (+f[rA >> 2]) * (+f[rB >> 2]);
-                break;
+                continue;
             case 0x3:
                 // lf.div.s
                 f[rD >> 2] = (+f[rA >> 2]) / (+f[rB >> 2]);
-                break;
+                continue;
             case 0x4:
                 // lf.itof.s
                 f[rD >> 2] = +(r[rA >> 2]|0);
-                break;
+                continue;
             case 0x5:
                 // lf.ftoi.s
                 r[rD >> 2] = ~~(+floor(+f[rA >> 2]));
-                break;
+                continue;
             case 0x7:
                 // lf.madd.s
                 f[rD >> 2] = (+f[rD >> 2]) + (+f[rA >> 2]) * (+f[rB >> 2]);
-                break;
+                continue;
             case 0x8:
                 // lf.sfeq.s
                 SR_F = (+f[rA >> 2]) == (+f[rB >> 2]);
-                break;
+                continue;
             case 0x9:
                 // lf.sfne.s
                 SR_F = (+f[rA >> 2]) != (+f[rB >> 2]);
-                break;
+                continue;
             case 0xa:
                 // lf.sfgt.s
                 SR_F = (+f[rA >> 2]) > (+f[rB >> 2]);
-                break;
+                continue;
             case 0xb:
                 // lf.sfge.s
                 SR_F = (+f[rA >> 2]) >= (+f[rB >> 2]);
-                break;
+                continue;
             case 0xc:
                 // lf.sflt.s
                 SR_F = (+f[rA >> 2]) < (+f[rB >> 2]);
-                break;
+                continue;
             case 0xd:
                 // lf.sfle.s
                 SR_F = (+f[rA >> 2]) <= (+f[rB >> 2]);
-                break;
+                continue;
             default:
                 DebugMessage(ERROR_UNKNOWN|0);
                 abort();
@@ -7557,7 +7447,7 @@ function Step(steps, clockspeed) {
             } else {
                 Write32(paddr|0, r[((ins >> 9) & 0x7C)>>2]|0);
             }
-            break;
+            continue;
 
         case 0x35:
             // sw
@@ -7577,7 +7467,7 @@ function Step(steps, clockspeed) {
             } else {
                 Write32(paddr|0, r[((ins >> 9) & 0x7C)>>2]|0);
             }
-            break;
+            continue;
 
         case 0x36:
             // sb
@@ -7598,7 +7488,7 @@ function Step(steps, clockspeed) {
             } else {
                 Write8(paddr|0, r[((ins >> 9) & 0x7C)>>2]|0);
             }
-            break;
+            continue;
 
         case 0x37:
             // sh
@@ -7613,17 +7503,12 @@ function Step(steps, clockspeed) {
                 write16tlblookup = ((paddr^vaddr) >> 13) << 13;
             }
             paddr = write16tlblookup ^ vaddr;
-/*
-            paddr = DTLBLookup(vaddr|0, 1)|0;
-            if ((paddr|0) == -1) {
-                break;
-            }*/
             if ((paddr|0) >= 0) {
                 w[ramp + (paddr ^ 2) >> 1] = r[((ins >> 9) & 0x7C)>>2];
             } else {
                 Write16(paddr|0, r[((ins >> 9) & 0x7C)>>2]|0);
             }
-            break;
+            continue;
 
         case 0x38:
             // three operands commands
@@ -7637,26 +7522,26 @@ function Step(steps, clockspeed) {
                 //SR_CY = r[rindex] < rA;
                 //SR_OV = (((rA ^ rB ^ -1) & (rA ^ r[rindex])) & 0x80000000)?true:false;
                 //TODO overflow and carry
-                break;
+                continue;
             case 0x2:
                 // sub signed
                 r[rindex>>2] = rA - rB;
                 //TODO overflow and carry
                 //SR_CY = (rB > rA);
                 //SR_OV = (((rA ^ rB) & (rA ^ r[rindex])) & 0x80000000)?true:false;                
-                break;
+                continue;
             case 0x3:
                 // and
                 r[rindex>>2] = rA & rB;
-                break;
+                continue;
             case 0x4:
                 // or
                 r[rindex>>2] = rA | rB;
-                break;
+                continue;
             case 0x5:
                 // or
                 r[rindex>>2] = rA ^ rB;
-                break;
+                continue;
             case 0x8:
                 // sll
                 r[rindex>>2] = rA << (rB & 0x1F);
@@ -7664,7 +7549,7 @@ function Step(steps, clockspeed) {
             case 0x48:
                 // srl not signed
                 r[rindex>>2] = rA >>> (rB & 0x1F);
-                break;
+                continue;
             case 0xf:
                 // ff1
                 r[rindex>>2] = 0;
@@ -7674,12 +7559,12 @@ function Step(steps, clockspeed) {
                         break;
                     }
                 }
-                break;
+                continue;
             case 0x88:
                 // sra signed
                 r[rindex>>2] = rA >> (rB & 0x1F);
                 // be carefull here and check
-                break;
+                continue;
             case 0x10f:
                 // fl1
                 r[rindex>>2] = 0;
@@ -7689,7 +7574,7 @@ function Step(steps, clockspeed) {
                         break;
                     }
                 }
-                break;
+                continue;
             case 0x306:
                 // mul signed (specification seems to be wrong)
                 {                    
@@ -7707,7 +7592,8 @@ function Step(steps, clockspeed) {
                     */
                     
                 }
-                break;
+                continue;
+
             case 0x30a:
                 // divu (specification seems to be wrong)
                 SR_CY = (rB|0) == 0;
@@ -7715,7 +7601,8 @@ function Step(steps, clockspeed) {
                 if (!SR_CY) {
                     r[rindex>>2] = /*Math.floor*/((rA>>>0) / (rB>>>0));
                 }
-                break;
+                continue;
+
             case 0x309:
                 // div (specification seems to be wrong)
                 SR_CY = (rB|0) == 0;
@@ -7723,8 +7610,8 @@ function Step(steps, clockspeed) {
                 if (!SR_CY) {
                     r[rindex>>2] = (rA|0) / (rB|0);
                 }
+                continue;
 
-                break;
             default:
                 //DebugMessage("Error: op38 opcode not supported yet");
                 DebugMessage(ERROR_UNKNOWN|0);
@@ -7739,43 +7626,43 @@ function Step(steps, clockspeed) {
             case 0x0:
                 // sfeq
                 SR_F = (r[((ins >> 14) & 0x7C)>>2]|0) == (r[((ins >> 9) & 0x7C)>>2]|0);
-                break;
+                continue;
             case 0x1:
                 // sfne
                 SR_F = (r[((ins >> 14) & 0x7C)>>2]|0) != (r[((ins >> 9) & 0x7C)>>2]|0);
-                break;
+                continue;
             case 0x2:
                 // sfgtu
                 SR_F = ((r[((ins >> 14) & 0x7C)>>2]>>>0) > (r[((ins >> 9) & 0x7C)>>2]>>>0));
-                break;
+                continue;
             case 0x3:
                 // sfgeu
                 SR_F = ((r[((ins >> 14) & 0x7C)>>2]>>>0) >= (r[((ins >> 9) & 0x7C)>>2]>>>0));
-                break;
+                continue;
             case 0x4:
                 // sfltu
                 SR_F = ((r[((ins >> 14) & 0x7C)>>2]>>>0) < (r[((ins >> 9) & 0x7C)>>2]>>>0));
-                break;
+                continue;
             case 0x5:
                 // sfleu
                 SR_F = ((r[((ins >> 14) & 0x7C)>>2]>>>0) <= (r[((ins >> 9) & 0x7C)>>2]>>>0));
-                break;
+                continue;
             case 0xa:
                 // sfgts
                 SR_F = (r[((ins >> 14) & 0x7C)>>2]|0) > (r[((ins >> 9) & 0x7C)>>2]|0);
-                break;
+                continue;
             case 0xb:
                 // sfges
                 SR_F = (r[((ins >> 14) & 0x7C)>>2]|0) >= (r[((ins >> 9) & 0x7C)>>2]|0);
-                break;
+                continue;
             case 0xc:
                 // sflts
                 SR_F = (r[((ins >> 14) & 0x7C)>>2]|0) < (r[((ins >> 9) & 0x7C)>>2]|0);
-                break;
+                continue;
             case 0xd:
                 // sfles
                 SR_F = (r[((ins >> 14) & 0x7C)>>2]|0) <= (r[((ins >> 9) & 0x7C)>>2]|0);
-                break;
+                continue;
             default:
                 //DebugMessage("Error: sf.... function supported yet");
                 DebugMessage(ERROR_UNKNOWN|0);
@@ -7789,6 +7676,108 @@ function Step(steps, clockspeed) {
             abort();
             break;
         }
+
+        } else { // fence
+
+            pc = nextpc;
+
+            if ((!delayedins_at_page_boundary|0)) {
+                delayedins = 0;
+            } 
+
+            dsteps = dsteps + ((ppc - ppcorigin) >> 2)|0;
+
+            // do this not so often
+            if ((dsteps|0) >= 64)
+            if (!(delayedins_at_page_boundary|0)) { // for now. Not sure if we need this
+
+                dsteps = dsteps - 64|0;
+                steps = steps - 64|0;
+                if ((steps|0) < 0) return 0x0; // return to main loop
+
+                // ---------- TICK ----------
+                // timer enabled
+                if ((TTMR >> 30) != 0) {
+                    delta = (TTMR & 0xFFFFFFF) - (TTCR & 0xFFFFFFF) |0;
+                    if ((delta|0) < 0) {
+                        delta = delta + 0xFFFFFFF | 0;
+                    }
+                    TTCR = (TTCR + clockspeed|0);
+                    if ((delta|0) < (clockspeed|0)) {
+                        // if interrupt enabled
+                        if (TTMR & (1 << 29)) {
+                            TTMR = TTMR | (1 << 28); // set pending interrupt
+                        }
+                    }
+                }
+
+                // check if pending and check if interrupt must be triggered
+                if (TTMR & (1 << 28)) {
+                    if (SR_TEE) {
+                        Exception(EXCEPT_TICK, h[group0p + (SPR_EEAR_BASE<<2) >> 2]|0);
+                        // treat exception directly here
+                        pc = nextpc;
+                    }
+                } else
+                if (SR_IEE|0) 
+                if (raise_interrupt|0) {
+                    raise_interrupt = 0;
+                    Exception(EXCEPT_INT, h[group0p + (SPR_EEAR_BASE<<2)>>2]|0);
+                    pc = nextpc;
+                }
+            } // dsteps
+
+            // Get Instruction Fast version
+            if ((instlbcheck ^ pc) & 0xFFFFE000) // short check if it is still the correct page
+            {
+                instlbcheck = pc; // save the new page, lower 11 bits are ignored
+                if (!SR_IME) {
+                    instlblookup = 0x0;
+                } else {
+                    setindex = (pc >> 13) & 63; // check this values
+                    tlmbr = h[group2p + ((0x200 | setindex) << 2) >> 2]|0;
+                    // test if tlmbr is valid
+                    if ((tlmbr & 1) == 0) {
+                        if (ITLBRefill(pc, 64)|0) {
+                            tlmbr = h[group2p + ((0x200 | setindex)<<2) >> 2]|0; // reload the new value
+                        } else {
+                            // just make sure he doesn't count this 'continue' as steps
+                            ppcorigin = ppc;
+                            delayedins_at_page_boundary = 0;
+                            continue;
+                        }
+                    }
+                    if ((tlmbr >> 19) != (pc >> 19)) {
+                        if (ITLBRefill(pc, 64)|0) {
+                            tlmbr = h[group2p + ((0x200 | setindex)<<2) >> 2]|0; // reload the new value
+                        } else {
+                            // just make sure he doesn't count this 'continue' as steps
+                            ppcorigin = ppc;
+                            delayedins_at_page_boundary = 0;
+                            continue;
+                        }
+                    }
+                    tlbtr = h[group2p + ((0x280 | setindex) << 2) >> 2]|0;
+                    instlblookup = ((tlbtr ^ tlmbr) >> 13) << 13;
+                }
+            }
+
+            // set pc and set the correcponding physical pc pointer
+            //pc = pc;
+            ppc = ramp + (instlblookup ^ pc)|0;
+            ppcorigin = ppc;
+            pcbase = pc - 4 - ppcorigin|0;
+
+            if (delayedins_at_page_boundary|0) {
+                delayedins_at_page_boundary = 0;
+                fence = ppc + 4|0;
+                nextpc = jump;
+            } else {
+                fence  = ((ppc >> 13) + 1) << 13; // next page
+                nextpc = ((pc  >> 13) + 1) << 13;
+            }
+
+        } // fence
 
     }; // main loop
 
@@ -8032,7 +8021,7 @@ forwardedMethods.forEach(function(m) {
 
 module.exports = CPU;
 
-},{"../imul":27,"../messagehandler":28,"../utils":43,"./fastcpu.js":30,"./safecpu.js":32,"./smpcpu.js":33}],32:[function(require,module,exports){
+},{"../imul":27,"../messagehandler":28,"../utils":44,"./fastcpu.js":30,"./safecpu.js":32,"./smpcpu.js":33}],32:[function(require,module,exports){
 // -------------------------------------------------
 // -------------------- CPU ------------------------
 // -------------------------------------------------
@@ -9148,7 +9137,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
 
 module.exports = SafeCPU;
 
-},{"../messagehandler":28,"../utils":43}],33:[function(require,module,exports){
+},{"../messagehandler":28,"../utils":44}],33:[function(require,module,exports){
 var message = require('../messagehandler');
 
 function SMPCPU(stdlib, foreign, heap) {
@@ -11157,7 +11146,7 @@ RAM.prototype.Write16LittleTemplate = function(addr, x) {
 
 module.exports = RAM;
 
-},{"./messagehandler":28,"./utils":43}],35:[function(require,module,exports){
+},{"./messagehandler":28,"./utils":44}],35:[function(require,module,exports){
 
 "use strict";
 var message = require('../messagehandler');
@@ -11765,7 +11754,7 @@ function Disassemble(ins,r,csr,pc) {
 };
 
 module.exports.Disassemble = Disassemble;
-},{"../messagehandler":28,"../utils":43}],36:[function(require,module,exports){
+},{"../messagehandler":28,"../utils":44}],36:[function(require,module,exports){
 // -------------------------------------------------
 // -------------------- CPU ------------------------
 // -------------------------------------------------
@@ -11775,7 +11764,7 @@ var DebugIns = require('./disassemble.js');
 
 
 // constructor
-function FastCPU(stdlib, foreign, heap) {
+function DynamicCPU(stdlib, foreign, heap) {
 "use asm";
 
 var DebugMessage = foreign.DebugMessage;
@@ -11939,11 +11928,44 @@ var ram8 = new stdlib.Int8Array(heap);
 var ram16 = new stdlib.Int16Array(heap);
 
 var pc = 0x200;
+var pcorigin = 0x200;
+var pc_change = 1; //1 implies pc has been changed by an instruction
 var ticks = 0;
 var amoaddr = 0,amovalue = 0;
 
-var fence = 0x01;
+var fence = 0x200;
 var ppc = 0x200;
+var ppcorigin = 0x200;
+
+var instlb_index = -1; //tlb index for pc
+var instlb_entry = -1;
+var read8tlb_index = -1; //tlb index for lb ins
+var read8tlb_entry = -1;
+var read8utlb_index = -1; //tlb index for lbu ins
+var read8utlb_entry = -1;
+var read16tlb_index = -1; //tlb index for lh ins
+var read16tlb_entry = -1;
+var read16utlb_index = -1; //tlb index for lhu ins
+var read16utlb_entry = -1;
+var read32tlb_index = -1; //tlb index for lw ins
+var read32tlb_entry = -1;
+var store8tlb_index = -1; //tlb index for sb ins
+var store8tlb_entry = -1;
+var store16tlb_index = -1; //tlb index for sh ins
+var store16tlb_entry = -1;
+var store32tlb_index = -1; //tlb index for sw ins
+var store32tlb_entry = -1;
+
+var float_read32tlb_index = -1; //tlb index for flw ins
+var float_read32tlb_entry = -1;
+var float_read64tlb_index = -1; //tlb index for fld ins
+var float_read64tlb_entry = -1;
+var float_store32tlb_index = -1; //tlb index for fsw ins
+var float_store32tlb_entry = -1;
+var float_store64tlb_index = -1; //tlb index for fsd ins
+var float_store64tlb_entry = -1;
+
+var queue_status = 0; // 1 means queue is full
 
 function Init() {
     Reset();
@@ -11972,9 +11994,6 @@ function Reset() {
     amovalue = 0x00;
 }
 
-function InvalidateTLB() {
-}
-
 function GetTimeToNextInterrupt() {
     return 10;
 }
@@ -12000,6 +12019,7 @@ function RaiseInterrupt(line, cpuid) {
     line = line|0;
     cpuid = cpuid|0;
     //DebugMessage("raise int " + line);
+    queue_status = 1;
 };
 
 function ClearInterrupt(line, cpuid) {
@@ -12018,13 +12038,16 @@ function Trap(cause, current_pc) {
     csr[(csrp + CSR_MEPC)>>2] = current_pc;
     csr[(csrp + CSR_MCAUSE)>>2] = cause;
     pc = (offset + (current_privilege_level << 6))|0;
-    fence = 1;  
+    fence = ppc;
+    pc_change = 1;
+    InvalidateTLB();
 };
 
 function MemTrap(addr, op) {
 
     addr = addr|0;
     op = op|0;
+    if((op|0) != (VM_FETCH|0)) pc = pcorigin + (ppc-ppcorigin)|0;
     csr[(csrp + CSR_MBADADDR)>>2] = addr;
     switch(op|0) {
         case 0: //VM_READ
@@ -12039,6 +12062,7 @@ function MemTrap(addr, op) {
             Trap(CAUSE_INSTRUCTION_ACCESS_FAULT, pc);
             break;
     }
+
 }
 
 
@@ -12660,6 +12684,35 @@ function SUMul(a,b,index) {
     return result1|0;
 };
 
+function InvalidateTLB(){
+
+    read8tlb_index = -1;
+    read8tlb_entry = -1;
+    read8utlb_index = -1;
+    read8utlb_entry = -1;
+    read16tlb_index = -1;
+    read16tlb_entry = -1;
+    read16utlb_index = -1;
+    read16utlb_entry = -1;
+    read32tlb_index = -1;
+    read32tlb_entry = -1;
+    store8tlb_index = -1;
+    store8tlb_entry = -1;
+    store16tlb_index = -1;
+    store16tlb_entry = -1;
+    store32tlb_index = -1;
+    store32tlb_entry = -1;
+
+    float_read32tlb_index = -1;
+    float_read32tlb_entry = -1;
+    float_read64tlb_index = -1;
+    float_read64tlb_entry = -1;
+    float_store32tlb_index = -1;
+    float_store32tlb_entry = -1;
+    float_store64tlb_index = -1;
+    float_store64tlb_entry = -1;
+
+}
 
 function PushPrivilegeStack(){
 
@@ -12683,13 +12736,7 @@ function Step(steps, clockspeed) {
 
     steps = steps|0;
     clockspeed = clockspeed|0;
-    var rindex = 0x00;
-    var findex = 0x00;
     var imm = 0x00;
-    var imm1 = 0x00;
-    var imm2 = 0x00;
-    var imm3 = 0x00;
-    var imm4 = 0x00;
     var zimm = 0x00;
     var mult = 0x00;
     var quo = 0x00;
@@ -12701,61 +12748,19 @@ function Step(steps, clockspeed) {
     var fs2 = 0.0;
     var fs3 = 0.0;
     
+    var delta = 0;
     var paddr = 0;
     var current_privilege_level = 0;
     var interrupts = 0;
     var ie = 0;
     var ins = 0;
-    var ram_index = 0;
+    var dsteps = 64;
     
-    do {
-        r[0] = 0x00;
-
-        current_privilege_level = (csr[(csrp + CSR_MSTATUS)>>2] & 0x06) >> 1;
-
-        ticks = ticks + 1|0;
-        if ((ticks|0) == (csr[(csrp + CSR_MTIMECMP)>>2]|0)) {
-            csr[(csrp + CSR_MIP)>>2] = csr[(csrp + CSR_MIP)>>2] | 0x20;
-        }
-
-        if(((pc|0) & 0xFFF) == 0) fence = 1; //Checking if the physical pc has reached a page boundary
+    for(;;) {
  
-        if((fence|0) == 1) {
-            ppc = TranslateVM(pc,VM_FETCH)|0;
-            if((ppc|0) == -1)
-                continue;
+    if ((fence|0) != (ppc|0)) {
 
-            interrupts = csr[(csrp + CSR_MIE)>>2] & csr[(csrp + CSR_MIP)>>2];
-            ie = csr[(csrp + CSR_MSTATUS)>>2] & 0x01;
-
-            if (((current_privilege_level|0) < 3) | (((current_privilege_level|0) == 3) & (ie|0))) {
-                if (((interrupts|0) & 0x8)) {
-                    Trap(CAUSE_SOFTWARE_INTERRUPT, pc);
-                    continue;
-                } else
-                if (!(IsQueueEmpty()|0)) {
-                    Trap(CAUSE_HOST_INTERRUPT, pc);
-                    continue;
-                }
-            }
-            if (((current_privilege_level|0) < 1) | (((current_privilege_level|0) == 1) & (ie|0))) {
-                if (((interrupts|0) & 0x2)) {
-                    Trap(CAUSE_SOFTWARE_INTERRUPT, pc);
-                    continue;
-                } else
-                if (((interrupts|0) & 0x20)) {
-                     Trap(CAUSE_TIMER_INTERRUPT, pc);
-                     continue;
-                }
-            }
-
-            fence = 0;
-        }
-
-        ram_index = ppc|0;
-        ins = ram[(ramp + ram_index) >> 2]|0;
-        //DebugIns.Disassemble(ins,r,csr,pc);
-        pc = pc + 4|0;
+        ins = ram[ppc >> 2]|0;
         ppc = ppc + 4|0;
 
         switch(ins&0x7F) {
@@ -12768,60 +12773,90 @@ function Step(steps, clockspeed) {
                         //lb
                         imm = (ins >> 20);
                         rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
-                        rindex = (ins >> 7) & 0x1F;
-                        paddr = TranslateVM(rs1 + imm|0, VM_READ)|0;
-                        if((paddr|0) == -1) break;
-                        ram_index = paddr|0;
-                        r[(rindex << 2) >> 2] = ((ram8[(ramp + ram_index) >> 0]) << 24) >> 24;
-                        break;
+                        if(!((read8tlb_index ^ (rs1 + imm|0)) & 0xFFFFF000)) paddr = (read8tlb_entry ^ (rs1 + imm|0));
+                        else{
+
+                            paddr = TranslateVM(rs1 + imm|0, VM_READ)|0;
+                            if((paddr|0) == -1) continue;
+
+                            read8tlb_index = paddr;
+                            read8tlb_entry = ((paddr ^ (rs1 + imm|0)) & 0xFFFFF000);
+                        }
+                        r[((ins >> 5) & 0x7C) >> 2] = ((ram8[(ramp + paddr) >> 0]) << 24) >> 24;
+                        ram[(ppc - 4) >> 2] = ((ins >> 7) << 7) | 0x74; //If this ins comes again, it will take the faster route at opcode 0x74
+                        continue;
 
                     case 0x01:
                         //lh
                         imm = (ins >> 20);
                         rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
-                        rindex = (ins >> 7) & 0x1F;
-                        paddr = TranslateVM(rs1 + imm|0, VM_READ)|0;
-                        if((paddr|0) == -1) break;
-                        ram_index = paddr|0;
-                        r[(rindex << 2) >> 2] = ((ram16[(ramp + ram_index) >> 1]) << 16) >> 16;
-                        break;
+                        if(!((read16tlb_index ^ (rs1 + imm|0)) & 0xFFFFF000)) paddr = (read16tlb_entry ^ (rs1 + imm|0));
+                        else{
+
+                            paddr = TranslateVM(rs1 + imm|0, VM_READ)|0;
+                            if((paddr|0) == -1) continue;
+
+                            read16tlb_index = paddr;
+                            read16tlb_entry = ((paddr ^ (rs1 + imm|0)) & 0xFFFFF000);
+                        }
+                        r[((ins >> 5) & 0x7C) >> 2] = ((ram16[(ramp + paddr) >> 1]) << 16) >> 16;
+                        ram[(ppc - 4) >> 2] = ((ins >> 7) << 7) | 0x75;
+                        continue;
 
                     case 0x02:
                         //lw
                         imm = (ins >> 20);
                         rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
-                        rindex = (ins >> 7) & 0x1F;
                         if ((rs1+imm) & 3) {
                              DebugMessage(ERROR_LOAD_WORD|0);
                              abort();
                         }
-                        paddr = TranslateVM(rs1 + imm|0, VM_READ)|0;
-                        if((paddr|0) == -1) break;
-                        ram_index = paddr|0;
-                        r[(rindex << 2) >> 2] = ram[(ramp + ram_index) >> 2]|0;
-                        break;
+                        if(!((read32tlb_index ^ (rs1 + imm|0)) & 0xFFFFF000)) paddr = (read32tlb_entry ^ (rs1 + imm|0));
+                        else{
+
+                            paddr = TranslateVM(rs1 + imm|0, VM_READ)|0;
+                            if((paddr|0) == -1) continue;
+
+                            read32tlb_index = paddr;
+                            read32tlb_entry = ((paddr ^ (rs1 + imm|0)) & 0xFFFFF000);
+                        }
+                        r[((ins >> 5) & 0x7C) >> 2] = ram[(ramp + paddr) >> 2]|0;
+                        ram[(ppc - 4) >> 2] = ((ins >> 7) << 7) | 0x76;
+                        continue;
 
                     case 0x04:
                         //lbu
                         imm = (ins >> 20);
                         rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
-                        rindex = (ins >> 7) & 0x1F;
-                        paddr = TranslateVM(rs1 + imm|0, VM_READ)|0;
-                        if((paddr|0) == -1) break;
-                        ram_index = paddr|0;
-                        r[(rindex << 2) >> 2] = (ram8[(ramp + ram_index) >> 0]) & 0xFF;
-                        break;
+                        if(!((read8utlb_index ^ (rs1 + imm|0)) & 0xFFFFF000)) paddr = (read8utlb_entry ^ (rs1 + imm|0));
+                        else{
+
+                            paddr = TranslateVM(rs1 + imm|0, VM_READ)|0;
+                            if((paddr|0) == -1) continue;
+
+                            read8utlb_index = paddr;
+                            read8utlb_entry = ((paddr ^ (rs1 + imm|0)) & 0xFFFFF000);
+                        }
+                        r[((ins >> 5) & 0x7C) >> 2] = (ram8[(ramp + paddr) >> 0]) & 0xFF;
+                        ram[(ppc - 4) >> 2] = ((ins >> 7) << 7) | 0x77;
+                        continue;
 
                     case 0x05:
                         //lhu
                         imm = (ins >> 20);
                         rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
-                        rindex = (ins >> 7) & 0x1F;
-                        paddr = TranslateVM(rs1 + imm|0 ,VM_READ)|0;
-                        if((paddr|0) == -1) break;
-                        ram_index = paddr|0;
-                        r[(rindex << 2) >> 2] = (ram16[(ramp + ram_index) >> 1]) & 0xFFFF;
-                        break;
+                        if(!((read16utlb_index ^ (rs1 + imm|0)) & 0xFFFFF000)) paddr = (read16utlb_entry ^ (rs1 + imm|0));
+                        else{
+
+                            paddr = TranslateVM(rs1 + imm|0, VM_READ)|0;
+                            if((paddr|0) == -1) continue;
+
+                            read16utlb_index = paddr;
+                            read16utlb_entry = ((paddr ^ (rs1 + imm|0)) & 0xFFFFF000);
+                        }
+                        r[((ins >> 5) & 0x7C) >> 2] = (ram16[(ramp + paddr) >> 1]) & 0xFFFF;
+                        ram[(ppc - 4) >> 2] = ((ins >> 7) << 7) | 0x78;
+                        continue;
 
                     default:
                         DebugMessage(ERROR_INSTRUCTION_NOT_FOUND|0);
@@ -12829,48 +12864,64 @@ function Step(steps, clockspeed) {
                         break;
 
                 }
-                break;
+                continue;
 
             case 0x23:
                 //sb, sh, sw
-                imm1 = (ins >> 25);
-                imm2 = (ins >> 7) & 0x1F;
-                imm = (imm1 << 5) | imm2;
+                imm = ((ins >> 25) << 5) | ((ins >> 7) & 0x1F);
                 switch((ins >> 12)&0x7) {
                     
                     case 0x00:
                         //sb
                         rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
-                        rindex = (ins >> 20) & 0x1F;
-                        paddr = TranslateVM(rs1 + imm|0,VM_WRITE)|0;
-                        if((paddr|0) == -1) break;
-                        ram_index = paddr|0;
-                        ram8[(ramp + ram_index) >> 0] = (r[(rindex << 2) >> 2] & 0xFF); 
-                        break;
+                        if(!((store8tlb_index ^ (rs1 + imm|0)) & 0xFFFFF000)) paddr = (store8tlb_entry ^ (rs1 + imm|0));
+                        else{
+
+                            paddr = TranslateVM(rs1 + imm|0, VM_WRITE)|0;
+                            if((paddr|0) == -1) continue;
+
+                            store8tlb_index = paddr;
+                            store8tlb_entry = ((paddr ^ (rs1 + imm|0)) & 0xFFFFF000);
+                        }
+                        ram8[(ramp + paddr) >> 0] = (r[((ins >> 18) & 0x7C) >> 2] & 0xFF);
+                        ram[(ppc - 4) >> 2] = ((ins >> 7) << 7) | 0x79;
+                        continue;
 
                     case 0x01:
                         //sh
                         rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
-                        rindex = (ins >> 20) & 0x1F;
-                        paddr = TranslateVM(rs1 + imm|0,VM_WRITE)|0;
-                        if((paddr|0) == -1) break;
-                        ram_index = paddr|0;
-                        ram16[(ramp + ram_index) >> 1] = (r[(rindex << 2) >> 2] & 0xFFFF);
-                        break;
+                        if(!((store16tlb_index ^ (rs1 + imm|0)) & 0xFFFFF000)) paddr = (store16tlb_entry ^ (rs1 + imm|0));
+                        else{
+
+                            paddr = TranslateVM(rs1 + imm|0, VM_WRITE)|0;
+                            if((paddr|0) == -1) continue;
+
+                            store16tlb_index = paddr;
+                            store16tlb_entry = ((paddr ^ (rs1 + imm|0)) & 0xFFFFF000);
+                        }
+                        ram16[(ramp + paddr) >> 1] = (r[((ins >> 18) & 0x7C) >> 2] & 0xFFFF);
+                        ram[(ppc - 4) >> 2] = ((ins >> 7) << 7) | 0x7A;
+                        continue;
 
                     case 0x02:
                         //sw
                         rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
-                        rindex = (ins >> 20) & 0x1F;
                         if ((rs1+imm) & 3) {
                              DebugMessage(ERROR_STORE_WORD|0);
                              abort();
                         }
-                        paddr = TranslateVM(rs1 + imm|0,VM_WRITE)|0;
-                        if((paddr|0) == -1) break;
-                        ram_index = paddr|0;
-                        ram[(ramp + ram_index) >> 2] = r[(rindex << 2) >> 2]|0;
-                        break;
+                        if(!((store32tlb_index ^ (rs1 + imm|0)) & 0xFFFFF000)) paddr = (store32tlb_entry ^ (rs1 + imm|0));
+                        else{
+
+                            paddr = TranslateVM(rs1 + imm|0, VM_WRITE)|0;
+                            if((paddr|0) == -1) continue;
+
+                            store32tlb_index = paddr;
+                            store32tlb_entry = ((paddr ^ (rs1 + imm|0)) & 0xFFFFF000);
+                        }
+                        ram[(ramp + paddr) >> 2] = r[((ins >> 18) & 0x7C) >> 2]|0;
+                        ram[(ppc - 4) >> 2] = ((ins >> 7) << 7) | 0x7B;
+                        continue;
 
                     default:
                         DebugMessage(ERROR_INSTRUCTION_NOT_FOUND|0);
@@ -12878,7 +12929,7 @@ function Step(steps, clockspeed) {
                         break;
 
                 }
-                break;
+                continue;
 
             case 0x13:
                 //addi,slti,sltiu,xori,ori,andi,slli,srli,srai
@@ -12886,78 +12937,61 @@ function Step(steps, clockspeed) {
                     
                     case 0x00:
                         //addi
-                        imm = (ins >> 20);
                         rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
-                        rindex = (ins >> 7) & 0x1F;
-                        r[(rindex << 2) >> 2] = rs1 + imm;
-                        break;
+                        r[((ins >> 5) & 0x7C) >> 2] = rs1 + (ins >> 20)|0;
+                        continue;
 
                     case 0x02:
                         //slti
-                        imm = (ins >> 20);
                         rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
-                        rindex = (ins >> 7) & 0x1F;
-                        if((rs1|0) < (imm|0)) r[(rindex << 2) >> 2] = 0x01;
-                        else r[(rindex << 2) >> 2] = 0x00;
-                        break;
+                        if((rs1|0) < (ins >> 20)) r[((ins >> 5) & 0x7C) >> 2] = 0x01;
+                        else r[((ins >> 5) & 0x7C) >> 2] = 0x00;
+                        continue;
 
                     case 0x03:
                         //sltiu
-                        imm = (ins >> 20) >>> 0;
                         rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
-                        rindex = (ins >> 7) & 0x1F;
-                        if((rs1 >>> 0) < (imm >>> 0)) r[(rindex << 2) >> 2] = 0x01;
-                        else r[(rindex << 2) >> 2] = 0x00;
-                        break;
+                        if((rs1 >>> 0) < ((ins >> 20) >>> 0)) r[((ins >> 5) & 0x7C) >> 2] = 0x01;
+                        else r[((ins >> 5) & 0x7C) >> 2] = 0x00;
+                        continue;
 
                     case 0x04:
                         //xori
                         imm = (ins >> 20);
                         rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
-                        rindex = (ins >> 7) & 0x1F;
-                        r[(rindex << 2) >> 2] = rs1 ^ imm;
-                        break;
+                        r[((ins >> 5) & 0x7C) >> 2] = rs1 ^ (ins >> 20);
+                        continue;
 
                     case 0x06:
                         //ori
-                        imm = (ins >> 20);
                         rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
-                        rindex = (ins >> 7) & 0x1F;
-                        r[(rindex << 2) >> 2] = rs1 | imm;
-                        break;
+                        r[((ins >> 5) & 0x7C) >> 2] = rs1 | (ins >> 20);
+                        continue;
 
                     case 0x07:
                         //andi
-                        imm = (ins >> 20);
                         rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
-                        rindex = (ins >> 7) & 0x1F;
-                        r[(rindex << 2) >> 2] = rs1 & imm;
-                        break;
+                        r[((ins >> 5) & 0x7C) >> 2] = rs1 & (ins >> 20);
+                        continue;
 
                     case 0x01:
                         //slli
-                        imm = (ins >> 20) & 0x1F;
                         rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
-                        rindex = (ins >> 7) & 0x1F;
-                        r[(rindex << 2) >> 2] = rs1 << imm;
-                        break;
+                        r[((ins >> 5) & 0x7C) >> 2] = rs1 << ((ins >> 20) & 0x1F);
+                        continue;
 
                     case 0x05:
                         if(((ins >> 25) & 0x7F) == 0x00){
                             //srli
-                            imm = (ins >> 20) & 0x1F;
                             rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
-                            rindex = (ins >> 7) & 0x1F;
-                            r[(rindex << 2) >> 2] = rs1 >>> imm;
+                            r[((ins >> 5) & 0x7C) >> 2] = rs1 >>> ((ins >> 20) & 0x1F);
                         }
                         else if(((ins >> 25) & 0x7F) == 0x20){
                             //srai
-                            imm = (ins >> 20) & 0x1F;
                             rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
-                            rindex = (ins >> 7) & 0x1F;
-                            r[(rindex << 2) >> 2] = rs1 >> imm;
+                            r[((ins >> 5) & 0x7C) >> 2] = rs1 >> ((ins >> 20) & 0x1F);
                         }
-                        break;
+                        continue;
 
                     default:
                         DebugMessage(ERROR_INSTRUCTION_NOT_FOUND|0);
@@ -12965,7 +12999,7 @@ function Step(steps, clockspeed) {
                         break;
 
                 }
-                break;
+                continue;
 
             case 0x33:
                 //add,sub,sll,slt,sltu,xor,srl,sra,or,and
@@ -12974,152 +13008,135 @@ function Step(steps, clockspeed) {
                     case 0x00:
                         //add,slt,sltu,add,or,xor,sll,srl
                         rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
-                        rs2 = r[(((ins >> 20) & 0x1F) << 2) >> 2]|0;
+                        rs2 = r[((ins >> 18) & 0x7C) >> 2]|0;
                         switch((ins >> 12)&0x7) {
                             case 0x00:
                                 //add
-                                rindex = (ins >> 7) & 0x1F;
-                                r[(rindex << 2) >> 2] = rs1 + rs2;
-                                break;
+                                r[((ins >> 5) & 0x7C) >> 2] = rs1 + rs2;
+                                continue;
 
                             case 0x02:
                                 //slt
-                                rindex = (ins >> 7) & 0x1F;
-                                if((rs1|0) < (rs2|0)) r[(rindex << 2) >> 2] = 0x01;
-                                else r[(rindex << 2) >> 2] = 0x00;
-                                break;
+                                if((rs1|0) < (rs2|0)) r[((ins >> 5) & 0x7C) >> 2] = 0x01;
+                                else r[((ins >> 5) & 0x7C) >> 2] = 0x00;
+                                continue;
 
                             case 0x03:
                                 //sltu
-                                rindex = (ins >> 7) & 0x1F;
-                                if((rs1 >>> 0) < (rs2 >>> 0)) r[(rindex << 2) >> 2] = 0x01;
-                                else r[(rindex << 2) >> 2] = 0x00;
-                                break;
+                                if((rs1 >>> 0) < (rs2 >>> 0)) r[((ins >> 5) & 0x7C) >> 2] = 0x01;
+                                else r[((ins >> 5) & 0x7C) >> 2] = 0x00;
+                                continue;
 
                             case 0x07:
                                 //and
-                                rindex = (ins >> 7) & 0x1F;
-                                r[(rindex << 2) >> 2] = rs1 & rs2;
-                                break;
+                                r[((ins >> 5) & 0x7C) >> 2] = rs1 & rs2;
+                                continue;
 
                             case 0x06:
                                 //or
-                                rindex = (ins >> 7) & 0x1F;
-                                r[(rindex << 2) >> 2] = rs1 | rs2;
-                                break;
+                                r[((ins >> 5) & 0x7C) >> 2] = rs1 | rs2;
+                                continue;
 
                             case 0x04:
                                 //xor
-                                rindex = (ins >> 7) & 0x1F;
-                                r[(rindex << 2) >> 2] = rs1 ^ rs2;
-                                break;
+                                r[((ins >> 5) & 0x7C) >> 2] = rs1 ^ rs2;
+                                continue;
 
                             case 0x01:
                                 //sll
-                                rindex = (ins >> 7) & 0x1F;
-                                r[(rindex << 2) >> 2] = rs1 << (rs2 & 0x1F);
-                                break;
+                                r[((ins >> 5) & 0x7C) >> 2] = rs1 << (rs2 & 0x1F);
+                                continue;
 
                             case 0x05:
                                 //srl
-                                rindex = (ins >> 7) & 0x1F;
-                                r[(rindex << 2) >> 2] = rs1 >>> (rs2 & 0x1F);
-                                break;
+                                r[((ins >> 5) & 0x7C) >> 2] = rs1 >>> (rs2 & 0x1F);
+                                continue;
                         }
-                        break;
+                        continue;
 
                     case 0x20:
-                        //sub
+                        //sub, sra
                         rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
-                        rs2 = r[(((ins >> 20) & 0x1F) << 2) >> 2]|0;
-                        rindex = (ins >> 7) & 0x1F;
+                        rs2 = r[((ins >> 18) & 0x7C) >> 2]|0;
                         switch((ins >> 12)&0x7) {
                             case 0x00:
                                 //sub
-                                r[(rindex << 2) >> 2] = rs1 - rs2;
-                                break;
+                                r[((ins >> 5) & 0x7C) >> 2] = rs1 - rs2;
+                                continue;
 
                             case 0x05:
                                 //sra
-                                r[(rindex << 2) >> 2] = rs1 >> (rs2 & 0x1F);
-                                break;
+                                r[((ins >> 5) & 0x7C) >> 2] = rs1 >> (rs2 & 0x1F);
+                                continue;
                         }
-                        break;
+                        continue;
 
                     case 0x01:
                         //mul,mulh,mulhsu,mulhu,div,divu,rem,remu
                         rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
-                        rs2 = r[(((ins >> 20) & 0x1F) << 2) >> 2]|0;
+                        rs2 = r[((ins >> 18) & 0x7C) >> 2]|0;
                         switch((ins >> 12)&0x7) {
                             case 0x00:
                                 //mul
-                                rindex = (ins >> 7) & 0x1F;
                                 mult = mul(rs1|0,rs2|0)|0;
-                                r[(rindex << 2) >> 2] = mult & 0xFFFFFFFF;
-                                break;
+                                r[((ins >> 5) & 0x7C) >> 2] = mult & 0xFFFFFFFF;
+                                continue;
 
                             case 0x01:
                                 //mulh
-                                rindex = (ins >> 7) & 0x1F;
                                 result = UMul(rs1,rs2, 1)|0;
-                                r[(rindex << 2) >> 2] = result;
-                                break;
+                                r[((ins >> 5) & 0x7C) >> 2] = result;
+                                continue;
 
                             case 0x02:
                                 //mulhsu
-                                rindex = (ins >> 7) & 0x1F;
                                 result = SUMul(rs1,rs2>>>0, 1)|0;
-                                r[(rindex << 2) >> 2] = result;
-                                break;
+                                r[((ins >> 5) & 0x7C) >> 2] = result;
+                                continue;
 
                             case 0x03:
                                 //mulhu
-                                rindex = (ins >> 7) & 0x1F;
                                 result = IMul(rs1>>>0, rs2>>>0, 1)|0;
-                                r[(rindex << 2) >> 2] = result;
-                                break;
+                                r[((ins >> 5) & 0x7C) >> 2] = result;
+                                continue;
 
                             case 0x04:
                                 //div
-                                rindex = (ins >> 7) & 0x1F;
                                 if((rs2|0) == 0)
                                     quo = -1;
                                 else
                                     quo = ((rs1|0) / (rs2|0))|0;
-                                r[(rindex << 2) >> 2] = quo;
-                                break;
+                                r[((ins >> 5) & 0x7C) >> 2] = quo;
+                                continue;
 
                             case 0x05:
                                 //divu
-                                rindex = (ins >> 7) & 0x1F;
                                 if((rs2|0) == 0)
                                     quo = 0xFFFFFFFF;
                                 else
                                     quo = ((rs1 >>> 0) / (rs2 >>> 0))|0;
-                                r[(rindex << 2) >> 2] = quo;
-                                break;
+                                r[((ins >> 5) & 0x7C) >> 2] = quo;
+                                continue;
 
                             case 0x06:
                                 //rem
-                                rindex = (ins >> 7) & 0x1F;
                                 if((rs2|0) == 0)
                                     rem = rs1;
                                 else
                                     rem = ((rs1|0) % (rs2|0))|0;
-                                r[(rindex << 2) >> 2] = rem;
-                                break;
+                                r[((ins >> 5) & 0x7C) >> 2] = rem;
+                                continue;
 
                             case 0x07:
                                 //remu
-                                rindex = (ins >> 7) & 0x1F;
                                 if((rs2|0) == 0)
                                     rem = (rs1 >>> 0);
                                 else
                                     rem = ((rs1 >>> 0) % (rs2 >>> 0))|0;
-                                r[(rindex << 2) >> 2] = rem;
-                                break;
+                                r[((ins >> 5) & 0x7C) >> 2] = rem;
+                                continue;
                         }
-                        break;
+                        continue;
 
                     default:
                         DebugMessage(ERROR_INSTRUCTION_NOT_FOUND|0);
@@ -13127,95 +13144,107 @@ function Step(steps, clockspeed) {
                         break;
 
                 }
-                break;
+                continue;
 
             case 0x37:
                 //lui
-                rindex = (ins >> 7) & 0x1F;
-                r[(rindex << 2) >> 2] = (ins & 0xFFFFF000);
-                break;
+                r[((ins >> 5) & 0x7C) >> 2] = (ins & 0xFFFFF000);
+                continue;
 
             case 0x17:
                 //auipc
+                pc = pcorigin + (ppc-ppcorigin)|0;
                 imm = (ins & 0xFFFFF000);
-                rindex = (ins >> 7) & 0x1F;
-                r[(rindex << 2) >> 2] = (imm + pc - 4)|0;
-                break;
+                r[((ins >> 5) & 0x7C) >> 2] = (imm + pc - 4)|0;
+                fence = ppc;
+                pc_change = 1;
+                continue;
 
             case 0x6F:
                 //jal
-                imm1 = (ins >> 21) & 0x3FF;
-                imm2 = ((ins >> 20) & 0x1) << 10;
-                imm3 = ((ins >> 12) & 0xFF) << 11;
-                imm4 = (ins >> 31) << 19;
-                imm =  (imm1 | imm2 | imm3 | imm4 ) << 1; 
-                rindex = (ins >> 7) & 0x1F;
-                r[(rindex << 2) >> 2] = pc;
+                pc = pcorigin + (ppc-ppcorigin)|0;
+                imm =  (((ins >> 21) & 0x3FF) | (((ins >> 20) & 0x1) << 10) | (((ins >> 12) & 0xFF) << 11) | ((ins >> 31) << 19) ) << 1; 
+                r[((ins >> 5) & 0x7C) >> 2] = pc;
                 pc = pc + imm - 4|0;
-                fence = 1;
-                break; 
+                fence = ppc;
+                pc_change = 1;
+                r[0] = 0;
+                continue; 
 
             case 0x67:
                 //jalr
+                pc = pcorigin + (ppc-ppcorigin)|0;
                 imm = (ins >> 20);
                 rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
-                rindex = (ins >> 7) & 0x1F;
-                r[(rindex << 2) >> 2] = pc;
+                r[((ins >> 5) & 0x7C) >> 2] = pc;
                 pc = ((rs1 + imm) & 0xFFFFFFFE)|0;
-                fence = 1;
-                break;
+                fence = ppc;
+                pc_change = 1;
+                r[0] = 0;
+                continue;
 
             case 0x63:
                 //beq, bne, blt, bge, bltu, bgeu
-                imm1 = (ins >> 31) << 11;
-                imm2 = ((ins >> 25) & 0x3F) << 4;
-                imm3 = (ins >> 8) & 0x0F;
-                imm4 = ((ins >> 7) & 0x01) << 10;
-                imm =  ((imm1 | imm2 | imm3 | imm4) << 1 );
-
+                pc = pcorigin + (ppc-ppcorigin)|0;
+                fence = ppc;
+                pc_change = 1;
+                rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
+                rs2 = r[((ins >> 18) & 0x7C) >> 2]|0;
                 switch((ins >> 12)&0x7) {
                     
                     case 0x00:
                         //beq
-                        rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
-                        rs2 = r[(((ins >> 20) & 0x1F) << 2) >> 2]|0;
-                        if((rs1|0) == (rs2|0)) pc = pc + imm - 4|0;//-4 temporary hack
-                        break;
+                        if((rs1|0) == (rs2|0)){
+                            imm =  ((((ins >> 31) << 11) | (((ins >> 25) & 0x3F) << 4) | ((ins >> 8) & 0x0F) | (((ins >> 7) & 0x01) << 10)) << 1 );
+                            pc = pc + imm - 4|0;
+                        }
+                        ram[(ppc - 4) >> 2] = ((ins >> 7) << 7) | 0x68;
+                        continue;
 
                     case 0x01:
                         //bne
-                        rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
-                        rs2 = r[(((ins >> 20) & 0x1F) << 2) >> 2]|0;
-                        if((rs1|0) != (rs2|0)) pc = pc + imm - 4|0;//-4 temporary hack
-                        break;
+                        if((rs1|0) != (rs2|0)){
+                            imm =  ((((ins >> 31) << 11) | (((ins >> 25) & 0x3F) << 4) | ((ins >> 8) & 0x0F) | (((ins >> 7) & 0x01) << 10)) << 1 );
+                            pc = pc + imm - 4|0;
+                        }
+                        ram[(ppc - 4) >> 2] = ((ins >> 7) << 7) | 0x69;
+                        continue;
 
                     case 0x04:
                         //blt
-                        rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
-                        rs2 = r[(((ins >> 20) & 0x1F) << 2) >> 2]|0;
-                        if((rs1|0) < (rs2|0)) pc = pc + imm - 4|0;//-4 temporary hack
-                        break;
+                        if((rs1|0) < (rs2|0)){
+                            imm =  ((((ins >> 31) << 11) | (((ins >> 25) & 0x3F) << 4) | ((ins >> 8) & 0x0F) | (((ins >> 7) & 0x01) << 10)) << 1 );
+                            pc = pc + imm - 4|0;
+                        }
+                        ram[(ppc - 4) >> 2] = ((ins >> 7) << 7) | 0x6A;
+                        continue;
 
                     case 0x05:
                         //bge
-                        rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
-                        rs2 = r[(((ins >> 20) & 0x1F) << 2) >> 2]|0;
-                        if((rs1|0) >= (rs2|0)) pc = pc + imm - 4|0;//-4 temporary hack
-                        break;
+                        if((rs1|0) >= (rs2|0)){
+                            imm =  ((((ins >> 31) << 11) | (((ins >> 25) & 0x3F) << 4) | ((ins >> 8) & 0x0F) | (((ins >> 7) & 0x01) << 10)) << 1 );
+                            pc = pc + imm - 4|0;
+                        }
+                        ram[(ppc - 4) >> 2] = ((ins >> 7) << 7) | 0x6B;
+                        continue;
 
                     case 0x06:
                         //bltu
-                        rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
-                        rs2 = r[(((ins >> 20) & 0x1F) << 2) >> 2]|0;
-                        if((rs1 >>> 0) < (rs2 >>> 0)) pc = pc + imm - 4|0;//-4 temporary hack
-                        break;
+                        if((rs1 >>> 0) < (rs2 >>> 0)){
+                            imm =  ((((ins >> 31) << 11) | (((ins >> 25) & 0x3F) << 4) | ((ins >> 8) & 0x0F) | (((ins >> 7) & 0x01) << 10)) << 1 );
+                            pc = pc + imm - 4|0;
+                        }
+                        ram[(ppc - 4) >> 2] = ((ins >> 7) << 7) | 0x6C;
+                        continue;
 
                     case 0x07:
                         //bgeu
-                        rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
-                        rs2 = r[(((ins >> 20) & 0x1F) << 2) >> 2]|0;
-                        if((rs1 >>> 0) >= (rs2 >>> 0)) pc = pc + imm - 4|0;//-4 temporary hack
-                        break;
+                        if((rs1 >>> 0) >= (rs2 >>> 0)){
+                            imm =  ((((ins >> 31) << 11) | (((ins >> 25) & 0x3F) << 4) | ((ins >> 8) & 0x0F) | (((ins >> 7) & 0x01) << 10)) << 1 );
+                            pc = pc + imm - 4|0;
+                        }
+                        ram[(ppc - 4) >> 2] = ((ins >> 7) << 7) | 0x6D;
+                        continue;
 
                     default:
                         DebugMessage(ERROR_INSTRUCTION_NOT_FOUND|0);
@@ -13223,62 +13252,68 @@ function Step(steps, clockspeed) {
                         break;
 
                 }
-                fence = 1;
-                break;
+                continue;
 
             case 0x73:
                 //csrrw, csrrs, csrrc, csrrwi, csrrsi, csrrci, ecall, eret, ebreak, mrts, wfi
                 imm = (ins >>> 20);
                 rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
-                rindex = (ins >> 7) & 0x1F;
                 switch((ins >> 12)&0x7) {
                     
                     case 0x01:
                         //csrrw
-                        r[(rindex << 2) >> 2] = GetCSR(imm)|0;
+                        r[((ins >> 5) & 0x7C) >> 2] = GetCSR(imm)|0;
                         //if (rindex != ((ins >> 15) & 0x1F))
                         SetCSR(imm, rs1);
-                        break;
+                        r[0] = 0;
+                        continue;
 
                     case 0x02:
                         //csrrs
-                        r[(rindex << 2) >> 2] = GetCSR(imm)|0;
+                        r[((ins >> 5) & 0x7C) >> 2] = GetCSR(imm)|0;
                         SetCSR(imm, (GetCSR(imm)|0) | rs1);
-                        break;
+                        r[0] = 0;
+                        continue;
 
                     case 0x03:
                         //csrrc
-                        r[(rindex << 2) >> 2] = GetCSR(imm)|0;
+                        r[((ins >> 5) & 0x7C) >> 2] = GetCSR(imm)|0;
                         SetCSR(imm, (GetCSR(imm)|0) & (~rs1));
-                        break;
+                        r[0] = 0;
+                        continue;
 
                     case 0x05:
                         //csrrwi
-                        r[(rindex << 2) >> 2] = GetCSR(imm)|0;
+                        r[((ins >> 5) & 0x7C) >> 2] = GetCSR(imm)|0;
                         zimm = (ins >> 15) & 0x1F;
                         if((zimm|0) != 0) SetCSR(imm, (zimm >> 0));
-                        break;
+                        r[0] = 0;
+                        continue;
                         
-
                     case 0x06:
                         //csrrsi
-                        r[(rindex << 2) >> 2] = GetCSR(imm)|0;
+                        r[((ins >> 5) & 0x7C) >> 2] = GetCSR(imm)|0;
                         zimm = (ins >> 15) & 0x1F;
                         if((zimm|0) != 0) SetCSR(imm, (GetCSR(imm)|0) | (zimm >> 0));
-                        break;
+                        r[0] = 0;
+                        continue;
 
                     case 0x07:
                         //csrrci
-                        r[(rindex << 2) >> 2] = GetCSR(imm)|0;
+                        r[((ins >> 5) & 0x7C) >> 2] = GetCSR(imm)|0;
                         zimm = (ins >> 15) & 0x1F;
                         if((zimm|0) != 0) SetCSR(imm, (GetCSR(imm)|0) & ~(zimm >> 0));
-                        break;
+                        r[0] = 0;
+                        continue;
                     
                     case 0x00:
                         //ecall, eret, ebreak, mrts, wfi
+                        current_privilege_level = (csr[(csrp + CSR_MSTATUS)>>2] & 0x06) >> 1;
+                        fence = ppc;
                         switch((ins >> 20)&0xFFF) {
                             case 0x00:
                                 //ecall
+                                pc = pcorigin + (ppc-ppcorigin)|0;
                                 switch(current_privilege_level|0)
                                 {
                                     case 0x00: //PRV_U
@@ -13303,16 +13338,18 @@ function Step(steps, clockspeed) {
                                         abort();
                                         break;
                                 }
-                                break;
+                                continue;
 
                             case 0x001:
                                 //ebreak
+                                pc = pcorigin + (ppc-ppcorigin)|0;
                                 Trap(CAUSE_BREAKPOINT, pc - 4|0);
-                                break;
+                                continue;
 
                             case 0x100:
                                 //eret
                                 current_privilege_level = (csr[(csrp + CSR_MSTATUS)>>2] & 0x06) >> 1;
+                                pc = pcorigin + (ppc-ppcorigin)|0;
                                 if((current_privilege_level|0) < (PRV_S|0)) {
                                     DebugMessage(ERROR_ERET_PRIV|0);
                                     abort();
@@ -13344,15 +13381,17 @@ function Step(steps, clockspeed) {
                                         abort();
                                         break;
                                 }
-                                fence = 1;
-                                break;
+                                pc_change = 1;
+                                InvalidateTLB();
+                                continue;
 
                             case 0x102:
                                 // wfi
-                                break;
+                                continue;
 
                             case 0x305:
-                                //mrts     
+                                //mrts
+                                pc = pcorigin + (ppc-ppcorigin)|0;    
                                 if((current_privilege_level|0) != (PRV_M|0)) {
                                     DebugMessage(ERROR_MRTS|0);
                                     abort();
@@ -13363,12 +13402,13 @@ function Step(steps, clockspeed) {
                                 csr[(csrp + CSR_SCAUSE)>>2] = csr[(csrp + CSR_MCAUSE)>>2];
                                 csr[(csrp + CSR_SEPC)>>2] = csr[(csrp + CSR_MEPC)>>2];
                                 pc = csr[(csrp + CSR_STVEC)>>2]|0;
-                                fence = 1;
-                                break;
+                                pc_change = 1;
+                                continue;
 
                             case 0x101:
                                 //sfence.vm
-                                break;
+                                InvalidateTLB();
+                                continue;
 
                             default:
                                 DebugMessage(ERROR_INSTRUCTION_NOT_FOUND|0);
@@ -13376,7 +13416,7 @@ function Step(steps, clockspeed) {
                                 break;
 
                         }
-                        break; 
+                        continue; 
 
                     default:
                         DebugMessage(ERROR_INSTRUCTION_NOT_FOUND|0);
@@ -13384,7 +13424,7 @@ function Step(steps, clockspeed) {
                         break;
 
                 }
-                break;
+                continue;
 
             case 0x07:
                 //flw,fld
@@ -13394,33 +13434,45 @@ function Step(steps, clockspeed) {
                         //flw
                         imm = (ins >> 20);
                         rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
-                        findex = ((ins >> 7) & 0x1F);
-                        paddr = TranslateVM(rs1 + imm|0,VM_READ)|0;
-                        if((paddr|0) == -1) break;
-                        ram_index = paddr|0;
-                        r[0] = ram[(ramp + ram_index) >> 2]|0;
-                        f[(fp + (findex << 3)) >> 3] = +ff[0];
-                        break;
+                        if(!((float_read32tlb_index ^ (rs1 + imm|0)) & 0xFFFFF000)) paddr = (float_read32tlb_entry ^ (rs1 + imm|0));
+                        else{
+
+                            paddr = TranslateVM(rs1 + imm|0, VM_READ)|0;
+                            if((paddr|0) == -1) break;
+
+                            float_read32tlb_index = paddr;
+                            float_read32tlb_entry = ((paddr ^ (rs1 + imm|0)) & 0xFFFFF000);
+                        }
+                        r[0] = ram[(ramp + paddr) >> 2]|0;
+                        f[(fp + (((ins >> 7) & 0x1F) << 3)) >> 3] = +ff[0];
+                        r[0] = 0;
+                        continue;
 
                     case 0x03:
                         //fld
                         imm = (ins >> 20);
                         rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
-                        findex = ((ins >> 7) & 0x1F) << 1;
-                        paddr = TranslateVM(rs1 + imm|0,VM_READ)|0;
-                        if((paddr|0) == -1) break;
-                        ram_index = paddr|0;
-                        fi[(fip + ((findex + 0) << 2)) >> 2] = ram[(ramp + ram_index + 0) >> 2]|0;
-                        fi[(fip + ((findex + 1) << 2)) >> 2] = ram[(ramp + ram_index + 4) >> 2]|0;
-                        break;
+                        if(!((float_read64tlb_index ^ (rs1 + imm|0)) & 0xFFFFF000)) paddr = (float_read64tlb_entry ^ (rs1 + imm|0));
+                        else{
+
+                            paddr = TranslateVM(rs1 + imm|0, VM_READ)|0;
+                            if((paddr|0) == -1) continue;
+
+                            float_read64tlb_index = paddr;
+                            float_read64tlb_entry = ((paddr ^ (rs1 + imm|0)) & 0xFFFFF000);
+                        }
+                        fi[(fip + ((((ins >> 7) & 0x1F) + 0) << 2)) >> 2] = ram[(ramp + paddr + 0) >> 2]|0;
+                        fi[(fip + ((((ins >> 7) & 0x1F) + 1) << 2)) >> 2] = ram[(ramp + paddr + 4) >> 2]|0;
+                        continue;
 
                     default:
                         DebugMessage(ERROR_INSTRUCTION_NOT_FOUND|0);
+                        DebugMessage(ins|0);
                         abort();
                         break;
 
                 }
-                break;
+                continue;
 
             case 0x27:
                 //fsw, fsd
@@ -13428,359 +13480,346 @@ function Step(steps, clockspeed) {
 
                     case 0x02:
                         //fsw
-                        imm1 = (ins >> 25);
-                        imm2 = (ins >> 7) & 0x1F;
-                        imm = ((imm1 << 5) + imm2)|0;
+                        imm = (((ins >> 25) << 5) + ((ins >> 7) & 0x1F))|0;
                         rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
-                        findex = (ins >> 20) & 0x1F;
-                        ff[0] = f[(fp + (findex << 3)) >> 3];
-                        paddr = TranslateVM(rs1 + imm|0, VM_WRITE)|0;
-                        if((paddr|0) == -1) break;
-                        ram_index = paddr|0;
-                        ram[(ramp + ram_index) >> 2] = r[0]|0; 
-                        break;
+                        ff[0] = f[(fp + (((ins >> 20) & 0x1F) << 3)) >> 3];
+                        if(!((float_store32tlb_index ^ (rs1 + imm|0)) & 0xFFFFF000)) paddr = (float_store32tlb_entry ^ (rs1 + imm|0));
+                        else{
+
+                            paddr = TranslateVM(rs1 + imm|0, VM_READ)|0;
+                            if((paddr|0) == -1) continue;
+
+                            float_store32tlb_index = paddr;
+                            float_store32tlb_entry = ((paddr ^ (rs1 + imm|0)) & 0xFFFFF000);
+                        }
+                        ram[(ramp + paddr) >> 2] = r[0]|0;
+                        r[0] = 0;
+                        continue;
 
                     case 0x03:
                         //fsd
-                        imm1 = (ins >> 25);
-                        imm2 = (ins >> 7) & 0x1F;
-                        imm = ((imm1 << 5) + imm2)|0;
+                        imm = (((ins >> 25) << 5) + ((ins >> 7) & 0x1F))|0;
                         rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
-                        findex = ((ins >> 20) & 0x1F) << 1;
-                        paddr = TranslateVM(rs1 + imm + 0|0, VM_WRITE)|0;
-                        if((paddr|0) == -1) break;
-                        ram_index = paddr|0;
-                        ram[(ramp + ram_index + 0) >> 2] = fi[(fip + ((findex + 0) << 2)) >> 2]|0;
-                        ram[(ramp + ram_index + 4) >> 2] = fi[(fip + ((findex + 1) << 2)) >> 2]|0; 
-                        break;
+                        if(!((float_store64tlb_index ^ (rs1 + imm|0)) & 0xFFFFF000)) paddr = (float_store64tlb_entry ^ (rs1 + imm|0));
+                        else{
+
+                            paddr = TranslateVM(rs1 + imm|0, VM_READ)|0;
+                            if((paddr|0) == -1) continue;
+
+                            float_store64tlb_index = paddr;
+                            float_store64tlb_entry = ((paddr ^ (rs1 + imm|0)) & 0xFFFFF000);
+                        }
+                        ram[(ramp + paddr + 0) >> 2] = fi[(fip + ((((ins >> 20) & 0x1F) + 0) << 2)) >> 2]|0;
+                        ram[(ramp + paddr + 4) >> 2] = fi[(fip + ((((ins >> 20) & 0x1F) + 1) << 2)) >> 2]|0; 
+                        continue;
 
                     default:
                         DebugMessage(ERROR_INSTRUCTION_NOT_FOUND|0);
+                        DebugMessage(ins|0);
                         abort();
                         break;
 
                 }
-                break;
+                continue;
 
             case 0x53:
                 //fadd.s, fsub.s
                 switch((ins >> 25)&0x7F) {
                     
-                    case 0x00 :
-                        //fadd.s
+                    case 0x00:  //fadd.s
+                    case 0x01:  //fadd.d
                         fs1 = (+f[(fp + (((ins >> 15) & 0x1F) << 3)) >> 3]);
                         fs2 = (+f[(fp + (((ins >> 20) & 0x1F) << 3)) >> 3]);
-                        rindex = (ins >> 7) & 0x1F;
-                        f[(fp + (rindex << 3)) >> 3] = fs1 + fs2;
-                        break;
+                        f[(fp + (((ins >> 7) & 0x1F) << 3)) >> 3] = fs1 + fs2;
+                        continue;
 
-                    case 0x04:
-                        //fsub.s
+                    case 0x04: //fsub.s 
+                    case 0x05: //fsub.d
                         fs1 = (+f[(fp + (((ins >> 15) & 0x1F) << 3)) >> 3]);
                         fs2 = (+f[(fp + (((ins >> 20) & 0x1F) << 3)) >> 3]);
-                        rindex = (ins >> 7) & 0x1F;
-                        f[(fp + (rindex << 3)) >> 3] = fs1 - fs2;
-                        break;
+                        f[(fp + (((ins >> 7) & 0x1F) << 3)) >> 3] = fs1 - fs2;
+                        continue;
 
                     case 0x50:
-                        //feq.s
-                        fs1 = (+f[(fp + (((ins >> 15) & 0x1F) << 3)) >> 3]);
-                        fs2 = (+f[(fp + (((ins >> 20) & 0x1F) << 3)) >> 3]);
-                        rindex = (ins >> 7) & 0x1F;
-                        if((~~fs1) == (~~fs2)) f[(fp + (rindex << 3)) >> 3] = 1.0;
-                        else f[(fp + (rindex << 3)) >> 3] = 0.0;
-                        //if(fs1 == QUIET_NAN || fs2 == QUIET_NAN) f[rindex] = 0;
-                        //else if(fs1 == SIGNALLING_NAN || fs2 == SIGNALLING_NAN) message.Abort();
-                        break;
-
                     case 0x51:
-                        //feq.d
+                        //fcmp.s, fcmp.d
                         fs1 = (+f[(fp + (((ins >> 15) & 0x1F) << 3)) >> 3]);
                         fs2 = (+f[(fp + (((ins >> 20) & 0x1F) << 3)) >> 3]);
-                        rindex = (ins >> 7) & 0x1F;
-                        if((~~fs1) == (~~fs2)) f[(fp + (rindex << 3)) >> 3] = 1.0;
-                        else f[(fp + (rindex << 3)) >> 3] = 0.0;
-                        //if(fs1 == QUIET_NAN || fs2 == QUIET_NAN) f[rindex] = 0;
-                        //else if(fs1 == SIGNALLING_NAN || fs2 == SIGNALLING_NAN) message.Abort();
-                        break;
+                        switch((ins >> 12) & 0x7) {
+                            case 0x0:
+                                //fle
+                                if((+fs1) <= (+fs2)) r[((ins >> 5) & 0x7C) >> 2] = 1;
+                                else r[((ins >> 5) & 0x7C) >> 2] = 0;
+                                continue;
+
+                            case 0x1:
+                                //flt
+                                if((+fs1) < (+fs2)) r[((ins >> 5) & 0x7C) >> 2] = 1;
+                                else r[((ins >> 5) & 0x7C) >> 2] = 0;
+                                continue;
+
+                            case 0x2:
+                                //fle
+                                if((+fs1) == (+fs2)) r[((ins >> 5) & 0x7C) >> 2] = 1;
+                                else r[((ins >> 5) & 0x7C) >> 2] = 0;
+                                continue;
+
+                            default:
+                                DebugMessage(ERROR_INSTRUCTION_NOT_FOUND|0);
+                                DebugMessage(ins|0);
+                                abort();
+                                break;
+                        }
+                        continue;
 
                     case 0x60:
                         //fcvt.w.s
-                        rindex = (ins >> 7) & 0x1F;
-                        r[(rindex << 2) >> 2] = (~~+f[(fp + (((ins >> 15) & 0x1F) << 3)) >> 3]);
-                        break;
+                        r[((ins >> 5) & 0x7C) >> 2] = (~~+f[(fp + (((ins >> 15) & 0x1F) << 3)) >> 3]);
+                        continue;
 
                     case 0x68: //fcvt.s.w
                     case 0x69:
                         //fcvt.d.w
-                        rindex = (ins >> 7) & 0x1F;
-                        f[(fp + (rindex << 3)) >> 3] = (+~~r[(((ins >> 15) & 0x1F) << 2) >> 2]);
-                        break;
+                        f[(fp + (((ins >> 7) & 0x1F) << 3)) >> 3] = (+~~r[(((ins >> 15) & 0x1F) << 2) >> 2]);
+                        continue;
 
-                    case 0x01 :
-                        //fadd.d
+                    case 0x08: //fmul.s
+                    case 0x09: //fmul.d
                         fs1 = (+f[(fp + (((ins >> 15) & 0x1F) << 3)) >> 3]);
                         fs2 = (+f[(fp + (((ins >> 20) & 0x1F) << 3)) >> 3]);
-                        rindex = (ins >> 7) & 0x1F;
-                        f[(fp + (rindex << 3)) >> 3] = fs1 + fs2;
-                        break;
-
-                    case 0x05:
-                        //fsub.d
-                        fs1 = (+f[(fp + (((ins >> 15) & 0x1F) << 3)) >> 3]);
-                        fs2 = (+f[(fp + (((ins >> 20) & 0x1F) << 3)) >> 3]);
-                        rindex = (ins >> 7) & 0x1F;
-                        f[(fp + (rindex << 3)) >> 3] = fs1 - fs2;
-                        break;
-
-                    case 0x09:
-                        //fmul.d
-                        fs1 = (+f[(fp + (((ins >> 15) & 0x1F) << 3)) >> 3]);
-                        fs2 = (+f[(fp + (((ins >> 20) & 0x1F) << 3)) >> 3]);
-                        rindex = (ins >> 7) & 0x1F;
-                        f[(fp + (rindex << 3)) >> 3] = (+mul(fs1,fs2));
-                        break;
+                        f[(fp + (((ins >> 7) & 0x1F) << 3)) >> 3] = (+mul(fs1,fs2));
+                        continue;
  
                     case 0x10: // single precision
                     case 0x11: // double precision
                         //fsgnj
                         fs1 = (+f[(fp + (((ins >> 15) & 0x1F) << 3)) >> 3]);
                         fs2 = (+f[(fp + (((ins >> 20) & 0x1F) << 3)) >> 3]);
-                        rindex = (ins >> 7) & 0x1F;
                         switch((ins >> 12) & 7) {
                             case 0:
                                 //fsgnj.d, also used for fmv.d
-                                f[(fp + (rindex << 3)) >> 3] = ((~~fs2)<0)?-MathAbs(fs1):MathAbs(fs1);
-                                break;
+                                f[(fp + (((ins >> 7) & 0x1F) << 3)) >> 3] = ((+fs2)<(+0))?-(+MathAbs(+fs1)):(+MathAbs(+fs1));
+                                continue;
  
                             case 1:
                                 //fsgnjn.d
-                                f[(fp + (rindex << 3)) >> 3] = ((~~fs2)<0)?MathAbs(fs1):-MathAbs(fs1);
-                                break;
+                                f[(fp + (((ins >> 7) & 0x1F) << 3)) >> 3] = ((+fs2)<(+0))?+MathAbs(+fs1):-(+MathAbs(+fs1));
+                                continue;
  
                             case 3:
                                 //fsgnjx.d
-                                f[(fp + (rindex << 3)) >> 3] = (((~~fs2|0)<0 & (~~fs1)<0) | ((~~fs2)>0 & (~~fs1)>0))?-MathAbs(fs1):MathAbs(fs1);
-                                break;
+                                f[(fp + (((ins >> 7) & 0x1F) << 3)) >> 3] = 
+                                    ( 
+                                    (((+fs2)<(+0)) & ((+fs1)<(+0)) ) | 
+                                    (((+fs2)>(+0)) & ((+fs1)>(+0)) )
+                                    )?-(+MathAbs(+fs1)):+MathAbs(+fs1);
+                                continue;
  
                             default:
                                 DebugMessage(ERROR_INSTRUCTION_NOT_FOUND|0);
+                                DebugMessage(ins|0);
                                 abort();
                         }
-                        break;
+                        continue;
 
                     case 0x61:
                         //fcvt.w.d
-                        rindex = (ins >> 7) & 0x1F;
-                        r[(rindex << 2) >> 2] = (~~+f[(fp + (((ins >> 15) & 0x1F) << 3)) >> 3]);
-                        break;
+                        r[((ins >> 5) & 0x7C) >> 2] = (~~+f[(fp + (((ins >> 15) & 0x1F) << 3)) >> 3]);
+                        continue;
 
                     case 0x78:
                         //fmv.s.x
                         rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
-                        findex = (ins >> 7) & 0x1F;
-                        f[(fp + (rindex << 3)) >> 3] = (+~~rs1); 
-                        break;
+                        r[0] = rs1;
+                        f[(fp + (((ins >> 7) & 0x1F) << 3)) >> 3] = +ff[0];
+                        r[0] = 0;
+                        continue;
 
 
                     default:
                         DebugMessage(ERROR_INSTRUCTION_NOT_FOUND|0);
+                        DebugMessage(ins|0);
                         abort();
                         break;
                 }
-                break;
+                continue;
 
             case 0x43:
                 //fmadd.d,fmadd.s
                 fs1 = (+f[(fp + (((ins >> 15) & 0x1F) << 3)) >> 3]);
                 fs2 = (+f[(fp + (((ins >> 20) & 0x1F) << 3)) >> 3]);
                 fs3 = (+f[(fp + (((ins >> 27) & 0x1F) << 3)) >> 3]);
-                rindex = (ins >> 7) & 0x1F;
-                f[(fp + (rindex << 3)) >> 3] = fs1 * fs2 + fs3;
-                break;
+                f[(fp + (((ins >> 7) & 0x1F) << 3)) >> 3] = fs1 * fs2 + fs3;
+                continue;
  
             case 0x47:
                 //fmsub.d,fmsub.s
                 fs1 = (+f[(fp + (((ins >> 15) & 0x1F) << 3)) >> 3]);
                 fs2 = (+f[(fp + (((ins >> 20) & 0x1F) << 3)) >> 3]);
                 fs3 = (+f[(fp + (((ins >> 27) & 0x1F) << 3)) >> 3]);
-                rindex = (ins >> 7) & 0x1F;
-                f[(fp + (rindex << 3)) >> 3] = fs1 * fs2 - fs3;
-                break;
+                f[(fp + (((ins >> 7) & 0x1F) << 3)) >> 3] = fs1 * fs2 - fs3;
+                continue;
  
             case 0x4B:
                 //fnmadd.d,fnmadd.s
                 fs1 = (+f[(fp + (((ins >> 15) & 0x1F) << 3)) >> 3]);
                 fs2 = (+f[(fp + (((ins >> 20) & 0x1F) << 3)) >> 3]);
                 fs3 = (+f[(fp + (((ins >> 27) & 0x1F) << 3)) >> 3]);
-                rindex = (ins >> 7) & 0x1F;
-                f[(fp + (rindex << 3)) >> 3] = -(fs1 * fs2 + fs3);
-                break;
+                f[(fp + (((ins >> 7) & 0x1F) << 3)) >> 3] = -(fs1 * fs2 + fs3);
+                continue;
  
             case 0x4F:
                 //fnmsub.d,fnmsub.s
                 fs1 = (+f[(fp + (((ins >> 15) & 0x1F) << 3)) >> 3]);
                 fs2 = (+f[(fp + (((ins >> 20) & 0x1F) << 3)) >> 3]);
                 fs3 = (+f[(fp + (((ins >> 27) & 0x1F) << 3)) >> 3]);
-                rindex = (ins >> 7) & 0x1F;
-                f[(fp + (rindex << 3)) >> 3] = -(fs1 * fs2 - fs3);
-                break;
+                f[(fp + (((ins >> 7) & 0x1F) << 3)) >> 3] = -(fs1 * fs2 - fs3);
+                continue;
 
             case 0x2F:
                 //amoswap, amoadd, amoxor, amoand, amoor, amomin, amomax, amominu, amomaxu
                 rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
-                rs2 = r[(((ins >> 20) & 0x1F) << 2) >> 2]|0;
-                rindex = (ins >> 7) & 0x1F;
+                rs2 = r[((ins >> 18) & 0x7C) >> 2]|0;
                 switch((ins >> 27)&0x1F) {
                     
                     case 0x01:
                         //amoswap
                         paddr = TranslateVM(rs1|0, VM_READ)|0;
                         if((paddr|0) == -1) break;
-                        ram_index = paddr|0;
-                        r[(rindex << 2) >> 2] = ram[(ramp + ram_index) >> 2]|0;
+                        r[((ins >> 5) & 0x7C) >> 2] = ram[(ramp + paddr) >> 2]|0;
                         paddr = TranslateVM(rs1|0, VM_WRITE)|0;
                         if((paddr|0) == -1) break;
-                        ram_index = paddr|0;
-                        ram[(ramp + ram_index) >> 2] = rs2|0;
-                        break;
+                        ram[(ramp + paddr) >> 2] = rs2|0;
+                        r[0] = 0;
+                        continue;
 
                     case 0x00:
                         //amoadd
                         paddr = TranslateVM(rs1|0, VM_READ)|0;
                         if((paddr|0) == -1) break;
-                        ram_index = paddr|0;
-                        r[(rindex << 2) >> 2] = ram[(ramp + ram_index) >> 2]|0;
+                        r[((ins >> 5) & 0x7C) >> 2] = ram[(ramp + paddr) >> 2]|0;
                         paddr = TranslateVM(rs1|0,VM_WRITE)|0;
                         if((paddr|0) == -1) break;
-                        ram_index = paddr|0;
-                        ram[(ramp + ram_index) >> 2] = ((r[(rindex << 2) >> 2]|0) + (rs2|0))|0;
-                        break;
+                        ram[(ramp + paddr) >> 2] = ((r[((ins >> 5) & 0x7C) >> 2]|0) + (rs2|0))|0;
+                        r[0] = 0;
+                        continue;
 
                     case 0x04:
                         //amoxor
                         paddr = TranslateVM(rs1|0, VM_READ)|0;
                         if((paddr|0) == -1) break;
-                        ram_index = paddr|0;
-                        r[(rindex << 2) >> 2] = ram[(ramp + ram_index) >> 2]|0;
+                        r[((ins >> 5) & 0x7C) >> 2] = ram[(ramp + paddr) >> 2]|0;
                         paddr = TranslateVM(rs1|0,VM_WRITE)|0;
                         if((paddr|0) == -1) break;
-                        ram_index = paddr|0;
-                        ram[(ramp + ram_index) >> 2] = ((r[(rindex << 2) >> 2]|0) ^ (rs2|0))|0;
-                        break;
+                        ram[(ramp + paddr) >> 2] = ((r[((ins >> 5) & 0x7C) >> 2]|0) ^ (rs2|0))|0;
+                        r[0] = 0;
+                        continue;
 
                     case 0x0C:
                         //amoand
                         paddr = TranslateVM(rs1|0, VM_READ)|0;
                         if((paddr|0) == -1) break;
-                        ram_index = paddr|0;
-                        r[(rindex << 2) >> 2] = ram[(ramp + ram_index) >> 2]|0;
+                        r[((ins >> 5) & 0x7C) >> 2] = ram[(ramp + paddr) >> 2]|0;
                         paddr = TranslateVM(rs1|0,VM_WRITE)|0;
                         if((paddr|0) == -1) break;
-                        ram_index = paddr|0;
-                        ram[(ramp + ram_index) >> 2] = ((r[(rindex << 2) >> 2]|0) & (rs2|0))|0;
-                        break;
+                        ram[(ramp + paddr) >> 2] = ((r[((ins >> 5) & 0x7C) >> 2]|0) & (rs2|0))|0;
+                        r[0] = 0;
+                        continue;
 
                     case 0x08:
                         //amoor
                         paddr = TranslateVM(rs1|0, VM_READ)|0;
                         if((paddr|0) == -1) break;
-                        ram_index = paddr|0;
-                        r[(rindex << 2) >> 2] = ram[(ramp + ram_index) >> 2]|0;
+                        r[((ins >> 5) & 0x7C) >> 2] = ram[(ramp + paddr) >> 2]|0;
                         paddr = TranslateVM(rs1|0,VM_WRITE)|0;
                         if((paddr|0) == -1) break;
-                        ram_index = paddr|0;
-                        ram[(ramp + ram_index) >> 2] = ((r[(rindex << 2) >> 2]|0) | (rs2|0))|0;
-                        break;
+                        ram[(ramp + paddr) >> 2] = ((r[((ins >> 5) & 0x7C) >> 2]|0) | (rs2|0))|0;
+                        r[0] = 0;
+                        continue;
 
                     case 0x10:
                         //amomin
                         paddr = TranslateVM(rs1|0, VM_READ)|0;
                         if((paddr|0) == -1) break;
-                        ram_index = paddr|0;
-                        r[(rindex << 2) >> 2] = ram[(ramp + ram_index) >> 2]|0;
-                        if((rs2 >> 0) > (r[(rindex << 2) >> 2] >> 0)) r[0] = r[(rindex << 2) >> 2];
+                        r[((ins >> 5) & 0x7C) >> 2] = ram[(ramp + paddr) >> 2]|0;
+                        if((rs2 >> 0) > (r[((ins >> 5) & 0x7C) >> 2] >> 0)) r[0] = r[((ins >> 5) & 0x7C) >> 2];
                         else r[0] = rs2;
                         paddr = TranslateVM(rs1|0,VM_WRITE)|0;
                         if((paddr|0) == -1) break;
-                        ram_index = paddr|0;
-                        ram[(ramp + ram_index) >> 2] = r[0]|0;
-                        break;
+                        ram[(ramp + paddr) >> 2] = r[0]|0;
+                        r[0] = 0;
+                        continue;
 
                    case 0x14:
                         //amomax
                         paddr = TranslateVM(rs1|0,VM_READ)|0;
                         if((paddr|0) == -1) break;
-                        ram_index = paddr|0;
-                        r[(rindex << 2) >> 2] = ram[(ramp + ram_index) >> 2]|0;
-                        if((rs2 >> 0) < (r[(rindex << 2) >> 2] >> 0)) r[0] = r[(rindex << 2) >> 2];
+                        r[((ins >> 5) & 0x7C) >> 2] = ram[(ramp + paddr) >> 2]|0;
+                        if((rs2 >> 0) < (r[((ins >> 5) & 0x7C) >> 2] >> 0)) r[0] = r[((ins >> 5) & 0x7C) >> 2];
                         else r[0] = rs2;
                         paddr = TranslateVM(rs1|0,VM_WRITE)|0;
                         if((paddr|0) == -1) break;
-                        ram_index = paddr|0;
-                        ram[(ramp + ram_index) >> 2] = r[0]|0;
-                        break;
+                        ram[(ramp + paddr) >> 2] = r[0]|0;
+                        r[0] = 0;
+                        continue;
 
                     case 0x18:
                         //amominu
                         paddr = TranslateVM(rs1|0,VM_READ)|0;
                         if((paddr|0) == -1) break;
-                        ram_index = paddr|0;
-                        r[(rindex << 2) >> 2] = ram[(ramp + ram_index) >> 2]|0;
-                        if((rs2 >>> 0) > (r[(rindex << 2) >> 2] >>> 0)) r[0] = r[(rindex << 2) >> 2];
+                        r[((ins >> 5) & 0x7C) >> 2] = ram[(ramp + paddr) >> 2]|0;
+                        if((rs2 >>> 0) > (r[((ins >> 5) & 0x7C) >> 2] >>> 0)) r[0] = r[((ins >> 5) & 0x7C) >> 2];
                         else r[0] = rs2;
                         paddr = TranslateVM(rs1|0,VM_WRITE)|0;
                         if((paddr|0) == -1) break;
-                        ram_index = paddr|0;
-                        ram[(ramp + ram_index) >> 2] = r[0]|0;
-                        break;
+                        ram[(ramp + paddr) >> 2] = r[0]|0;
+                        r[0] = 0;
+                        continue;
 
                     case 0x1C:
                         //amomaxu
                         paddr = TranslateVM(rs1|0,VM_READ)|0;
                         if((paddr|0) == -1) break;
-                        ram_index = paddr|0;
-                        r[(rindex << 2) >> 2] = ram[(ramp + ram_index) >> 2]|0;
-                        if((rs2 >>> 0) < (r[(rindex << 2) >> 2] >>> 0)) r[0] = r[(rindex << 2) >> 2];
+                        r[((ins >> 5) & 0x7C) >> 2] = ram[(ramp + paddr) >> 2]|0;
+                        if((rs2 >>> 0) < (r[((ins >> 5) & 0x7C) >> 2] >>> 0)) r[0] = r[((ins >> 5) & 0x7C) >> 2];
                         else r[0] = rs2;
                         paddr = TranslateVM(rs1|0,VM_WRITE)|0;
                         if((paddr|0) == -1) break;
-                        ram_index = paddr|0;
-                        ram[(ramp + ram_index) >> 2] = r[0]|0;
-                        break;
+                        ram[(ramp + paddr) >> 2] = r[0]|0;
+                        r[0] = 0;
+                        continue;
 
                     case 0x02:
                         //lr.d
                         rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
                         paddr = TranslateVM(rs1|0,VM_READ)|0;
                         if((paddr|0) == -1) break;
-                        ram_index = paddr|0;
-                        r[(rindex << 2) >> 2] = ram[(ramp + ram_index) >> 2]|0;
+                        r[((ins >> 5) & 0x7C) >> 2] = ram[(ramp + paddr) >> 2]|0;
                         amoaddr = rs1;
-                        amovalue = r[(rindex << 2) >> 2]|0;
-                        break;
+                        amovalue = r[((ins >> 5) & 0x7C) >> 2]|0;
+                        r[0] = 0;
+                        continue;
 
                     case 0x03:
                         //sc.d
                         rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
-                        rs2 = r[(((ins >> 20) & 0x1F) << 2) >> 2]|0;
+                        rs2 = r[((ins >> 18) & 0x7C) >> 2]|0;
                         if((rs1|0) != (amoaddr|0)) {
-                            r[(rindex << 2) >> 2] = 0x01;
-                            break;
+                            r[((ins >> 5) & 0x7C) >> 2] = 0x01;
+                            continue;
                         }
                         paddr = TranslateVM(rs1, VM_READ)|0;
                         if((paddr|0) == -1) break;
-                        ram_index = paddr|0;
-                        if((ram[(ramp + ram_index) >> 2]|0) != (amovalue|0)) {
-                            r[(rindex << 2) >> 2] = 0x01;
-                            break;
+                        if((ram[(ramp + paddr) >> 2]|0) != (amovalue|0)) {
+                            r[((ins >> 5) & 0x7C) >> 2] = 0x01;
+                            continue;
                         }
-                        r[(rindex << 2) >> 2] = 0x00;
+                        r[((ins >> 5) & 0x7C) >> 2] = 0x00;
                         paddr = TranslateVM(rs1, VM_WRITE)|0;
                         if ((paddr|0) == -1) break;
-                        ram_index = paddr|0;
-                        ram[(ramp + ram_index) >> 2] = rs2|0;
-                        break;
+                        ram[(ramp + paddr) >> 2] = rs2|0;
+                        r[0] = 0;
+                        continue;
 
                     default:
                         DebugMessage(ERROR_ATOMIC_INSTRUCTION|0);
@@ -13788,19 +13827,305 @@ function Step(steps, clockspeed) {
                         break;
 
                 }
-                break;
+                continue;
 
             case 0x0F:
                 //fence
-                break;
+                continue;
+
+            //custom opcodes defined to make instructions take the faster route
+            case 0x74:
+                //lb
+                imm = (ins >> 20);
+                rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
+                if(!((read8tlb_index ^ (rs1 + imm|0)) & 0xFFFFF000)) paddr = (read8tlb_entry ^ (rs1 + imm|0));
+                else{
+
+                    paddr = TranslateVM(rs1 + imm|0, VM_READ)|0;
+                    if((paddr|0) == -1) continue;
+
+                    read8tlb_index = paddr;
+                    read8tlb_entry = ((paddr ^ (rs1 + imm|0)) & 0xFFFFF000);
+                }
+                r[((ins >> 5) & 0x7C) >> 2] = ((ram8[(ramp + paddr) >> 0]) << 24) >> 24;
+                continue;
+
+            case 0x75:
+                //lh
+                imm = (ins >> 20);
+                rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
+                if(!((read16tlb_index ^ (rs1 + imm|0)) & 0xFFFFF000)) paddr = (read16tlb_entry ^ (rs1 + imm|0));
+                else{
+
+                    paddr = TranslateVM(rs1 + imm|0, VM_READ)|0;
+                    if((paddr|0) == -1) continue;
+
+                    read16tlb_index = paddr;
+                    read16tlb_entry = ((paddr ^ (rs1 + imm|0)) & 0xFFFFF000);
+                }
+                r[((ins >> 5) & 0x7C) >> 2] = ((ram16[(ramp + paddr) >> 1]) << 16) >> 16;
+                continue;
+
+            case 0x76:
+                //lw
+                imm = (ins >> 20);
+                rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
+                if ((rs1+imm) & 3) {
+                     DebugMessage(ERROR_LOAD_WORD|0);
+                     abort();
+                }
+                if(!((read32tlb_index ^ (rs1 + imm|0)) & 0xFFFFF000)) paddr = (read32tlb_entry ^ (rs1 + imm|0));
+                else{
+
+                    paddr = TranslateVM(rs1 + imm|0, VM_READ)|0;
+                    if((paddr|0) == -1) continue;
+
+                    read32tlb_index = paddr;
+                    read32tlb_entry = ((paddr ^ (rs1 + imm|0)) & 0xFFFFF000);
+                }
+                r[((ins >> 5) & 0x7C) >> 2] = ram[(ramp + paddr) >> 2]|0;
+                continue;
+
+            case 0x77:
+                //lbu
+                imm = (ins >> 20);
+                rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
+                if(!((read8utlb_index ^ (rs1 + imm|0)) & 0xFFFFF000)) paddr = (read8utlb_entry ^ (rs1 + imm|0));
+                else{
+
+                    paddr = TranslateVM(rs1 + imm|0, VM_READ)|0;
+                    if((paddr|0) == -1) continue;
+
+                    read8utlb_index = paddr;
+                    read8utlb_entry = ((paddr ^ (rs1 + imm|0)) & 0xFFFFF000);
+                }
+                r[((ins >> 5) & 0x7C) >> 2] = (ram8[(ramp + paddr) >> 0]) & 0xFF;
+                continue;
+
+            case 0x78:
+                //lhu
+                imm = (ins >> 20);
+                rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
+                if(!((read16utlb_index ^ (rs1 + imm|0)) & 0xFFFFF000)) paddr = (read16utlb_entry ^ (rs1 + imm|0));
+                else{
+
+                    paddr = TranslateVM(rs1 + imm|0, VM_READ)|0;
+                    if((paddr|0) == -1) continue;
+
+                    read16utlb_index = paddr;
+                    read16utlb_entry = ((paddr ^ (rs1 + imm|0)) & 0xFFFFF000);
+                }
+                r[((ins >> 5) & 0x7C) >> 2] = (ram16[(ramp + paddr) >> 1]) & 0xFFFF;
+                continue;
+
+            case 0x79:
+                //sb
+                imm = ((ins >> 25) << 5) | ((ins >> 7) & 0x1F);
+                rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
+                if(!((store8tlb_index ^ (rs1 + imm|0)) & 0xFFFFF000)) paddr = (store8tlb_entry ^ (rs1 + imm|0));
+                else{
+
+                    paddr = TranslateVM(rs1 + imm|0, VM_WRITE)|0;
+                    if((paddr|0) == -1) continue;
+
+                    store8tlb_index = paddr;
+                    store8tlb_entry = ((paddr ^ (rs1 + imm|0)) & 0xFFFFF000);
+                }
+                ram8[(ramp + paddr) >> 0] = (r[((ins >> 18) & 0x7C) >> 2] & 0xFF);
+                continue;
+
+            case 0x7A:
+                //sh
+                imm = ((ins >> 25) << 5) | ((ins >> 7) & 0x1F);
+                rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
+                if(!((store16tlb_index ^ (rs1 + imm|0)) & 0xFFFFF000)) paddr = (store16tlb_entry ^ (rs1 + imm|0));
+                else{
+
+                    paddr = TranslateVM(rs1 + imm|0, VM_WRITE)|0;
+                    if((paddr|0) == -1) continue;
+
+                    store16tlb_index = paddr;
+                    store16tlb_entry = ((paddr ^ (rs1 + imm|0)) & 0xFFFFF000);
+                }
+                ram16[(ramp + paddr) >> 1] = (r[((ins >> 18) & 0x7C) >> 2] & 0xFFFF);
+                continue;
+
+            case 0x7B:
+                //sw
+                imm = ((ins >> 25) << 5) | ((ins >> 7) & 0x1F);
+                rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
+                if ((rs1+imm) & 3) {
+                     DebugMessage(ERROR_STORE_WORD|0);
+                     abort();
+                }
+                if(!((store32tlb_index ^ (rs1 + imm|0)) & 0xFFFFF000)) paddr = (store32tlb_entry ^ (rs1 + imm|0));
+                else{
+
+                    paddr = TranslateVM(rs1 + imm|0, VM_WRITE)|0;
+                    if((paddr|0) == -1) continue;
+
+                    store32tlb_index = paddr;
+                    store32tlb_entry = ((paddr ^ (rs1 + imm|0)) & 0xFFFFF000);
+                }
+                ram[(ramp + paddr) >> 2] = r[((ins >> 18) & 0x7C) >> 2]|0;
+                continue;
+
+            case 0x68:
+                //beq
+                pc = pcorigin + (ppc-ppcorigin)|0;
+                fence = ppc;
+                pc_change = 1;
+                rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
+                rs2 = r[((ins >> 18) & 0x7C) >> 2]|0;
+                if((rs1|0) == (rs2|0)){
+                    imm =  ((((ins >> 31) << 11) | (((ins >> 25) & 0x3F) << 4) | ((ins >> 8) & 0x0F) | (((ins >> 7) & 0x01) << 10)) << 1 );
+                    pc = pc + imm - 4|0;
+                }
+                continue;
+
+            case 0x69:
+                //bne
+                pc = pcorigin + (ppc-ppcorigin)|0;
+                fence = ppc;
+                pc_change = 1;
+                rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
+                rs2 = r[((ins >> 18) & 0x7C) >> 2]|0;
+                if((rs1|0) != (rs2|0)){
+                    imm =  ((((ins >> 31) << 11) | (((ins >> 25) & 0x3F) << 4) | ((ins >> 8) & 0x0F) | (((ins >> 7) & 0x01) << 10)) << 1 );
+                    pc = pc + imm - 4|0;
+                }
+                continue;
+
+            case 0x6A:
+                //blt
+                pc = pcorigin + (ppc-ppcorigin)|0;
+                fence = ppc;
+                pc_change = 1;
+                rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
+                rs2 = r[((ins >> 18) & 0x7C) >> 2]|0;
+                if((rs1|0) < (rs2|0)){
+                    imm =  ((((ins >> 31) << 11) | (((ins >> 25) & 0x3F) << 4) | ((ins >> 8) & 0x0F) | (((ins >> 7) & 0x01) << 10)) << 1 );
+                    pc = pc + imm - 4|0;
+                }
+                continue;
+
+            case 0x6B:
+                //bge
+                pc = pcorigin + (ppc-ppcorigin)|0;
+                fence = ppc;
+                pc_change = 1;
+                rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
+                rs2 = r[((ins >> 18) & 0x7C) >> 2]|0;
+                if((rs1|0) >= (rs2|0)){
+                    imm =  ((((ins >> 31) << 11) | (((ins >> 25) & 0x3F) << 4) | ((ins >> 8) & 0x0F) | (((ins >> 7) & 0x01) << 10)) << 1 );
+                    pc = pc + imm - 4|0;
+                }
+                continue;
+
+            case 0x6C:
+                //bltu
+                pc = pcorigin + (ppc-ppcorigin)|0;
+                fence = ppc;
+                pc_change = 1;
+                rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
+                rs2 = r[((ins >> 18) & 0x7C) >> 2]|0;
+                if((rs1 >>> 0) < (rs2 >>> 0)){
+                    imm =  ((((ins >> 31) << 11) | (((ins >> 25) & 0x3F) << 4) | ((ins >> 8) & 0x0F) | (((ins >> 7) & 0x01) << 10)) << 1 );
+                    pc = pc + imm - 4|0;
+                }
+                continue;
+
+            case 0x6D:
+                //bgeu
+                pc = pcorigin + (ppc-ppcorigin)|0;
+                fence = ppc;
+                pc_change = 1;
+                rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
+                rs2 = r[((ins >> 18) & 0x7C) >> 2]|0;
+                if((rs1 >>> 0) >= (rs2 >>> 0)){
+                    imm =  ((((ins >> 31) << 11) | (((ins >> 25) & 0x3F) << 4) | ((ins >> 8) & 0x0F) | (((ins >> 7) & 0x01) << 10)) << 1 );
+                    pc = pc + imm - 4|0;
+                }
+                continue;
+
 
             default:
                 DebugMessage(ERROR_INSTRUCTION_NOT_FOUND|0);
+                DebugMessage(ins|0);
                 abort();
                 break;
-        }
+        } // end of switch
 
-    } while(steps = steps - 1|0);
+    } else // fence
+    {
+
+            if(!(pc_change|0)) pc = pcorigin + (ppc-ppcorigin)|0;
+
+            dsteps = dsteps - ((ppc-ppcorigin) >> 2)|0;
+            if ((dsteps|0) < 0) {
+
+                dsteps = dsteps + 64|0;
+                steps =  steps - 64|0;
+
+                if((steps|0) < 0) return 0;
+
+                delta = (csr[(csrp + CSR_MTIMECMP)>>2]|0) - ticks | 0;
+                delta = delta + ((delta|0)<0?0xFFFFFFFF:0x0) | 0;
+                ticks = ticks + clockspeed| 0;
+                if ((delta|0) < (clockspeed|0)) {
+                    csr[(csrp + CSR_MIP)>>2] = csr[(csrp + CSR_MIP)>>2] | 0x20;
+                }
+
+                // check for interrupts
+                current_privilege_level = (csr[(csrp + CSR_MSTATUS)>>2] & 0x06) >> 1;
+
+                interrupts = csr[(csrp + CSR_MIE)>>2] & csr[(csrp + CSR_MIP)>>2];
+                ie = csr[(csrp + CSR_MSTATUS)>>2] & 0x01;
+
+                if (((current_privilege_level|0) < 3) | (((current_privilege_level|0) == 3) & (ie|0))) {
+                    if (((interrupts|0) & 0x8)) {
+                        Trap(CAUSE_SOFTWARE_INTERRUPT, pc);
+                        continue;
+                    } else
+                    if (queue_status|0) {
+                        Trap(CAUSE_HOST_INTERRUPT, pc);
+                        queue_status = 0;
+                        continue;
+                    }
+                }
+                if (((current_privilege_level|0) < 1) | (((current_privilege_level|0) == 1) & (ie|0))) {
+                    if (((interrupts|0) & 0x2)) {
+                        Trap(CAUSE_SOFTWARE_INTERRUPT, pc);
+                        continue;
+                    } else
+                    if (((interrupts|0) & 0x20)) {
+                         Trap(CAUSE_TIMER_INTERRUPT, pc);
+                         continue;
+                    }
+                }
+            } // dsteps
+
+            // get new instruction pointer
+            if ((instlb_index ^ pc) & 0xFFFFF000) {
+                ppc = TranslateVM(pc,VM_FETCH)|0;
+                if((ppc|0) == -1) {
+                    ppc = fence;
+                    continue;
+                }
+                instlb_index = pc;
+                instlb_entry = ((ppc ^ pc) & 0xFFFFF000);
+            }
+
+            ppc = ramp + (instlb_entry ^ pc)| 0;
+            ppcorigin = ppc;
+            pcorigin = pc;
+            fence  = ((ppc >> 12) + 1) << 12; // next page
+            pc_change = 0;
+
+        } // end of fence
+
+    } // main loop
+
     return 0;
 };
 
@@ -13832,9 +14157,2219 @@ return {
 
 }
 
+module.exports = DynamicCPU;
+
+},{"../messagehandler":28,"../utils":44,"./disassemble.js":35}],37:[function(require,module,exports){
+// -------------------------------------------------
+// -------------------- CPU ------------------------
+// -------------------------------------------------
+var message = require('../messagehandler');
+var utils = require('../utils');
+var DebugIns = require('./disassemble.js');
+
+
+// constructor
+function FastCPU(stdlib, foreign, heap) {
+"use asm";
+
+var DebugMessage = foreign.DebugMessage;
+var abort = foreign.abort;
+var Read32 = foreign.Read32;
+var Write32 = foreign.Write32;
+var Read16 = foreign.Read16;
+var Write16 = foreign.Write16;
+var Read8 = foreign.Read8;
+var Write8 = foreign.Write8;
+var ReadDEVCMDToHost = foreign.ReadDEVCMDToHost;
+var ReadDEVCMDFromHost = foreign.ReadDEVCMDFromHost;
+var WriteDEVCMDToHost = foreign.WriteDEVCMDToHost;
+var WriteDEVCMDFromHost = foreign.WriteDEVCMDFromHost;
+var ReadToHost = foreign.ReadToHost;
+var ReadFromHost = foreign.ReadFromHost;
+var WriteToHost = foreign.WriteToHost;
+var WriteFromHost = foreign.WriteFromHost;
+var IsQueueEmpty = foreign.IsQueueEmpty;
+var mul = foreign.mul;
+var MathAbs = stdlib.Math.abs;
+
+//One of the following error ids are printed to the console in case of an abort()
+var ERROR_INCOMPLETE_VMPRIVILEGE = 0;
+var ERROR_VMPRIVILEGE = 1;
+var ERROR_VMMODE = 2;
+var ERROR_SETCSR = 3;
+var ERROR_GETCSR = 4;
+var ERROR_LOAD_WORD = 5;
+var ERROR_STORE_WORD = 6;
+var ERROR_INSTRUCTION_NOT_FOUND = 7;
+var ERROR_ECALL = 8;
+var ERROR_ERET = 9;
+var ERROR_ERET_PRIV = 10;
+var ERROR_MRTS = 11;
+var ERROR_ATOMIC_INSTRUCTION = 12;
+
+//Privilege Modes
+var PRV_U = 0x00;
+var PRV_S = 0x01;
+var PRV_H = 0x02;
+var PRV_M = 0x03;
+
+//Various operations on the page table
+var VM_READ  = 0;
+var VM_WRITE = 1;
+var VM_FETCH = 2;
+
+//Various Causes which need to be written to MCAUSE Register in case of a Trap 
+var CAUSE_TIMER_INTERRUPT          = 0x80000001;
+var CAUSE_HOST_INTERRUPT           = 0x80000002;
+var CAUSE_SOFTWARE_INTERRUPT       = 0x80000000;
+var CAUSE_INSTRUCTION_ACCESS_FAULT = 0x01;
+var CAUSE_ILLEGAL_INSTRUCTION      = 0x02;
+var CAUSE_BREAKPOINT               = 0x03;
+var CAUSE_LOAD_ACCESS_FAULT        = 0x05;
+var CAUSE_STORE_ACCESS_FAULT       = 0x07;
+var CAUSE_ENVCALL_UMODE            = 0x08;
+var CAUSE_ENVCALL_SMODE            = 0x09;
+var CAUSE_ENVCALL_HMODE            = 0x0A;
+var CAUSE_ENVCALL_MMODE            = 0x0B;
+
+//All CSR addresses have been multiplied for implementing in the asm.js way
+var CSR_CYCLES = 0x3000;
+var CSR_CYCLEW = 0x2400;
+
+
+var CSR_FFLAGS    = 0x4;
+var CSR_FRM       = 0x8;
+var CSR_FCSR      = 0xC;
+
+var CSR_SSTATUS   = 0x400;
+var CSR_STVEC     = 0x404;
+var CSR_SIE       = 0x410;
+var CSR_STIMECMP  = 0x484;
+var CSR_SSCRATCH  = 0x500;
+var CSR_SEPC      = 0x504;
+var CSR_SIP       = 0x510;
+var CSR_SPTBR     = 0x600;
+var CSR_SASID     = 0x604;
+
+var CSR_HEPC      = 0x904;
+
+var CSR_MSTATUS   = 0xC00;
+var CSR_MTVEC     = 0xC04;
+var CSR_MTDELEG   = 0xC08;
+var CSR_MIE       = 0xC10;
+var CSR_MTIMECMP  = 0xC84;
+var CSR_MTIMECMPH = 0xD84;
+var CSR_MEPC      = 0xD04;
+var CSR_MSCRATCH  = 0xD00;
+var CSR_MCAUSE    = 0xD08;
+var CSR_MBADADDR  = 0xD0C;
+var CSR_MIP       = 0xD10;
+var CSR_MTOHOST_TEMP = 0xD14; // terminal output, temporary for the patched pk.
+
+var CSR_MTIME     = 0x1C04;
+var CSR_MTIMEH    = 0x1D04;
+var CSR_MRESET    = 0x1E08;
+var CSR_SEND_IPI  = 0x1E0C;
+
+var CSR_MTOHOST         = 0x1E00;
+var CSR_MFROMHOST       = 0x1E04;
+var CSR_MDEVCMDTOHOST   = 0x1E40; // special
+var CSR_MDEVCMDFROMHOST = 0x1E44; // special
+
+var CSR_TIMEW     = 0x2404;
+var CSR_INSTRETW  = 0x2408;
+var CSR_CYCLEHW   = 0x2600;
+var CSR_TIMEHW    = 0x2604;
+var CSR_INSTRETHW = 0x2608;
+
+var CSR_STIMEW    = 0x2804;
+var CSR_STIMEH    = 0x3604;
+var CSR_STIMEHW   = 0x2A04;
+var CSR_STIME     = 0x3404;
+var CSR_SCAUSE    = 0x3508;
+var CSR_SBADADDR  = 0x350C;
+var CSR_MCPUID    = 0x3C00;
+var CSR_MIMPID    = 0x3C04;
+var CSR_MHARTID   = 0x3C40;
+var CSR_CYCLEH    = 0x3200;
+var CSR_TIMEH     = 0x3204;
+var CSR_INSTRETH  = 0x3208;
+
+var CSR_TIME      = 0x3004;
+var CSR_INSTRET   = 0x3008;
+var CSR_STATS     = 0x300;
+var CSR_UARCH0    = 0x3300;
+var CSR_UARCH1    = 0x3304;
+var CSR_UARCH2    = 0x3008;
+var CSR_UARCH3    = 0x330C;
+var CSR_UARCH4    = 0x3310;
+var CSR_UARCH5    = 0x3314;
+var CSR_UARCH6    = 0x3318;
+var CSR_UARCH7    = 0x331C;
+var CSR_UARCH8    = 0x3320;
+var CSR_UARCH9    = 0x3324;
+var CSR_UARCH10   = 0x3328;
+var CSR_UARCH11   = 0x332C;
+var CSR_UARCH12   = 0x3330;
+var CSR_UARCH13   = 0x33334;
+var CSR_UARCH14   = 0x33338;
+var CSR_UARCH15   = 0x3333C;
+
+/* 
+    Heap Layout
+    ===========
+    The heap is needed by the asm.js CPU. 
+
+    0x0       32 CPU registers 
+    0x80      Floating Point Registers
+    0x2000    CSR Registers
+    ------- RAM --------
+    0x100000  RAM
+*/
+
+
+var r = new stdlib.Int32Array(heap); // registers
+var rp = 0x00; //Never used
+
+var f = new stdlib.Float64Array(heap); // registers
+var fp = 0x80; //Offset to floating point registers in the Heap
+
+var fi = new stdlib.Int32Array(heap); // for copying operations
+var fip = 0x80;
+
+var ff = new stdlib.Float32Array(heap); // the zero register is used to convert to single precision
+var ffp = 0x00; //Never used
+
+var csr = new stdlib.Int32Array(heap);
+var csrp = 0x2000; //Offset to CSRs in the Heap
+
+var ram = new stdlib.Int32Array(heap);
+var ramp = 0x100000; //Offset to Ram in the Heap
+
+var ram8 = new stdlib.Int8Array(heap); //8bit view of heap
+var ram16 = new stdlib.Int16Array(heap);//16bit view of heap
+
+var pc = 0x200; //Virutal PC
+var pcorigin = 0x200;
+var pc_change = 1; //1 implies pc has been changed by an instruction
+var ticks = 0;
+var amoaddr = 0,amovalue = 0;
+
+var fence = 0x200; //Has the next page address in case of normal operation, it is made equal to ppc in insts like branch, jump etc
+var ppc = 0x200; //Physical PC
+var ppcorigin = 0x200;
+
+
+//tlb_index contains the virutal address and tlb_entry will have the correponding Phsysical Address
+//If the page number of vaddr matches with the tlb_index then we directly read the tlb_entry to get the Physical Frame Number
+var instlb_index = -0x8000; //tlb index for pc
+var instlb_entry = -0x8000;
+var read8tlb_index = -1; //tlb index for lb ins
+var read8tlb_entry = -1;
+var read8utlb_index = -1; //tlb index for lbu ins
+var read8utlb_entry = -1;
+var read16tlb_index = -1; //tlb index for lh ins
+var read16tlb_entry = -1;
+var read16utlb_index = -1; //tlb index for lhu ins
+var read16utlb_entry = -1;
+var read32tlb_index = -1; //tlb index for lw ins
+var read32tlb_entry = -1;
+var store8tlb_index = -1; //tlb index for sb ins
+var store8tlb_entry = -1;
+var store16tlb_index = -1; //tlb index for sh ins
+var store16tlb_entry = -1;
+var store32tlb_index = -1; //tlb index for sw ins
+var store32tlb_entry = -1;
+
+var float_read32tlb_index = -1; //tlb index for flw ins
+var float_read32tlb_entry = -1;
+var float_read64tlb_index = -1; //tlb index for fld ins
+var float_read64tlb_entry = -1;
+var float_store32tlb_index = -1; //tlb index for fsw ins
+var float_store32tlb_entry = -1;
+var float_store64tlb_index = -1; //tlb index for fsd ins
+var float_store64tlb_entry = -1;
+
+var queue_status = 0; // 1 means queue is full
+
+function Init() {
+    Reset();
+}
+
+function Reset() {
+    ticks = 0;
+    csr[(csrp + CSR_MSTATUS)>>2]  = 0x96; // 1001 0110 - All Interrupts Disabled, FPU disabled 
+    csr[(csrp + CSR_MTOHOST)>>2]  =  0x780;
+    csr[(csrp + CSR_MCPUID)>>2]   = 0x4112D;
+    csr[(csrp + CSR_MIMPID)>>2]   = 0x01;
+    csr[(csrp + CSR_MHARTID)>>2]  = 0x00;
+    csr[(csrp + CSR_MTVEC)>>2]    = 0x100;
+    csr[(csrp + CSR_MIE)>>2]      = 0x00;
+    csr[(csrp + CSR_MEPC)>>2]     = 0x00;
+    csr[(csrp + CSR_MCAUSE)>>2]   = 0x00;
+    csr[(csrp + CSR_MBADADDR)>>2] = 0x00;
+    csr[(csrp + CSR_SSTATUS)>>2]  = 0x3010;
+    csr[(csrp + CSR_STVEC)>>2]    = 0x00;
+    csr[(csrp + CSR_SIE)>>2]      = 0x00;
+    csr[(csrp + CSR_TIME)>>2]     = 0x0;
+    csr[(csrp + CSR_SPTBR)>>2]    = 0x40000;
+
+    // for atomic load & store instructions
+    amoaddr = 0x00; 
+    amovalue = 0x00;
+}
+
+function GetPC() {
+    pc = pcorigin + (ppc-ppcorigin)|0;
+    return pc|0;
+}
+
+function GetTimeToNextInterrupt() {
+    var delta = 0x0;
+    delta = (csr[(csrp + 0xC84)>> 2]>>>0) - (ticks & 0xFFFFFFFF) |0;
+    delta = delta + ((delta|0)<0?0xFFFFFFFF:0x0) | 0;
+    return delta|0;
+}
+
+function GetTicks() {
+    return ticks|0;
+}
+
+function ProgressTime(delta) {
+    delta = delta|0;
+    ticks = ticks + delta|0;
+}
+
+
+function AnalyzeImage() // we haveto define these to copy the cpus
+{
+}
+
+function CheckForInterrupt() {
+};
+
+function RaiseInterrupt(line, cpuid) {
+    line = line|0;
+    cpuid = cpuid|0;
+    //DebugMessage("raise int " + line);
+    queue_status = 1;
+};
+
+function ClearInterrupt(line, cpuid) {
+    line = line|0;
+    cpuid = cpuid|0;
+};
+
+function Trap(cause, current_pc) {
+
+    //Store the current_pc, set the mcause register and point PC to the Trap Handler
+    cause = cause|0;
+    current_pc = current_pc|0;
+    var current_privilege_level = 0;
+    var offset = 0x100;
+    current_privilege_level = (csr[(csrp + CSR_MSTATUS)>>2] & 0x06) >> 1;
+    PushPrivilegeStack();
+    csr[(csrp + CSR_MEPC)>>2] = current_pc;
+    csr[(csrp + CSR_MCAUSE)>>2] = cause;
+    pc = (offset + (current_privilege_level << 6))|0;
+    fence = ppc;
+    pc_change = 1;
+    InvalidateTLB();
+};
+
+function MemTrap(addr, op) {
+
+    addr = addr|0;
+    op = op|0;
+    if((op|0) != (VM_FETCH|0)) pc = pcorigin + (ppc-ppcorigin)|0;
+    csr[(csrp + CSR_MBADADDR)>>2] = addr;
+    switch(op|0) {
+        case 0: //VM_READ
+            Trap(CAUSE_LOAD_ACCESS_FAULT, pc - 4|0);
+            break;
+
+        case 1: //VM_WRITE
+            Trap(CAUSE_STORE_ACCESS_FAULT, pc - 4|0);
+            break;
+
+        case 2: //VM_FETCH
+            Trap(CAUSE_INSTRUCTION_ACCESS_FAULT, pc);
+            break;
+    }
+
+}
+
+
+
+function CheckVMPrivilege(type, op) {
+
+    //Checks if the Privilages of a Page Table Entry are being violated
+    type = type|0;
+    op = op|0;
+    var priv = 0;
+    priv = (csr[(csrp + CSR_MSTATUS)>>2] & 0x06) >> 1;
+
+    switch(type|0) {
+
+        case 2: 
+            if ((op|0) == (VM_READ|0)) return 1;
+            if (((priv|0) == (PRV_U|0)) & ((op|0) == (VM_FETCH|0))) return 1;
+            return 0;
+            break;
+
+        case 3: 
+            if (!( ((priv|0) == (PRV_S|0)) & ((op|0) == (VM_FETCH|0)) ) ) return 1;
+            break;
+
+        case 4:
+            if ((op|0) == (VM_READ|0)) return 1;
+            return 0;
+            break;
+
+        case 5:
+            if ((op|0) != (VM_FETCH|0)) return 1;
+            break;
+
+        case 6:
+            if ((op|0) != (VM_WRITE|0)) return 1;
+            break;
+
+        case 7:
+            return 1;
+            break;
+
+       case 11:
+            if ((priv|0) == (PRV_S|0)) return 1;
+            break;
+
+        case 13:
+            if (((priv|0) == (PRV_S|0)) & ((op|0) != (VM_FETCH|0))) return 1;
+            break;
+
+        case 14:
+            if (((priv|0) == (PRV_S|0)) & ((op|0) != (VM_WRITE|0))) return 1;
+            break;
+
+        case 15: 
+            if ((priv|0) == (PRV_S|0)) return 1;
+            break;
+
+    }
+
+    DebugMessage(ERROR_INCOMPLETE_VMPRIVILEGE|0);
+    abort();
+    return 0;
+}
+
+
+function TranslateVM(addr, op) {
+
+    //Converts Virtual Address to Physical Address
+    addr = addr|0;
+    op = op|0;
+    var vm = 0;
+    var current_privilege_level = 0;
+    var i = 1; //i = LEVELS -1 and LEVELS = 2 in a 32 bit System
+
+    var offset = 0;
+    var page_num = 0;
+    var frame_num = 0;
+    var type = 0;
+    var valid = 0;
+
+    //For Level 2
+    var new_sptbr = 0;
+    var new_page_num = 0;
+    var new_frame_num = 0;
+    var new_type = 0;
+    var new_valid = 0;
+    var ram_index = 0;
+
+
+    vm = (csr[(csrp + CSR_MSTATUS)>>2] >> 17) & 0x1F;
+    current_privilege_level = (csr[(csrp + CSR_MSTATUS)>>2] & 0x06) >> 1;
+    
+    // vm bare mode
+    if(((vm|0) == 0) | ((current_privilege_level|0) == (PRV_M|0))) return addr|0;
+
+    // hack, open mmio by direct mapping
+    //if ((addr>>>28) == 0x9) return addr;
+
+    // only RV32 supported
+    if((vm|0) != 8) {
+        DebugMessage(ERROR_VMMODE|0);
+        abort();
+    }
+
+    // LEVEL 1
+    offset = addr & 0xFFF;
+    page_num = (addr >>> 22)|0;
+
+    ram_index = (csr[(csrp + CSR_SPTBR)>>2]|0) + (page_num << 2)|0
+    frame_num = ram[(ramp + ram_index) >> 2]|0;
+    type = ((frame_num >> 1) & 0xF);
+    valid = (frame_num & 0x01);
+
+    if ((valid|0) == 0) {
+        //DebugMessage("Unsupported valid field " + valid + " or invalid entry in PTE at PC "+utils.ToHex(pc) + " pl:" + current_privilege_level + " addr:" + utils.ToHex(addr) + " op:"+op);
+        //abort();
+        MemTrap(addr, op);
+        return -1;
+    }
+    if ((type|0) >= 2) {
+
+        if (!(CheckVMPrivilege(type,op)|0)) {
+            DebugMessage(ERROR_VMPRIVILEGE|0);
+            abort();
+        }
+/*
+        var updated_frame_num = frame_num;
+        if(op == VM_READ)
+            updated_frame_num = (frame_num | 0x20);
+        else if(op == VM_WRITE)
+            updated_frame_num = (frame_num | 0x60);
+        Write32(csr[CSR_SPTBR] + (page_num << 2),updated_frame_num);
+*/
+        return (((frame_num >> 10) | ((addr >> 12) & 0x3FF)) << 12) | offset;
+    }
+
+    // LEVEL 2
+    //DebugMessage("Second level MMU");
+
+    offset = addr & 0xFFF;
+    new_sptbr = (frame_num & 0xFFFFFC00) << 2;
+    new_page_num = (addr >> 12) & 0x3FF;
+    ram_index = (new_sptbr|0) + (new_page_num << 2)|0;
+    new_frame_num = ram[(ramp + ram_index) >> 2]|0;
+    new_type = ((new_frame_num >> 1) & 0xF);
+    new_valid = (new_frame_num & 0x01);
+    i = (i - 1)|0;
+
+    if ((new_valid|0) == 0) {
+        MemTrap(addr, op);
+        return -1;
+    }
+
+    if (!(CheckVMPrivilege(new_type, op)|0)) {
+        //DebugMessage("Error in TranslateVM: Unhandled trap");
+        //abort();
+        MemTrap(addr, op);
+        return -1;
+    }
+
+/*
+    var updated_frame_num = new_frame_num;
+    if(op == VM_READ)
+        updated_frame_num = (new_frame_num | 0x20);
+    else if(op == VM_WRITE)
+        updated_frame_num = (new_frame_num | 0x60);
+    Write32(new_sptbr + (new_page_num << 2),updated_frame_num);
+*/
+
+    return ((new_frame_num >> 10) << 12) | offset | 0;
+};
+
+
+function SetCSR(addr,value) {
+
+    //Handles write to CSR Registers appropriately
+    addr = addr|0;
+    value = value|0;
+    var mask = 0;
+    var ram_index = 0;
+    addr = addr << 2;
+    switch(addr|0)
+    {
+        case 0xC: //CSR_FCSR
+            csr[(csrp + addr)>>2] = value;
+            break;
+
+        case 0x1E40: //CSR_MDEVCMDTOHOST
+            csr[(csrp + addr)>>2] = value;
+            WriteDEVCMDToHost(value|0);
+            break;
+
+        case 0x1E44: //CSR_MDEVCMDFROMHOST
+            csr[(csrp + addr)>>2] = value;
+            WriteDEVCMDFromHost(value|0);
+            break;
+
+        case 0x1E00: //CSR_MTOHOST
+            csr[(csrp + addr)>>2] =  value;
+            WriteToHost(value|0);
+            break;
+
+        case 0xD14: //CSR_MTOHOST_TEMP only temporary for the patched pk.
+            ram_index = 0x90000000 >> 0;
+            ram8[(ramp + ram_index) >> 0] = value|0; 
+            if ((value|0) == 0xA) ram8[(ramp + ram_index) >> 0] = 0xD;
+            break;
+
+        case 0x1E04: //CSR_MFROMHOST
+            csr[(csrp + addr)>>2] = value;
+            WriteFromHost(value|0);
+            break;
+
+        case 0xC00: //CSR_MSTATUS
+            csr[(csrp + addr)>>2] = value;
+            InvalidateTLB();
+            break;
+
+        case 0x3C00: //CSR_MCPUID
+            //csr[addr] = value;
+            break;
+
+        case 0x3C04: //CSR_MIMPID
+            csr[(csrp + addr)>>2] = value;
+            break;
+
+        case 0x3C40: //CSR_MHARTID
+            csr[(csrp + addr)>>2] = value;
+            break;
+
+        case 0xC04: //CSR_MTVEC
+            csr[(csrp + addr)>>2] = value;
+            break;
+
+        case 0xD10: //CSR_MIP
+            //csr[addr] = value;
+            mask = 0x2 | 0x08; //mask = MIP_SSIP | MIP_MSIP
+            csr[(csrp + addr)>>2] = (csr[(csrp + addr)>>2] & ~mask) | (value & mask);
+            break;
+
+        case 0xC10: //CSR_MIE
+            //csr[addr] = value;
+            mask = 0x2 | 0x08 | 0x20; //mask = MIP_SSIP | MIP_MSIP | MIP_STIP
+            csr[(csrp + addr)>>2] = (csr[(csrp + addr)>>2] & ~mask) | (value & mask);
+            break;
+
+        case 0x504: //CSR_SEPC
+        case 0xD04: //CSR_MEPC
+            csr[(csrp + addr)>>2] = value;
+            break;
+
+        case 0xD08: //CSR_MCAUSE
+            csr[(csrp + addr)>>2] = value;
+            break;
+
+        case 0x3508: //CSR_SCAUSE
+            csr[(csrp + addr)>>2] = value;
+            break;
+
+        case 0xD0C: //CSR_MBADADDR
+            csr[(csrp + addr)>>2] = value;
+            break;
+
+        case 0x350C: //CSR_SBADADDR
+            csr[(csrp + addr)>>2] = value;
+            break;
+
+        case 0x400: //CSR_SSTATUS
+            csr[(csrp + CSR_SSTATUS)>>2] = value;
+            csr[(csrp + CSR_MSTATUS)>>2] = csr[(csrp + CSR_MSTATUS)>>2] & (~0x1F039); 
+            csr[(csrp + CSR_MSTATUS)>>2] = csr[(csrp + CSR_MSTATUS)>>2] | (csr[(csrp + CSR_SSTATUS)>>2] & 0x01); //IE0
+            csr[(csrp + CSR_MSTATUS)>>2] = csr[(csrp + CSR_MSTATUS)>>2] | (csr[(csrp + CSR_SSTATUS)>>2] & 0x08); //IE1
+            csr[(csrp + CSR_MSTATUS)>>2] = csr[(csrp + CSR_MSTATUS)>>2] | (csr[(csrp + CSR_SSTATUS)>>2] & 0x10); //PRV1
+            csr[(csrp + CSR_MSTATUS)>>2] = csr[(csrp + CSR_MSTATUS)>>2] | (csr[(csrp + CSR_SSTATUS)>>2] & 0xF000); //FS,XS
+            csr[(csrp + CSR_MSTATUS)>>2] = csr[(csrp + CSR_MSTATUS)>>2] | (csr[(csrp + CSR_SSTATUS)>>2] & 0x10000); //MPRV
+            break; 
+
+        case 0x404: //CSR_STVEC
+            csr[(csrp + addr)>>2] = value;
+            break;
+
+        case 0x510: //CSR_SIP
+            //csr[addr] = value;
+            mask = 0x2; //mask = MIP_SSIP
+            csr[(csrp + CSR_MIP)>>2] = (csr[(csrp + CSR_MIP)>>2] & ~mask) | (value & mask);
+            break;
+
+        case 0x410: //CSR_SIE
+            //csr[addr] = value;
+            mask = 0x2 | 0x20; //mask = MIP_SSIP | MIP_STIP
+            csr[(csrp + CSR_MIE)>>2] = (csr[(csrp + CSR_MIE)>>2] & ~mask) | (value & mask);
+            break;
+
+        case 0xD00: //CSR_MSCRATCH
+            csr[(csrp + addr)>>2] = value;
+            break;
+
+        case 0x500: //CSR_SSCRATCH
+            csr[(csrp + addr)>>2] = value;
+            break;
+
+        case 0x2400: //CSR_CYCLEW
+            csr[(csrp + addr)>>2] = value;
+            break;
+
+        case 0x3000: //CSR_CYCLES
+            ticks = value;
+            csr[(csrp + addr)>>2] = value;
+            break;
+
+        case 0x1C04:  //CSR_MTIME
+        case 0x3404:  //CSR_STIME
+        case 0x2804: //CSR_STIMEW
+            csr[(csrp + addr)>>2] = value;
+            break;
+
+        case 0x1D04:  //CSR_MTIMEH
+        case 0x3604:  //CSR_STIMEH
+        case 0x2A04: //CSR_STIMEHW
+            csr[(csrp + addr)>>2] = value;
+            break;
+
+        case 0x3004:  //CSR_TIME
+        case 0x2404: //CSR_TIMEW
+            csr[(csrp + addr)>>2] = value;
+            break;
+
+        case 0xC84: //CSR_MTIMECMP
+        case 0x484: //CSR_STIMECMP
+            csr[(csrp + CSR_MIP)>>2] = csr[(csrp + CSR_MIP)>>2] & (~(0x20)); //csr[CSR_MIP] &= ~MIP_STIP
+            csr[(csrp + addr)>>2] = value;
+            break;
+
+        case 0xD84: //CSR_MTIMECMPH
+        case 0x600: //CSR_SPTBR
+            csr[(csrp + addr)>>2] = value;
+            break;
+
+        case 0x04: //CSR_FRM
+        case 0x08: //CSR_FFLAGS
+            csr[(csrp + addr)>>2] = value;
+            break;
+
+        default:
+            csr[(csrp + addr)>>2] = value;
+            DebugMessage(ERROR_SETCSR|0);
+            abort();
+            break;
+    }
+};
+
+function GetCSR(addr) {
+
+    //Handles Read operation on CSR Registers appropriately
+    addr = addr|0;
+    var current_privilege_level = 0;
+    current_privilege_level = (csr[(csrp + CSR_MSTATUS)>>2] & 0x06) >> 1;
+    addr = (addr << 2)|0;
+    switch(addr|0)
+    {
+        case 0xC: //CSR_FCSR
+            return 0x0;
+            break;
+
+        case 0x1E40: //CSR_MDEVCMDTOHOST
+            return ReadDEVCMDToHost()|0;
+            break;
+
+        case 0x1E44: //CSR_MDEVCMDFROMHOST
+            return ReadDEVCMDFromHost()|0;
+            break;
+
+        case 0x1E00: //CSR_MTOHOST
+            return ReadToHost()|0;
+            break;
+
+        case 0xD14: //CSR_MTOHOST_TEMP only temporary for the patched pk.
+            return 0x0;
+            break;
+
+        case 0x1E04: //CSR_MFROMHOST
+            return ReadFromHost()|0;
+            break;
+
+        case 0xC00: //CSR_MSTATUS
+            return csr[(csrp + addr)>>2]|0;
+            break;
+
+        case 0x3C00: //CSR_MCPUID
+            return csr[(csrp + addr)>>2]|0;
+            break;
+
+        case 0x3C04: //CSR_MIMPID
+            return csr[(csrp + addr)>>2]|0;
+            break;
+
+        case 0x3C40: //CSR_MHARTID
+            return csr[(csrp + addr)>>2]|0;
+            break;
+
+        case 0xC04: //CSR_MTVEC
+            return csr[(csrp + addr)>>2]|0;
+            break;
+
+        case 0xC10: //CSR_MIE
+            return csr[(csrp + addr)>>2]|0;
+            break;
+
+        case 0x504: //CSR_SEPC
+        case 0xD04: //CSR_MEPC
+            return csr[(csrp + addr)>>2]|0;
+            break;
+
+        case 0xD08: //CSR_MCAUSE
+            return csr[(csrp + addr)>>2]|0;
+            break;
+
+        case 0x3508: //CSR_SCAUSE
+            return csr[(csrp + addr)>>2]|0;
+            break;
+
+        case 0xD0C: //CSR_MBADADDR
+            return csr[(csrp + addr)>>2]|0;
+            break;
+
+        case 0x350C: //CSR_SBADADDR
+            return csr[(csrp + addr)>>2]|0;
+            break;
+
+        case 0x400: //CSR_SSTATUS
+            //if (current_privilege_level == 0) Trap(CAUSE_ILLEGAL_INSTRUCTION);
+            csr[(csrp + CSR_SSTATUS)>>2] = 0x00; 
+            csr[(csrp + CSR_SSTATUS)>>2] = csr[(csrp + CSR_SSTATUS)>>2] | (csr[(csrp + CSR_MSTATUS)>>2] & 0x01); //IE0
+            csr[(csrp + CSR_SSTATUS)>>2] = csr[(csrp + CSR_SSTATUS)>>2] | (csr[(csrp + CSR_MSTATUS)>>2] & 0x08); //IE1
+            csr[(csrp + CSR_SSTATUS)>>2] = csr[(csrp + CSR_SSTATUS)>>2] | (csr[(csrp + CSR_MSTATUS)>>2] & 0x10); //PRV1
+            csr[(csrp + CSR_SSTATUS)>>2] = csr[(csrp + CSR_SSTATUS)>>2] | (csr[(csrp + CSR_MSTATUS)>>2] & 0xF000); //FS,XS
+            csr[(csrp + CSR_SSTATUS)>>2] = csr[(csrp + CSR_SSTATUS)>>2] | (csr[(csrp + CSR_MSTATUS)>>2] & 0x10000); //MPRV
+            return csr[(csrp + CSR_SSTATUS)>>2]|0;
+            break;
+
+        case 0x404: //CSR_STVEC
+            return csr[(csrp + addr)>>2]|0;
+            break;
+
+        case 0xD10: //CSR_MIP
+            return csr[(csrp + addr)>>2]|0;
+            break;
+
+        case 0x510: //CSR_SIP 
+            return (csr[(csrp + CSR_MIP)>>2] & (0x2 | 0x20))|0;//(MIP_SSIP | MIP_STIP)
+            break;
+
+        case 0x410: //CSR_SIE 
+            return (csr[(csrp + CSR_MIE)>>2] & (0x2 | 0x20))|0;//(MIP_SSIP | MIP_STIP)
+            break;
+
+        case 0xD00: //CSR_MSCRATCH
+            return csr[(csrp + addr)>>2]|0;
+            break;
+
+        case 0x500: //CSR_SSCRATCH
+            return csr[(csrp + addr)>>2]|0;
+            break;
+
+        case 0x2400: //CSR_CYCLEW
+            return ticks|0;
+            break;
+
+        case 0x3000: //CSR_CYCLES
+            return ticks|0;
+            break;
+
+        case 0x1C04:  //CSR_MTIME
+        case 0x3404:  //CSR_STIME
+        case 0x2804: //CSR_STIMEW
+            return ticks|0;
+            break;
+
+        case 0x1D04:  //CSR_MTIMEH
+        case 0x3604:  //CSR_STIMEH
+        case 0x2A04: //CSR_STIMEHW
+            return ((ticks) >> 32)|0;
+            break;
+
+        case 0x3004:  //CSR_TIME
+        case 0x2404: //CSR_TIMEW
+            return ticks|0;
+            break;
+
+        case 0xC84: //CSR_MTIMECMP
+        case 0x484: //CSR_STIMECMP
+            return csr[(csrp + addr)>>2]|0;
+            break;
+        
+        case 0xD84: //CSR_MTIMECMPH
+        case 0x600: //CSR_SPTBR
+            return csr[(csrp + addr)>>2]|0;
+            break;
+
+        case 0x04: //CSR_FRM
+        case 0x08: //CSR_FFLAGS
+            return csr[(csrp + addr)>>2]|0;
+            break;
+
+        default:
+            DebugMessage(ERROR_GETCSR|0);
+            abort();
+            return csr[(csrp + addr)>>2]|0;
+            break;
+    }
+
+    return 0;
+   
+};
+
+function IMul(a,b,index) {
+
+    //Special Method for 64 Bit Multiplication for Unsigned*Unsigned
+    a = a|0;
+    b = b|0;
+    index = index|0;
+    var result0 = 0,result1 = 0;
+    
+    var a00 = 0, a16 = 0;
+    var b00 = 0, b16 = 0;
+
+    var c00 = 0;
+    var c16 = 0;
+    var c32 = 0;
+    var c48 = 0;
+
+    if (((a >>> 0) < 32767) & ((b >>> 0) < 65536)) {
+        result0 = mul(a|0,b|0)|0;
+        result1 = ((result0|0) < 0) ? -1 : 0;
+        if((index|0) == 0) return result0|0;
+        else return result1|0;
+    }
+
+    a00 = a & 0xFFFF;
+    a16 = a >>> 16;
+    b00 = b & 0xFFFF;
+
+    b16 = b >>> 16;
+
+    c00 = mul(a00|0,b00|0)|0;
+    c16 = ((c00 >>> 16) + (mul(a16|0,b00|0)|0))|0;
+    c32 = c16 >>> 16;
+    c16 = ((c16 & 0xFFFF) + (mul(a00|0,b16|0)|0))|0;
+    c32 = (c32 + (c16 >>> 16))|0;
+    c48 = c32 >>> 16;
+    c32 = ((c32 & 0xFFFF) + (mul(a16|0,b16|0)|0))|0;
+    c48 = (c48 + (c32 >>> 16))|0;
+
+    result0 = ((c16 & 0xFFFF) << 16) | (c00 & 0xFFFF);
+    result1 = ((c48 & 0xFFFF) << 16) | (c32 & 0xFFFF);
+    if((index|0) == 0) return result0|0;
+    return result1|0;
+};
+
+function UMul(a,b,index) {
+
+    //Special Method for 64 Bit Multiplication for Signed*Signed
+    a = a|0;
+    b = b|0;
+    index = index|0;
+    var result0 = 0,result1 = 0;
+    var doNegate = 0;
+
+    if ((a|0) == 0) return 0;
+    if ((b|0) == 0) return 0;
+
+    if ((((a|0) >= -32768) & ((a|0) <= 32767)) & (((b|0) >= -32768) & ((b|0) <= 32767))) {
+        result0 = mul(a|0,b|0)|0;
+        result1 = ((result0|0) < 0) ? -1 : 0;
+        if((index|0) == 0) return result0|0;
+        else return result1|0;
+    }
+
+    doNegate = ((a|0) < 0) ^ ((b|0) < 0);
+
+    a = MathAbs(a|0)|0;
+    b = MathAbs(b|0)|0;
+    result0 = IMul(a, b, 0)|0;
+    result1 = IMul(a, b, 1)|0;
+
+    if (doNegate) {
+        result0 = ~result0;
+        result1 = ~result1;
+        result0 = (result0 + 1) | 0;
+        if ((result0|0) == 0) result1 = (result1 + 1) | 0;
+    }
+
+    if((index|0) == 0) return result0|0;
+    return result1|0;
+};
+
+function SUMul(a,b,index) {
+
+    //Special Method for 64 Bit Multiplication for Signed*Unsigned
+    a = a|0;
+    b = b|0;
+    index = index|0;
+    var result0 = 0,result1 = 0;
+    var doNegate = 0;
+
+    if ((a|0) == 0) return 0;
+    if ((b|0) == 0) return 0;
+
+    if ((((a|0) >= -32768) & ((a|0) <= 32767)) & (((b|0) >= -32768) & ((b >>> 0) <= 32767))) {
+        result0 = mul(a|0,b|0)|0;
+        result1 = ((result0|0) < 0) ? -1 : 0;
+        if((index|0) == 0) return result0|0;
+        else return result1|0;
+    }
+
+    doNegate = ((a|0) < 0) ^ ((b|0) < 0);
+
+    a = MathAbs(a|0)|0;
+    b = MathAbs(b|0)|0;
+    result0 = IMul(a, b, 0)|0;
+    result1 = IMul(a, b, 1)|0;
+
+    if (doNegate) {
+        result0 = ~result0;
+        result1 = ~result1;
+        result0 = (result0 + 1) | 0;
+        if ((result0|0) == 0) result1 = (result1 + 1) | 0;
+    }
+
+    if((index|0) == 0) return result0|0;
+    return result1|0;
+};
+
+function InvalidateTLB(){
+
+    // the highest address migh be used by the sbi
+    instlb_index = 0xFFFF0000;
+    instlb_entry = -1;
+    read8tlb_index = 0xFFFF0000;
+    read8tlb_entry = -1;
+    read8utlb_index = 0xFFFF0000;
+    read8utlb_entry = -1;
+    read16tlb_index = 0xFFFF0000;
+    read16tlb_entry = -1;
+    read16utlb_index = 0xFFFF0000;
+    read16utlb_entry = -1;
+    read32tlb_index = 0xFFFF0000;
+    read32tlb_entry = -1;
+    store8tlb_index = 0xFFFF0000;
+    store8tlb_entry = -1;
+    store16tlb_index = 0xFFFF0000;
+    store16tlb_entry = -1;
+    store32tlb_index = 0xFFFF0000;
+    store32tlb_entry = -1;
+
+    float_read32tlb_index = 0xFFFF0000;
+    float_read32tlb_entry = -1;
+    float_read64tlb_index = 0xFFFF0000;
+    float_read64tlb_entry = -1;
+    float_store32tlb_index = 0xFFFF0000;
+    float_store32tlb_entry = -1;
+    float_store64tlb_index = 0xFFFF0000;
+    float_store64tlb_entry = -1;
+
+}
+
+function PushPrivilegeStack(){
+
+    //0 to 11 bits of mstatus register is considered as the stack.
+    //Pushing implies just right shifting the 0 to 11 bits by 3 and then setting PRV[1:0] to Machine
+    //Also set MPRV bit in mstatus register to zero
+    var mstatus = 0,privilege_level_stack = 0, new_privilege_level_stack = 0;
+    mstatus = csr[(csrp + CSR_MSTATUS)>>2]|0;
+    privilege_level_stack =  (mstatus & 0xFFF);
+    new_privilege_level_stack = (((privilege_level_stack << 2) | PRV_M) << 1) & 0xFFF;
+    csr[(csrp + CSR_MSTATUS)>>2] = (((mstatus >> 12) << 12) + new_privilege_level_stack) & 0xFFFEFFFF; //Last "and" to set mprv(bit 16) to zero
+};
+
+function PopPrivilegeStack(){
+
+    //0 to 11 bits of mstatus register is considered as the stack.
+    //Pop implies just left shifting the 0 to 11 bits by 3 and then setting PRV3[1:0] to lowest supported privilege mode(User in this case) with IE3 = 1 
+    //Also set MPRV bit in mstatus register to zero
+    var mstatus = 0,privilege_level_stack = 0, new_privilege_level_stack = 0;
+    mstatus = csr[(csrp + CSR_MSTATUS)>>2]|0;
+    privilege_level_stack =  (mstatus & 0xFFF);
+    new_privilege_level_stack = ((privilege_level_stack >>> 3) | ((PRV_U << 1) | 0x1) << 9);
+    csr[(csrp + CSR_MSTATUS)>>2] = ((mstatus >> 12) << 12) + new_privilege_level_stack;
+    InvalidateTLB();
+};
+
+function Step(steps, clockspeed) {
+
+    steps = steps|0;
+    clockspeed = clockspeed|0;
+    var imm = 0x00;
+    var zimm = 0x00;
+    var mult = 0x00;
+    var quo = 0x00;
+    var rem = 0x00;
+    var result = 0x00;
+    var rs1 = 0x0;
+    var rs2 = 0x0;
+    var fs1 = 0.0;
+    var fs2 = 0.0;
+    var fs3 = 0.0;
+    
+    var delta = 0;
+    var vaddr = 0;
+    var paddr = 0;
+    var current_privilege_level = 0;
+    var interrupts = 0;
+    var ie = 0;
+    var ins = 0;
+    var dsteps = 64;
+
+    for(;;) {
+
+    if ((fence|0) != (ppc|0)) {
+
+        ins = ram[ppc >> 2]|0;
+        ppc = ppc + 4|0;
+
+        switch(ins&0x7F) {
+
+            case 0x03:
+                //lb, lh, lw, lbu, lhu
+                vaddr = (r[(((ins >> 15) & 0x1F) << 2) >> 2]|0) + (ins >> 20)|0;
+                switch((ins >> 12)&0x7) {
+                    
+                    case 0x00:
+                        //lb
+                        //If the page number of vaddr matches with the tlb_index then we directly read the tlb_entry to get the Physical Frame Number
+                        if (!((read8tlb_index ^ vaddr) & 0xFFFFF000)) paddr = read8tlb_entry ^ vaddr;
+                        else {
+
+                            paddr = TranslateVM(vaddr|0, VM_READ)|0;
+                            if ((paddr|0) == -1) continue;
+
+                            read8tlb_index = vaddr|0;
+                            read8tlb_entry = (paddr ^ vaddr) & 0xFFFFF000;
+                        }
+                        r[((ins >> 5) & 0x7C) >> 2] = ((ram8[(ramp + paddr) >> 0]) << 24) >> 24;
+                        continue;
+
+                    case 0x01:
+                        //lh
+                        if (!((read16tlb_index ^ vaddr) & 0xFFFFF000)) paddr = read16tlb_entry ^ vaddr;
+                        else {
+
+                            paddr = TranslateVM(vaddr|0, VM_READ)|0;
+                            if ((paddr|0) == -1) continue;
+
+                            read16tlb_index = vaddr|0;
+                            read16tlb_entry = (paddr ^ vaddr) & 0xFFFFF000;
+                        }
+                        r[((ins >> 5) & 0x7C) >> 2] = ((ram16[(ramp + paddr) >> 1]) << 16) >> 16;
+                        continue;
+
+                    case 0x02:
+                        //lw
+                        if (vaddr & 3) {
+                             DebugMessage(ERROR_LOAD_WORD|0);
+                             abort();
+                        }
+                        if (!((read32tlb_index ^ vaddr) & 0xFFFFF000)) paddr = read32tlb_entry ^ vaddr;
+                        else {
+
+                            paddr = TranslateVM(vaddr|0, VM_READ)|0;
+                            if ((paddr|0) == -1) continue;
+
+                            read32tlb_index = vaddr|0;
+                            read32tlb_entry = (paddr ^ vaddr) & 0xFFFFF000;
+                        }
+                        r[((ins >> 5) & 0x7C) >> 2] = ram[(ramp + paddr) >> 2]|0;
+                        continue;
+
+                    case 0x04:
+                        //lbu
+                        if (!((read8utlb_index ^ vaddr) & 0xFFFFF000)) paddr = read8utlb_entry ^ vaddr;
+                        else {
+
+                            paddr = TranslateVM(vaddr|0, VM_READ)|0;
+                            if ((paddr|0) == -1) continue;
+
+                            read8utlb_index = vaddr|0;
+                            read8utlb_entry = (paddr ^ vaddr) & 0xFFFFF000;
+                        }
+                        r[((ins >> 5) & 0x7C) >> 2] = (ram8[(ramp + paddr) >> 0]) & 0xFF;
+                        continue;
+
+                    case 0x05:
+                        //lhu
+                        if (!((read16utlb_index ^ vaddr) & 0xFFFFF000)) paddr = read16utlb_entry ^ vaddr;
+                        else {
+                            paddr = TranslateVM(vaddr|0, VM_READ)|0;
+                            if ((paddr|0) == -1) continue;
+
+                            read16utlb_index = vaddr|0;
+                            read16utlb_entry = (paddr ^ vaddr) & 0xFFFFF000;
+                        }
+                        r[((ins >> 5) & 0x7C) >> 2] = (ram16[(ramp + paddr) >> 1]) & 0xFFFF;
+                        continue;
+
+                    default:
+                        DebugMessage(ERROR_INSTRUCTION_NOT_FOUND|0);
+                        abort();
+                        break;
+
+                }
+                continue;
+
+            case 0x23:
+                //sb, sh, sw
+                vaddr = (r[(((ins >> 15) & 0x1F) << 2) >> 2]|0) + (((ins >> 25) << 5) | ((ins >> 7) & 0x1F))|0;
+                switch((ins >> 12)&0x7) {
+                    
+                    case 0x00:
+                        //sb
+                        if (!((store8tlb_index ^ vaddr) & 0xFFFFF000)) paddr = store8tlb_entry ^ vaddr;
+                        else {
+
+                            paddr = TranslateVM(vaddr|0, VM_WRITE)|0;
+                            if ((paddr|0) == -1) continue;
+
+                            store8tlb_index = vaddr|0;
+                            store8tlb_entry = (paddr ^ vaddr) & 0xFFFFF000;
+                        }
+                        ram8[(ramp + paddr) >> 0] = (r[((ins >> 18) & 0x7C) >> 2] & 0xFF); 
+                        continue;
+
+                    case 0x01:
+                        //sh
+                        if (!((store16tlb_index ^ vaddr) & 0xFFFFF000)) paddr = store16tlb_entry ^ vaddr;
+                        else {
+
+                            paddr = TranslateVM(vaddr|0, VM_WRITE)|0;
+                            if ((paddr|0) == -1) continue;
+
+                            store16tlb_index = vaddr|0;
+                            store16tlb_entry = (paddr ^ vaddr) & 0xFFFFF000;
+                        }
+                        ram16[(ramp + paddr) >> 1] = (r[((ins >> 18) & 0x7C) >> 2] & 0xFFFF);
+                        continue;
+
+                    case 0x02:
+                        //sw
+                        if (vaddr & 3) {
+                             DebugMessage(ERROR_STORE_WORD|0);
+                             abort();
+                        }
+                        if (!((store32tlb_index ^ vaddr) & 0xFFFFF000)) paddr = store32tlb_entry ^ vaddr;
+                        else {
+
+                            paddr = TranslateVM(vaddr|0, VM_WRITE)|0;
+                            if ((paddr|0) == -1) continue;
+
+                            store32tlb_index = vaddr|0;
+                            store32tlb_entry = (paddr ^ vaddr) & 0xFFFFF000;
+                        }
+                        ram[(ramp + paddr) >> 2] = r[((ins >> 18) & 0x7C) >> 2]|0;
+                        continue;
+
+                    default:
+                        DebugMessage(ERROR_INSTRUCTION_NOT_FOUND|0);
+                        abort();
+                        break;
+
+                }
+                continue;
+
+            case 0x13:
+                //addi,slti,sltiu,xori,ori,andi,slli,srli,srai
+                switch((ins >> 12)&0x7) {
+                    
+                    case 0x00:
+                        //addi
+                        rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
+                        r[((ins >> 5) & 0x7C) >> 2] = rs1 + (ins >> 20)|0;
+                        continue;
+
+                    case 0x02:
+                        //slti
+                        rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
+                        if((rs1|0) < (ins >> 20)) r[((ins >> 5) & 0x7C) >> 2] = 0x01;
+                        else r[((ins >> 5) & 0x7C) >> 2] = 0x00;
+                        continue;
+
+                    case 0x03:
+                        //sltiu
+                        rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
+                        if((rs1 >>> 0) < ((ins >> 20) >>> 0)) r[((ins >> 5) & 0x7C) >> 2] = 0x01;
+                        else r[((ins >> 5) & 0x7C) >> 2] = 0x00;
+                        continue;
+
+                    case 0x04:
+                        //xori
+                        imm = (ins >> 20);
+                        rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
+                        r[((ins >> 5) & 0x7C) >> 2] = rs1 ^ (ins >> 20);
+                        continue;
+
+                    case 0x06:
+                        //ori
+                        rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
+                        r[((ins >> 5) & 0x7C) >> 2] = rs1 | (ins >> 20);
+                        continue;
+
+                    case 0x07:
+                        //andi
+                        rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
+                        r[((ins >> 5) & 0x7C) >> 2] = rs1 & (ins >> 20);
+                        continue;
+
+                    case 0x01:
+                        //slli
+                        rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
+                        r[((ins >> 5) & 0x7C) >> 2] = rs1 << ((ins >> 20) & 0x1F);
+                        continue;
+
+                    case 0x05:
+                        if(((ins >> 25) & 0x7F) == 0x00){
+                            //srli
+                            rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
+                            r[((ins >> 5) & 0x7C) >> 2] = rs1 >>> ((ins >> 20) & 0x1F);
+                        }
+                        else if(((ins >> 25) & 0x7F) == 0x20){
+                            //srai
+                            rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
+                            r[((ins >> 5) & 0x7C) >> 2] = rs1 >> ((ins >> 20) & 0x1F);
+                        }
+                        continue;
+
+                    default:
+                        DebugMessage(ERROR_INSTRUCTION_NOT_FOUND|0);
+                        abort();
+                        break;
+
+                }
+                continue;
+
+            case 0x33:
+                //add,sub,sll,slt,sltu,xor,srl,sra,or,and
+                switch((ins >> 25)&0x7F) {
+                    
+                    case 0x00:
+                        //add,slt,sltu,add,or,xor,sll,srl
+                        rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
+                        rs2 = r[((ins >> 18) & 0x7C) >> 2]|0;
+                        switch((ins >> 12)&0x7) {
+                            case 0x00:
+                                //add
+                                r[((ins >> 5) & 0x7C) >> 2] = rs1 + rs2;
+                                continue;
+
+                            case 0x02:
+                                //slt
+                                if((rs1|0) < (rs2|0)) r[((ins >> 5) & 0x7C) >> 2] = 0x01;
+                                else r[((ins >> 5) & 0x7C) >> 2] = 0x00;
+                                continue;
+
+                            case 0x03:
+                                //sltu
+                                if((rs1 >>> 0) < (rs2 >>> 0)) r[((ins >> 5) & 0x7C) >> 2] = 0x01;
+                                else r[((ins >> 5) & 0x7C) >> 2] = 0x00;
+                                continue;
+
+                            case 0x07:
+                                //and
+                                r[((ins >> 5) & 0x7C) >> 2] = rs1 & rs2;
+                                continue;
+
+                            case 0x06:
+                                //or
+                                r[((ins >> 5) & 0x7C) >> 2] = rs1 | rs2;
+                                continue;
+
+                            case 0x04:
+                                //xor
+                                r[((ins >> 5) & 0x7C) >> 2] = rs1 ^ rs2;
+                                continue;
+
+                            case 0x01:
+                                //sll
+                                r[((ins >> 5) & 0x7C) >> 2] = rs1 << (rs2 & 0x1F);
+                                continue;
+
+                            case 0x05:
+                                //srl
+                                r[((ins >> 5) & 0x7C) >> 2] = rs1 >>> (rs2 & 0x1F);
+                                continue;
+                        }
+                        continue;
+
+                    case 0x20:
+                        //sub, sra
+                        rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
+                        rs2 = r[((ins >> 18) & 0x7C) >> 2]|0;
+                        switch((ins >> 12)&0x7) {
+                            case 0x00:
+                                //sub
+                                r[((ins >> 5) & 0x7C) >> 2] = rs1 - rs2;
+                                continue;
+
+                            case 0x05:
+                                //sra
+                                r[((ins >> 5) & 0x7C) >> 2] = rs1 >> (rs2 & 0x1F);
+                                continue;
+                        }
+                        continue;
+
+                    case 0x01:
+                        //mul,mulh,mulhsu,mulhu,div,divu,rem,remu
+                        rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
+                        rs2 = r[((ins >> 18) & 0x7C) >> 2]|0;
+                        switch((ins >> 12)&0x7) {
+                            case 0x00:
+                                //mul
+                                mult = mul(rs1|0,rs2|0)|0;
+                                r[((ins >> 5) & 0x7C) >> 2] = mult & 0xFFFFFFFF;
+                                continue;
+
+                            case 0x01:
+                                //mulh
+                                result = UMul(rs1,rs2, 1)|0;
+                                r[((ins >> 5) & 0x7C) >> 2] = result;
+                                continue;
+
+                            case 0x02:
+                                //mulhsu
+                                result = SUMul(rs1,rs2>>>0, 1)|0;
+                                r[((ins >> 5) & 0x7C) >> 2] = result;
+                                continue;
+
+                            case 0x03:
+                                //mulhu
+                                result = IMul(rs1>>>0, rs2>>>0, 1)|0;
+                                r[((ins >> 5) & 0x7C) >> 2] = result;
+                                continue;
+
+                            case 0x04:
+                                //div
+                                if((rs2|0) == 0)
+                                    quo = -1;
+                                else
+                                    quo = ((rs1|0) / (rs2|0))|0;
+                                r[((ins >> 5) & 0x7C) >> 2] = quo;
+                                continue;
+
+                            case 0x05:
+                                //divu
+                                if((rs2|0) == 0)
+                                    quo = 0xFFFFFFFF;
+                                else
+                                    quo = ((rs1 >>> 0) / (rs2 >>> 0))|0;
+                                r[((ins >> 5) & 0x7C) >> 2] = quo;
+                                continue;
+
+                            case 0x06:
+                                //rem
+                                if((rs2|0) == 0)
+                                    rem = rs1;
+                                else
+                                    rem = ((rs1|0) % (rs2|0))|0;
+                                r[((ins >> 5) & 0x7C) >> 2] = rem;
+                                continue;
+
+                            case 0x07:
+                                //remu
+                                if((rs2|0) == 0)
+                                    rem = (rs1 >>> 0);
+                                else
+                                    rem = ((rs1 >>> 0) % (rs2 >>> 0))|0;
+                                r[((ins >> 5) & 0x7C) >> 2] = rem;
+                                continue;
+                        }
+                        continue;
+
+                    default:
+                        DebugMessage(ERROR_INSTRUCTION_NOT_FOUND|0);
+                        abort();
+                        break;
+
+                }
+                continue;
+
+            case 0x37:
+                //lui
+                r[((ins >> 5) & 0x7C) >> 2] = (ins & 0xFFFFF000);
+                continue;
+
+            case 0x17:
+                //auipc
+                pc = pcorigin + (ppc-ppcorigin)|0;
+                imm = (ins & 0xFFFFF000);
+                r[((ins >> 5) & 0x7C) >> 2] = (imm + pc - 4)|0;
+                fence = ppc;
+                pc_change = 1;
+                continue;
+
+            case 0x6F:
+                //jal
+                pc = pcorigin + (ppc-ppcorigin)|0;
+                imm =  (((ins >> 21) & 0x3FF) | (((ins >> 20) & 0x1) << 10) | (((ins >> 12) & 0xFF) << 11) | ((ins >> 31) << 19) ) << 1; 
+                r[((ins >> 5) & 0x7C) >> 2] = pc;
+                pc = pc + imm - 4|0;
+                fence = ppc;
+                pc_change = 1;
+                r[0] = 0;
+                continue; 
+
+            case 0x67:
+                //jalr
+                pc = pcorigin + (ppc-ppcorigin)|0;
+                imm = (ins >> 20);
+                rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
+                r[((ins >> 5) & 0x7C) >> 2] = pc;
+                pc = ((rs1 + imm) & 0xFFFFFFFE)|0;
+                fence = ppc;
+                pc_change = 1;
+                r[0] = 0;
+                continue;
+
+            case 0x63:
+                //beq, bne, blt, bge, bltu, bgeu
+                rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
+                rs2 = r[((ins >> 18) & 0x7C) >> 2]|0;
+                switch((ins >> 12)&0x7) {
+                    
+                    case 0x00:
+                        //beq
+                        if ((rs1|0) == (rs2|0)) {
+                            fence = ppc;
+                            pc_change = 1;
+                            imm =  ((((ins >> 31) << 11) | (((ins >> 25) & 0x3F) << 4) | ((ins >> 8) & 0x0F) | (((ins >> 7) & 0x01) << 10)) << 1 );
+                            pc = pcorigin + (ppc-ppcorigin)|0;
+                            pc = pc + imm - 4|0;
+                        }
+                        continue;
+
+                    case 0x01:
+                        //bne
+                        if ((rs1|0) != (rs2|0)) {
+                            fence = ppc;
+                            pc_change = 1;
+                            imm =  ((((ins >> 31) << 11) | (((ins >> 25) & 0x3F) << 4) | ((ins >> 8) & 0x0F) | (((ins >> 7) & 0x01) << 10)) << 1 );
+                            pc = pcorigin + (ppc-ppcorigin)|0;
+                            pc = pc + imm - 4|0;
+                        }
+                        continue;
+
+                    case 0x04:
+                        //blt
+                        if ((rs1|0) < (rs2|0)) {
+                            fence = ppc;
+                            pc_change = 1;
+                            imm =  ((((ins >> 31) << 11) | (((ins >> 25) & 0x3F) << 4) | ((ins >> 8) & 0x0F) | (((ins >> 7) & 0x01) << 10)) << 1 );
+                            pc = pcorigin + (ppc-ppcorigin)|0;
+                            pc = pc + imm - 4|0;
+                        }
+                        continue;
+
+                    case 0x05:
+                        //bge
+                        if ((rs1|0) >= (rs2|0)) {
+                            fence = ppc;
+                            pc_change = 1;
+                            imm =  ((((ins >> 31) << 11) | (((ins >> 25) & 0x3F) << 4) | ((ins >> 8) & 0x0F) | (((ins >> 7) & 0x01) << 10)) << 1 );
+                            pc = pcorigin + (ppc-ppcorigin)|0;
+                            pc = pc + imm - 4|0;
+                        }
+                        continue;
+
+                    case 0x06:
+                        //bltu
+                        if ((rs1 >>> 0) < (rs2 >>> 0)) {
+                            fence = ppc;
+                            pc_change = 1;
+                            imm =  ((((ins >> 31) << 11) | (((ins >> 25) & 0x3F) << 4) | ((ins >> 8) & 0x0F) | (((ins >> 7) & 0x01) << 10)) << 1 );
+                            pc = pcorigin + (ppc-ppcorigin)|0;
+                            pc = pc + imm - 4|0;
+                        }
+                        continue;
+
+                    case 0x07:
+                        //bgeu
+                        if ((rs1 >>> 0) >= (rs2 >>> 0)) {
+                            fence = ppc;
+                            pc_change = 1;
+                            imm =  ((((ins >> 31) << 11) | (((ins >> 25) & 0x3F) << 4) | ((ins >> 8) & 0x0F) | (((ins >> 7) & 0x01) << 10)) << 1 );
+                            pc = pcorigin + (ppc-ppcorigin)|0;
+                            pc = pc + imm - 4|0;
+                        }
+                        continue;
+
+                    default:
+                        DebugMessage(ERROR_INSTRUCTION_NOT_FOUND|0);
+                        abort();
+                        break;
+
+                }
+                continue;
+
+            case 0x73:
+                //csrrw, csrrs, csrrc, csrrwi, csrrsi, csrrci, ecall, eret, ebreak, mrts, wfi
+                imm = (ins >>> 20);
+                rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
+                switch((ins >> 12)&0x7) {
+                    
+                    case 0x01:
+                        //csrrw
+                        r[((ins >> 5) & 0x7C) >> 2] = GetCSR(imm)|0;
+                        //if (rindex != ((ins >> 15) & 0x1F))
+                        SetCSR(imm, rs1);
+                        r[0] = 0;
+                        continue;
+
+                    case 0x02:
+                        //csrrs
+                        r[((ins >> 5) & 0x7C) >> 2] = GetCSR(imm)|0;
+                        SetCSR(imm, (GetCSR(imm)|0) | rs1);
+                        r[0] = 0;
+                        continue;
+
+                    case 0x03:
+                        //csrrc
+                        r[((ins >> 5) & 0x7C) >> 2] = GetCSR(imm)|0;
+                        SetCSR(imm, (GetCSR(imm)|0) & (~rs1));
+                        r[0] = 0;
+                        continue;
+
+                    case 0x05:
+                        //csrrwi
+                        r[((ins >> 5) & 0x7C) >> 2] = GetCSR(imm)|0;
+                        zimm = (ins >> 15) & 0x1F;
+                        if((zimm|0) != 0) SetCSR(imm, (zimm >> 0));
+                        r[0] = 0;
+                        continue;
+                        
+                    case 0x06:
+                        //csrrsi
+                        r[((ins >> 5) & 0x7C) >> 2] = GetCSR(imm)|0;
+                        zimm = (ins >> 15) & 0x1F;
+                        if((zimm|0) != 0) SetCSR(imm, (GetCSR(imm)|0) | (zimm >> 0));
+                        r[0] = 0;
+                        continue;
+
+                    case 0x07:
+                        //csrrci
+                        r[((ins >> 5) & 0x7C) >> 2] = GetCSR(imm)|0;
+                        zimm = (ins >> 15) & 0x1F;
+                        if((zimm|0) != 0) SetCSR(imm, (GetCSR(imm)|0) & ~(zimm >> 0));
+                        r[0] = 0;
+                        continue;
+                    
+                    case 0x00:
+                        //ecall, eret, ebreak, mrts, wfi
+                        current_privilege_level = (csr[(csrp + CSR_MSTATUS)>>2] & 0x06) >> 1;
+                        fence = ppc;
+                        switch((ins >> 20)&0xFFF) {
+                            case 0x00:
+                                //ecall
+                                pc = pcorigin + (ppc-ppcorigin)|0;
+                                switch(current_privilege_level|0)
+                                {
+                                    case 0x00: //PRV_U
+                                        Trap(CAUSE_ENVCALL_UMODE, pc - 4|0);
+                                        break;
+
+                                    case 0x01: //PRV_S
+                                        Trap(CAUSE_ENVCALL_SMODE, pc - 4|0);
+                                        break;
+
+                                    case 0x02: //PRV_H
+                                        Trap(CAUSE_ENVCALL_HMODE, pc - 4|0);
+                                        abort();
+                                        break;
+
+                                    case 0x03: //PRV_M
+                                        Trap(CAUSE_ENVCALL_MMODE, pc - 4|0);
+                                        break;
+                                    
+                                    default:
+                                        DebugMessage(ERROR_ECALL|0);
+                                        abort();
+                                        break;
+                                }
+                                continue;
+
+                            case 0x001:
+                                //ebreak
+                                pc = pcorigin + (ppc-ppcorigin)|0;
+                                Trap(CAUSE_BREAKPOINT, pc - 4|0);
+                                continue;
+
+                            case 0x100:
+                                //eret
+                                current_privilege_level = (csr[(csrp + CSR_MSTATUS)>>2] & 0x06) >> 1;
+                                pc = pcorigin + (ppc-ppcorigin)|0;
+                                if((current_privilege_level|0) < (PRV_S|0)) {
+                                    DebugMessage(ERROR_ERET_PRIV|0);
+                                    abort();
+                                    break;   
+                                }
+                                PopPrivilegeStack();
+
+                                switch(current_privilege_level|0)
+                                {
+                                    
+                                    case 0x01: //PRV_S
+                                        //DebugMessage("eret PRV_S -"+ utils.ToHex(ins));
+                                        pc = csr[(csrp + CSR_SEPC)>>2]|0;
+                                        break;
+
+                                    case 0x02: //PRV_H
+                                        //DebugMessage("Not supported eret PRV_H -"+ utils.ToHex(ins));
+                                        pc = csr[(csrp + CSR_HEPC)>>2]|0;
+                                        abort();
+                                        break;
+
+                                    case 0x03: //PRV_M
+                                        //DebugMessage("eret PRV_M -"+ utils.ToHex(ins));
+                                        pc = csr[(csrp + CSR_MEPC)>>2]|0;
+                                        break;
+                                    
+                                    default:
+                                        DebugMessage(ERROR_ERET|0);
+                                        abort();
+                                        break;
+                                }
+                                pc_change = 1;
+                                InvalidateTLB();
+                                continue;
+
+                            case 0x102:
+                                // wfi
+                                interrupts = csr[(csrp + CSR_MIE)>>2] & csr[(csrp + CSR_MIP)>>2];
+/*
+                                if (!interrupts)
+                                if ((queue_status|0) == 0)
+                                    return steps|0;
+                                break;
+*/
+                                continue;
+
+                            case 0x305:
+                                //mrts
+                                pc = pcorigin + (ppc-ppcorigin)|0;    
+                                if ((current_privilege_level|0) != (PRV_M|0)) {
+                                    DebugMessage(ERROR_MRTS|0);
+                                    abort();
+                                    break;   
+                                }
+                                csr[(csrp + CSR_MSTATUS)>>2] = (csr[(csrp + CSR_MSTATUS)>>2] & ~0x6) | 0x02; //Setting the Privilage level to Supervisor
+                                csr[(csrp + CSR_SBADADDR)>>2] = csr[(csrp + CSR_MBADADDR)>>2];
+                                csr[(csrp + CSR_SCAUSE)>>2] = csr[(csrp + CSR_MCAUSE)>>2];
+                                csr[(csrp + CSR_SEPC)>>2] = csr[(csrp + CSR_MEPC)>>2];
+                                pc = csr[(csrp + CSR_STVEC)>>2]|0;
+                                InvalidateTLB();
+                                pc_change = 1;
+                                continue;
+
+                            case 0x101:
+                                //sfence.vm
+                                InvalidateTLB();
+                                continue;
+
+                            default:
+                                DebugMessage(ERROR_INSTRUCTION_NOT_FOUND|0);
+                                abort();
+                                break;
+
+                        }
+                        continue; 
+
+                    default:
+                        DebugMessage(ERROR_INSTRUCTION_NOT_FOUND|0);
+                        abort();
+                        break;
+
+                }
+                continue;
+
+            case 0x07:
+                //flw, fld
+                vaddr = (r[(((ins >> 15) & 0x1F) << 2) >> 2]|0) + (ins >> 20)|0;
+                switch((ins >> 12)&0x7) {
+                    
+                    case 0x02:
+                        //flw
+                        if (!((float_read32tlb_index ^ vaddr) & 0xFFFFF000)) paddr = float_read32tlb_entry ^ vaddr;
+                        else {
+
+                            paddr = TranslateVM(vaddr|0, VM_READ)|0;
+                            if ((paddr|0) == -1) break;
+
+                            float_read32tlb_index = vaddr|0;
+                            float_read32tlb_entry = (paddr ^ vaddr) & 0xFFFFF000;
+                        }
+                        r[0] = ram[(ramp + paddr) >> 2]|0;
+                        f[(fp + (((ins >> 7) & 0x1F) << 3)) >> 3] = +ff[0];
+                        r[0] = 0;
+                        continue;
+
+                    case 0x03:
+                        //fld
+                        if (!((float_read64tlb_index ^ vaddr) & 0xFFFFF000)) paddr = float_read64tlb_entry ^ vaddr;
+                        else {
+
+                            paddr = TranslateVM(vaddr|0, VM_READ)|0;
+                            if ((paddr|0) == -1) continue;
+
+                            float_read64tlb_index = vaddr|0;
+                            float_read64tlb_entry = (paddr ^ vaddr) & 0xFFFFF000;
+                        }
+                        fi[(fip + ((((ins >> 7) & 0x1F) + 0) << 3)) >> 2] = ram[(ramp + paddr + 0) >> 2]|0;
+                        fi[(fip + ((((ins >> 7) & 0x1F) + 1) << 3)) >> 2] = ram[(ramp + paddr + 4) >> 2]|0;
+                        continue;
+
+                    default:
+                        DebugMessage(ERROR_INSTRUCTION_NOT_FOUND|0);
+                        DebugMessage(ins|0);
+                        abort();
+                        break;
+
+                }
+                continue;
+
+            case 0x27:
+                //fsw, fsd
+                vaddr = (r[(((ins >> 15) & 0x1F) << 2) >> 2]|0) + ((((ins >> 25) << 5) | ((ins >> 7) & 0x1F)))|0;
+                switch((ins >> 12)&0x7) {
+
+                    case 0x02:
+                        //fsw
+                        ff[0] = f[(fp + (((ins >> 20) & 0x1F) << 3)) >> 3];
+                        if (!((float_store32tlb_index ^ vaddr) & 0xFFFFF000)) paddr = float_store32tlb_entry ^ vaddr;
+                        else {
+
+                            paddr = TranslateVM(vaddr|0, VM_READ)|0;
+                            if ((paddr|0) == -1) continue;
+
+                            float_store32tlb_index = vaddr|0;
+                            float_store32tlb_entry = (paddr ^ vaddr) & 0xFFFFF000;
+                        }
+                        ram[(ramp + paddr) >> 2] = r[0]|0;
+                        r[0] = 0;
+                        continue;
+
+                    case 0x03:
+                        //fsd
+                        if (!((float_store64tlb_index ^ vaddr) & 0xFFFFF000)) paddr = float_store64tlb_entry ^ vaddr;
+                        else {
+
+                            paddr = TranslateVM(vaddr|0, VM_READ)|0;
+                            if ((paddr|0) == -1) continue;
+
+                            float_store64tlb_index = vaddr|0;
+                            float_store64tlb_entry = (paddr ^ vaddr) & 0xFFFFF000;
+                        }
+                        ram[(ramp + paddr + 0) >> 2] = fi[(fip + ((((ins >> 20) & 0x1F) + 0) << 3)) >> 2]|0;
+                        ram[(ramp + paddr + 4) >> 2] = fi[(fip + ((((ins >> 20) & 0x1F) + 1) << 3)) >> 2]|0; 
+                        continue;
+
+                    default:
+                        DebugMessage(ERROR_INSTRUCTION_NOT_FOUND|0);
+                        DebugMessage(ins|0);
+                        abort();
+                        break;
+
+                }
+                continue;
+
+            case 0x53:
+                //fadd.s, fsub.s
+                switch((ins >> 25)&0x7F) {
+                    
+                    case 0x00:  //fadd.s
+                    case 0x01:  //fadd.d
+                        fs1 = (+f[(fp + (((ins >> 15) & 0x1F) << 3)) >> 3]);
+                        fs2 = (+f[(fp + (((ins >> 20) & 0x1F) << 3)) >> 3]);
+                        f[(fp + (((ins >> 7) & 0x1F) << 3)) >> 3] = fs1 + fs2;
+                        continue;
+
+                    case 0x04: //fsub.s 
+                    case 0x05: //fsub.d
+                        fs1 = (+f[(fp + (((ins >> 15) & 0x1F) << 3)) >> 3]);
+                        fs2 = (+f[(fp + (((ins >> 20) & 0x1F) << 3)) >> 3]);
+                        f[(fp + (((ins >> 7) & 0x1F) << 3)) >> 3] = fs1 - fs2;
+                        continue;
+
+                    case 0x50:
+                    case 0x51:
+                        //fcmp.s, fcmp.d
+                        fs1 = (+f[(fp + (((ins >> 15) & 0x1F) << 3)) >> 3]);
+                        fs2 = (+f[(fp + (((ins >> 20) & 0x1F) << 3)) >> 3]);
+                        switch((ins >> 12) & 0x7) {
+                            case 0x0:
+                                //fle
+                                if((+fs1) <= (+fs2)) r[((ins >> 5) & 0x7C) >> 2] = 1;
+                                else r[((ins >> 5) & 0x7C) >> 2] = 0;
+                                continue;
+
+                            case 0x1:
+                                //flt
+                                if((+fs1) < (+fs2)) r[((ins >> 5) & 0x7C) >> 2] = 1;
+                                else r[((ins >> 5) & 0x7C) >> 2] = 0;
+                                continue;
+
+                            case 0x2:
+                                //fle
+                                if((+fs1) == (+fs2)) r[((ins >> 5) & 0x7C) >> 2] = 1;
+                                else r[((ins >> 5) & 0x7C) >> 2] = 0;
+                                continue;
+
+                            default:
+                                DebugMessage(ERROR_INSTRUCTION_NOT_FOUND|0);
+                                DebugMessage(ins|0);
+                                abort();
+                                break;
+                        }
+                        continue;
+
+                    case 0x60:
+                        //fcvt.w.s
+                        r[((ins >> 5) & 0x7C) >> 2] = (~~+f[(fp + (((ins >> 15) & 0x1F) << 3)) >> 3]);
+                        continue;
+
+                    case 0x68:
+                    case 0x69:
+                        //fcvt.s.w, fcvt.d.w
+                        f[(fp + (((ins >> 7) & 0x1F) << 3)) >> 3] = (+~~r[(((ins >> 15) & 0x1F) << 2) >> 2]);
+                        continue;
+
+                    case 0x08: //fmul.s
+                    case 0x09: //fmul.d
+                        fs1 = (+f[(fp + (((ins >> 15) & 0x1F) << 3)) >> 3]);
+                        fs2 = (+f[(fp + (((ins >> 20) & 0x1F) << 3)) >> 3]);
+                        f[(fp + (((ins >> 7) & 0x1F) << 3)) >> 3] = (+mul(fs1,fs2));
+                        continue;
+ 
+                    case 0x10: // single precision
+                    case 0x11: // double precision
+                        //fsgnj
+                        fs1 = (+f[(fp + (((ins >> 15) & 0x1F) << 3)) >> 3]);
+                        fs2 = (+f[(fp + (((ins >> 20) & 0x1F) << 3)) >> 3]);
+                        switch((ins >> 12) & 7) {
+                            case 0:
+                                //fsgnj.d, also used for fmv.d
+                                f[(fp + (((ins >> 7) & 0x1F) << 3)) >> 3] = ((+fs2)<(+0))?-(+MathAbs(+fs1)):(+MathAbs(+fs1));
+                                continue;
+ 
+                            case 1:
+                                //fsgnjn.d
+                                f[(fp + (((ins >> 7) & 0x1F) << 3)) >> 3] = ((+fs2)<(+0))?+MathAbs(+fs1):-(+MathAbs(+fs1));
+                                continue;
+ 
+                            case 3:
+                                //fsgnjx.d
+                                f[(fp + (((ins >> 7) & 0x1F) << 3)) >> 3] = 
+                                    ( 
+                                    (((+fs2)<(+0)) & ((+fs1)<(+0)) ) | 
+                                    (((+fs2)>(+0)) & ((+fs1)>(+0)) )
+                                    )?-(+MathAbs(+fs1)):+MathAbs(+fs1);
+                                continue;
+ 
+                            default:
+                                DebugMessage(ERROR_INSTRUCTION_NOT_FOUND|0);
+                                DebugMessage(ins|0);
+                                abort();
+                        }
+                        continue;
+
+                    case 0x61:
+                        //fcvt.w.d
+                        r[((ins >> 5) & 0x7C) >> 2] = (~~+f[(fp + (((ins >> 15) & 0x1F) << 3)) >> 3]);
+                        continue;
+
+                    case 0x78:
+                        //fmv.s.x
+                        rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
+                        r[0] = rs1;
+                        f[(fp + (((ins >> 7) & 0x1F) << 3)) >> 3] = +ff[0];
+                        r[0] = 0;
+                        continue;
+
+
+                    default:
+                        DebugMessage(ERROR_INSTRUCTION_NOT_FOUND|0);
+                        DebugMessage(ins|0);
+                        abort();
+                        break;
+                }
+                continue;
+
+            case 0x43:
+                //fmadd.d,fmadd.s
+                fs1 = (+f[(fp + (((ins >> 15) & 0x1F) << 3)) >> 3]);
+                fs2 = (+f[(fp + (((ins >> 20) & 0x1F) << 3)) >> 3]);
+                fs3 = (+f[(fp + (((ins >> 27) & 0x1F) << 3)) >> 3]);
+                f[(fp + (((ins >> 7) & 0x1F) << 3)) >> 3] = fs1 * fs2 + fs3;
+                continue;
+ 
+            case 0x47:
+                //fmsub.d,fmsub.s
+                fs1 = (+f[(fp + (((ins >> 15) & 0x1F) << 3)) >> 3]);
+                fs2 = (+f[(fp + (((ins >> 20) & 0x1F) << 3)) >> 3]);
+                fs3 = (+f[(fp + (((ins >> 27) & 0x1F) << 3)) >> 3]);
+                f[(fp + (((ins >> 7) & 0x1F) << 3)) >> 3] = fs1 * fs2 - fs3;
+                continue;
+ 
+            case 0x4B:
+                //fnmadd.d,fnmadd.s
+                fs1 = (+f[(fp + (((ins >> 15) & 0x1F) << 3)) >> 3]);
+                fs2 = (+f[(fp + (((ins >> 20) & 0x1F) << 3)) >> 3]);
+                fs3 = (+f[(fp + (((ins >> 27) & 0x1F) << 3)) >> 3]);
+                f[(fp + (((ins >> 7) & 0x1F) << 3)) >> 3] = -(fs1 * fs2 + fs3);
+                continue;
+ 
+            case 0x4F:
+                //fnmsub.d,fnmsub.s
+                fs1 = (+f[(fp + (((ins >> 15) & 0x1F) << 3)) >> 3]);
+                fs2 = (+f[(fp + (((ins >> 20) & 0x1F) << 3)) >> 3]);
+                fs3 = (+f[(fp + (((ins >> 27) & 0x1F) << 3)) >> 3]);
+                f[(fp + (((ins >> 7) & 0x1F) << 3)) >> 3] = -(fs1 * fs2 - fs3);
+                continue;
+
+            case 0x2F:
+                //amoswap, amoadd, amoxor, amoand, amoor, amomin, amomax, amominu, amomaxu
+                rs1 = r[(((ins >> 15) & 0x1F) << 2) >> 2]|0;
+                rs2 = r[((ins >> 18) & 0x7C) >> 2]|0;
+                paddr = TranslateVM(rs1|0, VM_READ)|0;
+                if((paddr|0) == -1) continue;
+                switch((ins >> 27)&0x1F) {
+                    
+                    case 0x01:
+                        //amoswap
+                        r[((ins >> 5) & 0x7C) >> 2] = ram[(ramp + paddr) >> 2]|0;
+                        ram[(ramp + paddr) >> 2] = rs2|0;
+                        paddr = TranslateVM(rs1|0, VM_WRITE)|0;
+                        if((paddr|0) == -1) continue;
+                        r[0] = 0;
+                        continue;
+
+                    case 0x00:
+                        //amoadd
+                        r[((ins >> 5) & 0x7C) >> 2] = ram[(ramp + paddr) >> 2]|0;
+                        paddr = TranslateVM(rs1|0, VM_WRITE)|0;
+                        if((paddr|0) == -1) continue;
+                        ram[(ramp + paddr) >> 2] = ((r[((ins >> 5) & 0x7C) >> 2]|0) + (rs2|0))|0;
+                        r[0] = 0;
+                        continue;
+
+                    case 0x04:
+                        //amoxor
+                        r[((ins >> 5) & 0x7C) >> 2] = ram[(ramp + paddr) >> 2]|0;
+                        paddr = TranslateVM(rs1|0, VM_WRITE)|0;
+                        if((paddr|0) == -1) continue;
+                        ram[(ramp + paddr) >> 2] = ((r[((ins >> 5) & 0x7C) >> 2]|0) ^ (rs2|0))|0;
+                        r[0] = 0;
+                        continue;
+
+                    case 0x0C:
+                        //amoand
+                        r[((ins >> 5) & 0x7C) >> 2] = ram[(ramp + paddr) >> 2]|0;
+                        paddr = TranslateVM(rs1|0, VM_WRITE)|0;
+                        if((paddr|0) == -1) continue;
+                        ram[(ramp + paddr) >> 2] = ((r[((ins >> 5) & 0x7C) >> 2]|0) & (rs2|0))|0;
+                        r[0] = 0;
+                        continue;
+
+                    case 0x08:
+                        //amoor
+                        r[((ins >> 5) & 0x7C) >> 2] = ram[(ramp + paddr) >> 2]|0;
+                        paddr = TranslateVM(rs1|0, VM_WRITE)|0;
+                        if((paddr|0) == -1) continue;
+                        ram[(ramp + paddr) >> 2] = ((r[((ins >> 5) & 0x7C) >> 2]|0) | (rs2|0))|0;
+                        r[0] = 0;
+                        continue;
+
+                    case 0x10:
+                        //amomin
+                        r[((ins >> 5) & 0x7C) >> 2] = ram[(ramp + paddr) >> 2]|0;
+                        if((rs2 >> 0) > (r[((ins >> 5) & 0x7C) >> 2] >> 0)) r[0] = r[((ins >> 5) & 0x7C) >> 2];
+                        else r[0] = rs2;
+                        paddr = TranslateVM(rs1|0, VM_WRITE)|0;
+                        if((paddr|0) == -1) continue;
+                        ram[(ramp + paddr) >> 2] = r[0]|0;
+                        r[0] = 0;
+                        continue;
+
+                   case 0x14:
+                        //amomax
+                        r[((ins >> 5) & 0x7C) >> 2] = ram[(ramp + paddr) >> 2]|0;
+                        if((rs2 >> 0) < (r[((ins >> 5) & 0x7C) >> 2] >> 0)) r[0] = r[((ins >> 5) & 0x7C) >> 2];
+                        else r[0] = rs2;
+                        paddr = TranslateVM(rs1|0, VM_WRITE)|0;
+                        if((paddr|0) == -1) continue;
+                        ram[(ramp + paddr) >> 2] = r[0]|0;
+                        r[0] = 0;
+                        continue;
+
+                    case 0x18:
+                        //amominu
+                        r[((ins >> 5) & 0x7C) >> 2] = ram[(ramp + paddr) >> 2]|0;
+                        if((rs2 >>> 0) > (r[((ins >> 5) & 0x7C) >> 2] >>> 0)) r[0] = r[((ins >> 5) & 0x7C) >> 2];
+                        else r[0] = rs2;
+                        paddr = TranslateVM(rs1|0, VM_WRITE)|0;
+                        if((paddr|0) == -1) continue;
+                        ram[(ramp + paddr) >> 2] = r[0]|0;
+                        r[0] = 0;
+                        continue;
+
+                    case 0x1C:
+                        //amomaxu
+                        r[((ins >> 5) & 0x7C) >> 2] = ram[(ramp + paddr) >> 2]|0;
+                        if((rs2 >>> 0) < (r[((ins >> 5) & 0x7C) >> 2] >>> 0)) r[0] = r[((ins >> 5) & 0x7C) >> 2];
+                        else r[0] = rs2;
+                        paddr = TranslateVM(rs1|0, VM_WRITE)|0;
+                        if((paddr|0) == -1) continue;
+                        ram[(ramp + paddr) >> 2] = r[0]|0;
+                        r[0] = 0;
+                        continue;
+
+                    case 0x02:
+                        //lr.d
+                        r[((ins >> 5) & 0x7C) >> 2] = ram[(ramp + paddr) >> 2]|0;
+                        amoaddr = rs1;
+                        amovalue = r[((ins >> 5) & 0x7C) >> 2]|0;
+                        r[0] = 0;
+                        continue;
+
+                    case 0x03:
+                        //sc.d
+                        if((rs1|0) != (amoaddr|0)) {
+                            r[((ins >> 5) & 0x7C) >> 2] = 0x01;
+                            continue;
+                        }
+                        if((ram[(ramp + paddr) >> 2]|0) != (amovalue|0)) {
+                            r[((ins >> 5) & 0x7C) >> 2] = 0x01;
+                            continue;
+                        }
+                        r[((ins >> 5) & 0x7C) >> 2] = 0x00;
+                        paddr = TranslateVM(rs1, VM_WRITE)|0;
+                        if ((paddr|0) == -1) continue;
+                        ram[(ramp + paddr) >> 2] = rs2|0;
+                        r[0] = 0;
+                        continue;
+
+                    default:
+                        DebugMessage(ERROR_ATOMIC_INSTRUCTION|0);
+                        abort();
+                        break;
+
+                }
+                continue;
+
+            case 0x0F:
+                //fence
+                continue;
+
+            default:
+                DebugMessage(ERROR_INSTRUCTION_NOT_FOUND|0);
+                DebugMessage(ins|0);
+                abort();
+                break;
+        } // end of switch
+
+    } else // fence
+    {
+
+            if(!(pc_change|0)) pc = pcorigin + (ppc-ppcorigin)|0; //pc_change is set to one when pc is calculated in instrctions like branch, jump etc
+
+            dsteps = dsteps - ((ppc-ppcorigin) >> 2)|0;
+            if ((dsteps|0) < 0) {
+
+                dsteps = dsteps + 64|0;
+                steps =  steps - 64|0;
+
+                if((steps|0) < 0) return 0;
+
+                delta = (csr[(csrp + CSR_MTIMECMP)>>2]|0) - ticks | 0;
+                delta = delta + ((delta|0)<0?0xFFFFFFFF:0x0) | 0;
+                ticks = ticks + clockspeed| 0;
+                if ((delta|0) < (clockspeed|0)) {
+                    csr[(csrp + CSR_MIP)>>2] = csr[(csrp + CSR_MIP)>>2] | 0x20;
+                }
+
+                // check for interrupts
+                current_privilege_level = (csr[(csrp + CSR_MSTATUS)>>2] & 0x06) >> 1;
+
+                interrupts = csr[(csrp + CSR_MIE)>>2] & csr[(csrp + CSR_MIP)>>2];
+                ie = csr[(csrp + CSR_MSTATUS)>>2] & 0x01;
+
+                if (((current_privilege_level|0) < 3) | (((current_privilege_level|0) == 3) & (ie|0))) {
+                    if (((interrupts|0) & 0x8)) {
+                        Trap(CAUSE_SOFTWARE_INTERRUPT, pc);
+                        continue;
+                    } else
+                    if (queue_status|0) {
+                        Trap(CAUSE_HOST_INTERRUPT, pc);
+                        queue_status = 0;
+                        continue;
+                    }
+                }
+                if (((current_privilege_level|0) < 1) | (((current_privilege_level|0) == 1) & (ie|0))) {
+                    if (((interrupts|0) & 0x2)) {
+                        Trap(CAUSE_SOFTWARE_INTERRUPT, pc);
+                        continue;
+                    } else
+                    if (((interrupts|0) & 0x20)) {
+                         Trap(CAUSE_TIMER_INTERRUPT, pc);
+                         continue;
+                    }
+                }
+            } // dsteps
+
+            // get new instruction pointer
+            if ((instlb_index ^ pc) & 0xFFFFF000) {
+                ppc = TranslateVM(pc|0, VM_FETCH)|0;
+                if((ppc|0) == -1) {
+                    ppc = fence;
+                    continue;
+                }
+                instlb_index = pc;
+                instlb_entry = ((ppc ^ pc) & 0xFFFFF000);
+            }
+
+            ppc = ramp + (instlb_entry ^ pc)| 0;
+            ppcorigin = ppc;
+            pcorigin = pc;
+            fence  = ((ppc >> 12) + 1) << 12; // next page
+            pc_change = 0;
+
+        } // end of fence
+
+    } // main loop
+
+    return 0;
+};
+
+return {
+
+    Reset: Reset,
+    Init: Init,
+    InvalidateTLB: InvalidateTLB,
+    Step: Step,
+    TranslateVM: TranslateVM,
+    GetCSR: GetCSR,
+    SetCSR: SetCSR,
+    Trap: Trap,
+    MemTrap: MemTrap,
+    PopPrivilegeStack: PopPrivilegeStack,
+    PushPrivilegeStack: PushPrivilegeStack,
+    IMul: IMul,
+    UMul: UMul,
+    SUMul: SUMul,
+    CheckVMPrivilege: CheckVMPrivilege,  
+    GetTimeToNextInterrupt: GetTimeToNextInterrupt,
+    ProgressTime: ProgressTime,
+    GetTicks: GetTicks,
+    GetPC: GetPC,
+    AnalyzeImage: AnalyzeImage,
+    CheckForInterrupt: CheckForInterrupt,
+    RaiseInterrupt: RaiseInterrupt,
+    ClearInterrupt: ClearInterrupt
+};
+
+}
+
 module.exports = FastCPU;
 
-},{"../messagehandler":28,"../utils":43,"./disassemble.js":35}],37:[function(require,module,exports){
+},{"../messagehandler":28,"../utils":44,"./disassemble.js":35}],38:[function(require,module,exports){
 // -------------------------------------------------
 // -------------------- HTIF -----------------------
 // -------------------------------------------------
@@ -13842,6 +16377,7 @@ module.exports = FastCPU;
 "use strict";
 var message = require('../messagehandler');
 var utils = require('../utils');
+var bzip2 = require('../bzip2.js');
 var syscalls = require('./syscalls.js');
 
 // -------------------------------------------------
@@ -13964,12 +16500,17 @@ function HTIFDisk(ram, SendFunc) {
     this.buffer = new Uint8Array(1024*1024);
     this.identify = "disk size="+this.buffer.length;
     
-    utils.LoadBinaryResourceII("riscv/ext2fsimage", 
+    utils.LoadBinaryResourceII("../sys/riscv/ext2fsimage.bz2", 
     function(buffer) {
-        this.buffer = new Uint8Array(buffer);
+        this.buffer = new Uint8Array(20*1024*1024);
+
+        var length = 0;
+        var buffer8 = new Uint8Array(buffer);
+	bzip2.simple(buffer8, function(x){this.buffer[length++] = x;}.bind(this));
+
         this.identify = "disk size="+this.buffer.length;   
     }.bind(this)
-    , false, function(error){message.Abort();});
+    , false, function(error){throw error;});
 
     this.Read = function(value) {
         var addr   = this.ram.Read32(value + 0);
@@ -14001,8 +16542,9 @@ function HTIFDisk(ram, SendFunc) {
 
 
 // constructor
-function HTIF(ram) {
+function HTIF(ram, irqdev) {
     this.ram = ram;
+    this.irqdev = irqdev;
     
     this.device = [];
 
@@ -14029,7 +16571,9 @@ HTIF.prototype.Send = function(devid, cmd, data) {
 
     if (this.fromhostqueue.length == 1)
         this.reg_devcmdfromhost =
-        (this.fromhostqueue[0].devid << 16) | this.fromhostqueue[0].cmd;
+            (this.fromhostqueue[0].devid << 16) | this.fromhostqueue[0].cmd;
+
+    this.irqdev.RaiseInterrupt(0xF);
 }
 
 // -------------------------------------------------
@@ -14085,9 +16629,11 @@ HTIF.prototype.WriteFromHost = function(value) {
     {
         this.fromhostqueue.shift();
 
-        if (this.fromhostqueue.length > 0)
+        if (this.fromhostqueue.length > 0) {
             this.reg_devcmdfromhost =
-            (this.fromhostqueue[0].devid << 16) | this.fromhostqueue[0].cmd;
+                (this.fromhostqueue[0].devid << 16) | this.fromhostqueue[0].cmd;
+            this.irqdev.RaiseInterrupt(0xF);
+        }
     }
 }
 
@@ -14146,7 +16692,7 @@ HTIF.prototype.HandleRequest = function() {
 
 module.exports = HTIF;
 
-},{"../messagehandler":28,"../utils":43,"./syscalls.js":40}],38:[function(require,module,exports){
+},{"../bzip2.js":2,"../messagehandler":28,"../utils":44,"./syscalls.js":41}],39:[function(require,module,exports){
 /* this is a unified, abstract interface (a facade) to the different
  * CPU implementations
  */
@@ -14156,11 +16702,11 @@ var message = require('../messagehandler'); // global variable
 var utils = require('../utils');
 var imul = require('../imul');
 var mul = require('../mul');
-var HTIF = require('./htif.js');
 
 // CPUs
 var SafeCPU = require('./safecpu.js');
 var FastCPU = require('./fastcpu.js');
+var DynamicCPU = require('./dynamiccpu.js');
 
 var stdlib = {
     Int32Array : Int32Array,
@@ -14173,9 +16719,8 @@ var stdlib = {
     Math : Math
 };
 
-function createCPU(cpuname, ram, heap, ncores) {
+function createCPU(cpuname, ram, htif, heap, ncores) {
     var cpu = null;
-    var htif = new HTIF(ram);
     var foreign = {
         DebugMessage: message.Debug,
         abort : message.Abort,
@@ -14201,18 +16746,23 @@ function createCPU(cpuname, ram, heap, ncores) {
     };
 
     if (cpuname === "safe") {
-        return new SafeCPU(ram);
+        return new SafeCPU(ram, htif);
     }
     else if (cpuname === "asm") {
         cpu = FastCPU(stdlib, foreign, heap);
         cpu.Init();
         return cpu;
     }
+    else if (cpuname === "dynamic") {
+        cpu = DynamicCPU(stdlib, foreign, heap);
+        cpu.Init();
+        return cpu;
+    }
     throw new Error("invalid CPU name:" + cpuname);
 }
 
-function CPU(cpuname, ram, heap, ncores) {
-    this.cpu = createCPU(cpuname, ram, heap, ncores);
+function CPU(cpuname, ram, htif, heap, ncores) {
+    this.cpu = createCPU(cpuname, ram, htif, heap, ncores);
     this.name = cpuname;
     this.ncores = ncores;
     this.ram = ram;
@@ -14226,11 +16776,17 @@ CPU.prototype.switchImplementation = function(cpuname) {
 };
 
 CPU.prototype.toString = function() {
-    var r = new Uint32Array(this.heap);
+    var r = new Int32Array(this.heap, 0x0);
     var csr = new Uint32Array(this.heap, 0x2000);
     var str = '';
     str += "Current state of the machine\n";
-    str += "PC: " + utils.ToHex(this.cpu.pc) + "\n";
+
+
+    if (this.cpu.pc) {
+        str += "PC: " + utils.ToHex(this.cpu.pc) + "\n"; 
+    } else {
+        str += "PC: " + utils.ToHex(this.cpu.GetPC()) + "\n"; 
+    }
 
     for (var i = 0; i < 32; i += 4) {
         str += "   r" + (i + 0) + ": " +
@@ -14239,7 +16795,7 @@ CPU.prototype.toString = function() {
             utils.ToHex(r[i + 2]) + "   r" + (i + 3) + ": " +
             utils.ToHex(r[i + 3]) + "\n";
     }
-    str += "mstatus: " + utils.ToBin(this.cpu.csr[0x300]) + "\n";
+    str += "mstatus: " + utils.ToBin(csr[0x300]) + "\n";
     str += 
         "mcause: " + utils.ToHex(csr[0x342]) + 
         " mbadaddress: " + utils.ToHex(csr[0x343]) + 
@@ -14266,7 +16822,7 @@ forwardedMethods.forEach(function(m) {
 
 module.exports = CPU;
 
-},{"../imul":27,"../messagehandler":28,"../mul":29,"../utils":43,"./fastcpu.js":36,"./htif.js":37,"./safecpu.js":39}],39:[function(require,module,exports){
+},{"../imul":27,"../messagehandler":28,"../mul":29,"../utils":44,"./dynamiccpu.js":36,"./fastcpu.js":37,"./safecpu.js":40}],40:[function(require,module,exports){
 // -------------------------------------------------
 // -------------------- CPU ------------------------
 // -------------------------------------------------
@@ -14274,7 +16830,6 @@ module.exports = CPU;
 "use strict";
 var message = require('../messagehandler');
 var utils = require('../utils');
-var HTIF = require('./htif.js');
 var DebugIns = require('./disassemble.js');
 
 var PRV_U = 0x00;
@@ -14390,19 +16945,19 @@ var QUIET_NAN = 0xFFFFFFFF;
 var SIGNALLING_NAN = 0x7FFFFFFF;
 
 // constructor
-function SafeCPU(ram) {
+function SafeCPU(ram, htif) {
     message.Debug("Initialize RISCV CPU");
 
     this.ram = ram;
 
-    this.htif = new HTIF(this.ram);
+    this.htif = htif;
 
     // registers
     this.r = new Int32Array(this.ram.heap, 0, 32);
 
     this.f = new Float64Array(this.ram.heap, 32<<2, 32); 
 
-    this.fi = new Int32Array(this.ram.heap, 32<<2, 32); // for copying operations
+    this.fi = new Int32Array(this.ram.heap, 32<<2, 64); // for copying operations
     this.ff = new Float32Array(this.ram.heap, 0, 1); // the zero register is used to convert to single precision
 
     this.csr = new Int32Array(this.ram.heap, 0x2000, 4096);
@@ -14438,9 +16993,8 @@ SafeCPU.prototype.InvalidateTLB = function() {
 }
 
 SafeCPU.prototype.GetTimeToNextInterrupt = function () {
-    //return 10;
-    var delta = (csr[CSR_MTIMECMP] & 0xFFFFFFFF) - (this.ticks & 0xFFFFFFFF);
-    delta += delta<0?0x100000000:0x0;
+    var delta = (this.csr[CSR_MTIMECMP]>>>0) - (this.ticks & 0xFFFFFFFF);
+    delta = delta + (delta<0?0xFFFFFFFF:0x0) | 0;
     return delta;
 }
 
@@ -14449,7 +17003,7 @@ SafeCPU.prototype.GetTicks = function () {
 }
 
 SafeCPU.prototype.ProgressTime = function (delta) {
-    this.ticks += delta;
+    this.ticks = this.ticks + delta | 0;
 }
 
 
@@ -14461,7 +17015,7 @@ SafeCPU.prototype.CheckForInterrupt = function () {
 };
 
 SafeCPU.prototype.RaiseInterrupt = function (line, cpuid) {
-    message.Debug("raise int " + line);
+    //message.Debug("raise int " + line);
 };
 
 SafeCPU.prototype.ClearInterrupt = function (line, cpuid) {
@@ -14572,9 +17126,8 @@ SafeCPU.prototype.TranslateVM = function (addr, op) {
 
     // LEVEL 1
     var offset = addr & 0xFFF;
-    var page_num = (addr >>> 22);
 
-    var frame_num = this.ram.Read32(this.csr[CSR_SPTBR] + (page_num << 2));
+    var frame_num = this.ram.Read32(this.csr[CSR_SPTBR] + ((addr >>> 22) << 2));
     var type = ((frame_num >> 1) & 0xF);
     var valid = (frame_num & 0x01);
 
@@ -14584,6 +17137,7 @@ SafeCPU.prototype.TranslateVM = function (addr, op) {
         this.MemTrap(addr, op);
         return -1;
     }
+
     if (type >= 2) {
 
         if (!this.CheckVMPrivilege(type,op)) {
@@ -14600,7 +17154,7 @@ SafeCPU.prototype.TranslateVM = function (addr, op) {
             updated_frame_num = (frame_num | 0x60);
         this.ram.Write32(this.csr[CSR_SPTBR] + (page_num << 2),updated_frame_num);
 */
-        return (((frame_num >> 10) | ((addr >> 12) & 0x3FF)) << 12) | offset;
+        return ((frame_num >> 10) << 12) | (addr&0x3FFFFF);
     }
 
     // LEVEL 2
@@ -14993,7 +17547,7 @@ SafeCPU.prototype.GetCSR = function (addr) {
 
 SafeCPU.prototype.IMul = function (a,b) {
 
-    var result = [0,0];
+    var result = [0, 0];
 
     a >>>= 0;
     b >>>= 0;
@@ -15086,18 +17640,18 @@ SafeCPU.prototype.PushPrivilegeStack = function () {
 
     var csr = this.csr;
     var mstatus = csr[CSR_MSTATUS];
-    var privilege_level_stack =  (mstatus & 0xFFF);
-    var new_privilege_level_stack = (((privilege_level_stack << 2) | PRV_M) << 1) & 0xFFF;
-    csr[CSR_MSTATUS] = (((mstatus >> 12) << 12) + new_privilege_level_stack) & 0xFFFEFFFF; //Last "and" to set mprv(bit 16) to zero
+    var privilege_level_stack = mstatus & 0x1FF;
+    var new_privilege_level_stack = (((privilege_level_stack << 2) | PRV_M) << 1) & 0x1FF;
+    csr[CSR_MSTATUS] = ((mstatus & (~0xFFF)) + new_privilege_level_stack) & 0xFFFEFFFF; //Last "and" to set mprv(bit 16) to zero
 };
 
 SafeCPU.prototype.PopPrivilegeStack = function () {
 
     var csr = this.csr;
     var mstatus = csr[CSR_MSTATUS];
-    var privilege_level_stack =  (mstatus & 0xFFF);
-    var new_privilege_level_stack = ((privilege_level_stack >>> 3) | ((PRV_U << 1) | 0x1) << 9);
-    csr[CSR_MSTATUS] = ((mstatus >> 12) << 12) + new_privilege_level_stack;
+    var privilege_level_stack =  (mstatus & 0x1FF);
+    var new_privilege_level_stack = ((privilege_level_stack >>> 3) | ((PRV_U << 1) | 0x1) << 6);
+    csr[CSR_MSTATUS] = (mstatus & (~0xFFF)) + new_privilege_level_stack;
 };
 
 SafeCPU.prototype.Step = function (steps, clockspeed) {
@@ -15107,24 +17661,27 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
     var f = this.f;
     var csr = this.csr;
     var rindex = 0x00;
-    var findex = 0x00;
     var imm = 0x00;
     var imm1 = 0x00;
     var imm2 = 0x00;
     var imm3 = 0x00;
     var imm4 = 0x00;
     var zimm = 0x00;
-    var mul=0x00;
-    var quo=0x00;
-    var rem=0x00;
+    var quo = 0x00;
+    var rem = 0x00;
     var rs1 = 0x0;
     var rs2 = 0x0;
     var fs1 = 0.0;
     var fs2 = 0.0;
     var fs3 = 0.0;
+    var interrupts = 0x0;
+    var ie = 0x0;
+    var ins = 0x0;
+    var paddr = 0x0;
 
     steps = steps | 0;
     clockspeed = clockspeed | 0;
+    var delta = 0;
     
     do {
         r[0] = 0x00;
@@ -15133,21 +17690,21 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
         
         if (!(steps & 63)) {
             // ---------- TICK ----------
-            var delta = (csr[CSR_MTIMECMP] & 0xFFFFFFFF) - (this.ticks & 0xFFFFFFFF);
-            delta += delta<0?0x100000000:0x0;
-            this.ticks = (this.ticks + clockspeed) & 0xFFFFFFFF;
-            if (delta <= clockspeed) {
+            var delta = csr[CSR_MTIMECMP] - this.ticks | 0;
+            delta = delta + (delta<0?0xFFFFFFFF:0x0) | 0;
+            this.ticks = this.ticks + clockspeed | 0;
+            if (delta < clockspeed) {
                 csr[CSR_MIP] = csr[CSR_MIP] | 0x20;
-            }            
+            }
 
-            var interrupts = csr[CSR_MIE] & csr[CSR_MIP];
-            var ie = csr[CSR_MSTATUS] & 0x01;
+            interrupts = csr[CSR_MIE] & csr[CSR_MIP];
+            ie = csr[CSR_MSTATUS] & 0x01;
 
             if ((current_privilege_level < 3) || ((current_privilege_level == 3) && ie)) {
                 if (interrupts & 0x8) {
                     this.Trap(CAUSE_SOFTWARE_INTERRUPT, this.pc);
                     continue;
-                }
+                } else
                 if (!this.htif.IsQueueEmpty()) {
                     this.Trap(CAUSE_HOST_INTERRUPT, this.pc);
                     continue;
@@ -15163,50 +17720,48 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                      continue;
                 }
             }
-
         }
 
 
-        var paddr = this.TranslateVM(this.pc, VM_FETCH);
+        paddr = this.TranslateVM(this.pc, VM_FETCH);
         if(paddr == -1) {
             continue;
         }
-        var ins = this.ram.Read32(paddr);
+
+        ins = this.ram.Read32(paddr);
         this.pc = this.pc + 4|0;
         //DebugIns.Disassemble(ins,r,csr,this.pc);
 
         switch(ins&0x7F) {
 
             case 0x03:
-                //lb, lh, lw, lbu, lhu
+                // lb, lh, lw, lbu, lhu
+                imm = (ins >> 20);
+                rs1 = r[(ins >> 15) & 0x1F];
+                rindex = (ins >> 7) & 0x1F;
                 switch((ins >> 12)&0x7) {
                     
                     case 0x00:
-                        //lb
-                        imm = (ins >> 20);
-                        rs1 = r[(ins >> 15) & 0x1F];
-                        rindex = (ins >> 7) & 0x1F;
+                        // lb
                         paddr = this.TranslateVM(rs1 + imm|0, VM_READ);
                         if(paddr == -1) break;
                         r[rindex] = (this.ram.Read8(paddr) << 24) >> 24;
                         break;
 
                     case 0x01:
-                        //lh
-                        imm = (ins >> 20);
-                        rs1 = r[(ins >> 15) & 0x1F];
-                        rindex = (ins >> 7) & 0x1F;
+                        // lh
+                        if (rs1+imm & 1) {
+                             message.Debug("Error in lh: unaligned address");
+                             message.Abort();
+                        }
                         paddr = this.TranslateVM(rs1 + imm|0, VM_READ);
                         if(paddr == -1) break;
                         r[rindex] = (this.ram.Read16(paddr) << 16) >> 16;
                         break;
 
                     case 0x02:
-                        //lw
-                        imm = (ins >> 20);
-                        rs1 = r[(ins >> 15) & 0x1F];
-                        rindex = (ins >> 7) & 0x1F;
-                        if ((rs1+imm) & 3) {
+                        // lw
+                        if (rs1+imm & 3) {
                              message.Debug("Error in lw: unaligned address");
                              message.Abort();
                         }
@@ -15216,27 +17771,25 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                         break;
 
                     case 0x04:
-                        //lbu
-                        imm = (ins >> 20);
-                        rs1 = r[(ins >> 15) & 0x1F];
-                        rindex = (ins >> 7) & 0x1F;
+                        // lbu
                         paddr = this.TranslateVM(rs1 + imm|0, VM_READ);
                         if(paddr == -1) break;
                         r[rindex] = this.ram.Read8(paddr) & 0xFF;
                         break;
 
                     case 0x05:
-                        //lhu
-                        imm = (ins >> 20);
-                        rs1 = r[(ins >> 15) & 0x1F];
-                        rindex = (ins >> 7) & 0x1F;
+                        // lhu
+                        if (rs1+imm & 1) {
+                             message.Debug("Error in lhu: unaligned address");
+                             message.Abort();
+                        }
                         paddr = this.TranslateVM(rs1 + imm|0 ,VM_READ);
                         if(paddr == -1) break;
                         r[rindex] = this.ram.Read16(paddr) & 0xFFFF;
                         break;
 
                     default:
-                        message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + "not found");
+                        message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + " not found");
                         message.Abort();
                         break;
 
@@ -15244,35 +17797,35 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                 break;
 
             case 0x23:
-                //sb, sh, sw
+                // sb, sh, sw
                 imm1 = (ins >> 25);
                 imm2 = (ins >> 7) & 0x1F;
                 imm = (imm1 << 5) | imm2;
+                rs1 = r[(ins >> 15) & 0x1F];
+                rindex = (ins >> 20) & 0x1F;
                 switch((ins >> 12)&0x7) {
                     
                     case 0x00:
-                        //sb
-                        rs1 = r[(ins >> 15) & 0x1F];
-                        rindex = (ins >> 20) & 0x1F;
+                        // sb
                         paddr = this.TranslateVM(rs1 + imm|0,VM_WRITE);
                         if(paddr == -1) break;
                         this.ram.Write8(paddr,(r[rindex] & 0xFF));
                         break;
 
                     case 0x01:
-                        //sh
-                        rs1 = r[(ins >> 15) & 0x1F];
-                        rindex = (ins >> 20) & 0x1F;
+                        // sh
+                        if (rs1+imm & 1) {
+                             message.Debug("Error in sh: unaligned address");
+                             message.Abort();
+                        }
                         paddr = this.TranslateVM(rs1 + imm|0,VM_WRITE);
                         if(paddr == -1) break;
                         this.ram.Write16(paddr,(r[rindex] & 0xFFFF));
                         break;
 
                     case 0x02:
-                        //sw
-                        rs1 = r[(ins >> 15) & 0x1F];
-                        rindex = (ins >> 20) & 0x1F;
-                        if ((rs1+imm) & 3) {
+                        // sw
+                        if (rs1+imm & 3) {
                              message.Debug("Error in sw: unaligned address");
                              message.Abort();
                         }
@@ -15282,7 +17835,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                         break;
 
                     default:
-                        message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + "not found");
+                        message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + " not found");
                         message.Abort();
                         break;
 
@@ -15290,86 +17843,65 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                 break;
 
             case 0x13:
-                //addi,slti,sltiu,xori,ori,andi,slli,srli,srai
+                // addi, slti, sltiu, xori, ori, andi, slli, srli, srai
+                rindex = (ins >> 7) & 0x1F;
+                rs1 = r[(ins >> 15) & 0x1F];
+                imm = (ins >> 20);
                 switch((ins >> 12)&0x7) {
                     
                     case 0x00:
-                        //addi
-                        imm = (ins >> 20);
-                        rs1 = r[(ins >> 15) & 0x1F];
-                        rindex = (ins >> 7) & 0x1F;
+                        // addi
                         r[rindex] = rs1 + imm;
                         break;
 
                     case 0x02:
-                        //slti
-                        imm = (ins >> 20);
-                        rs1 = r[(ins >> 15) & 0x1F];
-                        rindex = (ins >> 7) & 0x1F;
+                        // slti
                         if(rs1 < imm) r[rindex] = 0x01;
                         else r[rindex] = 0x00;
                         break;
 
                     case 0x03:
-                        //sltiu
-                        imm = (ins >> 20) >>> 0;
-                        rs1 = r[(ins >> 15) & 0x1F] >>> 0;
-                        rindex = (ins >> 7) & 0x1F;
-                        if(rs1 < imm) r[rindex] = 0x01;
+                        // sltiu
+                        if((rs1>>>0) < (imm>>>0)) r[rindex] = 0x01;
                         else r[rindex] = 0x00;
                         break;
 
                     case 0x04:
-                        //xori
-                        imm = (ins >> 20);
-                        rs1 = r[(ins >> 15) & 0x1F];
-                        rindex = (ins >> 7) & 0x1F;
+                        // xori
                         r[rindex] = rs1 ^ imm;
                         break;
 
                     case 0x06:
-                        //ori
-                        imm = (ins >> 20);
-                        rs1 = r[(ins >> 15) & 0x1F];
-                        rindex = (ins >> 7) & 0x1F;
+                        // ori
                         r[rindex] = rs1 | imm;
                         break;
 
                     case 0x07:
-                        //andi
-                        imm = (ins >> 20);
-                        rs1 = r[(ins >> 15) & 0x1F];
-                        rindex = (ins >> 7) & 0x1F;
+                        // andi
                         r[rindex] = rs1 & imm;
                         break;
 
                     case 0x01:
-                        //slli
-                        imm = (ins >> 20) & 0x1F;
-                        rs1 = r[(ins >> 15) & 0x1F];
-                        rindex = (ins >> 7) & 0x1F;
+                        // slli
                         r[rindex] = rs1 << imm;
                         break;
 
                     case 0x05:
                         if(((ins >> 25) & 0x7F) == 0x00){
-                            //srli
-                            imm = (ins >> 20) & 0x1F;
-                            rs1 = r[(ins >> 15) & 0x1F];
-                            rindex = (ins >> 7) & 0x1F;
+                            // srli
                             r[rindex] = rs1 >>> imm;
                         }
                         else if(((ins >> 25) & 0x7F) == 0x20){
-                            //srai
-                            imm = (ins >> 20) & 0x1F;
-                            rs1 = r[(ins >> 15) & 0x1F];
-                            rindex = (ins >> 7) & 0x1F;
+                            // srai
                             r[rindex] = rs1 >> imm;
+                        } else {
+                            message.Debug("Error in safecpu: Instruction (sra, srl)" + utils.ToHex(ins) + " not found");
+                            message.Abort();
                         }
                         break;
 
                     default:
-                        message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + "not found");
+                        message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + " not found");
                         message.Abort();
                         break;
 
@@ -15377,61 +17909,54 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                 break;
 
             case 0x33:
-                //add,sub,sll,slt,sltu,xor,srl,sra,or,and
+                // add, sub, sll, slt, sltu, xor, srl, sra, or, and
                 switch((ins >> 25)&0x7F) {
                     
                     case 0x00:
-                        //add,slt,sltu,add,or,xor,sll,srl
+                        // add, slt, sltu, or, xor, sll, srl
                         rs1 = r[(ins >> 15) & 0x1F];
                         rs2 = r[(ins >> 20) & 0x1F];
+                        rindex = (ins >> 7) & 0x1F;
                         switch((ins >> 12)&0x7) {
                             case 0x00:
-                                //add
-                                rindex = (ins >> 7) & 0x1F;
+                                // add
                                 r[rindex] = rs1 + rs2;
                                 break;
 
                             case 0x02:
-                                //slt
-                                rindex = (ins >> 7) & 0x1F;
+                                // slt
                                 if(rs1 < rs2) r[rindex] = 0x01;
                                 else r[rindex] = 0x00;
                                 break;
 
                             case 0x03:
-                                //sltu
-                                rindex = (ins >> 7) & 0x1F;
+                                // sltu
                                 if((rs1>>>0) < (rs2>>>0)) r[rindex] = 0x01;
                                 else r[rindex] = 0x00;
                                 break;
 
                             case 0x07:
-                                //and
-                                rindex = (ins >> 7) & 0x1F;
+                                // and
                                 r[rindex] = rs1 & rs2;
                                 break;
 
                             case 0x06:
-                                //or
-                                rindex = (ins >> 7) & 0x1F;
+                                // or
                                 r[rindex] = rs1 | rs2;
                                 break;
 
                             case 0x04:
-                                //xor
-                                rindex = (ins >> 7) & 0x1F;
+                                // xor
                                 r[rindex] = rs1 ^ rs2;
                                 break;
 
                             case 0x01:
-                                //sll
-                                rindex = (ins >> 7) & 0x1F;
+                                // sll
                                 r[rindex] = rs1 << (rs2 & 0x1F);
                                 break;
 
                             case 0x05:
-                                //srl
-                                rindex = (ins >> 7) & 0x1F;
+                                // srl
                                 r[rindex] = rs1 >>> (rs2 & 0x1F);
                                 break;
                         }
@@ -15444,53 +17969,52 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                         rindex = (ins >> 7) & 0x1F;
                         switch((ins >> 12)&0x7) {
                             case 0x00:
-                                //sub
+                                // sub
                                 r[rindex] = rs1 - rs2;
                                 break;
 
                             case 0x05:
-                                //sra
+                                // sra
                                 r[rindex] = rs1 >> (rs2 & 0x1F);
                                 break;
+
+                            default:
+                                message.Debug("Error in safecpu: Instruction (sub,sra) " + utils.ToHex(ins) + " not found");
+                                message.Abort();
                         }
                         break;
 
                     case 0x01:
-                        //mul,mulh,mulhsu,mulhu,div,divu,rem,remu
+                        // mul, mulh, mulhsu, mulhu, div, divu, rem, remu
                         rs1 = r[(ins >> 15) & 0x1F];
                         rs2 = r[(ins >> 20) & 0x1F];
+                        rindex = (ins >> 7) & 0x1F;
                         switch((ins >> 12)&0x7) {
                             case 0x00:
-                                //mul
-                                rindex = (ins >> 7) & 0x1F;
-                                mul = rs1 * rs2;
-                                r[rindex] = mul & 0xFFFFFFFF;
+                                // mul
+                                r[rindex] = rs1 * rs2;
                                 break;
 
                             case 0x01:
-                                //mulh
-                                rindex = (ins >> 7) & 0x1F;
-                                var result = this.UMul(rs1,rs2);
+                                // mulh
+                                var result = this.UMul(rs1, rs2);
                                 r[rindex] = result[1];
                                 break;
 
                             case 0x02:
-                                //mulhsu
-                                rindex = (ins >> 7) & 0x1F;
-                                var result = this.SUMul(rs1,rs2>>>0);
+                                // mulhsu
+                                var result = this.SUMul(rs1, rs2>>>0);
                                 r[rindex] = result[1];
                                 break;
 
                             case 0x03:
-                                //mulhu
-                                rindex = (ins >> 7) & 0x1F;
+                                // mulhu
                                 var result = this.IMul(rs1>>>0, rs2>>>0);
                                 r[rindex] = result[1];
                                 break;
 
                             case 0x04:
-                                //div
-                                rindex = (ins >> 7) & 0x1F;
+                                // div
                                 if(rs2 == 0)
                                     quo = -1;
                                 else
@@ -15499,8 +18023,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                                 break;
 
                             case 0x05:
-                                //divu
-                                rindex = (ins >> 7) & 0x1F;
+                                // divu
                                 if(rs2 == 0)
                                     quo = 0xFFFFFFFF;
                                 else
@@ -15509,8 +18032,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                                 break;
 
                             case 0x06:
-                                //rem
-                                rindex = (ins >> 7) & 0x1F;
+                                // rem
                                 if(rs2 == 0)
                                     rem = rs1;
                                 else
@@ -15519,8 +18041,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                                 break;
 
                             case 0x07:
-                                //remu
-                                rindex = (ins >> 7) & 0x1F;
+                                // remu
                                 if(rs2 == 0)
                                     rem = (rs1 >>> 0);
                                 else
@@ -15530,10 +18051,8 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                         }
                         break;
 
-                    
-
                     default:
-                        message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + "not found");
+                        message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + " not found");
                         message.Abort();
                         break;
 
@@ -15541,20 +18060,20 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                 break;
 
             case 0x37:
-                //lui
+                // lui
                 rindex = (ins >> 7) & 0x1F;
-                r[rindex] = (ins & 0xFFFFF000);
+                r[rindex] = ins & 0xFFFFF000;
                 break;
 
             case 0x17:
-                //auipc
-                imm = (ins & 0xFFFFF000);
+                // auipc
+                imm = ins & 0xFFFFF000;
                 rindex = (ins >> 7) & 0x1F;
-                r[rindex] = (imm + this.pc - 4)|0;
+                r[rindex] = this.pc + imm - 4|0;
                 break;
 
             case 0x6F:
-                //jal
+                // jal
                 imm1 = (ins >> 21) & 0x3FF;
                 imm2 = ((ins >> 20) & 0x1) << 10;
                 imm3 = ((ins >> 12) & 0xFF) << 11;
@@ -15566,68 +18085,58 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                 break; 
 
             case 0x67:
-                //jalr
-                imm = (ins >> 20);
+                // jalr
+                imm = ins >> 20;
                 rs1 = r[(ins >> 15) & 0x1F];
                 rindex = (ins >> 7) & 0x1F;
                 r[rindex] = this.pc;
-                this.pc = ((rs1 + imm) & 0xFFFFFFFE)|0;
+                this.pc = (rs1 + imm) & 0xFFFFFFFE;
                 break;
 
             case 0x63:
-                //beq, bne, blt, bge, bltu, bgeu
+                // beq, bne, blt, bge, bltu, bgeu
                 imm1 = (ins >> 31) << 11;
                 imm2 = ((ins >> 25) & 0x3F) << 4;
                 imm3 = (ins >> 8) & 0x0F;
                 imm4 = ((ins >> 7) & 0x01) << 10;
                 imm =  ((imm1 | imm2 | imm3 | imm4) << 1 );
+                rs1 = r[(ins >> 15) & 0x1F];
+                rs2 = r[(ins >> 20) & 0x1F];
 
                 switch((ins >> 12)&0x7) {
                     
                     case 0x00:
-                        //beq
-                        rs1 = r[(ins >> 15) & 0x1F];
-                        rs2 = r[(ins >> 20) & 0x1F];
-                        if(rs1 == rs2) this.pc = this.pc + imm - 4|0;//-4 temporary hack
+                        // beq
+                        if(rs1 == rs2) this.pc = this.pc + imm - 4|0;
                         break;
 
                     case 0x01:
-                        //bne
-                        rs1 = r[(ins >> 15) & 0x1F];
-                        rs2 = r[(ins >> 20) & 0x1F];
-                        if(rs1 != rs2) this.pc = this.pc + imm - 4|0;//-4 temporary hack
+                        // bne
+                        if(rs1 != rs2) this.pc = this.pc + imm - 4|0;
                         break;
 
                     case 0x04:
-                        //blt
-                        rs1 = r[(ins >> 15) & 0x1F];
-                        rs2 = r[(ins >> 20) & 0x1F];
-                        if(rs1 < rs2) this.pc = this.pc + imm - 4|0;//-4 temporary hack
+                        // blt
+                        if(rs1 < rs2) this.pc = this.pc + imm - 4|0;
                         break;
 
                     case 0x05:
-                        //bge
-                        rs1 = r[(ins >> 15) & 0x1F];
-                        rs2 = r[(ins >> 20) & 0x1F];
-                        if(rs1 >= rs2) this.pc = this.pc + imm - 4|0;//-4 temporary hack
+                        // bge
+                        if(rs1 >= rs2) this.pc = this.pc + imm - 4|0;
                         break;
 
                     case 0x06:
-                        //bltu
-                        rs1 = r[(ins >> 15) & 0x1F] >>> 0;
-                        rs2 = r[(ins >> 20) & 0x1F] >>> 0;
-                        if(rs1 < rs2) this.pc = this.pc + imm - 4|0;//-4 temporary hack
+                        // bltu
+                        if((rs1>>>0) < (rs2>>>0)) this.pc = this.pc + imm - 4|0;
                         break;
 
                     case 0x07:
-                        //bgeu
-                        rs1 = r[(ins >> 15) & 0x1F] >>> 0;
-                        rs2 = r[(ins >> 20) & 0x1F] >>> 0;
-                        if(rs1 >= rs2) this.pc = this.pc + imm - 4|0;//-4 temporary hack
+                        // bgeu
+                        if((rs1>>>0) >= (rs2>>>0)) this.pc = this.pc + imm - 4|0;
                         break;
 
                     default:
-                        message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + "not found");
+                        message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + " not found");
                         message.Abort();
                         break;
 
@@ -15635,33 +18144,33 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                 break;
 
             case 0x73:
-                //csrrw, csrrs, csrrc, csrrwi, csrrsi, csrrci, ecall, eret, ebreak, mrts, wfi
+                // csrrw, csrrs, csrrc, csrrwi, csrrsi, csrrci, ecall, eret, ebreak, mrts, wfi
                 imm = (ins >>> 20);
                 rs1 = r[(ins >> 15) & 0x1F];
                 rindex = (ins >> 7) & 0x1F;
                 switch((ins >> 12)&0x7) {
                     
                     case 0x01:
-                        //csrrw
+                        // csrrw
                         r[rindex] = this.GetCSR(imm);
                         //if (rindex != ((ins >> 15) & 0x1F))
                         this.SetCSR(imm, rs1);
                         break;
 
                     case 0x02:
-                        //csrrs
+                        // csrrs
                         r[rindex] = this.GetCSR(imm);
                         this.SetCSR(imm, this.GetCSR(imm) | rs1);
                         break;
 
                     case 0x03:
-                        //csrrc
+                        // csrrc
                         r[rindex] = this.GetCSR(imm);
                         this.SetCSR(imm, this.GetCSR(imm) & (~rs1));
                         break;
 
                     case 0x05:
-                        //csrrwi
+                        // csrrwi
                         r[rindex] = this.GetCSR(imm);
                         zimm = (ins >> 15) & 0x1F;
                         if(zimm != 0) this.SetCSR(imm, (zimm >> 0));
@@ -15669,24 +18178,24 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                         
 
                     case 0x06:
-                        //csrrsi
+                        // csrrsi
                         r[rindex] = this.GetCSR(imm);
                         zimm = (ins >> 15) & 0x1F;
                         if(zimm != 0) this.SetCSR(imm, this.GetCSR(imm) | (zimm >> 0));
                         break;
 
                     case 0x07:
-                        //csrrci
+                        // csrrci
                         r[rindex] = this.GetCSR(imm);
                         zimm = (ins >> 15) & 0x1F;
                         if(zimm != 0) this.SetCSR(imm, this.GetCSR(imm) & ~(zimm >> 0));
                         break;
                     
                     case 0x00:
-                        //ecall, eret, ebreak, mrts, wfi
+                        // ecall, eret, ebreak, mrts, wfi
                         switch((ins >> 20)&0xFFF) {
                             case 0x00:
-                                //ecall
+                                // ecall
                                 switch(current_privilege_level)
                                 {
                                     case PRV_U:
@@ -15714,12 +18223,12 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                                 break;
 
                             case 0x001:
-                                //ebreak
+                                // ebreak
                                 this.Trap(CAUSE_BREAKPOINT, this.pc - 4|0);
                                 break;
 
                             case 0x100:
-                                //eret
+                                // eret
                                 var current_privilege_level = (csr[CSR_MSTATUS] & 0x06) >> 1;
                                 if(current_privilege_level < PRV_S) {
                                     message.Debug("Error in eret: current_privilege_level isn't allowed access");
@@ -15730,20 +18239,15 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
 
                                 switch(current_privilege_level)
                                 {
-                                    
                                     case PRV_S:
-                                        //message.Debug("eret PRV_S -"+ utils.ToHex(ins));
                                         this.pc = csr[CSR_SEPC]|0;
                                         break;
 
                                     case PRV_H:
-                                        //message.Debug("Not supported eret PRV_H -"+ utils.ToHex(ins));
                                         this.pc = csr[CSR_HEPC]|0;
-                                        message.Abort();
                                         break;
 
                                     case PRV_M:
-                                        //message.Debug("eret PRV_M -"+ utils.ToHex(ins));
                                         this.pc = csr[CSR_MEPC]|0;
                                         break;
                                     
@@ -15756,13 +18260,16 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
 
                             case 0x102:
                                 // wfi
-                                if((interrupts && ie))
+                                /*
+                                interrupts = csr[CSR_MIE] & csr[CSR_MIP];
+                                if ((!interrupts) && (this.htif.IsQueueEmpty()))
                                     return steps;
+                                */
                                 break;
 
                             case 0x305:
-                                //mrts     
-                                if(current_privilege_level != PRV_M) {
+                                // mrts
+                                if (current_privilege_level != PRV_M) {
                                     message.Debug("Error in mrts: current_privilege_level isn't allowed access");
                                     message.Abort();
                                     break;   
@@ -15775,11 +18282,11 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                                 break;
 
                             case 0x101:
-                                //sfence.vm
+                                // sfence.vm
                                 break;
 
                             default:
-                                message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + "not found");
+                                message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + " not found");
                                 message.Abort();
                                 break;
 
@@ -15787,7 +18294,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                         break; 
 
                     default:
-                        message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + "not found");
+                        message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + " not found");
                         message.Abort();
                         break;
 
@@ -15795,33 +18302,38 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                 break;
 
             case 0x07:
-                //flw,fld
+                // flw, fld
+                imm = (ins >> 20);
+                rs1 = r[(ins >> 15) & 0x1F];
+                rindex = ((ins >> 7) & 0x1F);
                 switch((ins >> 12)&0x7) {
                     
                     case 0x02:
-                        //flw
-                        imm = (ins >> 20);
-                        rs1 = r[(ins >> 15) & 0x1F];
-                        findex = ((ins >> 7) & 0x1F);
+                        // flw
+                        if (rs1+imm & 3) {
+                             message.Debug("Error in flw: unaligned address");
+                             message.Abort();
+                        }
                         paddr = this.TranslateVM(rs1 + imm|0,VM_READ);
                         if(paddr == -1) break;
                         r[0] = this.ram.Read32(paddr);
-                        f[findex] = ff[0];
+                        f[rindex] = ff[0];
                         break;
 
                     case 0x03:
-                        //fld
-                        imm = (ins >> 20);
-                        rs1 = r[(ins >> 15) & 0x1F];
-                        findex = ((ins >> 7) & 0x1F) << 1;
+                        // fld
+                        if (rs1+imm & 7) {
+                             message.Debug("Error in flw: unaligned address");
+                             message.Abort();
+                        }
                         paddr = this.TranslateVM(rs1 + imm|0,VM_READ);
                         if(paddr == -1) break;
-                        fi[findex + 0] = this.ram.Read32(paddr+0);
-                        fi[findex + 1] = this.ram.Read32(paddr+4);
+                        fi[(rindex<<1) + 0] = this.ram.Read32(paddr+0);
+                        fi[(rindex<<1) + 1] = this.ram.Read32(paddr+4);
                         break;
 
                     default:
-                        message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + "not found");
+                        message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + " not found");
                         message.Abort();
                         break;
 
@@ -15829,37 +18341,40 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                 break;
 
             case 0x27:
-                //fsw, fsd
+                // fsw, fsd
+                imm1 = (ins >> 25);
+                imm2 = (ins >> 7) & 0x1F;
+                imm = (imm1 << 5) + imm2;
+                rs1 = r[(ins >> 15) & 0x1F];
+                rindex = (ins >> 20) & 0x1F;
                 switch((ins >> 12)&0x7) {
 
                     case 0x02:
-                        //fsw
-                        imm1 = (ins >> 25);
-                        imm2 = (ins >> 7) & 0x1F;
-                        imm = (imm1 << 5) + imm2;
-                        rs1 = r[(ins >> 15) & 0x1F];
-                        findex = (ins >> 20) & 0x1F;
-                        ff[0] = f[findex];
+                        // fsw
+                        ff[0] = f[rindex];
+                        if (rs1+imm & 3) {
+                             message.Debug("Error in fsw: unaligned address");
+                             message.Abort();
+                        }
                         paddr = this.TranslateVM(rs1 + imm|0, VM_WRITE);
                         if(paddr == -1) break;
                         this.ram.Write32(paddr, r[0]);
                         break;
 
                     case 0x03:
-                        //fsd
-                        imm1 = (ins >> 25);
-                        imm2 = (ins >> 7) & 0x1F;
-                        imm = (imm1 << 5) + imm2;
-                        rs1 = r[(ins >> 15) & 0x1F];
-                        findex = ((ins >> 20) & 0x1F) << 1;
-                        paddr = this.TranslateVM(rs1 + imm + 0|0, VM_WRITE);
+                        // fsd
+                        if (rs1+imm & 7) {
+                             message.Debug("Error in fsd: unaligned address");
+                             message.Abort();
+                        }
+                        paddr = this.TranslateVM(rs1 + imm|0, VM_WRITE);
                         if (paddr == -1) break;
-                        this.ram.Write32(paddr+0, fi[findex + 0]);
-                        this.ram.Write32(paddr+4, fi[findex + 1]);
+                        this.ram.Write32(paddr+0, fi[(rindex<<1) + 0]);
+                        this.ram.Write32(paddr+4, fi[(rindex<<1) + 1]);
                         break;
 
                     default:
-                        message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + "not found");
+                        message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + " not found");
                         message.Abort();
                         break;
 
@@ -15867,113 +18382,102 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                 break;
 
             case 0x53:
-                //fadd.s, fsub.s
+                // fadd, fsub
+                rindex = (ins >> 7) & 0x1F;
                 switch((ins >> 25)&0x7F) {
                     
-                    case 0x00 :
-                        //fadd.s
+                    case 0x00:
+                    case 0x01:
+                        // fadd.s, fadd.d
                         fs1 = f[(ins >> 15) & 0x1F];
                         fs2 = f[(ins >> 20) & 0x1F];
-                        rindex = (ins >> 7) & 0x1F;
                         f[rindex] = fs1 + fs2;
                         break;
 
                     case 0x04:
-                        //fsub.s
+                    case 0x05:
+                        // fsub.s, fsub.d
                         fs1 = f[(ins >> 15) & 0x1F];
                         fs2 = f[(ins >> 20) & 0x1F];
-                        rindex = (ins >> 7) & 0x1F;
                         f[rindex] = fs1 - fs2;
                         break;
 
                     case 0x50:
-                        //feq.s
-                        fs1 = f[(ins >> 15) & 0x1F];
-                        fs2 = f[(ins >> 20) & 0x1F];
-                        rindex = (ins >> 7) & 0x1F;
-                        if(fs1 == fs2) f[rindex] = 1;
-                        else f[rindex] = 0;
-                        //if(fs1 == QUIET_NAN || fs2 == QUIET_NAN) f[rindex] = 0;
-                        //else if(fs1 == SIGNALLING_NAN || fs2 == SIGNALLING_NAN) message.Abort();
-                        break;
-
                     case 0x51:
-                        //feq.d
+                        // fcmp.s, fcmp.d
                         fs1 = f[(ins >> 15) & 0x1F];
                         fs2 = f[(ins >> 20) & 0x1F];
-                        rindex = (ins >> 7) & 0x1F;
-                        if(fs1 == fs2) f[rindex] = 1;
-                        else f[rindex] = 0;
-                        //if(fs1 == QUIET_NAN || fs2 == QUIET_NAN) f[rindex] = 0;
-                        //else if(fs1 == SIGNALLING_NAN || fs2 == SIGNALLING_NAN) message.Abort();
+                        switch((ins >> 12) & 0x7) {
+                            case 0x0:
+                                if (fs1 <= fs2) r[rindex] = 1;
+                                else r[rindex] = 0;
+                                break;
+
+                            case 0x1:
+                                if (fs1 < fs2) r[rindex] = 1;
+                                else r[rindex] = 0;
+                                break;
+
+                            case 0x2:
+                                if (fs1 == fs2) r[rindex] = 1;
+                                else r[rindex] = 0;
+                                break;
+
+                            default:
+                                message.Debug("Error in safecpu: Instruction (fcmp) " + utils.ToHex(ins) + " not found");
+                                message.Abort();
+                                break;
+                        }
                         break;
 
                     case 0x60:
                         //fcvt.w.s
-                        rindex = (ins >> 7) & 0x1F;
+                        r[rindex] = f[(ins >> 15) & 0x1F];
+                        break;
+
+                    case 0x61:
+                        //fcvt.w.d
                         r[rindex] = f[(ins >> 15) & 0x1F];
                         break;
 
                     case 0x68:
                         //fcvt.s.w
-                        rindex = (ins >> 7) & 0x1F;
                         f[rindex] = r[(ins >> 15) & 0x1F];
                         break;
 
                     case 0x69:
                         //fcvt.d.w
-                        rindex = (ins >> 7) & 0x1F;
                         f[rindex] = r[(ins >> 15) & 0x1F];
                         break;
 
-                    case 0x01 :
-                        //fadd.d
-                        fs1 = f[(ins >> 15) & 0x1F];
-                        fs2 = f[(ins >> 20) & 0x1F];
-                        rindex = (ins >> 7) & 0x1F;
-                        f[rindex] = fs1 + fs2;
-                        break;
 
-                    case 0x05:
-                        //fsub.d
-                        fs1 = f[(ins >> 15) & 0x1F];
-                        fs2 = f[(ins >> 20) & 0x1F];
-                        rindex = (ins >> 7) & 0x1F;
-                        f[rindex] = fs1 - fs2;
-                        break;
-
+                    case 0x08:
                     case 0x09:
-                        //fmul.d
+                        //fmul.s, fmul.d
                         fs1 = f[(ins >> 15) & 0x1F];
                         fs2 = f[(ins >> 20) & 0x1F];
-                        rindex = (ins >> 7) & 0x1F;
                         f[rindex] = fs1 * fs2;
                         break;
 
                     case 0x10: // single precision
                     case 0x11: // double precision
-                        //fsgnj
-                        rindex = (ins >> 7) & 0x1F;
+                        // fsgnj
+                        fs1 = f[(ins >> 15) & 0x1F];
+                        fs2 = f[(ins >> 20) & 0x1F];
                         switch((ins >> 12) & 7) {
                             case 0:
-                                //fsgnj.d, also used for fmv.d
-                                fs1 = f[(ins >> 15) & 0x1F];
-                                fs2 = f[(ins >> 20) & 0x1F];
+                                // fsgnj.d, also used for fmv.d
                                 f[rindex] = (fs2<0)?-Math.abs(fs1):Math.abs(fs1);
                                 break;
 
                             case 1:
-                                //fsgnjn.d
-                                fs1 = f[(ins >> 15) & 0x1F];
-                                fs2 = f[(ins >> 20) & 0x1F];
+                                // fsgnjn.d
                                 f[rindex] = (fs2<0)?Math.abs(fs1):-Math.abs(fs1);
                                 break;
 
                             case 3:
-                                //fsgnjx.d
-                                fs1 = f[(ins >> 15) & 0x1F];
-                                fs2 = f[(ins >> 20) & 0x1F];
-                                f[rindex] = ((fs2<0 && fs1<0) || (fs2>0 && fs1>0))?-Math.abs(fs1):Math.abs(fs1);
+                                // fsgnjx.d
+                                f[rindex] = ((fs2<0 && fs1<0) || (fs2>0 && fs1>0))?Math.abs(fs1):-Math.abs(fs1);
                                 break;
 
                             default:
@@ -15982,29 +18486,23 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                         }
                         break;
 
-                    case 0x61:
-                        //fcvt.w.d
-                        rindex = (ins >> 7) & 0x1F;
-                        r[rindex] = f[(ins >> 15) & 0x1F];
-                        break;
-
                     case 0x78:
-                        //fmv.s.x
+                        // fmv.s.x
                         rs1 = r[(ins >> 15) & 0x1F];
-                        findex = (ins >> 7) & 0x1F;
-                        f[findex] = rs1; 
+                        r[0] = rs1;
+                        f[rindex] = ff[0]; 
                         break;
 
 
                     default:
-                        message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + "not found");
+                        message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + " not found");
                         message.Abort();
                         break;
                 }
                 break;
 
             case 0x43:
-                //fmadd.d,fmadd.s
+                // fmadd.d, fmadd.s
                 fs1 = f[(ins >> 15) & 0x1F];
                 fs2 = f[(ins >> 20) & 0x1F];
                 fs3 = f[(ins >> 27) & 0x1F];
@@ -16013,7 +18511,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                 break;
 
             case 0x47:
-                //fmsub.d,fmsub.s
+                // fmsub.d, fmsub.s
                 fs1 = f[(ins >> 15) & 0x1F];
                 fs2 = f[(ins >> 20) & 0x1F];
                 fs3 = f[(ins >> 27) & 0x1F];
@@ -16022,7 +18520,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                 break;
 
             case 0x4B:
-                //fnmadd.d,fnmadd.s
+                // fnmadd.d, fnmadd.s
                 fs1 = f[(ins >> 15) & 0x1F];
                 fs2 = f[(ins >> 20) & 0x1F];
                 fs3 = f[(ins >> 27) & 0x1F];
@@ -16031,7 +18529,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                 break;
 
             case 0x4F:
-                //fnmsub.d,fnmsub.s
+                // fnmsub.d, fnmsub.s
                 fs1 = f[(ins >> 15) & 0x1F];
                 fs2 = f[(ins >> 20) & 0x1F];
                 fs3 = f[(ins >> 27) & 0x1F];
@@ -16040,16 +18538,17 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                 break;
 
             case 0x2F:
-                //amoswap, amoadd, amoxor, amoand, amoor, amomin, amomax, amominu, amomaxu
+                // amoswap, amoadd, amoxor, amoand, amoor, amomin, amomax, amominu, amomaxu
                 rs1 = r[(ins >> 15) & 0x1F];
                 rs2 = r[(ins >> 20) & 0x1F];
                 rindex = (ins >> 7) & 0x1F;
+                paddr = this.TranslateVM(rs1|0, VM_READ);
+                if (paddr == -1) break;
+
                 switch((ins >> 27)&0x1F) {
                     
                     case 0x01:
-                        //amoswap
-                        paddr = this.TranslateVM(rs1|0, VM_READ);
-                        if(paddr == -1) break;
+                        // amoswap
                         r[rindex] = this.ram.Read32(paddr);
                         paddr = this.TranslateVM(rs1|0, VM_WRITE);
                         if(paddr == -1) break;
@@ -16057,111 +18556,90 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                         break;
 
                     case 0x00:
-                        //amoadd
-                        paddr = this.TranslateVM(rs1|0,VM_READ);
-                        if(paddr == -1) break;
+                        // amoadd
                         r[rindex] = this.ram.Read32(paddr);
-                        paddr = this.TranslateVM(rs1|0,VM_WRITE);
+                        paddr = this.TranslateVM(rs1|0, VM_WRITE);
                         if(paddr == -1) break;
                         this.ram.Write32(paddr,r[rindex] + rs2);
                         break;
 
                     case 0x04:
-                        //amoxor
-                        paddr = this.TranslateVM(rs1|0,VM_READ);
-                        if(paddr == -1) break;
+                        // amoxor
                         r[rindex] = this.ram.Read32(paddr);
-                        paddr = this.TranslateVM(rs1|0,VM_WRITE);
+                        paddr = this.TranslateVM(rs1|0, VM_WRITE);
                         if(paddr == -1) break;
                         this.ram.Write32(paddr,r[rindex] ^ rs2);
                         break;
 
                     case 0x0C:
-                        //amoand
-                        paddr = this.TranslateVM(rs1|0,VM_READ);
-                        if(paddr == -1) break;
+                        // amoand
                         r[rindex] = this.ram.Read32(paddr);
-                        paddr = this.TranslateVM(rs1|0,VM_WRITE);
+                        paddr = this.TranslateVM(rs1|0, VM_WRITE);
                         if(paddr == -1) break;
-                        this.ram.Write32(paddr,r[rindex] & rs2);
+                        this.ram.Write32(paddr, r[rindex] & rs2);
                         break;
 
                     case 0x08:
-                        //amoor
-                        paddr = this.TranslateVM(rs1|0,VM_READ);
-                        if(paddr == -1) break;
+                        // amoor
                         r[rindex] = this.ram.Read32(paddr);
-                        paddr = this.TranslateVM(rs1|0,VM_WRITE);
+                        paddr = this.TranslateVM(rs1|0, VM_WRITE);
                         if(paddr == -1) break;
-                        this.ram.Write32(paddr,r[rindex] | rs2);
+                        this.ram.Write32(paddr, r[rindex] | rs2);
                         break;
 
                     case 0x10:
-                        //amomin
-                        paddr = this.TranslateVM(rs1|0,VM_READ);
-                        if(paddr == -1) break;
+                        // amomin
                         r[rindex] = this.ram.Read32(paddr);
                         if((rs2 >> 0) > (r[rindex] >> 0)) r[0] = r[rindex];
                         else r[0] = rs2;
-                        paddr = this.TranslateVM(rs1|0,VM_WRITE);
+                        paddr = this.TranslateVM(rs1|0, VM_WRITE);
                         if(paddr == -1) break;
-                        this.ram.Write32(paddr,r[0]);
+                        this.ram.Write32(paddr, r[0]);
                         break;
 
                    case 0x14:
-                        //amomax
-                        paddr = this.TranslateVM(rs1,VM_READ);
-                        if(paddr == -1) break;
+                        // amomax
                         r[rindex] = this.ram.Read32(paddr);
-                        if((rs2 >> 0) < (r[rindex] >> 0)) r[0] = r[rindex];
+                        if(rs2 < r[rindex]) r[0] = r[rindex];
                         else r[0] = rs2;
-                        paddr = this.TranslateVM(rs1,VM_WRITE);
+                        paddr = this.TranslateVM(rs1, VM_WRITE);
                         if(paddr == -1) break;
-                        this.ram.Write32(paddr,r[0]);
+                        this.ram.Write32(paddr, r[0]);
                         break;
 
                     case 0x18:
-                        //amominu
+                        // amominu
                         r[rindex] = this.ram.Read32(paddr);
                         if((rs2 >>> 0) > (r[rindex] >>> 0)) r[0] = r[rindex];
                         else r[0] = rs2;
-                        paddr = this.TranslateVM(rs1,VM_WRITE);
+                        paddr = this.TranslateVM(rs1, VM_WRITE);
                         if(paddr == -1) break;
-                        this.ram.Write32(paddr,r[0]);
+                        this.ram.Write32(paddr, r[0]);
                         break;
 
                     case 0x1C:
-                        //amomaxu
-                        paddr = this.TranslateVM(rs1,VM_READ);
-                        if(paddr == -1) break;
+                        // amomaxu
                         r[rindex] = this.ram.Read32(paddr);
                         if((rs2 >>> 0) < (r[rindex] >>> 0)) r[0] = r[rindex];
                         else r[0] = rs2;
-                        paddr = this.TranslateVM(rs1,VM_WRITE);
+                        paddr = this.TranslateVM(rs1, VM_WRITE);
                         if(paddr == -1) break;
-                        this.ram.Write32(paddr,r[0]);
+                        this.ram.Write32(paddr, r[0]);
                         break;
 
                     case 0x02:
-                        //lr.d
-                        rs1 = r[(ins >> 15) & 0x1F];
-                        paddr = this.TranslateVM(rs1,VM_READ);
-                        if(paddr == -1) break;
+                        // lr.d
                         r[rindex] = this.ram.Read32(paddr);
                         this.amoaddr = rs1;
                         this.amovalue = r[rindex];
                         break;
 
                     case 0x03:
-                        //sc.d
-                        rs1 = r[(ins >> 15) & 0x1F];
-                        rs2 = r[(ins >> 20) & 0x1F];
+                        // sc.d
                         if(rs1 != this.amoaddr) {
                             r[rindex] = 0x01;
                             break;
                         }
-                        paddr = this.TranslateVM(rs1, VM_READ);
-                        if(paddr == -1) break;
                         if(this.ram.Read32(paddr) != this.amovalue) {
                             r[rindex] = 0x01;
                             break;
@@ -16173,7 +18651,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                         break;
 
                     default:
-                        message.Debug("Error in Atomic Memory Instruction " + utils.ToHex(ins) + "not found");
+                        message.Debug("Error in Atomic Memory Instruction " + utils.ToHex(ins) + " not found");
                         message.Abort();
                         break;
 
@@ -16181,7 +18659,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                 break;
 
             case 0x0F:
-                //fence
+                // fence
                 break;
 
             default:
@@ -16192,24 +18670,26 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
 
     } while(steps=steps-1|0);
 
-
     return 0;
 };
 
 module.exports = SafeCPU;
 
-},{"../messagehandler":28,"../utils":43,"./disassemble.js":35,"./htif.js":37}],40:[function(require,module,exports){
+},{"../messagehandler":28,"../utils":44,"./disassemble.js":35}],41:[function(require,module,exports){
+// -------------------------------------------------
+// ----------------- SYSCALLS ----------------------
+// -------------------------------------------------
 
 "use strict";
 var message = require('../messagehandler');
 var utils = require('../utils');
 
-var SYS_OPENAT = 56;
-var SYS_CLOSE = 57;
-var SYS_PREAD = 67;
-var SYS_WRITE = 64;
-var SYS_FSTAT = 80;
-var SYS_EXIT = 93;
+var SYS_OPENAT      = 56;
+var SYS_CLOSE       = 57;
+var SYS_PREAD       = 67;
+var SYS_WRITE       = 64;
+var SYS_FSTAT       = 80;
+var SYS_EXIT        = 93;
 var SYS_GETMAINVARS = 2011;
 
 function SysCalls(ram) {
@@ -16245,7 +18725,11 @@ SysCalls.prototype.HandleSysCall = function (addr) {
                     filename += String.fromCharCode(c);
             }
             var url = filename;
-            utils.LoadBinaryResourceII("riscv/"+url, this.OnFileLoaded.bind(this), false, function(error){message.Abort();});
+            utils.LoadBinaryResourceII("../sys/riscv/" + url, 
+                this.OnFileLoaded.bind(this), 
+                false, 
+                function(error){throw error;}
+            );
             this.ram.Write32(addr, this.file_descriptor_offset);
             break;
 
@@ -16356,9 +18840,9 @@ SysCalls.prototype.HandleSysCall = function (addr) {
 };
 
 SysCalls.prototype.OnFileLoaded = function(buffer) {
-
     var buffer8 = new Uint8Array(buffer);
     var length = buffer8.length;
+message.Debug("On File Loaded " + length);
     for(var i=0; i<length; i++) this.elf8mem[i+this.elf8mem_offset] = buffer8[i];
     this.file_descriptor_table[++this.file_descriptor_offset] = this.elf8mem_offset;
     this.elf8mem_offset += length;
@@ -16369,45 +18853,45 @@ SysCalls.prototype.OnFileLoaded = function(buffer) {
 
 module.exports = SysCalls;
 
-},{"../messagehandler":28,"../utils":43}],41:[function(require,module,exports){
+},{"../messagehandler":28,"../utils":44}],42:[function(require,module,exports){
 // -------------------------------------------------
 // ------------------- SYSTEM ----------------------
 // -------------------------------------------------
 
 "use strict";
 // common
-var message = require('./messagehandler.js'); // global variable
-var utils = require('./utils.js');
-var RAM = require('./ram.js');
-var bzip2 = require('./bzip2.js');
-var elf = require('./elf.js');
-var Timer = require('./timer.js');
+var message = require('./messagehandler'); // global variable
+var utils = require('./utils');
+var RAM = require('./ram');
+var bzip2 = require('./bzip2');
+var elf = require('./elf');
+var Timer = require('./timer');
+var HTIF = require('./riscv/htif');
 
 // CPU
 var OR1KCPU = require('./or1k');
 var RISCVCPU = require('./riscv');
 
 // Devices
-var UARTDev = require('./dev/uart.js');
-var IRQDev = require('./dev/irq.js');
-var TimerDev = require('./dev/timer.js');
-var FBDev = require('./dev/framebuffer.js');
-var EthDev = require('./dev/ethmac.js');
-var ATADev = require('./dev/ata.js');
-var RTCDev = require('./dev/rtc.js');
-var TouchscreenDev = require('./dev/touchscreen.js');
-var KeyboardDev = require('./dev/keyboard.js');
-var SoundDev = require('./dev/sound.js');
-var VirtIODev = require('./dev/virtio.js');
-var Virtio9p = require('./dev/virtio/9p.js');
-var VirtioDummy = require('./dev/virtio/dummy.js');
-var VirtioInput = require('./dev/virtio/input.js');
-var VirtioNET = require('./dev/virtio/net.js');
-var VirtioBlock = require('./dev/virtio/block.js');
-var VirtioGPU = require('./dev/virtio/gpu.js');
-var VirtioConsole = require('./dev/virtio/console.js');
-var FS = require('./filesystem/filesystem.js');
-
+var UARTDev = require('./dev/uart');
+var IRQDev = require('./dev/irq');
+var TimerDev = require('./dev/timer');
+var FBDev = require('./dev/framebuffer');
+var EthDev = require('./dev/ethmac');
+var ATADev = require('./dev/ata');
+var RTCDev = require('./dev/rtc');
+var TouchscreenDev = require('./dev/touchscreen');
+var KeyboardDev = require('./dev/keyboard');
+var SoundDev = require('./dev/sound');
+var VirtIODev = require('./dev/virtio');
+var Virtio9p = require('./dev/virtio/9p');
+var VirtioDummy = require('./dev/virtio/dummy');
+var VirtioInput = require('./dev/virtio/input');
+var VirtioNET = require('./dev/virtio/net');
+var VirtioBlock = require('./dev/virtio/block');
+var VirtioGPU = require('./dev/virtio/gpu');
+var VirtioConsole = require('./dev/virtio/console');
+var FS = require('./filesystem/filesystem');
 
 /* 
     Heap Layout
@@ -16462,7 +18946,7 @@ System.prototype.CreateCPU = function(cpuname, arch) {
             this.cpu = new OR1KCPU(cpuname, this.ram, this.heap, this.ncores);
         } else
         if (arch == "riscv") {
-            this.cpu = new RISCVCPU(cpuname, this.ram, this.heap, this.ncores);
+            this.cpu = new RISCVCPU(cpuname, this.ram, this.htif, this.heap, this.ncores);
         } else
             throw "Architecture " + arch + " not supported";
     } catch (e) {
@@ -16497,6 +18981,11 @@ System.prototype.Init = function(system) {
     this.heap = new ArrayBuffer(this.memorysize*0x100000); 
     this.memorysize--; // - the lower 1 MB are used for the cpu cores
     this.ram = new RAM(this.heap, ramoffset);
+
+    if (system.arch == "riscv") {
+        this.htif = new HTIF(this.ram, this);
+    }
+
     this.CreateCPU(system.cpu, system.arch);
 
     this.devices = [];
@@ -16617,6 +19106,7 @@ System.prototype.ClearSoftInterrupt = function (line, cpuid) {
 };
 
 System.prototype.PrintState = function() {
+    // Flush the buffer of the terminal
     this.uartdev0 && this.uartdev0.Step();
     this.uartdev1 && this.uartdev1.Step();
     message.Debug(this.cpu.toString());
@@ -16633,10 +19123,14 @@ System.prototype.SendStringToTerminal = function(str)
 
 System.prototype.LoadImageAndStart = function(url) {
     this.SendStringToTerminal("\r================================================================================");
-    
-    if (typeof url  == 'string') {
+
+    if (typeof url == 'string') {
         this.SendStringToTerminal("\r\nLoading kernel and hard and basic file system from web server. Please wait ...\r\n");
-        utils.LoadBinaryResource(url, this.OnKernelLoaded.bind(this), function(error){throw error;});
+        utils.LoadBinaryResource(
+            url, 
+            this.OnKernelLoaded.bind(this), 
+            function(error){throw error;}
+        );
     } else {
         this.OnKernelLoaded(url);
     }
@@ -16756,7 +19250,7 @@ System.prototype.MainLoop = function() {
 
 module.exports = System;
 
-},{"./bzip2.js":2,"./dev/ata.js":3,"./dev/ethmac.js":4,"./dev/framebuffer.js":5,"./dev/irq.js":6,"./dev/keyboard.js":7,"./dev/rtc.js":8,"./dev/sound.js":9,"./dev/timer.js":10,"./dev/touchscreen.js":11,"./dev/uart.js":12,"./dev/virtio.js":13,"./dev/virtio/9p.js":14,"./dev/virtio/block.js":15,"./dev/virtio/console.js":16,"./dev/virtio/dummy.js":17,"./dev/virtio/gpu.js":18,"./dev/virtio/input.js":19,"./dev/virtio/net.js":21,"./elf.js":22,"./filesystem/filesystem.js":23,"./messagehandler.js":28,"./or1k":31,"./ram.js":34,"./riscv":38,"./timer.js":42,"./utils.js":43}],42:[function(require,module,exports){
+},{"./bzip2":2,"./dev/ata":3,"./dev/ethmac":4,"./dev/framebuffer":5,"./dev/irq":6,"./dev/keyboard":7,"./dev/rtc":8,"./dev/sound":9,"./dev/timer":10,"./dev/touchscreen":11,"./dev/uart":12,"./dev/virtio":13,"./dev/virtio/9p":14,"./dev/virtio/block":15,"./dev/virtio/console":16,"./dev/virtio/dummy":17,"./dev/virtio/gpu":18,"./dev/virtio/input":19,"./dev/virtio/net":21,"./elf":22,"./filesystem/filesystem":23,"./messagehandler":28,"./or1k":31,"./ram":34,"./riscv":39,"./riscv/htif":38,"./timer":43,"./utils":44}],43:[function(require,module,exports){
 // -------------------------------------------------
 // ------------------- TIMER -----------------------
 // -------------------------------------------------
@@ -16896,7 +19390,7 @@ Timer.prototype.GlobalUpdate = function(ticks) {
 
 module.exports = Timer;
 
-},{"./messagehandler.js":28,"./utils.js":43}],43:[function(require,module,exports){
+},{"./messagehandler.js":28,"./utils.js":44}],44:[function(require,module,exports){
 // -------------------------------------------------
 // ------------------ Utils ------------------------
 // -------------------------------------------------
@@ -17112,7 +19606,7 @@ module.exports.LoadBinaryResourceII = LoadBinaryResourceII;
 module.exports.LoadTextResource = LoadTextResource;
 
 
-},{}],44:[function(require,module,exports){
+},{}],45:[function(require,module,exports){
 // -------------------------------------------------
 // -------------------- Worker ---------------------
 // -------------------------------------------------
@@ -17120,4 +19614,4 @@ module.exports.LoadTextResource = LoadTextResource;
 var System = require('./system.js');
 var sys = new System();
 
-},{"./system.js":41}]},{},[44]);
+},{"./system.js":42}]},{},[45]);

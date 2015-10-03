@@ -1,14 +1,17 @@
+// -------------------------------------------------
+// ----------------- SYSCALLS ----------------------
+// -------------------------------------------------
 
 "use strict";
 var message = require('../messagehandler');
 var utils = require('../utils');
 
-var SYS_OPENAT = 56;
-var SYS_CLOSE = 57;
-var SYS_PREAD = 67;
-var SYS_WRITE = 64;
-var SYS_FSTAT = 80;
-var SYS_EXIT = 93;
+var SYS_OPENAT      = 56;
+var SYS_CLOSE       = 57;
+var SYS_PREAD       = 67;
+var SYS_WRITE       = 64;
+var SYS_FSTAT       = 80;
+var SYS_EXIT        = 93;
 var SYS_GETMAINVARS = 2011;
 
 function SysCalls(ram) {
@@ -44,7 +47,11 @@ SysCalls.prototype.HandleSysCall = function (addr) {
                     filename += String.fromCharCode(c);
             }
             var url = filename;
-            utils.LoadBinaryResourceII("riscv/"+url, this.OnFileLoaded.bind(this), false, function(error){message.Abort();});
+            utils.LoadBinaryResourceII("../sys/riscv/" + url, 
+                this.OnFileLoaded.bind(this), 
+                false, 
+                function(error){throw error;}
+            );
             this.ram.Write32(addr, this.file_descriptor_offset);
             break;
 
@@ -155,9 +162,9 @@ SysCalls.prototype.HandleSysCall = function (addr) {
 };
 
 SysCalls.prototype.OnFileLoaded = function(buffer) {
-
     var buffer8 = new Uint8Array(buffer);
     var length = buffer8.length;
+message.Debug("On File Loaded " + length);
     for(var i=0; i<length; i++) this.elf8mem[i+this.elf8mem_offset] = buffer8[i];
     this.file_descriptor_table[++this.file_descriptor_offset] = this.elf8mem_offset;
     this.elf8mem_offset += length;

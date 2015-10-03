@@ -65,7 +65,7 @@
 </body>
 
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
-<script src="../bin/jor1k-master-min.js"></script>
+<script src="jor1k-master-min.js"></script>
 <script src="./bootstrap/js/bootstrap.min.js"></script>
 
 <script>
@@ -222,10 +222,10 @@ var term = new LinuxTerm("tty");
 var jor1kgui = new Jor1k(
     {
         term: term, 
-        path: "../bin/",
+        path: "../sys/riscv/",
         statsid: "stats",
         system: {
-            kernelURL: "riscv/" + tests[1],
+            kernelURL: tests[1],
             arch: "riscv",
             cpu: "asm",
             memorysize: 32,
@@ -245,7 +245,7 @@ function OnSelectChange(sel)
 	}
 
 
-	jor1kgui.params.system.kernelURL = "riscv/"+sel.value;
+	jor1kgui.params.system.kernelURL = jor1kgui.params.path + sel.value;
 	jor1kgui.Reset();
 	jor1kgui.Pause(false);
 };

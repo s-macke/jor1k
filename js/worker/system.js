@@ -4,39 +4,38 @@
 
 "use strict";
 // common
-var message = require('./messagehandler.js'); // global variable
-var utils = require('./utils.js');
-var RAM = require('./ram.js');
-var bzip2 = require('./bzip2.js');
-var elf = require('./elf.js');
-var Timer = require('./timer.js');
-var HTIF = require('./riscv/htif.js');
+var message = require('./messagehandler'); // global variable
+var utils = require('./utils');
+var RAM = require('./ram');
+var bzip2 = require('./bzip2');
+var elf = require('./elf');
+var Timer = require('./timer');
+var HTIF = require('./riscv/htif');
 
 // CPU
 var OR1KCPU = require('./or1k');
 var RISCVCPU = require('./riscv');
 
 // Devices
-var UARTDev = require('./dev/uart.js');
-var IRQDev = require('./dev/irq.js');
-var TimerDev = require('./dev/timer.js');
-var FBDev = require('./dev/framebuffer.js');
-var EthDev = require('./dev/ethmac.js');
-var ATADev = require('./dev/ata.js');
-var RTCDev = require('./dev/rtc.js');
-var TouchscreenDev = require('./dev/touchscreen.js');
-var KeyboardDev = require('./dev/keyboard.js');
-var SoundDev = require('./dev/sound.js');
-var VirtIODev = require('./dev/virtio.js');
-var Virtio9p = require('./dev/virtio/9p.js');
-var VirtioDummy = require('./dev/virtio/dummy.js');
-var VirtioInput = require('./dev/virtio/input.js');
-var VirtioNET = require('./dev/virtio/net.js');
-var VirtioBlock = require('./dev/virtio/block.js');
-var VirtioGPU = require('./dev/virtio/gpu.js');
-var VirtioConsole = require('./dev/virtio/console.js');
-var FS = require('./filesystem/filesystem.js');
-
+var UARTDev = require('./dev/uart');
+var IRQDev = require('./dev/irq');
+var TimerDev = require('./dev/timer');
+var FBDev = require('./dev/framebuffer');
+var EthDev = require('./dev/ethmac');
+var ATADev = require('./dev/ata');
+var RTCDev = require('./dev/rtc');
+var TouchscreenDev = require('./dev/touchscreen');
+var KeyboardDev = require('./dev/keyboard');
+var SoundDev = require('./dev/sound');
+var VirtIODev = require('./dev/virtio');
+var Virtio9p = require('./dev/virtio/9p');
+var VirtioDummy = require('./dev/virtio/dummy');
+var VirtioInput = require('./dev/virtio/input');
+var VirtioNET = require('./dev/virtio/net');
+var VirtioBlock = require('./dev/virtio/block');
+var VirtioGPU = require('./dev/virtio/gpu');
+var VirtioConsole = require('./dev/virtio/console');
+var FS = require('./filesystem/filesystem');
 
 /* 
     Heap Layout
@@ -268,10 +267,14 @@ System.prototype.SendStringToTerminal = function(str)
 
 System.prototype.LoadImageAndStart = function(url) {
     this.SendStringToTerminal("\r================================================================================");
-    
-    if (typeof url  == 'string') {
+
+    if (typeof url == 'string') {
         this.SendStringToTerminal("\r\nLoading kernel and hard and basic file system from web server. Please wait ...\r\n");
-        utils.LoadBinaryResource(url, this.OnKernelLoaded.bind(this), function(error){throw error;});
+        utils.LoadBinaryResource(
+            url, 
+            this.OnKernelLoaded.bind(this), 
+            function(error){throw error;}
+        );
     } else {
         this.OnKernelLoaded(url);
     }

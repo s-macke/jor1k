@@ -14,7 +14,7 @@ Restart with new binary image:
                         Terminal uses canvas
 </canvas>
 
-<script src="../bin/jor1k-master-min.js"></script>
+<script src="jor1k-master-min.js"></script>
 
 <script>
 
@@ -41,13 +41,13 @@ jor1k = new Jor1k(
 	system: {
             memorysize: 32,
             cpu: "safe",
-            kernelURL : "or1k/rtems.bin.bz2",
+            kernelURL : "rtems.bin.bz2",
 	 },
          fs: {
             basefsURL: ""
          },
          term: new LinuxTerm("tty"),
-	 path: "../bin/"
+	 path: "../sys/or1k/"
 	});
 
 </script>
