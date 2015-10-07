@@ -2077,6 +2077,7 @@ function Step(steps, clockspeed) {
                 //fence
                 continue;
 
+            case 0x0: // this line removes one assembler instruction (sub) from the main loop
             default:
                 DebugMessage(ERROR_INSTRUCTION_NOT_FOUND|0);
                 DebugMessage(ins|0);
