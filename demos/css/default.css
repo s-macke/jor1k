@@ -84,14 +84,15 @@ iframe {
 .terminal {
     border: 2px solid black;
     font-family: courier,fixed,swiss,monospace,sans-serif;
-    font-size: 12px;
+    font-size: 14px;
     color: #bbbbbb;
     background: #000000;   
-    border-collapse: collapse
+    border-collapse: collapse;
+    line-height: normal;
 }
 
 .screen {
-    border: 2px solid black;
+    border: 0px solid black;
 }
 
 .contributor ul {
