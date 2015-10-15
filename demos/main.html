@@ -206,7 +206,7 @@ function Start() {
             if (params[i].substr(0,4) == "user") {
                 userid = params[i].split('=')[1];
                 jor1kparameters.userid = userid;
-                jor1kparameters.fs.lazyloadimages.push("http://jor1k.com/sync/tarballs/"+userid+".tar.bz2");
+                jor1kparameters.fs.lazyloadimages.push("https://jor1k.com/sync/tarballs/"+userid+".tar.bz2");
             }
             if (params[i].substr(0,3) == "cpu") {
                 jor1kparameters.system.cpu = params[i].split('=')[1];
