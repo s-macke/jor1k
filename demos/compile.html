@@ -154,7 +154,7 @@ function Start() {
         statsid: "stats",  // object id for the statistics test
         relayURL: "", // relay url for the network
         userid: userid, // unique user id string. Empty, choosen randomly, from a url, or from a cookie.
-        syncURL: "https://jor1k.com/sync/upload.php", // url to sync a certain folder
+        syncURL: "//jor1k.com/sync/upload.php", // url to sync a certain folder
         fps: 10, // update interval of framebuffer
         memorysize: 32, // in MB, must be a power of two
         path: "../sys/or1k/",
@@ -170,7 +170,7 @@ function Start() {
             if (params[i].substr(0,4) == "user") {
                 userid = params[i].split('=')[1];
                 jor1kparameters.userid = userid;
-                jor1kparameters.fs.lazyloadimages.push("https://jor1k.com/sync/tarballs/"+userid+".tar.bz2");
+                jor1kparameters.fs.lazyloadimages.push("//jor1k.com/sync/tarballs/"+userid+".tar.bz2");
             }
             if (params[i].substr(0,3) == "cpu") {
                 jor1kparameters.system.cpu = params[i].split('=')[1];
