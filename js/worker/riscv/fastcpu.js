@@ -902,7 +902,10 @@ function IMul64(a,b,index) {
     if ((a|0) == 0) return 0;
     if ((b|0) == 0) return 0;
 
-    if ((((a|0) >= -32768) & ((a|0) <= 32767)) & (((b|0) >= -32768) & ((b|0) <= 32767))) {
+    if ((a|0) >= -32768) 
+    if ((a|0) <=  32767)  
+    if ((b|0) >= -32768)  
+    if ((b|0) <=  32767) {
         result0 = imul((a|0),(b|0))|0;
         result1 = ((result0|0) < 0) ? -1 : 0;
         if ((index|0) == 0) return result0|0;
@@ -939,17 +942,18 @@ function SUMul64(a,b,index) {
     if ((a|0) == 0) return 0;
     if ((b|0) == 0) return 0;
 
-    if ((((a|0) >= -32768) & ((a|0) <= 32767)) & (((b|0) >= -32768) & ((b >>> 0) <= 32767))) {
+    if ((a|0) >= -32768)
+    if ((a|0) <= 32767) 
+    if ((b>>>0) < 65536)  {
         result0 = imul((a|0),(b|0))|0;
         result1 = ((result0|0) < 0) ? -1 : 0;
         if ((index|0) == 0) return result0|0;
         return result1|0;
     }
 
-    doNegate = ((a|0) < 0) ^ ((b|0) < 0);
+    doNegate = ((a|0) < 0);
 
     a = MathAbs(a|0)|0;
-    b = MathAbs(b|0)|0;
     result0 = UMul64(a, b, 0)|0;
     result1 = UMul64(a, b, 1)|0;
 
@@ -1783,14 +1787,14 @@ function Step(steps, clockspeed) {
                     case 0x01:  //fadd.d
                         fs1 = (+f[(fp + (((ins >> 15) & 0x1F) << 3)) >> 3]);
                         fs2 = (+f[(fp + (((ins >> 20) & 0x1F) << 3)) >> 3]);
-                        f[(fp + (((ins >> 7) & 0x1F) << 3)) >> 3] = fs1 + fs2;
+                        f[(fp + (((ins >> 7) & 0x1F) << 3)) >> 3] = (+fs1) + (+fs2);
                         continue;
 
                     case 0x04: //fsub.s
                     case 0x05: //fsub.d
                         fs1 = (+f[(fp + (((ins >> 15) & 0x1F) << 3)) >> 3]);
                         fs2 = (+f[(fp + (((ins >> 20) & 0x1F) << 3)) >> 3]);
-                        f[(fp + (((ins >> 7) & 0x1F) << 3)) >> 3] = fs1 - fs2;
+                        f[(fp + (((ins >> 7) & 0x1F) << 3)) >> 3] = (+fs1) - (+fs2);
                         continue;
 
                     case 0x50:
@@ -1816,7 +1820,7 @@ function Step(steps, clockspeed) {
                                 continue;
 
                             case 0x2:
-                                // fle
+                                // feq
                                 if ((+fs1) == (+fs2))
                                     r[((ins >> 5) & 0x7C) >> 2] = 1;
                                 else
@@ -1839,7 +1843,7 @@ function Step(steps, clockspeed) {
                     case 0x68:
                     case 0x69:
                         // fcvt.s.w, fcvt.d.w
-                        f[(fp + (((ins >> 7) & 0x1F) << 3)) >> 3] = (+~~r[((ins >> 13) & 0x7C) >> 2]);
+                        f[(fp + (((ins >> 7) & 0x1F) << 3)) >> 3] = +(r[((ins >> 13) & 0x7C) >> 2]|0);
                         continue;
 
                     case 0x08: //fmul.s

@@ -790,13 +790,13 @@ SafeCPU.prototype.SUMul64 = function (a,b) {
     a |= 0;
     b >>>= 0;
 
-    if ((a >= -32768 && a <= 32767) && (b >= -32768 && b <= 32767)) {
+    if ((a >= -32768 && a <= 32767) && (b < 65536)) {
         result[0] = a * b;
         result[1] = (result[0] < 0) ? -1 : 0;
         return result;
     }
 
-    var doNegate = (a < 0) ^ (b < 0);
+    var doNegate = a < 0;
 
     result = this.UMul64(Math.abs(a), Math.abs(b));
 
