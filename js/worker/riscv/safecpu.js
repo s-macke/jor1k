@@ -1606,6 +1606,12 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                         }
                         break;
 
+                    case 0x20: // fcvt.s.d
+                    case 0x21: // fcvt.d.s
+                        fs1 = f[(ins >> 15) & 0x1F];
+                        f[rindex] = fs1;
+                        break;
+
                     case 0x60:
                         //fcvt.w.s
                         r[rindex] = f[(ins >> 15) & 0x1F];
@@ -1651,7 +1657,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                                 f[rindex] = (fs2<0)?Math.abs(fs1):-Math.abs(fs1);
                                 break;
 
-                            case 3:
+                            case 2:
                                 // fsgnjx.d
                                 f[rindex] = ((fs2<0 && fs1<0) || (fs2>0 && fs1>0))?Math.abs(fs1):-Math.abs(fs1);
                                 break;

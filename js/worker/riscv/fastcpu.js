@@ -28,6 +28,7 @@ var WriteToHost = foreign.WriteToHost;
 var WriteFromHost = foreign.WriteFromHost;
 var imul = foreign.imul;
 var MathAbs = stdlib.Math.abs;
+var floor = stdlib.Math.floor;
 
 //One of the following error ids are printed to the console in case of an abort()
 var ERROR_INCOMPLETE_VMPRIVILEGE = 0;
@@ -1725,8 +1726,8 @@ function Step(steps, clockspeed) {
                             float_read64tlb_entry = (paddr ^ vaddr) & 0xFFFFF000;
                         }
                         paddr = float_read64tlb_entry ^ vaddr;
-                        fi[(fip + ((((ins >> 7) & 0x1F) + 0) << 3)) >> 2] = ram[(ramp + paddr + 0) >> 2]|0;
-                        fi[(fip + ((((ins >> 7) & 0x1F) + 1) << 3)) >> 2] = ram[(ramp + paddr + 4) >> 2]|0;
+                        fi[(fip + (((ins >> 7) & 0x1F) << 3) + 0) >> 2] = ram[(ramp + paddr + 0) >> 2]|0;
+                        fi[(fip + (((ins >> 7) & 0x1F) << 3) + 4) >> 2] = ram[(ramp + paddr + 4) >> 2]|0;
                         continue;
 
                     default:
@@ -1745,7 +1746,7 @@ function Step(steps, clockspeed) {
 
                     case 0x02:
                         // fsw
-                        ff[0] = f[(fp + (((ins >> 20) & 0x1F) << 3)) >> 3];
+                        ff[0] = +f[(fp + (((ins >> 20) & 0x1F) << 3)) >> 3];
                         if ((float_store32tlb_index ^ vaddr) & 0xFFFFF000) {
                             paddr = TranslateVM(vaddr|0, VM_READ)|0;
                             if ((paddr|0) == -1) continue;
@@ -1766,8 +1767,8 @@ function Step(steps, clockspeed) {
                             float_store64tlb_entry = (paddr ^ vaddr) & 0xFFFFF000;
                         }
                         paddr = float_store64tlb_entry ^ vaddr;
-                        ram[(ramp + paddr + 0) >> 2] = fi[(fip + ((((ins >> 20) & 0x1F) + 0) << 3)) >> 2]|0;
-                        ram[(ramp + paddr + 4) >> 2] = fi[(fip + ((((ins >> 20) & 0x1F) + 1) << 3)) >> 2]|0;
+                        ram[(ramp + paddr + 0) >> 2] = fi[(fip + (((ins >> 20) & 0x1F) << 3) + 0) >> 2]|0;
+                        ram[(ramp + paddr + 4) >> 2] = fi[(fip + (((ins >> 20) & 0x1F) << 3) + 4) >> 2]|0;
                         continue;
 
                     default:
@@ -1835,9 +1836,15 @@ function Step(steps, clockspeed) {
                         }
                         continue;
 
+                    case 0x20: // fcvt.s.d
+                    case 0x21: // fcvt.d.s
+                        f[(fp + (((ins >> 7) & 0x1F) << 3)) >> 3] = 
+                            (+f[(fp + (((ins >> 15) & 0x1F) << 3)) >> 3]);
+                        continue;
+
                     case 0x60:
                         // fcvt.w.s
-                        r[((ins >> 5) & 0x7C) >> 2] = (~~+f[(fp + (((ins >> 15) & 0x1F) << 3)) >> 3]);
+                        r[((ins >> 5) & 0x7C) >> 2] = ~~floor(+f[(fp + (((ins >> 15) & 0x1F) << 3)) >> 3]);
                         continue;
 
                     case 0x68:
@@ -1869,13 +1876,14 @@ function Step(steps, clockspeed) {
                                 f[(fp + (((ins >> 7) & 0x1F) << 3)) >> 3] = ((+fs2)<(+0))?+MathAbs(+fs1):-(+MathAbs(+fs1));
                                 continue;
 
-                            case 3:
+                            case 2:
                                 // fsgnjx.d
-                                f[(fp + (((ins >> 7) & 0x1F) << 3)) >> 3] =
-                                    (
-                                    (((+fs2)<(+0)) & ((+fs1)<(+0)) ) |
-                                    (((+fs2)>(+0)) & ((+fs1)>(+0)) )
-                                    )?-(+MathAbs(+fs1)):+MathAbs(+fs1);
+
+                                if (((+fs1)*(+fs2)) < (+0)) {
+                                    f[(fp + (((ins >> 7) & 0x1F) << 3)) >> 3] = -(+MathAbs(+fs1));
+                                } else {
+                                    f[(fp + (((ins >> 7) & 0x1F) << 3)) >> 3] = +(+MathAbs(+fs1));
+                                }
                                 continue;
 
                             default:
