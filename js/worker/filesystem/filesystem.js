@@ -653,10 +653,6 @@ FS.prototype.MergeFile = function(file) {
     this.inodes[ids.id].size = file.data.length;
 }
 
-FS.prototype.DeleteInode = function(idx) {
-    this.CloseInode(idx);
-    this.Unlink(idx);
-}
 
 FS.prototype.RecursiveDelete = function(path) {
     var toDelete = []
@@ -666,7 +662,7 @@ FS.prototype.RecursiveDelete = function(path) {
     this.GetRecursiveList(ids.id, toDelete);
 
     for(var i=toDelete.length-1; i>=0; i--)
-        this.DeleteInode(toDelete[i]);
+        this.Unlink(toDelete[i]);
 
 }
 
@@ -675,15 +671,15 @@ FS.prototype.DeleteNode = function(path) {
     if (ids.parentid == -1 || ids.id == -1) return;
     
     if ((this.inodes[ids.id].mode&S_IFMT) == S_IFREG){
-        this.DeleteInode(ids.id);
+        this.Unlink(ids.id);
         return;
     }
     if ((this.inodes[ids.id].mode&S_IFMT) == S_IFDIR){
         var toDelete = []
         this.GetRecursiveList(ids.id, toDelete);
         for(var i=toDelete.length-1; i>=0; i--)
-            this.DeleteInode(toDelete[i]);
-        this.DeleteInode(ids.id);
+            this.Unlink(toDelete[i]);
+        this.Unlink(ids.id);
         return;
     }
 }
