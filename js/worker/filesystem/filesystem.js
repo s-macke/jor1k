@@ -54,13 +54,28 @@ function FS() {
     this.userinfo = [];
 
     this.watchFiles = {};
+    this.watchDirectories = {};
 
     message.Register("LoadFilesystem", this.LoadFilesystem.bind(this) );
     message.Register("MergeFile", this.MergeFile.bind(this) );
+    message.Register("DeleteNode", this.DeleteNode.bind(this) );
+    message.Register("DeleteDirContents", this.RecursiveDelete.bind(this) );
+    message.Register("CreateDirectory", 
+        function(newDirPath){
+            var ids = this.SearchPath(newDirPath);
+            if(ids.id == -1 && ids.parentid != -1)
+                this.CreateDirectory(ids.name, ids.parentid);
+        }.bind(this)
+    );
     message.Register("WatchFile",
         function(file) {
             //message.Debug("watching file: " + file.name);
             this.watchFiles[file.name] = true;
+        }.bind(this)
+    );
+    message.Register("WatchDirectory",
+        function(file) {
+            this.watchDirectories[file.name] = true;
         }.bind(this)
     );
     //message.Debug("registering readfile on worker");
@@ -324,6 +339,7 @@ FS.prototype.CreateDirectory = function(name, parentid) {
     }
     x.qid.type = S_IFDIR >> 8;
     this.PushInode(x);
+    this.NotifyListeners(this.inodes.length-1, 'newdir');
     return this.inodes.length-1;
 }
 
@@ -336,6 +352,7 @@ FS.prototype.CreateFile = function(filename, parentid) {
     x.qid.type = S_IFREG >> 8;
     x.mode = (this.inodes[parentid].mode & 0x1B6) | S_IFREG;
     this.PushInode(x);
+    this.NotifyListeners(this.inodes.length-1, 'newfile');
     return this.inodes.length-1;
 }
 
@@ -453,11 +470,7 @@ FS.prototype.Rename = function(olddirid, oldname, newdirid, newname) {
 }
 
 FS.prototype.Write = function(id, offset, count, GetByte) {
-    var path = this.GetFullPath(id);
-    if (this.watchFiles[path] == true) {
-      //message.Debug("sending WatchFileEvent for " + path);
-      message.Send("WatchFileEvent", path);
-    }
+    this.NotifyListeners(id, 'write');
     var inode = this.inodes[id];
 
     if (inode.data.length < (offset+count)) {
@@ -517,6 +530,7 @@ FS.prototype.FindPreviousID = function(idx) {
 }
 
 FS.prototype.Unlink = function(idx) {
+    this.NotifyListeners(idx, 'delete');
     if (idx == 0) return false; // root node cannot be deleted
     var inode = this.GetInode(idx);
     //message.Debug("Unlink " + inode.name);
@@ -637,6 +651,55 @@ FS.prototype.MergeFile = function(file) {
     }
     this.inodes[ids.id].data = file.data;
     this.inodes[ids.id].size = file.data.length;
+}
+
+FS.prototype.DeleteInode = function(idx) {
+    this.CloseInode(idx);
+    this.Unlink(idx);
+}
+
+FS.prototype.RecursiveDelete = function(path) {
+    var toDelete = []
+    var ids = this.SearchPath(path);
+    if (ids.parentid == -1 || ids.id == -1) return;
+    
+    this.GetRecursiveList(ids.id, toDelete);
+
+    for(var i=toDelete.length-1; i>=0; i--)
+        this.DeleteInode(toDelete[i]);
+
+}
+
+FS.prototype.DeleteNode = function(path) {
+    var ids = this.SearchPath(path);
+    if (ids.parentid == -1 || ids.id == -1) return;
+    
+    if ((this.inodes[ids.id].mode&S_IFMT) == S_IFREG){
+        this.DeleteInode(ids.id);
+        return;
+    }
+    if ((this.inodes[ids.id].mode&S_IFMT) == S_IFDIR){
+        var toDelete = []
+        this.GetRecursiveList(ids.id, toDelete);
+        for(var i=toDelete.length-1; i>=0; i--)
+            this.DeleteInode(toDelete[i]);
+        this.DeleteInode(ids.id);
+        return;
+    }
+}
+
+FS.prototype.NotifyListeners = function(id, action) {
+    var path = this.GetFullPath(id);
+    if (this.watchFiles[path] == true && action=='write') {
+      message.Send("WatchFileEvent", path);
+    }
+    for (var directory in this.watchDirectories) {
+        if (this.watchDirectories.hasOwnProperty(directory)) {
+            var indexOf = path.indexOf(directory)
+            if(indexOf == 0 || indexOf == 1)
+                message.Send("WatchDirectoryEvent", {path: path, event: action})
+        }
+    }
 }
 
 
