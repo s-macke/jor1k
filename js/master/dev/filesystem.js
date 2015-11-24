@@ -79,6 +79,10 @@ Filesystem.prototype.DeleteNode = function(nodeName) {
     message.Send("DeleteNode", nodeName);
 }
 
+Filesystem.prototype.Rename = function(oldPath, newPath) {
+    message.Send("Rename", {oldPath:oldPath, newPath: newPath});
+}
+
 Filesystem.prototype.WatchFile = function(fileName, callback) {
   message.Register("WatchFileEvent", callback);
   message.Send("WatchFile", { name: fileName });
