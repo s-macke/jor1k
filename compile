@@ -5,7 +5,7 @@ rm -rf bin && mkdir bin && rm sys
 browserify -r ./js/plugins/terminal-linux.js:LinuxTerm -r ./js/master/master.js:Jor1k -o bin/jor1k-master-min.js
 browserify js/worker/worker.js -o bin/jor1k-worker-min.js
 
-# create symbolic link 
+# also need to create a symlink to sysroot 
 
 ln -s ../jor1k-sysroot sys
 
