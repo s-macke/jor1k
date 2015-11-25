@@ -1,3 +1,0 @@
-[submodule "sys"]
-	path = sys
-	url = https://github.com/s-macke/jor1k-sysroot.git

@@ -67,6 +67,29 @@ function FS() {
                 this.CreateDirectory(ids.name, ids.parentid);
         }.bind(this)
     );
+    message.Register("Rename",
+        function(info) {
+            var oldNodeInfo = this.SearchPath(info.oldPath);
+            var newNodeInfo = this.SearchPath(info.newPath);
+            
+            // old node DNE or new node has invalid directory path
+            if(oldNodeInfo.id == -1 || newNodeInfo.parentid == -1) 
+                return;
+               
+            if(newNodeInfo.id==-1){ //create
+                //parent must be directory
+                if(((this.inodes[newNodeInfo.parentid].mode)&S_IFMT) != S_IFDIR)
+                    return;
+                    
+                this.Rename(this.inodes[oldNodeInfo.id].parentid, this.inodes[oldNodeInfo.id].name, 
+                                newNodeInfo.parentid, newNodeInfo.name);
+            }
+            else { //overwrite 
+                this.Rename(this.inodes[oldNodeInfo.id].parentid, this.inodes[oldNodeInfo.id].name, 
+                                this.inodes[newNodeInfo.id].parentid, this.inodes[newNodeInfo.id].name);
+            }                
+        }.bind(this)
+    );
     message.Register("WatchFile",
         function(file) {
             //message.Debug("watching file: " + file.name);
@@ -434,6 +457,7 @@ FS.prototype.Rename = function(olddirid, oldname, newdirid, newname) {
         return true;
     }
     var oldid = this.Search(olddirid, oldname);
+    var oldpath = this.GetFullPath(oldid);
     if (oldid == -1) {
         return false;
     }
@@ -466,6 +490,9 @@ FS.prototype.Rename = function(olddirid, oldname, newdirid, newname) {
 
     this.inodes[olddirid].updatedir = true;
     this.inodes[newdirid].updatedir = true;
+
+    this.NotifyListeners(idx, "rename", {oldpath: oldpath});
+    
     return true;
 }
 
@@ -684,7 +711,10 @@ FS.prototype.DeleteNode = function(path) {
     }
 }
 
-FS.prototype.NotifyListeners = function(id, action) {
+FS.prototype.NotifyListeners = function(id, action, info) {
+    if(info==undefined)
+        info = {};
+
     var path = this.GetFullPath(id);
     if (this.watchFiles[path] == true && action=='write') {
       message.Send("WatchFileEvent", path);
@@ -693,7 +723,7 @@ FS.prototype.NotifyListeners = function(id, action) {
         if (this.watchDirectories.hasOwnProperty(directory)) {
             var indexOf = path.indexOf(directory)
             if(indexOf == 0 || indexOf == 1)
-                message.Send("WatchDirectoryEvent", {path: path, event: action})
+                message.Send("WatchDirectoryEvent", {path: path, event: action, info: info});         
         }
     }
 }
