@@ -5,14 +5,14 @@
 
 "use strict";
 
-var TAR = require('./tar.js');
-var FSLoader = require('./fsloader.js');
-var utils = require('../utils.js');
-var bzip2 = require('../bzip2.js');
-var marshall = require('../dev/virtio/marshall.js');
-var UTF8 = require('../../lib/utf8.js');
+var TAR = require('./tar');
+var FSLoader = require('./fsloader');
+var utils = require('../utils');
+var bzip2 = require('../bzip2');
+var marshall = require('../dev/virtio/marshall');
+var UTF8 = require('../../lib/utf8');
 var message = require('../messagehandler');
-var LazyUint8Array = require("./lazyUint8Array.js");
+var LazyUint8Array = require("./lazyUint8Array");
 
 var S_IRWXUGO = 0x1FF;
 var S_IFMT = 0xF000;

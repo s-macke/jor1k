@@ -5,7 +5,7 @@
 "use strict";
 var message = require('../messagehandler');
 var utils = require('../utils');
-var DebugIns = require('./disassemble.js');
+var DebugIns = require('./disassemble');
 
 var PRV_U = 0x00;
 var PRV_S = 0x01;

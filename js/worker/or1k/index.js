@@ -8,9 +8,9 @@ var toHex = require('../utils').ToHex;
 var imul = require('../imul');
 
 // CPUs
-var FastCPU = require('./fastcpu.js');
-var SafeCPU = require('./safecpu.js');
-var SMPCPU = require('./smpcpu.js');
+var FastCPU = require('./fastcpu');
+var SafeCPU = require('./safecpu');
+var SMPCPU = require('./smpcpu');
 
 // The asm.js ("Fast") and SMP cores must be singletons
 //  because of Firefox limitations.

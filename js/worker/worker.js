@@ -2,5 +2,5 @@
 // -------------------- Worker ---------------------
 // -------------------------------------------------
 
-var System = require('./system.js');
+var System = require('./system');
 var sys = new System();

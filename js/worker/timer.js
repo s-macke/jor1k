@@ -6,8 +6,8 @@
 
 "use strict";
 
-var message = require('./messagehandler.js'); // global variable
-var utils = require('./utils.js');
+var message = require('./messagehandler'); // global variable
+var utils = require('./utils');
 
 function Timer(_ticksperms, _loopspersecond) {
     // constants
