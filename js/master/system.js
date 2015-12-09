@@ -48,8 +48,10 @@ function jor1kGUI(parameters)
     this.params.userid = this.params.userid || "";
 
     // ----------------------
-    this.worker = new Worker("jor1k/bin/jor1k-worker-min.js");
+
+    this.worker = new Worker("jor1k-worker-min.js");
     message.SetWorker(this.worker);
+
     // ----
 
     if (this.params.clipboardid) {
@@ -209,6 +211,7 @@ jor1kGUI.prototype.Reset = function () {
     this.stop = false; // VM Stopped/Aborted
     this.userpaused = false;
     this.executepending = false; // if we rec an execute message while paused      
+
     message.Send("Init", this.params.system);
     message.Send("Reset");
     message.Send("LoadAndStart", this.params.system.kernelURL);
