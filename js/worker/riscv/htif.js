@@ -5,8 +5,8 @@
 "use strict";
 var message = require('../messagehandler');
 var utils = require('../utils');
-var bzip2 = require('../bzip2.js');
-var syscalls = require('./syscalls.js');
+var bzip2 = require('../bzip2');
+var syscalls = require('./syscalls');
 
 // -------------------------------------------------
 

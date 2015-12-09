@@ -1,4 +1,4 @@
-var message = require('../messagehandler.js');
+var message = require('../messagehandler');
 
 
 "use strict";

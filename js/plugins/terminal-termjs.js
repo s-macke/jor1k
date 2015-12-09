@@ -1,4 +1,4 @@
-var TermJS = require("./term.js");
+var TermJS = require("./term");
 var UTF8 = require("../lib/utf8");
 
 function TermJSTerm(termElement) {
