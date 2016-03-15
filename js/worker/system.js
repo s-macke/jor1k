@@ -70,7 +70,7 @@ var SYSTEM_HALT = 0x3; // Idle
 function System() {
     // the Init function is called by the master thread.
     message.Register("LoadAndStart", this.LoadImageAndStart.bind(this) );
-    message.Register("execute", this.MainLoop.bind(this)	);
+    message.Register("execute", this.MainLoop.bind(this));
     message.Register("Init", this.Init.bind(this) );
     message.Register("Reset", this.Reset.bind(this) );
     message.Register("ChangeCore", this.ChangeCPU.bind(this) );
@@ -79,9 +79,7 @@ function System() {
     message.Register("GetIPS", function(data) {
         message.Send("GetIPS", this.ips);
         this.ips=0;
-    }.bind(this)
-
-    );
+    }.bind(this));
 }
 
 System.prototype.CreateCPU = function(cpuname, arch) {
