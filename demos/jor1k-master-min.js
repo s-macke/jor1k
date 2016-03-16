@@ -331,9 +331,9 @@ Ethernet.prototype.Close = function() {
 module.exports = Ethernet;
 
 },{"../messagehandler":9}],4:[function(require,module,exports){
-var message = require('../messagehandler.js');
+var message = require('../messagehandler');
 var download = require('../../lib/download');
-var utils = require('../utils.js');
+var utils = require('../utils');
 
 "use strict";
 
@@ -389,9 +389,31 @@ Filesystem.prototype.MergeFile = function(fileName, data) {
   message.Send("MergeFile", {name: fileName, data: stringToUint(data)});
 }
 
+Filesystem.prototype.MergeBinaryFile = function(fileName, data) {
+  message.Send("MergeFile", {name: fileName, data: data});
+}
+
+Filesystem.prototype.CreateDirectory = function(dirctoryName) {
+    message.Send("CreateDirectory", dirctoryName );
+}
+
 Filesystem.prototype.ReadFile = function(fileName, callback) {
   message.Register("ReadFile", callback);
   message.Send("ReadFile", { name: fileName });
+}
+
+//deletes contents of specified directory.
+Filesystem.prototype.DeleteDirContents = function(dirPath) {
+    message.Send("DeleteDirContents", dirPath);
+}
+
+//deletes file, recursively deletes dir
+Filesystem.prototype.DeleteNode = function(nodeName) {
+    message.Send("DeleteNode", nodeName);
+}
+
+Filesystem.prototype.Rename = function(oldPath, newPath) {
+    message.Send("Rename", {oldPath:oldPath, newPath: newPath});
 }
 
 Filesystem.prototype.WatchFile = function(fileName, callback) {
@@ -399,10 +421,15 @@ Filesystem.prototype.WatchFile = function(fileName, callback) {
   message.Send("WatchFile", { name: fileName });
 }
 
+Filesystem.prototype.WatchDirectory = function(directoryPath, callback) {
+  message.Register("WatchDirectoryEvent", callback);
+  message.Send("WatchDirectory", { name: directoryPath });
+}
+
 module.exports = Filesystem;
 
-},{"../../lib/download":1,"../messagehandler.js":9,"../utils.js":11}],5:[function(require,module,exports){
-var message = require('../messagehandler.js');
+},{"../../lib/download":1,"../messagehandler":9,"../utils":11}],5:[function(require,module,exports){
+var message = require('../messagehandler');
 
 
 "use strict";
@@ -490,7 +517,7 @@ Framebuffer.prototype.Update = function(buffer) {
 
 module.exports = Framebuffer;
 
-},{"../messagehandler.js":9}],6:[function(require,module,exports){
+},{"../messagehandler":9}],6:[function(require,module,exports){
 // Provides a loop sound buffer.
 
 var message = require('../messagehandler');
@@ -1758,7 +1785,9 @@ function jor1kGUI(parameters)
 
     // ----------------------
 
-    this.worker = new Worker("jor1k-worker-min.js");
+    this.worker = (this.params.worker instanceof Worker) ?
+        this.params.worker : new Worker("jor1k-worker-min.js");
+
     message.SetWorker(this.worker);
 
     // ----
@@ -1881,11 +1910,15 @@ function jor1kGUI(parameters)
 
     message.Register("GetIPS", this.ShowIPS.bind(this));
     message.Register("execute", this.Execute.bind(this));
-
-    this.Reset();
-
-    window.setInterval(function(){message.Send("GetIPS", 0)}.bind(this), 1000);
+    message.Register("WorkerReady", this.OnWorkerReady.bind(this));
 }
+
+jor1kGUI.prototype.OnWorkerReady = function() {
+    this.Reset();
+    window.setInterval(function() {
+        message.Send("GetIPS", 0);
+    }, 1000);
+};
 
 // this command is send back and forth to be responsive
 jor1kGUI.prototype.Execute = function() {

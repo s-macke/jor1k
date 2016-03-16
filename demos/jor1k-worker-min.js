@@ -4927,14 +4927,14 @@ module.exports = elf;
 
 "use strict";
 
-var TAR = require('./tar.js');
-var FSLoader = require('./fsloader.js');
-var utils = require('../utils.js');
-var bzip2 = require('../bzip2.js');
-var marshall = require('../dev/virtio/marshall.js');
-var UTF8 = require('../../lib/utf8.js');
+var TAR = require('./tar');
+var FSLoader = require('./fsloader');
+var utils = require('../utils');
+var bzip2 = require('../bzip2');
+var marshall = require('../dev/virtio/marshall');
+var UTF8 = require('../../lib/utf8');
 var message = require('../messagehandler');
-var LazyUint8Array = require("./lazyUint8Array.js");
+var LazyUint8Array = require("./lazyUint8Array");
 
 var S_IRWXUGO = 0x1FF;
 var S_IFMT = 0xF000;
@@ -4976,13 +4976,51 @@ function FS() {
     this.userinfo = [];
 
     this.watchFiles = {};
+    this.watchDirectories = {};
 
     message.Register("LoadFilesystem", this.LoadFilesystem.bind(this) );
     message.Register("MergeFile", this.MergeFile.bind(this) );
+    message.Register("DeleteNode", this.DeleteNode.bind(this) );
+    message.Register("DeleteDirContents", this.RecursiveDelete.bind(this) );
+    message.Register("CreateDirectory", 
+        function(newDirPath){
+            var ids = this.SearchPath(newDirPath);
+            if(ids.id == -1 && ids.parentid != -1)
+                this.CreateDirectory(ids.name, ids.parentid);
+        }.bind(this)
+    );
+    message.Register("Rename",
+        function(info) {
+            var oldNodeInfo = this.SearchPath(info.oldPath);
+            var newNodeInfo = this.SearchPath(info.newPath);
+            
+            // old node DNE or new node has invalid directory path
+            if(oldNodeInfo.id == -1 || newNodeInfo.parentid == -1) 
+                return;
+               
+            if(newNodeInfo.id==-1){ //create
+                //parent must be directory
+                if(((this.inodes[newNodeInfo.parentid].mode)&S_IFMT) != S_IFDIR)
+                    return;
+                    
+                this.Rename(this.inodes[oldNodeInfo.id].parentid, this.inodes[oldNodeInfo.id].name, 
+                                newNodeInfo.parentid, newNodeInfo.name);
+            }
+            else { //overwrite 
+                this.Rename(this.inodes[oldNodeInfo.id].parentid, this.inodes[oldNodeInfo.id].name, 
+                                this.inodes[newNodeInfo.id].parentid, this.inodes[newNodeInfo.id].name);
+            }                
+        }.bind(this)
+    );
     message.Register("WatchFile",
         function(file) {
             //message.Debug("watching file: " + file.name);
             this.watchFiles[file.name] = true;
+        }.bind(this)
+    );
+    message.Register("WatchDirectory",
+        function(file) {
+            this.watchDirectories[file.name] = true;
         }.bind(this)
     );
     //message.Debug("registering readfile on worker");
@@ -5246,6 +5284,7 @@ FS.prototype.CreateDirectory = function(name, parentid) {
     }
     x.qid.type = S_IFDIR >> 8;
     this.PushInode(x);
+    this.NotifyListeners(this.inodes.length-1, 'newdir');
     return this.inodes.length-1;
 }
 
@@ -5258,6 +5297,7 @@ FS.prototype.CreateFile = function(filename, parentid) {
     x.qid.type = S_IFREG >> 8;
     x.mode = (this.inodes[parentid].mode & 0x1B6) | S_IFREG;
     this.PushInode(x);
+    this.NotifyListeners(this.inodes.length-1, 'newfile');
     return this.inodes.length-1;
 }
 
@@ -5339,6 +5379,7 @@ FS.prototype.Rename = function(olddirid, oldname, newdirid, newname) {
         return true;
     }
     var oldid = this.Search(olddirid, oldname);
+    var oldpath = this.GetFullPath(oldid);
     if (oldid == -1) {
         return false;
     }
@@ -5371,15 +5412,14 @@ FS.prototype.Rename = function(olddirid, oldname, newdirid, newname) {
 
     this.inodes[olddirid].updatedir = true;
     this.inodes[newdirid].updatedir = true;
+
+    this.NotifyListeners(idx, "rename", {oldpath: oldpath});
+    
     return true;
 }
 
 FS.prototype.Write = function(id, offset, count, GetByte) {
-    var path = this.GetFullPath(id);
-    if (this.watchFiles[path] == true) {
-      //message.Debug("sending WatchFileEvent for " + path);
-      message.Send("WatchFileEvent", path);
-    }
+    this.NotifyListeners(id, 'write');
     var inode = this.inodes[id];
 
     if (inode.data.length < (offset+count)) {
@@ -5439,6 +5479,7 @@ FS.prototype.FindPreviousID = function(idx) {
 }
 
 FS.prototype.Unlink = function(idx) {
+    this.NotifyListeners(idx, 'delete');
     if (idx == 0) return false; // root node cannot be deleted
     var inode = this.GetInode(idx);
     //message.Debug("Unlink " + inode.name);
@@ -5562,6 +5603,54 @@ FS.prototype.MergeFile = function(file) {
 }
 
 
+FS.prototype.RecursiveDelete = function(path) {
+    var toDelete = []
+    var ids = this.SearchPath(path);
+    if (ids.parentid == -1 || ids.id == -1) return;
+    
+    this.GetRecursiveList(ids.id, toDelete);
+
+    for(var i=toDelete.length-1; i>=0; i--)
+        this.Unlink(toDelete[i]);
+
+}
+
+FS.prototype.DeleteNode = function(path) {
+    var ids = this.SearchPath(path);
+    if (ids.parentid == -1 || ids.id == -1) return;
+    
+    if ((this.inodes[ids.id].mode&S_IFMT) == S_IFREG){
+        this.Unlink(ids.id);
+        return;
+    }
+    if ((this.inodes[ids.id].mode&S_IFMT) == S_IFDIR){
+        var toDelete = []
+        this.GetRecursiveList(ids.id, toDelete);
+        for(var i=toDelete.length-1; i>=0; i--)
+            this.Unlink(toDelete[i]);
+        this.Unlink(ids.id);
+        return;
+    }
+}
+
+FS.prototype.NotifyListeners = function(id, action, info) {
+    if(info==undefined)
+        info = {};
+
+    var path = this.GetFullPath(id);
+    if (this.watchFiles[path] == true && action=='write') {
+      message.Send("WatchFileEvent", path);
+    }
+    for (var directory in this.watchDirectories) {
+        if (this.watchDirectories.hasOwnProperty(directory)) {
+            var indexOf = path.indexOf(directory)
+            if(indexOf == 0 || indexOf == 1)
+                message.Send("WatchDirectoryEvent", {path: path, event: action, info: info});         
+        }
+    }
+}
+
+
 FS.prototype.Check = function() {
     for(var i=1; i<this.inodes.length; i++)
     {
@@ -5681,7 +5770,7 @@ FS.prototype.PrepareCAPs = function(id) {
 
 module.exports = FS;
 
-},{"../../lib/utf8.js":1,"../bzip2.js":2,"../dev/virtio/marshall.js":20,"../messagehandler":28,"../utils.js":43,"./fsloader.js":24,"./lazyUint8Array.js":25,"./tar.js":26}],24:[function(require,module,exports){
+},{"../../lib/utf8":1,"../bzip2":2,"../dev/virtio/marshall":20,"../messagehandler":28,"../utils":43,"./fsloader":24,"./lazyUint8Array":25,"./tar":26}],24:[function(require,module,exports){
 // -------------------------------------------------
 // ------------- FILESYSTEM LOADER -----------------
 // -------------------------------------------------
@@ -7801,9 +7890,9 @@ var toHex = require('../utils').ToHex;
 var imul = require('../imul');
 
 // CPUs
-var FastCPU = require('./fastcpu.js');
-var SafeCPU = require('./safecpu.js');
-var SMPCPU = require('./smpcpu.js');
+var FastCPU = require('./fastcpu');
+var SafeCPU = require('./safecpu');
+var SMPCPU = require('./smpcpu');
 
 // The asm.js ("Fast") and SMP cores must be singletons
 //  because of Firefox limitations.
@@ -8005,7 +8094,7 @@ forwardedMethods.forEach(function(m) {
 
 module.exports = CPU;
 
-},{"../imul":27,"../messagehandler":28,"../utils":43,"./fastcpu.js":29,"./safecpu.js":31,"./smpcpu.js":32}],31:[function(require,module,exports){
+},{"../imul":27,"../messagehandler":28,"../utils":43,"./fastcpu":29,"./safecpu":31,"./smpcpu":32}],31:[function(require,module,exports){
 // -------------------------------------------------
 // -------------------- CPU ------------------------
 // -------------------------------------------------
@@ -11791,7 +11880,7 @@ module.exports.Disassemble = Disassemble;
 // -------------------------------------------------
 var message = require('../messagehandler');
 var utils = require('../utils');
-var DebugIns = require('./disassemble.js');
+var DebugIns = require('./disassemble');
 
 
 // constructor
@@ -14190,13 +14279,13 @@ return {
 
 module.exports = DynamicCPU;
 
-},{"../messagehandler":28,"../utils":43,"./disassemble.js":34}],36:[function(require,module,exports){
+},{"../messagehandler":28,"../utils":43,"./disassemble":34}],36:[function(require,module,exports){
 // -------------------------------------------------
 // -------------------- CPU ------------------------
 // -------------------------------------------------
 var message = require('../messagehandler');
 var utils = require('../utils');
-var DebugIns = require('./disassemble.js');
+var DebugIns = require('./disassemble');
 
 
 // constructor
@@ -14221,6 +14310,7 @@ var WriteToHost = foreign.WriteToHost;
 var WriteFromHost = foreign.WriteFromHost;
 var imul = foreign.imul;
 var MathAbs = stdlib.Math.abs;
+var floor = stdlib.Math.floor;
 
 //One of the following error ids are printed to the console in case of an abort()
 var ERROR_INCOMPLETE_VMPRIVILEGE = 0;
@@ -15095,7 +15185,10 @@ function IMul64(a,b,index) {
     if ((a|0) == 0) return 0;
     if ((b|0) == 0) return 0;
 
-    if ((((a|0) >= -32768) & ((a|0) <= 32767)) & (((b|0) >= -32768) & ((b|0) <= 32767))) {
+    if ((a|0) >= -32768) 
+    if ((a|0) <=  32767)  
+    if ((b|0) >= -32768)  
+    if ((b|0) <=  32767) {
         result0 = imul((a|0),(b|0))|0;
         result1 = ((result0|0) < 0) ? -1 : 0;
         if ((index|0) == 0) return result0|0;
@@ -15132,17 +15225,18 @@ function SUMul64(a,b,index) {
     if ((a|0) == 0) return 0;
     if ((b|0) == 0) return 0;
 
-    if ((((a|0) >= -32768) & ((a|0) <= 32767)) & (((b|0) >= -32768) & ((b >>> 0) <= 32767))) {
+    if ((a|0) >= -32768)
+    if ((a|0) <= 32767) 
+    if ((b>>>0) < 65536)  {
         result0 = imul((a|0),(b|0))|0;
         result1 = ((result0|0) < 0) ? -1 : 0;
         if ((index|0) == 0) return result0|0;
         return result1|0;
     }
 
-    doNegate = ((a|0) < 0) ^ ((b|0) < 0);
+    doNegate = ((a|0) < 0);
 
     a = MathAbs(a|0)|0;
-    b = MathAbs(b|0)|0;
     result0 = UMul64(a, b, 0)|0;
     result1 = UMul64(a, b, 1)|0;
 
@@ -15914,8 +16008,8 @@ function Step(steps, clockspeed) {
                             float_read64tlb_entry = (paddr ^ vaddr) & 0xFFFFF000;
                         }
                         paddr = float_read64tlb_entry ^ vaddr;
-                        fi[(fip + ((((ins >> 7) & 0x1F) + 0) << 3)) >> 2] = ram[(ramp + paddr + 0) >> 2]|0;
-                        fi[(fip + ((((ins >> 7) & 0x1F) + 1) << 3)) >> 2] = ram[(ramp + paddr + 4) >> 2]|0;
+                        fi[(fip + (((ins >> 7) & 0x1F) << 3) + 0) >> 2] = ram[(ramp + paddr + 0) >> 2]|0;
+                        fi[(fip + (((ins >> 7) & 0x1F) << 3) + 4) >> 2] = ram[(ramp + paddr + 4) >> 2]|0;
                         continue;
 
                     default:
@@ -15934,7 +16028,7 @@ function Step(steps, clockspeed) {
 
                     case 0x02:
                         // fsw
-                        ff[0] = f[(fp + (((ins >> 20) & 0x1F) << 3)) >> 3];
+                        ff[0] = +f[(fp + (((ins >> 20) & 0x1F) << 3)) >> 3];
                         if ((float_store32tlb_index ^ vaddr) & 0xFFFFF000) {
                             paddr = TranslateVM(vaddr|0, VM_READ)|0;
                             if ((paddr|0) == -1) continue;
@@ -15955,8 +16049,8 @@ function Step(steps, clockspeed) {
                             float_store64tlb_entry = (paddr ^ vaddr) & 0xFFFFF000;
                         }
                         paddr = float_store64tlb_entry ^ vaddr;
-                        ram[(ramp + paddr + 0) >> 2] = fi[(fip + ((((ins >> 20) & 0x1F) + 0) << 3)) >> 2]|0;
-                        ram[(ramp + paddr + 4) >> 2] = fi[(fip + ((((ins >> 20) & 0x1F) + 1) << 3)) >> 2]|0;
+                        ram[(ramp + paddr + 0) >> 2] = fi[(fip + (((ins >> 20) & 0x1F) << 3) + 0) >> 2]|0;
+                        ram[(ramp + paddr + 4) >> 2] = fi[(fip + (((ins >> 20) & 0x1F) << 3) + 4) >> 2]|0;
                         continue;
 
                     default:
@@ -15976,14 +16070,14 @@ function Step(steps, clockspeed) {
                     case 0x01:  //fadd.d
                         fs1 = (+f[(fp + (((ins >> 15) & 0x1F) << 3)) >> 3]);
                         fs2 = (+f[(fp + (((ins >> 20) & 0x1F) << 3)) >> 3]);
-                        f[(fp + (((ins >> 7) & 0x1F) << 3)) >> 3] = fs1 + fs2;
+                        f[(fp + (((ins >> 7) & 0x1F) << 3)) >> 3] = (+fs1) + (+fs2);
                         continue;
 
                     case 0x04: //fsub.s
                     case 0x05: //fsub.d
                         fs1 = (+f[(fp + (((ins >> 15) & 0x1F) << 3)) >> 3]);
                         fs2 = (+f[(fp + (((ins >> 20) & 0x1F) << 3)) >> 3]);
-                        f[(fp + (((ins >> 7) & 0x1F) << 3)) >> 3] = fs1 - fs2;
+                        f[(fp + (((ins >> 7) & 0x1F) << 3)) >> 3] = (+fs1) - (+fs2);
                         continue;
 
                     case 0x50:
@@ -16009,7 +16103,7 @@ function Step(steps, clockspeed) {
                                 continue;
 
                             case 0x2:
-                                // fle
+                                // feq
                                 if ((+fs1) == (+fs2))
                                     r[((ins >> 5) & 0x7C) >> 2] = 1;
                                 else
@@ -16024,15 +16118,21 @@ function Step(steps, clockspeed) {
                         }
                         continue;
 
+                    case 0x20: // fcvt.s.d
+                    case 0x21: // fcvt.d.s
+                        f[(fp + (((ins >> 7) & 0x1F) << 3)) >> 3] = 
+                            (+f[(fp + (((ins >> 15) & 0x1F) << 3)) >> 3]);
+                        continue;
+
                     case 0x60:
                         // fcvt.w.s
-                        r[((ins >> 5) & 0x7C) >> 2] = (~~+f[(fp + (((ins >> 15) & 0x1F) << 3)) >> 3]);
+                        r[((ins >> 5) & 0x7C) >> 2] = ~~floor(+f[(fp + (((ins >> 15) & 0x1F) << 3)) >> 3]);
                         continue;
 
                     case 0x68:
                     case 0x69:
                         // fcvt.s.w, fcvt.d.w
-                        f[(fp + (((ins >> 7) & 0x1F) << 3)) >> 3] = (+~~r[((ins >> 13) & 0x7C) >> 2]);
+                        f[(fp + (((ins >> 7) & 0x1F) << 3)) >> 3] = +(r[((ins >> 13) & 0x7C) >> 2]|0);
                         continue;
 
                     case 0x08: //fmul.s
@@ -16058,13 +16158,14 @@ function Step(steps, clockspeed) {
                                 f[(fp + (((ins >> 7) & 0x1F) << 3)) >> 3] = ((+fs2)<(+0))?+MathAbs(+fs1):-(+MathAbs(+fs1));
                                 continue;
 
-                            case 3:
+                            case 2:
                                 // fsgnjx.d
-                                f[(fp + (((ins >> 7) & 0x1F) << 3)) >> 3] =
-                                    (
-                                    (((+fs2)<(+0)) & ((+fs1)<(+0)) ) |
-                                    (((+fs2)>(+0)) & ((+fs1)>(+0)) )
-                                    )?-(+MathAbs(+fs1)):+MathAbs(+fs1);
+
+                                if (((+fs1)*(+fs2)) < (+0)) {
+                                    f[(fp + (((ins >> 7) & 0x1F) << 3)) >> 3] = -(+MathAbs(+fs1));
+                                } else {
+                                    f[(fp + (((ins >> 7) & 0x1F) << 3)) >> 3] = +(+MathAbs(+fs1));
+                                }
                                 continue;
 
                             default:
@@ -16373,7 +16474,7 @@ return {
 
 module.exports = FastCPU;
 
-},{"../messagehandler":28,"../utils":43,"./disassemble.js":34}],37:[function(require,module,exports){
+},{"../messagehandler":28,"../utils":43,"./disassemble":34}],37:[function(require,module,exports){
 // -------------------------------------------------
 // -------------------- HTIF -----------------------
 // -------------------------------------------------
@@ -16381,8 +16482,8 @@ module.exports = FastCPU;
 "use strict";
 var message = require('../messagehandler');
 var utils = require('../utils');
-var bzip2 = require('../bzip2.js');
-var syscalls = require('./syscalls.js');
+var bzip2 = require('../bzip2');
+var syscalls = require('./syscalls');
 
 // -------------------------------------------------
 
@@ -16696,7 +16797,7 @@ HTIF.prototype.HandleRequest = function() {
 
 module.exports = HTIF;
 
-},{"../bzip2.js":2,"../messagehandler":28,"../utils":43,"./syscalls.js":40}],38:[function(require,module,exports){
+},{"../bzip2":2,"../messagehandler":28,"../utils":43,"./syscalls":40}],38:[function(require,module,exports){
 /* this is a unified, abstract interface (a facade) to the different
  * CPU implementations
  */
@@ -16707,9 +16808,9 @@ var utils = require('../utils');
 var imul = require('../imul');
 
 // CPUs
-var SafeCPU = require('./safecpu.js');
-var FastCPU = require('./fastcpu.js');
-var DynamicCPU = require('./dynamiccpu.js');
+var SafeCPU = require('./safecpu');
+var FastCPU = require('./fastcpu');
+var DynamicCPU = require('./dynamiccpu');
 
 var stdlib = {
     Int32Array : Int32Array,
@@ -16822,7 +16923,7 @@ forwardedMethods.forEach(function(m) {
 
 module.exports = CPU;
 
-},{"../imul":27,"../messagehandler":28,"../utils":43,"./dynamiccpu.js":35,"./fastcpu.js":36,"./safecpu.js":39}],39:[function(require,module,exports){
+},{"../imul":27,"../messagehandler":28,"../utils":43,"./dynamiccpu":35,"./fastcpu":36,"./safecpu":39}],39:[function(require,module,exports){
 // -------------------------------------------------
 // -------------------- CPU ------------------------
 // -------------------------------------------------
@@ -16830,7 +16931,7 @@ module.exports = CPU;
 "use strict";
 var message = require('../messagehandler');
 var utils = require('../utils');
-var DebugIns = require('./disassemble.js');
+var DebugIns = require('./disassemble');
 
 var PRV_U = 0x00;
 var PRV_S = 0x01;
@@ -17615,13 +17716,13 @@ SafeCPU.prototype.SUMul64 = function (a,b) {
     a |= 0;
     b >>>= 0;
 
-    if ((a >= -32768 && a <= 32767) && (b >= -32768 && b <= 32767)) {
+    if ((a >= -32768 && a <= 32767) && (b < 65536)) {
         result[0] = a * b;
         result[1] = (result[0] < 0) ? -1 : 0;
         return result;
     }
 
-    var doNegate = (a < 0) ^ (b < 0);
+    var doNegate = a < 0;
 
     result = this.UMul64(Math.abs(a), Math.abs(b));
 
@@ -18431,6 +18532,12 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                         }
                         break;
 
+                    case 0x20: // fcvt.s.d
+                    case 0x21: // fcvt.d.s
+                        fs1 = f[(ins >> 15) & 0x1F];
+                        f[rindex] = fs1;
+                        break;
+
                     case 0x60:
                         //fcvt.w.s
                         r[rindex] = f[(ins >> 15) & 0x1F];
@@ -18476,7 +18583,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                                 f[rindex] = (fs2<0)?Math.abs(fs1):-Math.abs(fs1);
                                 break;
 
-                            case 3:
+                            case 2:
                                 // fsgnjx.d
                                 f[rindex] = ((fs2<0 && fs1<0) || (fs2>0 && fs1>0))?Math.abs(fs1):-Math.abs(fs1);
                                 break;
@@ -18676,7 +18783,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
 
 module.exports = SafeCPU;
 
-},{"../messagehandler":28,"../utils":43,"./disassemble.js":34}],40:[function(require,module,exports){
+},{"../messagehandler":28,"../utils":43,"./disassemble":34}],40:[function(require,module,exports){
 // -------------------------------------------------
 // ----------------- SYSCALLS ----------------------
 // -------------------------------------------------
@@ -18927,7 +19034,7 @@ var SYSTEM_HALT = 0x3; // Idle
 function System() {
     // the Init function is called by the master thread.
     message.Register("LoadAndStart", this.LoadImageAndStart.bind(this) );
-    message.Register("execute", this.MainLoop.bind(this)	);
+    message.Register("execute", this.MainLoop.bind(this));
     message.Register("Init", this.Init.bind(this) );
     message.Register("Reset", this.Reset.bind(this) );
     message.Register("ChangeCore", this.ChangeCPU.bind(this) );
@@ -18936,9 +19043,7 @@ function System() {
     message.Register("GetIPS", function(data) {
         message.Send("GetIPS", this.ips);
         this.ips=0;
-    }.bind(this)
-
-    );
+    }.bind(this));
 }
 
 System.prototype.CreateCPU = function(cpuname, arch) {
@@ -19260,8 +19365,8 @@ module.exports = System;
 
 "use strict";
 
-var message = require('./messagehandler.js'); // global variable
-var utils = require('./utils.js');
+var message = require('./messagehandler'); // global variable
+var utils = require('./utils');
 
 function Timer(_ticksperms, _loopspersecond) {
     // constants
@@ -19391,7 +19496,7 @@ Timer.prototype.GlobalUpdate = function(ticks) {
 
 module.exports = Timer;
 
-},{"./messagehandler.js":28,"./utils.js":43}],43:[function(require,module,exports){
+},{"./messagehandler":28,"./utils":43}],43:[function(require,module,exports){
 // -------------------------------------------------
 // ------------------ Utils ------------------------
 // -------------------------------------------------
@@ -19612,7 +19717,10 @@ module.exports.LoadTextResource = LoadTextResource;
 // -------------------- Worker ---------------------
 // -------------------------------------------------
 
-var System = require('./system.js');
-var sys = new System();
+var message = require('./messagehandler');
+var System = require('./system');
 
-},{"./system.js":41}]},{},[44]);
+new System();
+message.Send("WorkerReady", 0);
+
+},{"./messagehandler":28,"./system":41}]},{},[44]);
