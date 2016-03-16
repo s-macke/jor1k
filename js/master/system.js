@@ -49,7 +49,9 @@ function jor1kGUI(parameters)
 
     // ----------------------
 
-    this.worker = new Worker("jor1k-worker-min.js");
+    this.worker = (this.params.worker instanceof Worker) ?
+        this.params.worker : new Worker("jor1k-worker-min.js");
+
     message.SetWorker(this.worker);
 
     // ----
@@ -172,11 +174,15 @@ function jor1kGUI(parameters)
 
     message.Register("GetIPS", this.ShowIPS.bind(this));
     message.Register("execute", this.Execute.bind(this));
-
-    this.Reset();
-
-    window.setInterval(function(){message.Send("GetIPS", 0)}.bind(this), 1000);
+    message.Register("WorkerReady", this.OnWorkerReady.bind(this));
 }
+
+jor1kGUI.prototype.OnWorkerReady = function() {
+    this.Reset();
+    window.setInterval(function() {
+        message.Send("GetIPS", 0);
+    }, 1000);
+};
 
 // this command is send back and forth to be responsive
 jor1kGUI.prototype.Execute = function() {
