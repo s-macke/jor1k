@@ -5131,23 +5131,23 @@ FS.prototype.CheckEarlyload = function(path)
 // The filesystem is responsible to add the correct time. This is a hack
 // Have to find a better solution.
 FS.prototype.AppendDateHack = function(idx) {
-    if (this.GetFullPath(idx) != "etc/init.d/rcS") return; 
+    if (this.GetFullPath(idx) != "home/user/.profile") return;
     var inode = this.inodes[idx];
     var date = new Date();
     var datestring = 
         "\ndate -s \"" + 
-        date.getFullYear() + 
+        date.getUTCFullYear() + 
         "-" + 
-        (date.getMonth()+1) + 
+        (date.getUTCMonth()+1) + 
         "-" + 
-        date.getDate() + 
+        date.getUTCDate() + 
         " " + 
-        date.getHours() +
+        date.getUTCHours() +
         ":" + 
-        date.getMinutes() +
+        date.getUTCMinutes() +
         ":" + 
-        date.getSeconds() +
-        "\"\n";
+        date.getUTCSeconds() +
+        "\" &>/dev/null\n";
     var size = inode.size;
     this.ChangeSize(idx, size+datestring.length);
     for(var i=0; i<datestring.length; i++) {
@@ -5206,10 +5206,7 @@ FS.prototype.LoadFile = function(idx) {
             inode.data = new Uint8Array(buffer);
             if (inode.size != inode.data.length) message.Warning("Size wrong for uncompressed non-lazily loaded file: " + inode.name);
             inode.size = inode.data.length; // correct size if the previous was wrong. 
-            inode.status = STATUS_OK;
-            if (inode.name == "rcS") {
-                this.AppendDateHack(idx);
-            }
+            inode.status = STATUS_OK;            
             this.filesinloadingqueue--;
             this.HandleEvent(idx);            
         }.bind(this);
@@ -5359,6 +5356,11 @@ FS.prototype.OpenInode = function(id, mode) {
         this.LoadFile(id);
         return false;
     }
+
+    if (inode.name == ".profile") {
+        this.AppendDateHack(id);
+    }
+
     return true;
 }
 
