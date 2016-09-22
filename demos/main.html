@@ -237,10 +237,6 @@ function Start() {
        if (jor1kparameters.system.cpu == "smp") {
              console.log("Load smp kernel");
              jor1kparameters.system.kernelURL = "vmlinuxsmp.bin.bz2";
-             if (jor1kparameters.system.ncores != 4) {
-                jor1kparameters.system.ncores = 4;
-                pushState = true;
-             }
        }
     } else {
        pushState = true;
