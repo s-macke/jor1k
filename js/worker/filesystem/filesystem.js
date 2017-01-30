@@ -680,6 +680,8 @@ FS.prototype.MergeFile = function(file) {
     }
     this.inodes[ids.id].data = file.data;
     this.inodes[ids.id].size = file.data.length;
+    // Don't forget to update the modification date !
+    this.inodes[ids.id].mtime = Math.floor((new Date()).getTime()/1000);
 }
 
 
