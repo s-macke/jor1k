@@ -227,7 +227,7 @@ var jor1kgui = new Jor1k(
         system: {
             kernelURL: tests[1],
             arch: "riscv",
-            cpu: "asm",
+            cpu: "safe",
             memorysize: 32,
         }
     }
@@ -243,7 +243,6 @@ function OnSelectChange(sel)
     		jor1kgui.Pause(true);    
     		return;
 	}
-
 
 	jor1kgui.params.system.kernelURL = jor1kgui.params.path + sel.value;
 	jor1kgui.Reset();

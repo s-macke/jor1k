@@ -27,6 +27,7 @@ function jor1kGUI(parameters)
     this.params.path = this.params.path || "";
 
     this.params.system.kernelURL = this.params.system.kernelURL || "vmlinux.bin.bz2";
+    console.log("kernel URL: " + this.params.system.kernelURL);
     this.params.system.memorysize = this.params.system.memorysize || 32;
     this.params.system.arch = this.params.system.arch || "or1k";
     this.params.system.cpu = this.params.system.cpu || "asm";

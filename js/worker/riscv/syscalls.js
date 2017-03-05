@@ -23,7 +23,6 @@ function SysCalls(ram) {
     this.file_pointer = []; //file descriptor is the index
     this.file_descriptor_offset = 9;
     this.elf8mem_offset = 0x00;
-
 }
 
 SysCalls.prototype.HandleSysCall = function (addr) {
@@ -31,12 +30,11 @@ SysCalls.prototype.HandleSysCall = function (addr) {
     addr = addr | 0;
     var ram = this.ram;
     var syscall_id = this.ram.Read32(addr);
-    //message.Debug("syscall_id " + syscall_id);
-    var argv = ["spike", "-m31", "-p1", "vmlinux"];
-    switch(syscall_id){
+    message.Debug("syscall_id " + syscall_id);
+    var argv = ["spike", "vmlinux"];
+    switch(syscall_id) {
 
         case SYS_OPENAT:
-            //sys_openat
             var filename_pointer = this.ram.Read32(addr + 16);
             var filename = "";
             for(var i=0,c;;i++){
@@ -56,7 +54,6 @@ SysCalls.prototype.HandleSysCall = function (addr) {
             break;
 
         case SYS_PREAD:
-            //sys_pread
             var file_descriptor = this.ram.Read32(addr + 8);
             var file_address = this.file_descriptor_table[file_descriptor];
             var buffer_address = this.ram.Read32(addr + 16);
@@ -75,12 +72,10 @@ SysCalls.prototype.HandleSysCall = function (addr) {
             break;
 
         case SYS_CLOSE:
-            //sys_close
             this.ram.Write32(addr, 0);
             break;
 
         case SYS_FSTAT:
-            //sys_fstat
             var file_descriptor = this.ram.Read32(addr + 8);
             var stat_buffer_address = this.ram.Read32(addr + 16);
             this.ram.Write32(stat_buffer_address, 0); //unsigned long   Device. 
@@ -107,25 +102,22 @@ SysCalls.prototype.HandleSysCall = function (addr) {
             break;
 
         case SYS_WRITE:
-            //sys_write
             var length = this.ram.Read32(addr + 8*3), i =0;
             var string_address = this.ram.Read32(addr + 8*2);
             while(i < length){
                 var c = this.ram.Read8(string_address + (i++));
-                this.ram.Write8Little(0x90000000 >> 0, c);
-                if (c == 0xA) this.ram.Write8(0x90000000 >> 0, 0xD);
+                this.ram.Write8Little(0x30000000 >> 0, c);
+                if (c == 0xA) this.ram.Write8(0x30000000 >> 0, 0xD);
             }
             this.ram.Write32(addr, i);
             break;
 
         case SYS_EXIT:
-            //sys_exit
             message.Debug("Program exited with sys_exit for inst at PC "+utils.ToHex(this.pc));
             message.Abort();
             break;
 
         case SYS_GETMAINVARS:
-            //sys_getmainvars
             var address = this.ram.Read32(addr + 8);
             var length = this.ram.Read32(addr + 16);
 
@@ -164,7 +156,7 @@ SysCalls.prototype.HandleSysCall = function (addr) {
 SysCalls.prototype.OnFileLoaded = function(buffer) {
     var buffer8 = new Uint8Array(buffer);
     var length = buffer8.length;
-message.Debug("On File Loaded " + length);
+    message.Debug("On File Loaded " + length);
     for(var i=0; i<length; i++) this.elf8mem[i+this.elf8mem_offset] = buffer8[i];
     this.file_descriptor_table[++this.file_descriptor_offset] = this.elf8mem_offset;
     this.elf8mem_offset += length;

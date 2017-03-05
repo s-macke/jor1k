@@ -24,6 +24,8 @@ var FBDev = require('./dev/framebuffer');
 var EthDev = require('./dev/ethmac');
 var ATADev = require('./dev/ata');
 var RTCDev = require('./dev/rtc');
+var RISCV_RTCDev = require('./dev/riscv_rtc');
+var ROMDev = require('./dev/rom');
 var TouchscreenDev = require('./dev/touchscreen');
 var KeyboardDev = require('./dev/keyboard');
 var SoundDev = require('./dev/sound');
@@ -61,7 +63,6 @@ var FS = require('./filesystem/filesystem');
     ------- RAM --------
     0x100000 -  ...     RAM
 */
-
 
 var SYSTEM_RUN = 0x1;
 var SYSTEM_STOP = 0x2;
@@ -133,6 +134,9 @@ System.prototype.Init = function(system) {
     this.devices = [];
     this.devices.push(this.cpu);
 
+    this.filesystem = new FS();
+    this.virtio9pdev = new Virtio9p(this.ram, this.filesystem);
+
     if (system.arch == "or1k") {
 
         this.irqdev = new IRQDev(this);
@@ -151,15 +155,13 @@ System.prototype.Init = function(system) {
         this.snddev = new SoundDev(this, this.ram);
         this.rtcdev = new RTCDev(this);
 
-        this.filesystem = new FS();
-        this.virtio9pdev = new Virtio9p(this.ram, this.filesystem);
-        this.virtiodev1 = new VirtIODev(this, 0x6, this.ram, this.virtio9pdev);
         this.virtioinputdev = new VirtioInput(this.ram);
         this.virtionetdev = new VirtioNET(this.ram);
         this.virtioblockdev = new VirtioBlock(this.ram);
         this.virtiodummydev = new VirtioDummy(this.ram);
         this.virtiogpudev = new VirtioGPU(this.ram);
         this.virtioconsoledev = new VirtioConsole(this.ram);
+        this.virtiodev1 = new VirtIODev(this, 0x6, this.ram, this.virtio9pdev);
         this.virtiodev2 = new VirtIODev(this, 0xB, this.ram, this.virtiodummydev);
         this.virtiodev3 = new VirtIODev(this, 0xC, this.ram, this.virtiodummydev);
 
@@ -204,9 +206,59 @@ System.prototype.Init = function(system) {
     if (system.arch == "riscv") {
         // at the moment the htif interface is part of the CPU initialization.
         // However, it uses uartdev0
-        this.uartdev0 = new UARTDev(0, this, 0x2);
+
+        this.rom = new ArrayBuffer(0x2000);
+        var buffer32view = new Int32Array(this.rom);
+        var buffer8view = new Uint8Array(this.rom);
+        // boot process starts at 0x1000
+        buffer32view[0x400] = 0x297 + 0x80000000 - 0x1000; // reset vector
+        buffer32view[0x401] = 0x00028067; // jump straight to DRAM_BASE
+        buffer32view[0x402] = 0x00000000; // reserved
+        buffer32view[0x403] = 0x00001020; // config string pointer
+        buffer32view[0x404] = 0x00000000; // trap vector
+        buffer32view[0x405] = 0x00000000; // trap vector
+        buffer32view[0x406] = 0x00000000; // trap vector
+        buffer32view[0x407] = 0x00000000; // trap vector
+        var configstring =
+        "platform {\n" +
+        "  vendor ucb;\n" +
+        "  arch spike;\n" +
+        "};\n" +
+        "rtc {\n" +
+        "  addr 0x40000000;\n" +
+        "};\n" +
+        "ram {\n" +
+        "  0 {\n" +
+        "    addr 0x80000000;\n" +
+        "    size 0x01f00000;\n" +
+        "  };\n" +
+        "};\n" +
+        "core {\n" +
+        "  0 {\n" +
+        "    0 {\n" + // hart 0 on core 0
+        "      isa rv32imafdc;\n" +
+        "      timecmp 0x40000008;\n" +
+        "      ipi 0x40001000;\n" +
+        "    };\n" +
+	"  };\n" +
+	"};\n";
+	for(var i=0; i<configstring.length; i++) buffer8view[0x1020+i] = configstring.charCodeAt(i);
+
+        this.virtiodev1 = new VirtIODev(this, 0x1, this.ram, this.virtio9pdev);
+        this.romdev = new ROMDev(this.rom);
+        this.uartdev0 = new UARTDev(0, this, 0xD);
+        this.rtcdev = new RISCV_RTCDev(this);
+
+        this.devices.push(this.romdev);
         this.devices.push(this.uartdev0);
-        this.ram.AddDevice(this.uartdev0,   0x90000000, 0x7);
+        this.devices.push(this.rtcdev);
+        this.devices.push(this.virtiodev1);
+        this.devices.push(this.virtio9pdev);
+
+        this.ram.AddDevice(this.romdev,      0x00000000, 0x7);
+        this.ram.AddDevice(this.uartdev0,    0x30000000, 0x2000);
+        this.ram.AddDevice(this.rtcdev,      0x40000000, 0x2000);
+        this.ram.AddDevice(this.virtiodev1,  0x20000000, 0x2000);
     }
 
     this.ips = 0; // external instruction per second counter
@@ -306,12 +358,13 @@ System.prototype.PatchKernel = function(length)
 System.prototype.OnKernelLoaded = function(buffer) {
     this.SendStringToTerminal("Decompressing kernel...\r\n");
     var buffer8 = new Uint8Array(buffer);
-    var length = 0;
+    var length = buffer.byteLength;
 
     if (elf.IsELF(buffer8)) {
-        elf.Extract(buffer8, this.ram.uint8mem);
+        elf.Extract(buffer8, this.ram);
     } else 
     if (bzip2.IsBZIP2(buffer8)) {
+        length = 0;
         bzip2.simple(buffer8, function(x){this.ram.uint8mem[length++] = x;}.bind(this));
         if (elf.IsELF(this.ram.uint8mem)) {
             var temp = new Uint8Array(length);
@@ -321,11 +374,12 @@ System.prototype.OnKernelLoaded = function(buffer) {
             elf.Extract(temp, this.ram.uint8mem);
         }
     } else {
-        length = buffer8.length;
         for(var i=0; i<length; i++) this.ram.uint8mem[i] = buffer8[i];
     }
-    this.PatchKernel(length);
+
+    // OpenRISC CPU uses Big Endian
     if (this.cpu.littleendian == false) {
+        this.PatchKernel(length);
         this.ram.Little2Big(length);
     }
     message.Debug("Kernel loaded: " + length + " bytes");
