@@ -52,7 +52,7 @@ FSLoader.prototype.HandleDirContents = function(list, parentid) {
              inode.mode = S_IFLNK | S_IRWXUGO;
              inode.symlink = tag.path;
              this.fs.PushInode(inode);
-         } else if (!tag.size) { // dir
+         } else if (typeof tag.size === "undefined") { // dir
              inode.mode |= S_IFDIR;
              inode.updatedir = true;
              this.fs.PushInode(inode);
