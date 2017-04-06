@@ -23,6 +23,7 @@ function LoopSoundBuffer(samplerate) {
 
 LoopSoundBuffer.prototype.SetRate = function(rate) {
     if (this.samplerate == rate) return;
+    if (typeof this.context === "undefined") return;
     this.samplerate = rate;
     this.periodsize = Math.floor(this.samplerate/4); // 250ms
     this.sampleslen = this.periodsize*this.nperiods;
@@ -43,6 +44,7 @@ LoopSoundBuffer.prototype.OnEnded = function()
 LoopSoundBuffer.prototype.Enabled = function(e)
 {
     this.enabled = e;
+    if (typeof this.context === "undefined") return;
     if (!e) return;
     this.period = 0;
     this.basetime = this.context.currentTime;
