@@ -19,23 +19,20 @@ var VM_WRITE = 1;
 var VM_FETCH = 2;
 
 var CAUSE_MISALIGNED_FETCH    = 0x0;
-var CAUSE_FAULT_FETCH         = 0x1;
+var CAUSE_FETCH_ACCESS        = 0x1;
 var CAUSE_ILLEGAL_INSTRUCTION = 0x2;
 var CAUSE_BREAKPOINT          = 0x3;
 var CAUSE_MISALIGNED_LOAD     = 0x4;
-var CAUSE_FAULT_LOAD          = 0x5;
+var CAUSE_LOAD_ACCESS         = 0x5;
 var CAUSE_MISALIGNED_STORE    = 0x6;
-var CAUSE_FAULT_STORE         = 0x7;
+var CAUSE_STORE_ACCESS        = 0x7;
 var CAUSE_USER_ECALL          = 0x8;
 var CAUSE_SUPERVISOR_ECALL    = 0x9;
 var CAUSE_HYPERVISOR_ECALL    = 0xa;
 var CAUSE_MACHINE_ECALL       = 0xb;
-/*
-var CAUSE_SOFTWARE_INTERRUPT  = 0xc; // interprocess interrupts (ipi)
-var CAUSE_TIMER_INTERRUPT     = 0xd;
-var CAUSE_HOST_INTERRUPT      = 0xe; // trap from machine mode
-*/
-
+var CAUSE_FETCH_PAGE_FAULT    = 0xc;
+var CAUSE_LOAD_PAGE_FAULT     = 0xd;
+var CAUSE_STORE_PAGE_FAULT    = 0xf;
 /*
 var CAUSE_TIMER_INTERRUPT          = (1<<31) | 0x01;
 var CAUSE_HOST_INTERRUPT           = (1<<31) | 0x02;
@@ -56,17 +53,18 @@ var MSTATUS_MPP     = 0x00001800; // privilege mode
 var MSTATUS_FS      = 0x00006000; // tracking current state of floating point unit
 var MSTATUS_XS      = 0x00018000; // status of user-mode extensions
 var MSTATUS_MPRV    = 0x00020000; // priviege level at which loads and stores execute
-var MSTATUS_PUM     = 0x00040000; // protect user memory
+var MSTATUS_SUM     = 0x00040000; // supervisor may access user memory
 var MSTATUS_MXR     = 0x00080000; // make executable readable
-var MSTATUS_VM      = 0x1F000000; // mode of virtual memory (MMU)
+var MSTATUS_TVM     = 0x00100000;
+var MSTATUS_TW      = 0x00200000;
+var MSTATUS_TSR     = 0x00400000;
 var MSTATUS_SD      = 0x80000000;
 
-var VM_MBARE = 0;
-var VM_MBB   = 1;
-var VM_MBBID = 2;
-var VM_SV32  = 8;
-var VM_SV39  = 9;
-var VM_SV48  = 10;
+var SPTBR_MODE_OFF  = 0;
+var SPTBR_MODE_SV32 = 1;
+var SPTBR32_MODE = 0x80000000;
+var SPTBR32_ASID = 0x7FC00000;
+var SPTBR32_PPN  = 0x003FFFFF;
 
 // page table entry (PTE) fields
 var PTE_V     = 0x001 // Valid
@@ -107,15 +105,16 @@ var CSR_FRM       = 0x002; // Floating-Point Dynamic Rounding Mode
 var CSR_FCSR      = 0x003; // Floating-Point Control and Status Register
 
 // Supervisor CSRs standard read/write
-var CSR_SSTATUS   = 0x100; // Supervisor status register
-var CSR_SIE       = 0x104; // Supervisor interrupt-enable register
-var CSR_STVEC     = 0x105; // Supervisor trap handler base address.
-var CSR_SSCRATCH  = 0x140; // Scratch register for supervisor trap handlers.
-var CSR_SEPC      = 0x141; // Supervisor exception program counter
-var CSR_SCAUSE    = 0x142; // Supervisor trap cause
-var CSR_SIP       = 0x144; // Supervisor interrupt pending
-var CSR_SPTBR     = 0x180; // Page-table base register
-var CSR_SBADADDR  = 0x143; // Supervisor bad address
+var CSR_SSTATUS    = 0x100; // Supervisor status register
+var CSR_SIE        = 0x104; // Supervisor interrupt-enable register
+var CSR_STVEC      = 0x105; // Supervisor trap handler base address.
+var CSR_SCOUNTEREN = 0x106; // machine counter enable register (supervisor)
+var CSR_SSCRATCH   = 0x140; // Scratch register for supervisor trap handlers.
+var CSR_SEPC       = 0x141; // Supervisor exception program counter
+var CSR_SCAUSE     = 0x142; // Supervisor trap cause
+var CSR_SBADADDR   = 0x143; // Supervisor bad address
+var CSR_SIP        = 0x144; // Supervisor interrupt pending
+var CSR_SPTBR      = 0x180; // Page-table base register
 
 // Hypervisor CSR standard read/write
 var CSR_HEPC      = 0x241; // Hypervisor exception program counte
@@ -128,14 +127,16 @@ var CSR_MIDELEG   = 0x303; // Machine interrupt delegation register.
 var CSR_MIE       = 0x304; // Machine interrupt-enable registe
 var CSR_MTVEC     = 0x305; // Machine trap-handler base address.
 
-var CSR_MUCOUNTEREN = 0x320; // machine counter enable register (user)
-var CSR_MSCOUNTEREN = 0x321; // machine counter enable register (supervisor)
+var CSR_MCOUNTEREN = 0x306; // machine counter enable register (user)
 
 var CSR_MSCRATCH  = 0x340; // Scratch register for machine trap handlers
 var CSR_MEPC      = 0x341; // Machine exception program counter
 var CSR_MCAUSE    = 0x342; // Machine trap cause
 var CSR_MBADADDR  = 0x343; // Machine bad address
 var CSR_MIP       = 0x344; // Machine interrupt pending
+
+var CSR_PMPCFG0   = 0x3a0;
+var CSR_PMPADDR0  = 0x3b0;
 
 // Machine CSRs standard read/write and unknown
 var CSR_MRESET    = 0x782;
@@ -188,16 +189,16 @@ function SafeCPU(ram, htif) {
 }
 
 function get_field(reg, mask) {
-    var reg = reg|0;
+    var reg  = reg|0;
     var mask = mask|0;
-    return ((reg & mask) / (mask & ~(mask << 1)));
+    return ((reg & mask) / (mask & ~(mask << 1)))|0;
 }
 
 function set_field(reg, mask, val) {
-    var reg = reg|0;
-    var mask = mask|0;
-    var val = val|0;
-    return ((reg & ~mask) | ((val * (mask & ~(mask << 1))) & mask));
+    var reg  = reg | 0;
+    var mask = mask | 0;
+    var val  = val | 0;
+    return (reg & ~mask) | ((val * (mask & ~(mask << 1))) & mask);
 }
 
 SafeCPU.prototype.Reset = function() {
@@ -212,7 +213,7 @@ SafeCPU.prototype.Reset = function() {
     this.amoaddr = 0x00;
     this.amovalue = 0x00;
 
-    this.pc = 0x1000; // implementation defined start address, boot in ROM
+    this.pc = 0x1000; // implementation defined start address, boot into ROM
 }
 
 SafeCPU.prototype.InvalidateTLB = function() {
@@ -275,30 +276,36 @@ SafeCPU.prototype.CheckForInterrupt = function () {
     var s_enabled = (this.prv < PRV_S) || ((this.prv == PRV_S) && sie);
     enabled_interrupts |= pending_interrupts & this.csr[CSR_MIDELEG] & -s_enabled;
 */
+/*
     var mie = get_field(this.csr[CSR_MSTATUS], MSTATUS_MIE);
     var m_enabled = (this.prv < PRV_M) || ((this.prv == PRV_M) && mie);
     var enabled_interrupts = pending_interrupts & ~this.csr[CSR_MIDELEG] & -m_enabled;
 
     var sie = get_field(this.csr[CSR_MSTATUS], MSTATUS_SIE);
     var s_enabled = this.prv < PRV_S || (this.prv == PRV_S && sie);
-    enabled_interrupts |= pending_interrupts & this.csr[CSR_MIDELEG] & -s_enabled;
+    if (enabled_interrupts == 0)
+        enabled_interrupts |= pending_interrupts & this.csr[CSR_MIDELEG] & -s_enabled;
 
     if (enabled_interrupts) {
         this.Trap(0x80000000 | ctz(enabled_interrupts), this.pc);
     }
+*/
 };
 
 
-SafeCPU.prototype.Trap = function (cause, epc) {
+SafeCPU.prototype.Trap = function (cause, epc, addr) {
     cause = cause|0;
+    epc = epc|0;
+    addr = addr|0;
 
-    //message.Debug("Trap cause=" + utils.ToHex(cause) + " " + utils.ToHex(epc));
+    message.Debug("Trap cause=" + utils.ToHex(cause) + " at epc=" + utils.ToHex(epc));
     //message.Abort();
 
     // by default, trap to M-mode, unless delegated to S-mode
     var bit = cause;
     var deleg = this.csr[CSR_MEDELEG];
-    if (bit & (1<<31)) {
+    var interrupt = (bit & (1<<31)) != 0;
+    if (interrupt) {
         deleg = this.csr[CSR_MIDELEG];
         bit &= ~(1<<31);
     }
@@ -307,36 +314,26 @@ SafeCPU.prototype.Trap = function (cause, epc) {
         this.pc = this.csr[CSR_STVEC];
         this.csr[CSR_SCAUSE] = cause;
         this.csr[CSR_SEPC] = epc;
+        this.csr[CSR_SBADADDR] = addr;
 
         var s = this.csr[CSR_MSTATUS] | 0;
-/*
-        s &= ~(MSTATUS_SIE | MSTATUS_SPP | MSTATUS_SPIE);
-        s |= this.prv << 8; // to SPP bit
-        s |= (this.csr[CSR_MSTATUS] & (MSTATUS_UIE << this.prv))?1<<5:0; // set MSTATUS_SPIE
-*/
-        s = set_field(s, MSTATUS_SPIE, get_field(s, MSTATUS_UIE << this.prv));
-        s = set_field(s, MSTATUS_SPP, this.prv);
-        s = set_field(s, MSTATUS_SIE, 0);
+        s = set_field(s, MSTATUS_SPIE, get_field(s, MSTATUS_SIE))|0;
+        s = set_field(s, MSTATUS_SPP, this.prv)|0;
+        s = set_field(s, MSTATUS_SIE, 0)|0;
         this.csr[CSR_MSTATUS] = s;
 
         this.prv = PRV_S;
     } else {
-        this.pc = this.csr[CSR_MTVEC];
+        var vector = ((this.csr[CSR_MTVEC] & 1) && interrupt) ? bit*4 : 0;
+        this.pc = (this.csr[CSR_MTVEC]&(~1)) + vector;
         this.csr[CSR_MEPC] = epc;
         this.csr[CSR_MCAUSE] = cause;
+        this.csr[CSR_MBADADDR] = addr;
 
         var s = this.csr[CSR_MSTATUS] | 0;
-/*
-        s &= ~(MSTATUS_MIE | MSTATUS_MPP | MSTATUS_MPIE);
-        s |= this.prv << 11; // to MPP bit
-        s |= (this.csr[CSR_MSTATUS] & (MSTATUS_UIE << this.prv))?1<<7:0; // set MPIE
-*/
-        //s |= ((this.csr[CSR_MSTATUS] >> this.prv)&1) << 7; // set MPIE
-        //s = set_field(s, MSTATUS_MPIE, get_field(s, MSTATUS_UIE << this.prv));
-
-        s = set_field(s, MSTATUS_MPIE, get_field(s, MSTATUS_UIE << this.prv));
-        s = set_field(s, MSTATUS_MPP, this.prv);
-        s = set_field(s, MSTATUS_MIE, 0);
+        s = set_field(s, MSTATUS_MPIE, get_field(s, MSTATUS_MIE))|0;
+        s = set_field(s, MSTATUS_MPP, this.prv)|0;
+        s = set_field(s, MSTATUS_MIE, 0)|0;
         this.csr[CSR_MSTATUS] = s;
 
         this.prv = PRV_M;
@@ -347,20 +344,17 @@ SafeCPU.prototype.Trap = function (cause, epc) {
 };
 
 SafeCPU.prototype.MemAccessTrap = function(addr, op) {
-    // TODO: decide which register, see trap
-    this.csr[CSR_MBADADDR] = addr;
-    this.csr[CSR_SBADADDR] = addr;
     switch(op) {
         case VM_READ:
-            this.Trap(CAUSE_FAULT_LOAD, this.pc - 4|0);
+            this.Trap(CAUSE_LOAD_PAGE_FAULT, this.pc - 4|0, addr);
             break;
 
         case VM_WRITE:
-            this.Trap(CAUSE_FAULT_STORE, this.pc - 4|0);
+            this.Trap(CAUSE_STORE_PAGE_FAULT, this.pc - 4|0, addr);
             break;
 
         case VM_FETCH:
-            this.Trap(CAUSE_FAULT_FETCH, this.pc);
+            this.Trap(CAUSE_FETCH_PAGE_FAULT , this.pc, addr);
             break;
     }
 }
@@ -369,10 +363,10 @@ SafeCPU.prototype.MemAccessTrap = function(addr, op) {
 SafeCPU.prototype.CheckVMPrivilege = function (pte, op) {
     var type = (pte >> 1) & 0xF;
     var supervisor = this.prv == PRV_S;
-    var pum = this.csr[CSR_MSTATUS] & MSTATUS_PUM; // protect user memory
+    var sum = this.csr[CSR_MSTATUS] & MSTATUS_SUM; // protect user memory
     var mxr = this.csr[CSR_MSTATUS] & MSTATUS_MXR; // make executable readable
 
-    if ((pte & PTE_U) ? supervisor && pum : !supervisor) {
+    if ((pte & PTE_U) ? supervisor && !sum : !supervisor) {
       return false;
     } else
     if (!(pte & PTE_V) || (!(pte & PTE_R) && (pte & PTE_W))) {
@@ -387,11 +381,12 @@ SafeCPU.prototype.CheckVMPrivilege = function (pte, op) {
 }
 
 
-/* Translates a virtual address to a physical by walking through
+/* 
+ * Translates a virtual address to a physical by walking through
  * the page table and checking  the rights
  */
 SafeCPU.prototype.TranslateVM = function (addr, op) {
-    var vm = (this.csr[CSR_MSTATUS] >> 24) & 0x1F;
+    var vm = (this.csr[CSR_SPTBR] >> 31) & 1;
     var PGSIZE = 4096;
     var PGMASK = ~(PGSIZE-1);
     var PGSHIFT = 12;
@@ -399,17 +394,11 @@ SafeCPU.prototype.TranslateVM = function (addr, op) {
     var ptesize = 4;
 
     // vm bare mode
-    if (vm == VM_MBARE || this.prv == PRV_M) return addr;
-
-    // only RV32 supported
-    if(vm != VM_SV32) {
-        message.Debug("unkown VM Mode " + vm + " at PC " + utils.ToHex(this.pc));
-        message.Abort();
-    }
+    if (vm == SPTBR_MODE_OFF || this.prv == PRV_M) return addr;
 
     // LEVEL 1
     // get first entry in page table
-    var base = this.csr[CSR_SPTBR] << PGSHIFT;
+    var base = (this.csr[CSR_SPTBR] & SPTBR32_PPN) << PGSHIFT;
     var pte = this.ram.Read32(base + ((addr >>> 22) << 2)) | 0;
 
     //message.Debug("VM Start " + utils.ToHex(addr) + " " + utils.ToHex(base) + " " + utils.ToHex(pte));
@@ -423,6 +412,7 @@ SafeCPU.prototype.TranslateVM = function (addr, op) {
     //message.Abort();
         return ((pte >> 10) << 12) | (addr&0x3FFFFF);
     }
+
     // LEVEL 2
     base = (pte & 0xFFFFFC00) << 2;
     var new_page_num = (addr >> 12) & 0x3FF;
@@ -449,29 +439,28 @@ SafeCPU.prototype.TranslateVM = function (addr, op) {
 
 SafeCPU.prototype.SetCSR = function (addr, value) {
 
-    //message.Debug("SetCSR: Address:" + utils.ToHex(addr) + ", value " + utils.ToHex(value));
+    message.Debug("SetCSR: Address:" + utils.ToHex(addr) + ", value " + utils.ToHex(value));
     var csr = this.csr;
 
     switch(addr)
     {
         case CSR_MSTATUS:
-            if ((value ^ csr[CSR_MSTATUS]) & (MSTATUS_VM | MSTATUS_MPP | MSTATUS_MPRV | MSTATUS_PUM | MSTATUS_MXR)) {
+            if ((value ^ csr[CSR_MSTATUS]) & (MSTATUS_MPP | MSTATUS_MPRV | MSTATUS_SUM | MSTATUS_MXR)) {
                 this.InvalidateTLB();
             }
             var mask = MSTATUS_SIE | MSTATUS_SPIE | MSTATUS_MIE | MSTATUS_MPIE
-                     | MSTATUS_SPP | MSTATUS_FS | MSTATUS_MPRV | MSTATUS_PUM
-                     | MSTATUS_MPP | MSTATUS_MXR | MSTATUS_XS;
-            mask |= MSTATUS_VM;
+                     | MSTATUS_SPP | MSTATUS_FS | MSTATUS_MPRV | MSTATUS_SUM
+                     | MSTATUS_MPP | MSTATUS_MXR | MSTATUS_TW | MSTATUS_TVM
+                     | MSTATUS_TSR | MSTATUS_XS;
             csr[addr] = (value & ~mask) | (value & mask);
             var dirty = (csr[CSR_MSTATUS] & MSTATUS_FS) == MSTATUS_FS;
             dirty |= (csr[CSR_MSTATUS] & MSTATUS_XS) == MSTATUS_XS;
             csr[CSR_MSTATUS] = (csr[CSR_MSTATUS] & ~MSTATUS_SD) | (dirty?1<<MSTATUS_SD:0);
-            //message.Debug("MSTATUS VM: " + ((csr[CSR_MSTATUS] & MSTATUS_VM) >> 24));
             break;
 
         case CSR_SSTATUS:
             csr[addr] = value;
-            var mask = MSTATUS_SIE | MSTATUS_SPIE | MSTATUS_SPP | MSTATUS_FS | MSTATUS_XS | MSTATUS_PUM;
+            var mask = MSTATUS_SIE | MSTATUS_SPIE | MSTATUS_SPP | MSTATUS_FS | MSTATUS_XS | MSTATUS_SUM | MSTATUS_MXR;
             this.SetCSR(CSR_MSTATUS, (csr[CSR_MSTATUS] & ~mask) | (value & mask));
             break;
 
@@ -484,19 +473,7 @@ SafeCPU.prototype.SetCSR = function (addr, value) {
         case CSR_SIE:
             csr[CSR_MIE] = (csr[CSR_MIE] & ~csr[CSR_MIDELEG]) | (value & csr[CSR_MIDELEG]);
             break;
-/*
-        case CSR_MCPUID:
-            //csr[addr] = value;
-            break;
 
-        case CSR_MIMPID:
-            csr[addr] = value;
-            break;
-
-        case CSR_MHARTID:
-            csr[addr] = value;
-            break;
-*/
         case CSR_MISA:
             // TODO: only a few bits can be changed
             csr[CSR_MISA] = value;
@@ -505,7 +482,7 @@ SafeCPU.prototype.SetCSR = function (addr, value) {
         case CSR_MIP:
             var mask = MIP_SSIP | MIP_STIP;
             csr[CSR_MIP] = (csr[CSR_MIP] & ~mask) | (value & mask);
-            message.Debug("Write MIP: " + utils.ToHex(csr[CSR_MIP]));
+            //message.Debug("Write MIP: " + utils.ToHex(csr[CSR_MIP]));
             break;
 
         case CSR_SEPC:
@@ -513,13 +490,17 @@ SafeCPU.prototype.SetCSR = function (addr, value) {
             csr[addr] = value;
             break;
 
-/*
-
-        case CSR_MCAUSE:
+        case CSR_SBADADDR:
             csr[addr] = value;
             break;
 
         case CSR_SCAUSE:
+            //message.Debug("Write SCAUSE: " + utils.ToHex(csr[CSR_SCAUSE]));
+            csr[addr] = value;
+            break;
+/*
+
+        case CSR_MCAUSE:
             csr[addr] = value;
             break;
 
@@ -527,12 +508,8 @@ SafeCPU.prototype.SetCSR = function (addr, value) {
             csr[addr] = value;
             break;
 
-        case CSR_SBADADDR:
-            csr[addr] = value;
-            break;
-
         case CSR_SIP:
-            var mask = 0x2; // mask = MIP_SSIP
+            var mask = 0x2 & csr[CSR_MIDELEG]; // mask = MIP_SSIP
             csr[CSR_MIP] = (csr[CSR_MIP] & ~mask) | (value & mask);
             break;
 */
@@ -542,17 +519,23 @@ SafeCPU.prototype.SetCSR = function (addr, value) {
         case CSR_MIDELEG:
         case CSR_MSCRATCH:
         case CSR_SSCRATCH:
-        case CSR_SPTBR:
             csr[addr] = value;
             break;
 
-        case CSR_STVEC:
-        case CSR_MTVEC:
-            csr[addr] = value >> 2 << 2;
+        case CSR_SPTBR:
+            this.InvalidateTLB();
+            csr[addr] = value & (SPTBR32_PPN | SPTBR32_MODE);
             break;
 
-        case CSR_MUCOUNTEREN:
-        case CSR_MSCOUNTEREN:
+
+        case CSR_STVEC:
+        case CSR_MTVEC:
+            csr[addr] = value&(~3);
+            break;
+
+
+        case CSR_MCOUNTEREN:
+        case CSR_SCOUNTEREN:
             csr[addr] = value;
             break;
 
@@ -584,6 +567,12 @@ SafeCPU.prototype.SetCSR = function (addr, value) {
             break;
 
 */
+
+        case CSR_PMPCFG0:
+        case CSR_PMPADDR0:
+            csr[addr] = value;
+            break;
+
         default:
             csr[addr] = value;
             message.Debug("Error in SetCSR: PC "+utils.ToHex(this.pc)+" Address " + utils.ToHex(addr) + " unkown");
@@ -594,22 +583,14 @@ SafeCPU.prototype.SetCSR = function (addr, value) {
 
 SafeCPU.prototype.GetCSR = function (addr) {
 
-    //message.Debug("GetCSR: Address:" + utils.ToHex(addr));
+    message.Debug("GetCSR: Address:" + utils.ToHex(addr));
     var csr = this.csr;
     switch(addr)
     {
         case CSR_FCSR:
             return 0x0;
             break;
-/*
-        case CSR_MCPUID:
-            return csr[addr];
-            break;
 
-        case CSR_MIMPID:
-            return csr[addr];
-            break;
-*/
         case CSR_MHARTID:
             return csr[addr];
             break;
@@ -641,15 +622,13 @@ SafeCPU.prototype.GetCSR = function (addr) {
 
         case CSR_SSTATUS:
             var mask = MSTATUS_SIE | MSTATUS_SPIE | MSTATUS_SPP | MSTATUS_FS
-                       | MSTATUS_XS | MSTATUS_PUM;
+                       | MSTATUS_XS | MSTATUS_SUM;
             var sstatus = csr[CSR_MSTATUS] & mask;
             if ((sstatus & MSTATUS_FS) == MSTATUS_FS ||
                 (sstatus & MSTATUS_XS) == MSTATUS_XS)
                 sstatus |= MSTATUS_SD;
             return sstatus;
             break;
-
-
 /*
         case CSR_SIP:
             return csr[CSR_MIP] & (0x2 | 0x20); //(MIP_SSIP | MIP_STIP)
@@ -670,8 +649,8 @@ SafeCPU.prototype.GetCSR = function (addr) {
             return csr[addr];
             break;
 
-        case CSR_MUCOUNTEREN:
-        case CSR_MSCOUNTEREN:
+        case CSR_MCOUNTEREN:
+        case CSR_SCOUNTEREN:
             return csr[addr];
             break;
 
@@ -682,6 +661,12 @@ SafeCPU.prototype.GetCSR = function (addr) {
         case CSR_TIMEH:
             return 0x0;
             break;
+
+        case CSR_PMPCFG0:
+        case CSR_PMPADDR0:
+            return 0x0;
+            break;
+
 /*
         case CSR_CYCLEW:
             return this.ticks;
@@ -854,7 +839,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
         r[0] = 0x00;
         
         if (!(steps & 63)) {
-            this.CheckForInterrupt();
+            //this.CheckForInterrupt();
             /*
             // interrupt is state.mip &= ~MIP_MTIP
             // ---------- TICK ----------
@@ -871,21 +856,21 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
 
             if ((this.prv < 3) || ((this.prv == 3) && ie)) {
                 if (interrupts & 0x8) {
-                    this.Trap(CAUSE_SOFTWARE_INTERRUPT, this.pc);
+                    this.Trap(CAUSE_SOFTWARE_INTERRUPT, this.pc, -1);
                     continue;
                 } else
                 if (!this.htif.IsQueueEmpty()) {
-                    this.Trap(CAUSE_HOST_INTERRUPT, this.pc);
+                    this.Trap(CAUSE_HOST_INTERRUPT, this.pc, -1);
                     continue;
                 }
             }
             if ((this.prv < 1) || ((this.prv == 1) && ie)) {
                 if (interrupts & 0x2) {
-                    this.Trap(CAUSE_SOFTWARE_INTERRUPT, this.pc);
+                    this.Trap(CAUSE_SOFTWARE_INTERRUPT, this.pc, -1);
                     continue;
                 } else
                 if (interrupts & 0x20) {
-                     this.Trap(CAUSE_TIMER_INTERRUPT, this.pc);
+                     this.Trap(CAUSE_TIMER_INTERRUPT, this.pc, -1);
                      continue;
                 }
             }
@@ -936,11 +921,11 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                         }
                         paddr = this.TranslateVM(rs1 + imm|0, VM_READ)|0;
                         if(paddr == -1) break;
-                        if ((paddr>>>0) == 0x8000a000) {
+                        if ((paddr>>>0) == 0x8000e008) {
                             this.ram.Write32(paddr+0, this.htif.ReadToHost());
                             this.ram.Write32(paddr+4, this.htif.ReadDEVCMDToHost());
                         }
-                        if ((paddr>>>0) == 0x8000a040) {
+                        if ((paddr>>>0) == 0x8000e000) {
                             this.ram.Write32(paddr+0, this.htif.ReadFromHost());
                             this.ram.Write32(paddr+4, this.htif.ReadDEVCMDFromHost());
                         }
@@ -1009,11 +994,12 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                         paddr = this.TranslateVM(rs1 + imm|0, VM_WRITE)|0;
                         if(paddr == -1) break;
                         this.ram.Write32(paddr, r[rindex]);
-                        if ((paddr>>>0) == 0x8000a004) {
+                        if ((paddr>>>0) == 0x8000e00c) {
+                            //message.Debug("Write tohost at " + utils.ToHex(this.pc));
                             this.htif.WriteDEVCMDToHost(this.ram.Read32(paddr));
                             this.htif.WriteToHost(this.ram.Read32(paddr-4));
                         }
-                        if ((paddr>>>0) == 0x8000a044) {
+                        if ((paddr>>>0) == 0x8000e004) {
                             this.htif.WriteDEVCMDFromHost(this.ram.Read32(paddr));
                             this.htif.WriteFromHost(this.ram.Read32(paddr-4));
                         }
@@ -1393,20 +1379,20 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                                 switch(this.prv)
                                 {
                                     case PRV_U:
-                                        this.Trap(CAUSE_USER_ECALL, this.pc - 4|0);
+                                        this.Trap(CAUSE_USER_ECALL, this.pc - 4|0, -1);
                                         break;
 
                                     case PRV_S:
-                                        this.Trap(CAUSE_SUPERVISOR_ECALL, this.pc - 4|0);
+                                        this.Trap(CAUSE_SUPERVISOR_ECALL, this.pc - 4|0, -1);
                                         break;
 
                                     case PRV_H:
-                                        this.Trap(CAUSE_HYPERVISOR_ECALL, this.pc - 4|0);
+                                        this.Trap(CAUSE_HYPERVISOR_ECALL, this.pc - 4|0, -1);
                                         this.Abort();
                                         break;
 
                                     case PRV_M:
-                                        this.Trap(CAUSE_MACHINE_ECALL, this.pc - 4|0);
+                                        this.Trap(CAUSE_MACHINE_ECALL, this.pc - 4|0, -1);
                                         break;
                                     
                                     default:
@@ -1418,9 +1404,8 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
 
                             case 0x001:
                                 // ebreak
-                                this.Trap(CAUSE_BREAKPOINT, this.pc - 4|0);
+                                this.Trap(CAUSE_BREAKPOINT, this.pc - 4|0, -1);
                                 break;
-
 /*
                             case 0x7b2:
                                 // dret
@@ -1437,11 +1422,11 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                                     break;
                                 }
                                 this.pc = csr[CSR_SEPC] | 0;
-                                var prev_prv = (csr[CSR_MSTATUS] & MSTATUS_SPP) >> 8;
                                 var s = csr[CSR_MSTATUS] | 0;
-                                s &= ~((MSTATUS_UIE << prev_prv) | MSTATUS_SPP | MSTATUS_SPIE);
-                                s |= PRV_U << 8; // set SPP
-                                s |= ((csr[CSR_MSTATUS] & MSTATUS_SPIE)>>5) << (MSTATUS_UIE << prev_prv);
+                                var prev_prv = get_field(s, MSTATUS_SPP);
+                                s = set_field(s, MSTATUS_SIE, get_field(s, MSTATUS_SPIE));
+                                s = set_field(s, MSTATUS_SPIE, 1);
+                                s = set_field(s, MSTATUS_SPP, PRV_U);
                                 csr[CSR_MSTATUS] = s;
                                 this.prv = prev_prv;
                                 this.InvalidateTLB();
@@ -1449,6 +1434,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
 
                             case 0x105:
                                 // wfi
+                                message.Debug("wfi");
                                 /*
                                 interrupts = csr[CSR_MIE] & csr[CSR_MIP];
                                 if ((!interrupts) && (this.htif.IsQueueEmpty()))
@@ -1465,18 +1451,18 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                                     break;
                                 }
                                 this.pc = csr[CSR_MEPC] | 0;
-                                var prev_prv = (csr[CSR_MSTATUS] & MSTATUS_MPP) >> 11;
                                 var s = csr[CSR_MSTATUS] | 0;
-                                s &= ~((MSTATUS_UIE << prev_prv) | MSTATUS_MPP | MSTATUS_MPIE);
-                                s |= PRV_U << 11; // set MPP
-                                s |= ((csr[CSR_MSTATUS] & MSTATUS_MPIE)>>7) << (MSTATUS_UIE << prev_prv);
+                                var prev_prv = get_field(s, MSTATUS_MPP);
+                                s = set_field(s, MSTATUS_MIE, get_field(s, MSTATUS_MPIE));
+                                s = set_field(s, MSTATUS_MPIE, 1);
+                                s = set_field(s, MSTATUS_MPP, PRV_U);
                                 csr[CSR_MSTATUS] = s;
                                 this.prv = prev_prv;
                                 this.InvalidateTLB();
                                 break;
 
-                            case 0x104:
-                                // sfence.vm
+                            case 0x120:
+                                // sfence.vma
                                 break;
 
                             default:

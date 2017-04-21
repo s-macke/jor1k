@@ -17,7 +17,6 @@ function StringToBytes(str, ram, offset) {
     ram.Write8(offset+str.length, 0);
 }
 
-
 // -------------------------------------------------
 
 
@@ -44,7 +43,7 @@ function HTIFFB(ram, SendFunc) {
 
     this.OnGetFB = function() {
         if (this.paddr == 0x0) return;
-        message.Send("GetFB", this.GetBuffer() );
+        //message.Send("GetFB", this.GetBuffer() );
     }
 
     this.GetBuffer = function () {
@@ -207,11 +206,18 @@ HTIF.prototype.Send = function(devid, cmd, data) {
 // -------------------------------------------------
 
 HTIF.prototype.ReadDEVCMDToHost = function() {
-    // always ready to receive data
     //message.Debug("ReadDEVCMDToHost 0x0");
+    // ready to receive data
     return 0x0;
-    //return (this.devid << 24) | (this.cmd << 16);
 }
+
+HTIF.prototype.ReadToHost = function() {
+    //message.Debug("ReadToHost 0x0");
+    // ready to receive data
+    return 0x0;
+}
+
+// -------------------------------------------------
 
 HTIF.prototype.WriteDEVCMDToHost = function(value) {
     //message.Debug("WriteDEVCMDToHost " + utils.ToHex(value));
@@ -219,13 +225,13 @@ HTIF.prototype.WriteDEVCMDToHost = function(value) {
     this.cmd = (value >> 16) & 0xFF;
 }
 
-// -------------------------------------------------
-
-HTIF.prototype.WriteDEVCMDFromHost = function(value) {
-    //message.Debug("WriteDEVCMDFromHost");
-    this.reg_devcmdfromhost = value;
-    return;
+HTIF.prototype.WriteToHost = function(value) {
+    //message.Debug("WriteToHost dev:" + this.devid + " cmd:" + this.cmd + " data:" + utils.ToHex(value));
+    this.reg_tohost = value|0;
+    this.HandleRequest();
 }
+
+// -------------------------------------------------
 
 HTIF.prototype.ReadDEVCMDFromHost = function() {
     //message.Debug("ReadDEVCMDFromHost");
@@ -235,33 +241,30 @@ HTIF.prototype.ReadDEVCMDFromHost = function() {
         return 0x0;
 }
 
-// -------------------------------------------------
-
-HTIF.prototype.ReadToHost = function() {
-    //message.Debug("ReadToHost 0x0");
-    return 0; // always immediate response
-}
-
-HTIF.prototype.WriteToHost = function(value) {
-    //message.Debug("WriteToHost" + utils.ToHex(value));
-
-    this.reg_tohost = value|0;
-    this.HandleRequest();
-}
-
-// -------------------------------------------------
-
 HTIF.prototype.ReadFromHost = function() {
     //message.Debug("ReadFromHost " + this.fromhostqueue.length);
+   
     if (this.fromhostqueue.length != 0)
         return this.fromhostqueue[0].data; 
     else
         return 0x0;
 }
 
+// -------------------------------------------------
+
+HTIF.prototype.WriteDEVCMDFromHost = function(value) {
+    //message.Debug("WriteDEVCMDFromHost: " + value);
+    this.reg_devcmdfromhost = value;
+    return;
+}
+
 HTIF.prototype.WriteFromHost = function(value) {
-    //message.Debug("WriteFromHost: " + value);
+    var devid = this.reg_devcmdfromhost >>> 24;
+    var cmd = (this.reg_devcmdfromhost >> 16) & 0xFF;
+    //message.Debug("WriteFromHost dev:" + devid + " cmd:" + cmd + " data:" + utils.ToHex(value));
+
     //if (value == 1) message.Abort();
+    /*
     if ((value == 0) && (this.reg_devcmdfromhost == 0))
     {
         this.fromhostqueue.shift();
@@ -272,6 +275,7 @@ HTIF.prototype.WriteFromHost = function(value) {
             this.irqdev.RaiseInterrupt(0x1);
         }
     }
+    */
 }
 
 // ------------------------------------------------

@@ -31,7 +31,8 @@ SysCalls.prototype.HandleSysCall = function (addr) {
     var ram = this.ram;
     var syscall_id = this.ram.Read32(addr);
     message.Debug("syscall_id " + syscall_id);
-    var argv = ["spike", "vmlinux"];
+    //var argv = ["spike", "pk", "a.out"];
+    var argv = ["pk", "a.out"];
     switch(syscall_id) {
 
         case SYS_OPENAT:
@@ -45,6 +46,7 @@ SysCalls.prototype.HandleSysCall = function (addr) {
                     filename += String.fromCharCode(c);
             }
             var url = filename;
+            //message.Debug("load " + url);
             utils.LoadBinaryResourceII("../sys/riscv/" + url, 
                 this.OnFileLoaded.bind(this), 
                 false, 
@@ -102,7 +104,8 @@ SysCalls.prototype.HandleSysCall = function (addr) {
             break;
 
         case SYS_WRITE:
-            var length = this.ram.Read32(addr + 8*3), i =0;
+            var length = this.ram.Read32(addr + 8*3);
+            var i = 0;
             var string_address = this.ram.Read32(addr + 8*2);
             while(i < length){
                 var c = this.ram.Read8(string_address + (i++));
