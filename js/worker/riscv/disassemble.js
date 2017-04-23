@@ -419,9 +419,9 @@ function Disassemble(ins,r,csr,pc) {
                             message.Debug("mrts - "+ utils.ToHex(ins));
                             break;
 
-                        case 0x101:
-                            //sfence.vm
-                            message.Debug("sfence.vm - "+ utils.ToHex(ins));
+                        case 0x120:
+                            //sfence.vma
+                            message.Debug("sfence.vma - "+ utils.ToHex(ins));
                             break;
 
                         default:
@@ -605,3 +605,4 @@ function Disassemble(ins,r,csr,pc) {
 };
 
 module.exports.Disassemble = Disassemble;
+

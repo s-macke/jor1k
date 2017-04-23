@@ -68,11 +68,10 @@ function HTIFConsole(ram, SendFunc) {
     this.identify = "bcd";
     this.Send = SendFunc;
     this.charqueue = [];
-    this.readpresent = false;
+    this.readpresent = true;
 
     this.Read = function(value) {
-        //message.Debug("Read: " + value);
-        //this.Send(1, 0, 1);
+        //message.Debug("Read char: " + value);
         this.readpresent = true;
         if (this.charqueue.length == 0) return;
         this.Send(1, 0, this.charqueue.shift());
@@ -82,12 +81,12 @@ function HTIFConsole(ram, SendFunc) {
     this.Write = function(value) {
         this.ram.Write8(0x30000000 >> 0, value);
         if (value == 0xA) this.ram.Write8(0x30000000 >> 0, 0xD);
-        this.Send(1, 1, 1);
+        //this.Send(1, 1, 1);
     }
 
     this.ReceiveChar = function(c) {
         this.charqueue = this.charqueue.concat(c);
-
+        //message.Debug("chars received: " + c);
         if (!this.readpresent) return;
         this.Send(1, 0, this.charqueue.shift());
         this.readpresent = false;
@@ -150,7 +149,6 @@ function HTIFDisk(ram, SendFunc) {
         }
         this.Send(2, 0, tag);
     }
-
 
     this.Write = function(value) {
         var addr   = this.ram.Read32(value + 0);
@@ -259,23 +257,19 @@ HTIF.prototype.WriteDEVCMDFromHost = function(value) {
 }
 
 HTIF.prototype.WriteFromHost = function(value) {
-    var devid = this.reg_devcmdfromhost >>> 24;
-    var cmd = (this.reg_devcmdfromhost >> 16) & 0xFF;
-    //message.Debug("WriteFromHost dev:" + devid + " cmd:" + cmd + " data:" + utils.ToHex(value));
+    message.Debug("WriteFromHost data:" + value);
 
-    //if (value == 1) message.Abort();
-    /*
-    if ((value == 0) && (this.reg_devcmdfromhost == 0))
-    {
+    if ((value == 0) && (this.reg_devcmdfromhost == 0)) {
         this.fromhostqueue.shift();
 
         if (this.fromhostqueue.length > 0) {
             this.reg_devcmdfromhost =
                 (this.fromhostqueue[0].devid << 24) | (this.fromhostqueue[0].cmd << 16);
             this.irqdev.RaiseInterrupt(0x1);
+        } else {
+            this.irqdev.ClearInterrupt(0x1);
         }
     }
-    */
 }
 
 // ------------------------------------------------

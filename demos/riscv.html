@@ -77,8 +77,8 @@ var LinuxTerm = require("LinuxTerm");
 var tests =
 [
 "choose test",
-"pk",
 "bbl",
+"pk",
 "sos-image-riscv-spike",
 "rv32ui-p-add.bin",
 "rv32ui-pt-add",
@@ -228,7 +228,7 @@ var jor1kgui = new Jor1k(
             kernelURL: tests[1],
             arch: "riscv",
             cpu: "safe",
-            memorysize: 32,
+            memorysize: 64,
         }
     }
 );
