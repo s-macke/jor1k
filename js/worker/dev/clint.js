@@ -30,14 +30,13 @@ CLINTDev.prototype.Reset = function() {
 }
 
 CLINTDev.prototype.ReadReg32 = function (addr) {
-    message.Debug("CLINT: unknown ReadReg32: " + utils.ToHex(addr));
+    //message.Debug("CLINT: unknown ReadReg32: " + utils.ToHex(addr));
     //message.Abort();
     return 0x0;
 }
 
 CLINTDev.prototype.WriteReg32 = function (addr, value) {
-    message.Debug("CLINT: unknown WriteReg32: " + utils.ToHex(addr) + ": " + utils.ToHex(value));
-    //message.Abort();
+    //message.Debug("CLINT: unknown WriteReg32: " + utils.ToHex(addr) + ": " + utils.ToHex(value));
 /*
     if (addr == 0x1000) return; // ignore ipi
     if (addr < 0 || addr > 12) {

@@ -207,6 +207,7 @@ SafeCPU.prototype.Reset = function() {
 }
 
 SafeCPU.prototype.InvalidateTLB = function() {
+    // No TLB
 }
 
 SafeCPU.prototype.GetTimeToNextInterrupt = function () {
@@ -242,17 +243,13 @@ function ctz(val)
 }
 
 SafeCPU.prototype.RaiseInterrupt = function (line, cpuid) {
-    //message.Debug("raise int " + line);
-    //this.csr[CSR_MIP] |= MIP_MSIP;
-    //this.csr[CSR_MIP] |= MIP_MEIP; // EXT
-    //this.csr[CSR_MIP] |= MIP_MTIP; // Timer
-    //this.csr[CSR_MIP] |= MIP_MSIP; // Soft
+    message.Debug("raise int " + line);
+    if (line == 1) return; // HTIF
+    this.csr[CSR_MIP] |= MIP_SEIP; // EXT
 };
 
 SafeCPU.prototype.ClearInterrupt = function (line, cpuid) {
     //message.Debug("clear int " + line);
-    //this.csr[CSR_MIP] &= ~line;
-    //this.csr[CSR_MIP] &= ~MIP_MSIP;
 };
 
 SafeCPU.prototype.CheckForInterrupt = function () {
@@ -790,7 +787,6 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
             if ((this.ticks&0xFFFF) == 1) {
                 this.csr[CSR_MIP] |= MIP_STIP
                 message.Debug("Tick");
-                //this.Trap(CAUSE_TIMER_INTERRUPT, this.pc, -1);
             }
             this.CheckForInterrupt();
 

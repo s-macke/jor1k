@@ -79,8 +79,8 @@ function HTIFConsole(ram, SendFunc) {
     }
 
     this.Write = function(value) {
-        this.ram.Write8(0x30000000 >> 0, value);
-        if (value == 0xA) this.ram.Write8(0x30000000 >> 0, 0xD);
+        this.ram.Write8(0x03000000 >> 0, value);
+        if (value == 0xA) this.ram.Write8(0x03000000 >> 0, 0xD);
         //this.Send(1, 1, 1);
     }
 
@@ -109,7 +109,7 @@ function HTIFSyscall(ram, SendFunc) {
         if((value>>>0) > 0x100) {
             this.syscallHandler.HandleSysCall(value);
         } else {
-            this.ram.Write8(0x30000000 >> 0, value+0x30);
+            this.ram.Write8(0x03000000 >> 0, value+0x30);
             message.Debug("return value: " + value);
             message.Abort();
        }
@@ -257,7 +257,7 @@ HTIF.prototype.WriteDEVCMDFromHost = function(value) {
 }
 
 HTIF.prototype.WriteFromHost = function(value) {
-    message.Debug("WriteFromHost data:" + value);
+    //message.Debug("WriteFromHost data:" + value);
 
     if ((value == 0) && (this.reg_devcmdfromhost == 0)) {
         this.fromhostqueue.shift();
