@@ -41,6 +41,7 @@ function jor1kGUI(parameters)
 
     // add path to every URL
     this.params.system.kernelURL = this.params.path + this.params.system.kernelURL;
+    this.params.system.dtbURL = this.params.path + this.params.system.dtbURL;
     this.params.fs.basefsURL = this.params.path + this.params.fs.basefsURL;
     if (this.params.fs.extendedfsURL) {
         this.params.fs.extendedfsURL = this.params.path + this.params.fs.extendedfsURL;
