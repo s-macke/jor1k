@@ -39,11 +39,12 @@
                             <option value="30">30 FPS</option>
                         </select>
                     </form>
+                    <input type="text" id="loadPath" style="height: 20px;" value="/home/user" />
                     <label>
-                        <img src="images/upload.png" width="20px" height="20px" title="Upload to home folder" />
+                        <img src="images/upload.png" width="20px" height="20px" title="Upload to folder" />
                         <input type="file" id="files" style="visibility:hidden;width:1px; height:1px;" name="files[]" onchange='OnUploadFiles(this.files)' multiple />
                     </label>
-                    <img src="images/tar.png" width="20px" height="20px"  onclick='jor1k.fs.TAR("home/user")' title="Download of home folder" />
+                    <img src="images/tar.png" width="20px" height="20px"  onclick='jor1k.fs.TAR(document.getElementById("loadPath").value)' title="Download of folder" />
                     <img src="images/sync.png" width="20px" height="20px"  onclick='jor1k.fs.Sync("home/user")' title="Sync with server" />
                     <img src="images/fullscreen.png" width="20px" height="20px"  onclick='Fullscreen()' title="Windowed fullscreen of framebuffer" />
                     <textarea style="height: 20px;" type=text cols="5" rows="1" id="clipboard">clipb</textarea>
@@ -154,8 +155,9 @@ function Fullscreen()
 
 function OnUploadFiles(files)
 {
+    var path = document.getElementById("loadPath").value;
     for (var i = 0, f; f = files[i]; i++) {
-        jor1k.fs.UploadExternalFile(f);
+        jor1k.fs.UploadExternalFile(path, f);
     }
 }
 

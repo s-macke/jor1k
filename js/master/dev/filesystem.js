@@ -10,7 +10,11 @@ function Filesystem(syncURL, userid) {
 }
 
 Filesystem.prototype.TAR = function(path) {
-    message.Register("tar", function(d){download(d, "user.tar", "application/x-tar");} );
+    if (path == "") {
+        path = "/home/user";
+    }
+    var arrayPath = path.split('/');
+    message.Register("tar", function(d){download(d, arrayPath[arrayPath.length-1]+".tar", "application/x-tar");} );
     message.Send("tar", path);
 }
 
@@ -35,11 +39,14 @@ Filesystem.prototype.OnSync = function(d) {
     );
 }
 
-Filesystem.prototype.UploadExternalFile = function(f) {
+Filesystem.prototype.UploadExternalFile = function(path, f) {
     var reader = new FileReader();
+    if (path.slice(-1) != '/') {
+        path += '/';
+    }
     reader.onload = function(e) {
         message.Send("MergeFile",
-        {name: "home/user/"+f.name, data: new Uint8Array(reader.result)});
+        {name: path+f.name, data: new Uint8Array(reader.result)});
     }.bind(this);
     reader.readAsArrayBuffer(f);
 }
