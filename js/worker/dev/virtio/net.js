@@ -21,7 +21,7 @@ function VirtioNET(ramdev) {
         this.configspace[i] = Math.floor(Math.random()*256);
     }
 
-    message.Register("virtio.net.transfer", this.Receive.bind(this) );
+    message.Register("ethmac", this.Receive.bind(this) );
 
     this.Reset();
 }

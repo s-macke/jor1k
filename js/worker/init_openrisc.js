@@ -81,12 +81,12 @@ function InitOpenRISC(system, initdata) {
     system.snddev = new SoundDev(irqhandler, system.ram);
     system.rtcdev = new RTCDev(irqhandler);
 
-    system.virtioinputdev = new VirtioInput(system.ram);
-    system.virtionetdev = new VirtioNET(system.ram);
-    system.virtioblockdev = new VirtioBlock(system.ram);
+    //system.virtioinputdev = new VirtioInput(system.ram);
+    //system.virtionetdev = new VirtioNET(system.ram);
+    //system.virtioblockdev = new VirtioBlock(system.ram);
     system.virtiodummydev = new VirtioDummy(system.ram);
-    system.virtiogpudev = new VirtioGPU(system.ram);
-    system.virtioconsoledev = new VirtioConsole(system.ram);
+    //system.virtiogpudev = new VirtioGPU(system.ram);
+    //system.virtioconsoledev = new VirtioConsole(system.ram);
     system.virtiodev1 = new VirtIODev(irqhandler, 0x6, system.ram, system.virtio9pdev);
     system.virtiodev2 = new VirtIODev(irqhandler, 0xB, system.ram, system.virtiodummydev);
     system.virtiodev3 = new VirtIODev(irqhandler, 0xC, system.ram, system.virtiodummydev);
@@ -107,12 +107,12 @@ function InitOpenRISC(system, initdata) {
     system.devices.push(system.virtiodev2);
     system.devices.push(system.virtiodev3);
 
-    system.devices.push(system.virtioinputdev);
-    system.devices.push(system.virtionetdev);
-    system.devices.push(system.virtioblockdev);
+    //system.devices.push(system.virtioinputdev);
+    //system.devices.push(system.virtionetdev);
+    //system.devices.push(system.virtioblockdev);
     system.devices.push(system.virtiodummydev);
-    system.devices.push(system.virtiogpudev);
-    system.devices.push(system.virtioconsoledev);
+    //system.devices.push(system.virtiogpudev);
+    //system.devices.push(system.virtioconsoledev);
 
     system.ram.AddDevice(system.uartdev0,   0x90000000, 0x7);
     system.ram.AddDevice(system.fbdev,      0x91000000, 0x1000);

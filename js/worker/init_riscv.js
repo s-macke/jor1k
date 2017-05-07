@@ -34,13 +34,12 @@ var UARTDev = require('./dev/uart');
 //var SoundDev = require('./dev/sound');
 var VirtIODev = require('./dev/virtio');
 var Virtio9p = require('./dev/virtio/9p');
-//var VirtioDummy = require('./dev/virtio/dummy');
+var VirtioDummy = require('./dev/virtio/dummy');
+var VirtioNET = require('./dev/virtio/net');
 //var VirtioInput = require('./dev/virtio/input');
-//var VirtioNET = require('./dev/virtio/net');
 //var VirtioBlock = require('./dev/virtio/block');
 //var VirtioGPU = require('./dev/virtio/gpu');
 //var VirtioConsole = require('./dev/virtio/console');
-
 
 function InitRISCV(system, initdata) {
     message.Debug("Init RISCV SoC");
@@ -75,17 +74,34 @@ function InitRISCV(system, initdata) {
     }.bind(this)
     , false, function(error){throw error;});
 
-    system.virtiodev1 = new VirtIODev(irqhandler, 0x1, system.ram, system.virtio9pdev);
+
+    system.virtionetdev = new VirtioNET(system.ram);
+    system.virtiodummydev = new VirtioDummy(system.ram);
+    //system.virtioinputdev = new VirtioInput(system.ram);
+    //system.virtioblockdev = new VirtioBlock(system.ram);
+    //system.virtiogpudev = new VirtioGPU(system.ram);
+    //system.virtioconsoledev = new VirtioConsole(system.ram);
+
+    system.virtiodev1 = new VirtIODev(irqhandler, 0x3, system.ram, system.virtio9pdev);
+    system.virtiodev2 = new VirtIODev(irqhandler, 0x4, system.ram, system.virtionetdev);
+    system.virtiodev3 = new VirtIODev(irqhandler, 0x5, system.ram, system.virtiodummydev);
+    system.virtiodev4 = new VirtIODev(irqhandler, 0x6, system.ram, system.virtiodummydev);
+    system.virtiodev5 = new VirtIODev(irqhandler, 0x7, system.ram, system.virtiodummydev);
+
     system.romdev = new ROMDev(system.rom);
     system.uartdev0 = new UARTDev(0, irqhandler, 2);
     system.clintdev = new CLINTDev(irqhandler);
-    system.plicdev = new PLICDev(irqhandler);
+    system.plicdev = new PLICDev(system.cpu);
 
     system.devices.push(system.romdev);
     system.devices.push(system.uartdev0);
     system.devices.push(system.clintdev);
     system.devices.push(system.plicdev);
     system.devices.push(system.virtiodev1);
+    system.devices.push(system.virtiodev2);
+    system.devices.push(system.virtiodev3);
+    system.devices.push(system.virtiodev4);
+    system.devices.push(system.virtiodev5);
     system.devices.push(system.virtio9pdev);
 
     system.ram.AddDevice(system.romdev,      0x00000000, 0x7);
@@ -93,7 +109,10 @@ function InitRISCV(system, initdata) {
     system.ram.AddDevice(system.clintdev,    0x02000000, 0x2000);
     system.ram.AddDevice(system.plicdev,     0x04000000, 0xF00000);
     system.ram.AddDevice(system.virtiodev1,  0x20000000, 0x2000);
-
+    system.ram.AddDevice(system.virtiodev2,  0x30000000, 0x2000);
+    system.ram.AddDevice(system.virtiodev3,  0x40000000, 0x2000);
+    system.ram.AddDevice(system.virtiodev4,  0x50000000, 0x2000);
+    system.ram.AddDevice(system.virtiodev5,  0x60000000, 0x2000);
 }
 
 module.exports = InitRISCV;
