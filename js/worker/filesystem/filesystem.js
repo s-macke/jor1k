@@ -730,7 +730,6 @@ FS.prototype.NotifyListeners = function(id, action, info) {
     }
 }
 
-
 FS.prototype.Check = function() {
     for(var i=1; i<this.inodes.length; i++)
     {
@@ -756,9 +755,7 @@ FS.prototype.Check = function() {
             } 
         }
     }
-
 }
-
 
 FS.prototype.FillDirectory = function(dirid) {
     var inode = this.GetInode(dirid);
@@ -801,10 +798,12 @@ FS.prototype.FillDirectory = function(dirid) {
     while(id != -1) {
         offset += marshall.Marshall(
         ["Q", "d", "b", "s"],
-        [this.inodes[id].qid,
-        offset+13+8+1+2+UTF8.UTF8Length(this.inodes[id].name),
-        this.inodes[id].mode >> 12,
-        this.inodes[id].name],
+        [
+            this.inodes[id].qid,
+            offset+13+8+1+2+UTF8.UTF8Length(this.inodes[id].name),
+            this.inodes[id].mode >> 12,
+            this.inodes[id].name
+        ],
         inode.data, offset);
         id = this.inodes[id].nextid;
     }
