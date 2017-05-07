@@ -31,13 +31,13 @@
                     <button type='button' onclick='term_output="";waitingForActivate=true;jor1kgui.Reset()'>Reset</button>
                     <button type='button' onclick='jor1kgui.Pause(true)'>Pause</button>
                     <button type='button' onclick='jor1kgui.Pause(false)'>Run</button>
-                    </form>                    
-                    
+                    </form>
+                    <input type="text" id="loadPath" style="height: 20px;" value="/home/user" />
                     <label>
-                        <img src="images/upload.png" width="20px" height="20px" title="Upload to home folder" />
+                        <img src="images/upload.png" width="20px" height="20px" title="Upload to folder" />
                         <input type="file" id="files" style="visibility:hidden;width:1px; height:1px;" name="files[]" onchange='OnUploadFiles(this.files)' multiple />
                     </label>
-                    <img src="images/tar.png" width="20px" height="20px"  onclick='jor1kgui.fs.TAR("home/user")' title="Download of home folder" />
+                    <img src="images/tar.png" width="20px" height="20px"  onclick='jor1kgui.fs.TAR(jor1k.fs.TAR(document.getElementById("loadPath").value))' title="Download of folder" />
                     <img src="images/sync.png" width="20px" height="20px"  onclick='jor1kgui.fs.Sync("home/user")' title="Sync with server" />
                     <textarea style="display:none;" id="clipboard">clipb</textarea>
                     </span>
@@ -107,8 +107,9 @@ var LinuxTerm = require("LinuxTerm");
 
 function OnUploadFiles(files)
 {
+    var path = document.getElementById("loadPath").value;
     for (var i = 0, f; f = files[i]; i++) {
-        jor1kgui.fs.UploadExternalFile(f);
+        jor1kgui.fs.UploadExternalFile(path, f);
     }
 }
 
