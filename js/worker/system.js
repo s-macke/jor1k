@@ -223,7 +223,7 @@ System.prototype.OnKernelLoaded = function(buffer) {
             for(var i=0; i<length; i++) {
                 temp[i] = this.ram.uint8mem[i];
             }
-            elf.Extract(temp, this.ram.uint8mem);
+            elf.Extract(temp, this.ram);
         }
     } else {
         for(var i=0; i<length; i++) this.ram.uint8mem[i] = buffer8[i];

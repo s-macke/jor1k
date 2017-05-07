@@ -1,6 +1,6 @@
 [submodule "sys"]
 	path = sys
 	url = https://github.com/s-macke/jor1k-sysroot.git
-[submodule "riscv-sysroot"]
-	path = riscv-sysroot
+[submodule "riscv-sys"]
+	path = riscv-sys
 	url = https://github.com/s-macke/riscv-sysroot.git
