@@ -126,7 +126,7 @@ function HTIFDisk(ram, SendFunc) {
     this.buffer = new Uint8Array(1024*1024);
     this.identify = "disk size="+this.buffer.length;
     
-    utils.LoadBinaryResourceII("../sys/riscv/ext2fsimage.bz2", 
+    utils.LoadBinaryResourceII("../riscv-sys/ext2fsimage.bz2", 
     function(buffer) {
         this.buffer = new Uint8Array(20*1024*1024);
 
@@ -175,8 +175,8 @@ function HTIF(ram, irqdev) {
 
     this.device.push( new HTIFSyscall(this.ram, this.Send.bind(this)) ); // dev 0
     this.device.push( new HTIFConsole(this.ram, this.Send.bind(this)) ); // dev 1
-    this.device.push( new HTIFDisk   (this.ram, this.Send.bind(this)) ); // dev 2
-    this.device.push( new HTIFFB     (this.ram, this.Send.bind(this)) ); // dev 3
+    //this.device.push( new HTIFDisk   (this.ram, this.Send.bind(this)) ); // dev 2
+    //this.device.push( new HTIFFB     (this.ram, this.Send.bind(this)) ); // dev 3
 
     this.devid = 0x0;
     this.cmd = 0x0;

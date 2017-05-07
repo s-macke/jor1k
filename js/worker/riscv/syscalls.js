@@ -47,7 +47,7 @@ SysCalls.prototype.HandleSysCall = function (addr) {
             }
             var url = filename;
             //message.Debug("load " + url);
-            utils.LoadBinaryResourceII("../sys/riscv/" + url, 
+            utils.LoadBinaryResourceII("../riscv-sys/" + url, 
                 this.OnFileLoaded.bind(this), 
                 false, 
                 function(error){throw error;}
