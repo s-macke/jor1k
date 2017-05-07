@@ -11,6 +11,7 @@ var PRV_M = 0x03;
 var CSR_MSTATUS   = 0x300;
 
 function Disassemble(ins,r,csr,pc) {
+    message.Debug("pc=" + utils.ToHex(pc) + " ins=" + utils.ToHex(ins));
 
     switch(ins&0x7F) {
 
@@ -20,31 +21,31 @@ function Disassemble(ins,r,csr,pc) {
                 
                 case 0x00:
                     //lb
-                    message.Debug("lb - "+ utils.ToHex(ins));
+                    message.Debug("lb");
                     break;
 
                 case 0x01:
                     //lh
-                    message.Debug("lh - "+ utils.ToHex(ins));
+                    message.Debug("lh");
                     break;
 
                 case 0x02:
                     //lw
-                    message.Debug("lw - "+ utils.ToHex(ins));
+                    message.Debug("lw");
                     break;
 
                 case 0x04:
                     //lbu
-                    message.Debug("lbu - "+ utils.ToHex(ins));
+                    message.Debug("lbu");
                     break;
 
                 case 0x05:
                     //lhu
-                    message.Debug("lhu - "+ utils.ToHex(ins));
+                    message.Debug("lhu");
                     break;
 
                 default:
-                    message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + "not found");
+                    message.Debug("Error in disassemble: Instruction " + utils.ToHex(ins) + "not found");
                     break;
 
             }
@@ -56,21 +57,21 @@ function Disassemble(ins,r,csr,pc) {
                 
                 case 0x00:
                     //sb
-                    message.Debug("sb - "+ utils.ToHex(ins));
+                    message.Debug("sb");
                     break;
 
                 case 0x01:
                     //sh
-                    message.Debug("sh - "+ utils.ToHex(ins));
+                    message.Debug("sh");
                     break;
 
                 case 0x02:
                     //sw
-                    message.Debug("sw - "+ utils.ToHex(ins));
+                    message.Debug("sw");
                     break;
 
                 default:
-                    message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + "not found");
+                    message.Debug("Error in disassemble: Instruction " + utils.ToHex(ins) + "not found");
                     break;
 
             }
@@ -82,52 +83,52 @@ function Disassemble(ins,r,csr,pc) {
                 
                 case 0x00:
                     //addi
-                    message.Debug("addi - "+ utils.ToHex(ins));
+                    message.Debug("addi");
                     break;
 
                 case 0x02:
                     //slti
-                    message.Debug("slti - "+ utils.ToHex(ins));
+                    message.Debug("slti");
                     break;
 
                 case 0x03:
                     //sltiu
-                    message.Debug("sltiu - "+ utils.ToHex(ins));
+                    message.Debug("sltiu");
                     break;
 
                 case 0x04:
                     //xori
-                    message.Debug("xori - "+ utils.ToHex(ins));
+                    message.Debug("xori");
                     break;
 
                 case 0x06:
                     //ori
-                    message.Debug("ori - "+ utils.ToHex(ins));
+                    message.Debug("ori");
                     break;
 
                 case 0x07:
                     //andi
-                    message.Debug("andi - "+ utils.ToHex(ins));
+                    message.Debug("andi");
                     break;
 
                 case 0x01:
                     //slli
-                    message.Debug("slli - "+ utils.ToHex(ins));
+                    message.Debug("slli");
                     break;
 
                 case 0x05:
                     if(((ins >> 25) & 0x7F) == 0x00){
                         //srli
-                        message.Debug("srli - "+ utils.ToHex(ins));
+                        message.Debug("srli");
                     }
                     else if(((ins >> 25) & 0x7F) == 0x20){
                         //srai
-                        message.Debug("srai - "+ utils.ToHex(ins));  
+                        message.Debug("srai");
                     }
                     break;
 
                 default:
-                    message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + "not found");
+                    message.Debug("Error in disassemble: Instruction " + utils.ToHex(ins) + "not found");
                     break;
 
             }
@@ -142,42 +143,42 @@ function Disassemble(ins,r,csr,pc) {
                     switch((ins >> 12)&0x7) {
                         case 0x00:
                             //add
-                            message.Debug("add - "+ utils.ToHex(ins));
+                            message.Debug("add");
                             break;
 
                         case 0x02:
                             //slt
-                            message.Debug("slt - "+ utils.ToHex(ins));
+                            message.Debug("slt");
                             break;
 
                         case 0x03:
                             //sltu
-                            message.Debug("sltu - "+ utils.ToHex(ins));
+                            message.Debug("sltu");
                             break;
 
                         case 0x07:
                             //and
-                            message.Debug("and - "+ utils.ToHex(ins));
+                            message.Debug("and");
                             break;
 
                         case 0x06:
                             //or
-                            message.Debug("or - "+ utils.ToHex(ins));
+                            message.Debug("or");
                             break;
 
                         case 0x04:
                             //xor
-                            message.Debug("xor - "+ utils.ToHex(ins));
+                            message.Debug("xor");
                             break;
 
                         case 0x01:
                             //sll
-                            message.Debug("sll - "+ utils.ToHex(ins));
+                            message.Debug("sll");
                             break;
 
                         case 0x05:
                             //srl
-                            message.Debug("srl - "+ utils.ToHex(ins));
+                            message.Debug("srl");
                             break;
                     }
                     break;
@@ -187,12 +188,12 @@ function Disassemble(ins,r,csr,pc) {
                     switch((ins >> 12)&0x7) {
                         case 0x00:
                             //sub
-                            message.Debug("sub - "+ utils.ToHex(ins));
+                            message.Debug("sub");
                             break;
 
                         case 0x05:
                             //sra
-                            message.Debug("sra - "+ utils.ToHex(ins));
+                            message.Debug("sra");
                             break;
                     }
                     break;
@@ -202,49 +203,49 @@ function Disassemble(ins,r,csr,pc) {
                     switch((ins >> 12)&0x7) {
                         case 0x00:
                             //mul
-                            message.Debug("mul - "+ utils.ToHex(ins));
+                            message.Debug("mul");
                             break;
 
                         case 0x01:
                             //mulh
-                            message.Debug("mulh - "+ utils.ToHex(ins));
+                            message.Debug("mulh");
                             break;
 
                         case 0x02:
                             //mulhsu
-                            message.Debug("mulhsu - "+ utils.ToHex(ins));
+                            message.Debug("mulhsu");
                             break;
 
                         case 0x03:
                             //mulhu
-                            message.Debug("mulhu - "+ utils.ToHex(ins));
+                            message.Debug("mulhu");
                             break;
 
                         case 0x04:
                             //div
-                            message.Debug("div - "+ utils.ToHex(ins));
+                            message.Debug("div");
                             break;
 
                         case 0x05:
                             //divu
-                            message.Debug("divu - "+ utils.ToHex(ins));
+                            message.Debug("divu");
                             break;
 
                         case 0x06:
                             //rem
-                            message.Debug("rem - "+ utils.ToHex(ins));
+                            message.Debug("rem");
                             break;
 
                         case 0x07:
                             //remu
-                            message.Debug("remu - "+ utils.ToHex(ins));
+                            message.Debug("remu");
                             break;
                     }
                     break;
                
 
                 default:
-                    message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + "not found");
+                    message.Debug("Error in disassemble: Instruction " + utils.ToHex(ins) + "not found");
                     break;
 
             }
@@ -252,22 +253,22 @@ function Disassemble(ins,r,csr,pc) {
 
         case 0x37:
             //lui
-            message.Debug("Lui - "+ utils.ToHex(ins));
+            message.Debug("Lui");
             break;
 
         case 0x17:
             //auipc
-            message.Debug("auipc - "+ utils.ToHex(ins));
+            message.Debug("auipc");
             break;
 
         case 0x6F:
             //jal
-            message.Debug("jal - "+ utils.ToHex(ins));
+            message.Debug("jal");
             break; 
 
         case 0x67:
             //jalr
-            message.Debug("jalr - "+ utils.ToHex(ins));
+            message.Debug("jalr");
             break;
 
         case 0x63:
@@ -276,36 +277,36 @@ function Disassemble(ins,r,csr,pc) {
                 
                 case 0x00:
                     //beq
-                    message.Debug("beq - "+ utils.ToHex(ins));
+                    message.Debug("beq");
                     break;
 
                 case 0x01:
                     //bne
-                    message.Debug("bne - "+ utils.ToHex(ins));
+                    message.Debug("bne");
                     break;
 
                 case 0x04:
                     //blt
-                    message.Debug("blt - "+ utils.ToHex(ins));
+                    message.Debug("blt");
                     break;
 
                 case 0x05:
                     //bge
-                    message.Debug("bge - "+ utils.ToHex(ins));
+                    message.Debug("bge");
                     break;
 
                 case 0x06:
                     //bltu
-                    message.Debug("bltu - "+ utils.ToHex(ins));
+                    message.Debug("bltu");
                     break;
 
                 case 0x07:
                     //bgeu
-                    message.Debug("bgeu - "+ utils.ToHex(ins));
+                    message.Debug("bgeu");
                     break;
 
                 default:
-                    message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + "not found");
+                    message.Debug("Error in disassemble: Instruction " + utils.ToHex(ins) + "not found");
                     break;
 
             }
@@ -317,12 +318,12 @@ function Disassemble(ins,r,csr,pc) {
                 
                 case 0x01:
                     //csrrw
-                    message.Debug("csrrw - "+ utils.ToHex(ins));
+                    message.Debug("csrrw");
                     break;
 
                 case 0x02:
                     //csrrs
-                    message.Debug("csrrs - "+ utils.ToHex(ins));
+                    message.Debug("csrrs");
                     break;
 
                 case 0x03:
@@ -418,20 +419,20 @@ function Disassemble(ins,r,csr,pc) {
                             message.Debug("mrts - "+ utils.ToHex(ins));
                             break;
 
-                        case 0x101:
-                            //sfence.vm
-                            message.Debug("sfence.vm - "+ utils.ToHex(ins));
+                        case 0x120:
+                            //sfence.vma
+                            message.Debug("sfence.vma - "+ utils.ToHex(ins));
                             break;
 
                         default:
-                            message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + "not found");
+                            message.Debug("Error in disassemble: Instruction " + utils.ToHex(ins) + "not found");
                             break;
 
                     }
                     break; 
 
                 default:
-                    message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + "not found");
+                    message.Debug("Error in disassemble: Instruction " + utils.ToHex(ins) + "not found");
                     break;
 
             }
@@ -448,11 +449,11 @@ function Disassemble(ins,r,csr,pc) {
 
                 case 0x03:
                     //fld
-                    message.Debug("fld - "+ utils.ToHex(ins));
+                    message.Debug("fld");
                     break;
 
                 default:
-                    message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + "not found");
+                    message.Debug("Error in disassemble: Instruction " + utils.ToHex(ins) + "not found");
                     break;
 
             }
@@ -464,16 +465,16 @@ function Disassemble(ins,r,csr,pc) {
 
                 case 0x02:
                     //fsw
-                    message.Debug("fsw - "+ utils.ToHex(ins));
+                    message.Debug("fsw");
                     break;
 
                 case 0x03:
                     //fsd
-                    message.Debug("fsw - "+ utils.ToHex(ins));
+                    message.Debug("fsw");
                     break;
 
                 default:
-                    message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + "not found");
+                    message.Debug("Error in disassemble: Instruction " + utils.ToHex(ins) + "not found");
                     break;
 
             }
@@ -485,42 +486,42 @@ function Disassemble(ins,r,csr,pc) {
                 
                 case 0x00 :
                     //fadd.s
-                    message.Debug("fadd.s - "+ utils.ToHex(ins));
+                    message.Debug("fadd.s");
                     break;
 
                 case 0x04:
                     //fsub.s
-                    message.Debug("fsub.s - "+ utils.ToHex(ins));
+                    message.Debug("fsub.s");
                     break;
 
                 case 0x60:
                     //fcvt.w.s
-                    message.Debug("fcvt.w.s - "+ utils.ToHex(ins));
+                    message.Debug("fcvt.w.s");
                     break;
 
                 case 0x01 :
                     //fadd.d
-                    message.Debug("fadd.d - "+ utils.ToHex(ins));
+                    message.Debug("fadd.d");
                     break;
 
                 case 0x05:
                     //fsub.d
-                    message.Debug("fsub.d - "+ utils.ToHex(ins));
+                    message.Debug("fsub.d");
                     break;
 
                 case 0x61:
                     //fcvt.w.d
-                    message.Debug("fcvt.w.s - "+ utils.ToHex(ins));
+                    message.Debug("fcvt.w.s");
                     break;
 
                 case 0x78:
                     //fmv.s.x
-                    message.Debug("fmv.s.x - "+ utils.ToHex(ins));
+                    message.Debug("fmv.s.x");
                     break;
 
 
                 default:
-                    message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + "not found");
+                    message.Debug("Error in disassemble: Instruction " + utils.ToHex(ins) + "not found");
                     break;
             }
             break;
@@ -531,57 +532,57 @@ function Disassemble(ins,r,csr,pc) {
                 
                 case 0x01:
                     //amoswap
-                    message.Debug("amoswap - "+ utils.ToHex(ins));
+                    message.Debug("amoswap");
                     break;
 
                 case 0x00:
                     //amoadd
-                    message.Debug("amoadd - "+ utils.ToHex(ins));
+                    message.Debug("amoadd");
                     break;
 
                 case 0x04:
                     //amoxor
-                    message.Debug("amoxor - "+ utils.ToHex(ins));
+                    message.Debug("amoxor");
                     break;
 
                 case 0x0C:
                     //amoand
-                    message.Debug("amoand - "+ utils.ToHex(ins));
+                    message.Debug("amoand");
                     break;
 
                 case 0x08:
                     //amoor
-                    message.Debug("amoor - "+ utils.ToHex(ins));
+                    message.Debug("amoor");
                     break;
 
                 case 0x10:
                     //amomin
-                    message.Debug("amomin - "+ utils.ToHex(ins));
+                    message.Debug("amomin");
                     break;
 
                case 0x14:
                     //amomax
-                    message.Debug("amomax - "+ utils.ToHex(ins));
+                    message.Debug("amomax");
                     break;
 
                 case 0x18:
                     //amominu
-                    message.Debug("amominu - "+ utils.ToHex(ins));
+                    message.Debug("amominu");
                     break;
 
                 case 0x1C:
                     //amomaxu
-                    message.Debug("amomaxu - "+ utils.ToHex(ins));
+                    message.Debug("amomaxu");
                     break;
 
                 case 0x02:
                     //lr.d
-                    message.Debug("lr.d - "+ utils.ToHex(ins));
+                    message.Debug("lr.d");
                     break;
 
                 case 0x03:
                     //sc.d
-                    message.Debug("sc.d - "+ utils.ToHex(ins));
+                    message.Debug("sc.d");
                     break;
 
                 default:
@@ -593,15 +594,15 @@ function Disassemble(ins,r,csr,pc) {
 
         case 0x0F:
             //fence
-            message.Debug("fence - "+ utils.ToHex(ins));
+            message.Debug("fence");
             break;
 
         default:
-            message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + " not found at "+utils.ToHex(this.pc));
+            message.Debug("Error in disassemble: Instruction " + utils.ToHex(ins) + " not found");
             break;
     }
 
-    message.Debug(utils.ToHex(pc));
 };
 
 module.exports.Disassemble = Disassemble;
+

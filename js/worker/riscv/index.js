@@ -83,7 +83,7 @@ CPU.prototype.toString = function() {
     str += "Current state of the machine\n";
 
 
-    if (this.cpu.pc) {
+    if (typeof this.cpu.pc != 'undefined') {
         str += "PC: " + utils.ToHex(this.cpu.pc) + "\n"; 
     } else {
         str += "PC: " + utils.ToHex(this.cpu.GetPC()) + "\n"; 

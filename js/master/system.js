@@ -27,6 +27,7 @@ function jor1kGUI(parameters)
     this.params.path = this.params.path || "";
 
     this.params.system.kernelURL = this.params.system.kernelURL || "vmlinux.bin.bz2";
+    console.log("kernel URL: " + this.params.system.kernelURL);
     this.params.system.memorysize = this.params.system.memorysize || 32;
     this.params.system.arch = this.params.system.arch || "or1k";
     this.params.system.cpu = this.params.system.cpu || "asm";
@@ -40,6 +41,7 @@ function jor1kGUI(parameters)
 
     // add path to every URL
     this.params.system.kernelURL = this.params.path + this.params.system.kernelURL;
+    this.params.system.dtbURL = this.params.path + this.params.system.dtbURL;
     this.params.fs.basefsURL = this.params.path + this.params.fs.basefsURL;
     if (this.params.fs.extendedfsURL) {
         this.params.fs.extendedfsURL = this.params.path + this.params.fs.extendedfsURL;

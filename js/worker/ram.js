@@ -20,6 +20,7 @@ function RAM(heap, ramoffset) {
     this.int32mem = new Int32Array(this.heap, ramoffset);
     this.uint8mem = new Uint8Array(this.heap, ramoffset);
     this.sint8mem = new Int8Array(this.heap, ramoffset);
+
     this.devices = new Array(0x100);
 
     // generic functions assume little endian
@@ -93,7 +94,8 @@ RAM.prototype.Read32BigTemplate = function(addr) {
 
 RAM.prototype.Read32LittleTemplate = function(addr) {
     addr = addr | 0;
-    if (addr >= 0) {
+    if (addr < 0) {
+        addr = addr ^ 0x80000000;
         if (this.int32mem.byteLength <= addr) {
             message.Debug("Error in Read32Little: read above upper boundary");
             message.Abort();
@@ -118,7 +120,8 @@ RAM.prototype.Write32BigTemplate = function(addr, x) {
 
 RAM.prototype.Write32LittleTemplate = function(addr, x) {
     addr = addr | 0;
-    if (addr >= 0) {
+    if (addr < 0) {
+        addr = addr ^ 0x80000000;
         if (this.int32mem.byteLength <= addr) {
             message.Debug("Error in Write32Little: write above upper boundary");
             message.Abort();
@@ -143,7 +146,8 @@ RAM.prototype.Read8BigTemplate = function(addr) {
 
 RAM.prototype.Read8LittleTemplate = function(addr) {
     addr = addr | 0;
-    if (addr >= 0) {
+    if (addr < 0) {
+        addr = addr ^ 0x80000000;
         if (this.uint8mem.byteLength <= addr) {
             message.Debug("Error in Read8Little: read above upper boundary");
             message.Abort();
@@ -167,8 +171,9 @@ RAM.prototype.Write8BigTemplate = function(addr, x) {
 };
 
 RAM.prototype.Write8LittleTemplate = function(addr, x) {
-    addr = addr | 0;
-    if (addr >= 0) {
+    addr = addr | 0
+    if (addr < 0) {
+        addr = addr ^ 0x80000000;
         if (this.uint8mem.byteLength <= addr) {
             message.Debug("Error in Write8Little: write above upper boundary");
             message.Abort();
@@ -193,7 +198,8 @@ RAM.prototype.Read16BigTemplate = function(addr) {
 
 RAM.prototype.Read16LittleTemplate = function(addr) {
     addr = addr | 0;
-    if (addr >= 0) {
+    if (addr < 0) {
+        addr = addr ^ 0x80000000;
         if (this.uint8mem.byteLength <= addr) {
             message.Debug("Error in Read16Little: read above upper boundary");
             message.Abort();
@@ -219,7 +225,8 @@ RAM.prototype.Write16BigTemplate = function(addr, x) {
 
 RAM.prototype.Write16LittleTemplate = function(addr, x) {
     addr = addr | 0;
-    if (addr >= 0) {
+    if (addr < 0) {
+        addr = addr ^ 0x80000000;
         if (this.uint8mem.byteLength <= addr) {
             message.Debug("Error in Write16Little: write above upper boundary");
             message.Abort();

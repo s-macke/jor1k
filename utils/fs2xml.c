@@ -273,7 +273,7 @@ void Untar(unsigned char *buf, int len)
 		//int size = atoi(ph->size);
 		int size = strtol(ph->size, NULL, 8);
 		printf("%c %s %8i %s\n", ph->typeflag, ph->mode, size, ph->name);
-		MergeFile(ph);
+		if (ph->typeflag != 'L') MergeFile(ph);
 
 		if (size != 0) {
 			p = p + size;
@@ -566,7 +566,7 @@ void WalkDir(int parentid)
 				system(command);
 				*/
 
-				
+
 			}
 			if (ShouldBeLoaded(inodes[i].name)) {
                              inodes[i].load = 1;
@@ -584,7 +584,7 @@ void CreateFilesystem()
 
 int main(int argc, char *argv[])
 {
-	unsigned char *buf = (unsigned char*)malloc(60 * 1024 * 1024);
+	unsigned char *buf = (unsigned char*)malloc(80 * 1024 * 1024);
 
 	if (argc < 2)
 	{
@@ -593,8 +593,8 @@ int main(int argc, char *argv[])
 	}
 	printf("Build sysroot in folder %s\n", "fs");
 
-	inodes = (struct inode*) malloc(10000 * sizeof(struct inode));
-	memset(inodes, 0, 10000 * sizeof(struct inode));
+	inodes = (struct inode*) malloc(20000 * sizeof(struct inode));
+	memset(inodes, 0, 20000 * sizeof(struct inode));
 
 	int i=0;
 	char filename[256];

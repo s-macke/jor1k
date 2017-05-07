@@ -10,11 +10,9 @@ var RAM = require('./ram');
 var bzip2 = require('./bzip2');
 var elf = require('./elf');
 var Timer = require('./timer');
-var HTIF = require('./riscv/htif');
-
-// CPU
-var OR1KCPU = require('./or1k');
-var RISCVCPU = require('./riscv');
+var InitOpenRISC = require('./init_openrisc');
+var InitRISCV = require('./init_riscv');
+var FS = require('./filesystem/filesystem');
 
 // Devices
 var UARTDev = require('./dev/uart');
@@ -24,6 +22,9 @@ var FBDev = require('./dev/framebuffer');
 var EthDev = require('./dev/ethmac');
 var ATADev = require('./dev/ata');
 var RTCDev = require('./dev/rtc');
+var CLINTDev = require('./dev/clint');
+var PLICDev = require('./dev/plic');
+var ROMDev = require('./dev/rom');
 var TouchscreenDev = require('./dev/touchscreen');
 var KeyboardDev = require('./dev/keyboard');
 var SoundDev = require('./dev/sound');
@@ -35,33 +36,6 @@ var VirtioNET = require('./dev/virtio/net');
 var VirtioBlock = require('./dev/virtio/block');
 var VirtioGPU = require('./dev/virtio/gpu');
 var VirtioConsole = require('./dev/virtio/console');
-var FS = require('./filesystem/filesystem');
-
-/* 
-    Heap Layout
-    ===========
-    The heap is needed by the asm.js CPU. 
-    For compatibility all CPUs use the same layout
-    by using the different views of typed arrays
-
-    ------ Core 1 ------
-    0x0     -  0x7F     32 CPU registers 
-    0x80    -  0x1FFF   CPU specific, usually unused or temporary data
-    0x2000  -  0x3FFF   group 0 (system control and status)
-    0x4000  -  0x5FFF   group 1 (data MMU)
-    0x6000  -  0x7FFF   group 2 (instruction MMU)
-    ------ Core 2 ------
-    0x8000  -  0x807F   32 CPU registers
-    0x8080  -  0x9FFF   CPU specific, usually unused or temporary data
-    0xA000  -  0xBFFF   group 0 (system control and status)
-    0xC000  -  0xDFFF   group 1 (data MMU)
-    0xE000  -  0xFFFF   group 2 (instruction MMU)
-    ------ Core 3 ------
-    ...
-    ------- RAM --------
-    0x100000 -  ...     RAM
-*/
-
 
 var SYSTEM_RUN = 0x1;
 var SYSTEM_STOP = 0x2;
@@ -82,21 +56,6 @@ function System() {
     }.bind(this));
 }
 
-System.prototype.CreateCPU = function(cpuname, arch) {
-    try {
-        if (arch == "or1k") {
-            this.cpu = new OR1KCPU(cpuname, this.ram, this.heap, this.ncores);
-        } else
-        if (arch == "riscv") {
-            this.cpu = new RISCVCPU(cpuname, this.ram, this.htif, this.heap, this.ncores);
-        } else
-            throw "Architecture " + arch + " not supported";
-    } catch (e) {
-        message.Debug("Error: failed to create CPU:" + e);
-    }
-};
-
-
 System.prototype.ChangeCPU = function(cpuname) {
     this.cpu.switchImplementation(cpuname);
 };
@@ -112,102 +71,15 @@ System.prototype.Reset = function() {
 };
 
 System.prototype.Init = function(system) {
-    this.status = SYSTEM_STOP;
-    this.memorysize = system.memorysize;
+    message.Debug("Init with following JSON structure: ");
+    message.Debug(system);
 
+    this.status = SYSTEM_STOP;
+
+    this.arch = system.arch;
+    this.memorysize = system.memorysize;
     this.ncores = system.ncores;
     if (!system.ncores) system.ncores = 1;
-
-    // this must be a power of two.
-    var ramoffset = 0x100000;
-    this.heap = new ArrayBuffer(this.memorysize*0x100000); 
-    this.memorysize--; // - the lower 1 MB are used for the cpu cores
-    this.ram = new RAM(this.heap, ramoffset);
-
-    if (system.arch == "riscv") {
-        this.htif = new HTIF(this.ram, this);
-    }
-
-    this.CreateCPU(system.cpu, system.arch);
-
-    this.devices = [];
-    this.devices.push(this.cpu);
-
-    if (system.arch == "or1k") {
-
-        this.irqdev = new IRQDev(this);
-        this.timerdev = new TimerDev();
-        this.uartdev0 = new UARTDev(0, this, 0x2);
-        this.uartdev1 = new UARTDev(1, this, 0x3);
-        this.ethdev = new EthDev(this.ram, this);
-        this.ethdev.TransmitCallback = function(data){
-            message.Send("ethmac", data);
-        };
-
-        this.fbdev = new FBDev(this.ram);
-        this.atadev = new ATADev(this);
-        this.tsdev = new TouchscreenDev(this);
-        this.kbddev = new KeyboardDev(this);
-        this.snddev = new SoundDev(this, this.ram);
-        this.rtcdev = new RTCDev(this);
-
-        this.filesystem = new FS();
-        this.virtio9pdev = new Virtio9p(this.ram, this.filesystem);
-        this.virtiodev1 = new VirtIODev(this, 0x6, this.ram, this.virtio9pdev);
-        this.virtioinputdev = new VirtioInput(this.ram);
-        this.virtionetdev = new VirtioNET(this.ram);
-        this.virtioblockdev = new VirtioBlock(this.ram);
-        this.virtiodummydev = new VirtioDummy(this.ram);
-        this.virtiogpudev = new VirtioGPU(this.ram);
-        this.virtioconsoledev = new VirtioConsole(this.ram);
-        this.virtiodev2 = new VirtIODev(this, 0xB, this.ram, this.virtiodummydev);
-        this.virtiodev3 = new VirtIODev(this, 0xC, this.ram, this.virtiodummydev);
-
-        this.devices.push(this.irqdev);
-        this.devices.push(this.timerdev);
-        this.devices.push(this.uartdev0);
-        this.devices.push(this.uartdev1);
-        this.devices.push(this.ethdev);
-        this.devices.push(this.fbdev);
-        this.devices.push(this.atadev);
-        this.devices.push(this.tsdev);
-        this.devices.push(this.kbddev);
-        this.devices.push(this.snddev);
-        this.devices.push(this.rtcdev);
-        this.devices.push(this.virtio9pdev);
-        this.devices.push(this.virtiodev1);
-        this.devices.push(this.virtiodev2);
-        this.devices.push(this.virtiodev3);
-
-        this.devices.push(this.virtioinputdev);
-        this.devices.push(this.virtionetdev);
-        this.devices.push(this.virtioblockdev);
-        this.devices.push(this.virtiodummydev);
-        this.devices.push(this.virtiogpudev);
-        this.devices.push(this.virtioconsoledev);
-
-        this.ram.AddDevice(this.uartdev0,   0x90000000, 0x7);
-        this.ram.AddDevice(this.fbdev,      0x91000000, 0x1000);
-        this.ram.AddDevice(this.ethdev,     0x92000000, 0x1000);
-        this.ram.AddDevice(this.tsdev,      0x93000000, 0x1000);
-        this.ram.AddDevice(this.kbddev,     0x94000000, 0x100);
-        this.ram.AddDevice(this.uartdev1,   0x96000000, 0x7);
-        this.ram.AddDevice(this.virtiodev1, 0x97000000, 0x1000);
-        this.ram.AddDevice(this.snddev,     0x98000000, 0x400);
-        this.ram.AddDevice(this.rtcdev,     0x99000000, 0x1000);
-        this.ram.AddDevice(this.irqdev,     0x9A000000, 0x1000);
-        this.ram.AddDevice(this.timerdev,   0x9B000000, 0x1000);
-        this.ram.AddDevice(this.virtiodev2, 0x9C000000, 0x1000);
-        this.ram.AddDevice(this.virtiodev3, 0x9D000000, 0x1000);
-        this.ram.AddDevice(this.atadev,     0x9E000000, 0x1000);
-    } else 
-    if (system.arch == "riscv") {
-        // at the moment the htif interface is part of the CPU initialization.
-        // However, it uses uartdev0
-        this.uartdev0 = new UARTDev(0, this, 0x2);
-        this.devices.push(this.uartdev0);
-        this.ram.AddDevice(this.uartdev0,   0x90000000, 0x7);
-    }
 
     this.ips = 0; // external instruction per second counter
     this.idletime = 0; // start time of the idle routine
@@ -218,11 +90,39 @@ System.prototype.Init = function(system) {
     this.loopspersecond = 100; // main loops per second, to keep the system responsive
 
     this.timer = new Timer(this.ticksperms, this.loopspersecond);
+
+    // this must be a power of two.
+    message.Debug("Allocate " + this.memorysize + " MB");
+    var ramoffset = 0x100000;
+    this.heap = new ArrayBuffer(this.memorysize*0x100000); 
+    this.memorysize--; // - the lower 1 MB are used for the cpu cores
+    this.ram = new RAM(this.heap, ramoffset);
+
+    this.devices = [];
+    this.filesystem = new FS();
+    this.virtio9pdev = new Virtio9p(this.ram, this.filesystem);
+
+    try {
+        if (system.arch == "or1k") {
+            InitOpenRISC(this, system);
+        } else
+        if (system.arch == "riscv") {
+            InitRISCV(this, system);
+        } else {
+            throw "Architecture " + system.arch + " not supported";
+        }
+    } catch (e) {
+        message.Debug("Error: failed to create SoC: " + e);
+    }
 };
 
 System.prototype.RaiseInterrupt = function(line) {
     //message.Debug("Raise " + line);
-    this.cpu.RaiseInterrupt(line, -1); // raise all cores
+    if (this.arch == "riscv") {
+        this.plicdev.RaiseInterrupt(line);
+    } else {
+        this.cpu.RaiseInterrupt(line, -1); // raise all cores
+    }
     if (this.status == SYSTEM_HALT)
     {
         this.status = SYSTEM_RUN;
@@ -235,7 +135,11 @@ System.prototype.RaiseInterrupt = function(line) {
 };
 
 System.prototype.ClearInterrupt = function (line) {
-    this.cpu.ClearInterrupt(line, -1); // clear all cores
+    if (this.arch == "riscv") {
+        this.plicdev.ClearInterrupt(line);
+    } else {
+        this.cpu.ClearInterrupt(line, -1); // clear all cores
+    }
 };
 
 System.prototype.RaiseSoftInterrupt = function(line, cpuid) {
@@ -306,26 +210,28 @@ System.prototype.PatchKernel = function(length)
 System.prototype.OnKernelLoaded = function(buffer) {
     this.SendStringToTerminal("Decompressing kernel...\r\n");
     var buffer8 = new Uint8Array(buffer);
-    var length = 0;
+    var length = buffer.byteLength;
 
     if (elf.IsELF(buffer8)) {
-        elf.Extract(buffer8, this.ram.uint8mem);
+        elf.Extract(buffer8, this.ram);
     } else 
     if (bzip2.IsBZIP2(buffer8)) {
+        length = 0;
         bzip2.simple(buffer8, function(x){this.ram.uint8mem[length++] = x;}.bind(this));
         if (elf.IsELF(this.ram.uint8mem)) {
             var temp = new Uint8Array(length);
             for(var i=0; i<length; i++) {
                 temp[i] = this.ram.uint8mem[i];
             }
-            elf.Extract(temp, this.ram.uint8mem);
+            elf.Extract(temp, this.ram);
         }
     } else {
-        length = buffer8.length;
         for(var i=0; i<length; i++) this.ram.uint8mem[i] = buffer8[i];
     }
-    this.PatchKernel(length);
+
+    // OpenRISC CPU uses Big Endian
     if (this.cpu.littleendian == false) {
+        this.PatchKernel(length);
         this.ram.Little2Big(length);
     }
     message.Debug("Kernel loaded: " + length + " bytes");
