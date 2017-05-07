@@ -1604,6 +1604,14 @@ this.n = 0;
                         f[rindex] = fs1 * fs2;
                         break;
 
+                    case 0x0C:
+                    case 0x0D:
+                        //fdiv.s, fdiv.d
+                        fs1 = f[(ins >> 15) & 0x1F];
+                        fs2 = f[(ins >> 20) & 0x1F];
+                        f[rindex] = fs1 / fs2;
+                        break;
+
                     case 0x10: // single precision
                     case 0x11: // double precision
                         // fsgnj
