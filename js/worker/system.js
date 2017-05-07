@@ -118,7 +118,11 @@ System.prototype.Init = function(system) {
 
 System.prototype.RaiseInterrupt = function(line) {
     //message.Debug("Raise " + line);
-    this.cpu.RaiseInterrupt(line, -1); // raise all cores
+    if (this.arch == "riscv") {
+        this.plicdev.RaiseInterrupt(line);
+    } else {
+        this.cpu.RaiseInterrupt(line, -1); // raise all cores
+    }
     if (this.status == SYSTEM_HALT)
     {
         this.status = SYSTEM_RUN;
@@ -131,7 +135,11 @@ System.prototype.RaiseInterrupt = function(line) {
 };
 
 System.prototype.ClearInterrupt = function (line) {
-    this.cpu.ClearInterrupt(line, -1); // clear all cores
+    if (this.arch == "riscv") {
+        this.plicdev.ClearInterrupt(line);
+    } else {
+        this.cpu.ClearInterrupt(line, -1); // clear all cores
+    }
 };
 
 System.prototype.RaiseSoftInterrupt = function(line, cpuid) {

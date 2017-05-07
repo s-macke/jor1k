@@ -109,8 +109,8 @@ SysCalls.prototype.HandleSysCall = function (addr) {
             var string_address = this.ram.Read32(addr + 8*2);
             while(i < length){
                 var c = this.ram.Read8(string_address + (i++));
-                this.ram.Write8Little(0x30000000 >> 0, c);
-                if (c == 0xA) this.ram.Write8(0x30000000 >> 0, 0xD);
+                this.ram.Write8Little(0x03000000 >> 0, c);
+                if (c == 0xA) this.ram.Write8(0x03000000 >> 0, 0xD);
             }
             this.ram.Write32(addr, i);
             break;

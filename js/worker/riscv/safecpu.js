@@ -2,8 +2,6 @@
 // -------------------- CPU ------------------------
 // -------------------------------------------------
 
-// TODO mideleg
-
 "use strict";
 var message = require('../messagehandler');
 var utils = require('../utils');
@@ -33,12 +31,6 @@ var CAUSE_MACHINE_ECALL       = 0xb;
 var CAUSE_FETCH_PAGE_FAULT    = 0xc;
 var CAUSE_LOAD_PAGE_FAULT     = 0xd;
 var CAUSE_STORE_PAGE_FAULT    = 0xf;
-
-/*
-var CAUSE_TIMER_INTERRUPT          = (1<<31) | 0x01;
-var CAUSE_HOST_INTERRUPT           = (1<<31) | 0x02;
-var CAUSE_SOFTWARE_INTERRUPT       = (1<<31) | 0x00;
-*/
 
 var MSTATUS_UIE     = 0x00000001; // interrupt enable bits
 var MSTATUS_SIE     = 0x00000002;
@@ -143,6 +135,9 @@ var CSR_PMPADDR0  = 0x3b0;
 var CSR_MRESET    = 0x782;
 var CSR_SEND_IPI  = 0x783;
 
+// debug tdata1
+var CSR_TDATA1  = 0x7A1;
+
 // user CSRs standard read only
 var CSR_CYCLE     = 0xC00; // Cycle counter for RDCYCLE instruction
 var CSR_TIME      = 0xC01; // Timer for RDTIME instruction
@@ -243,13 +238,17 @@ function ctz(val)
 }
 
 SafeCPU.prototype.RaiseInterrupt = function (line, cpuid) {
-    message.Debug("raise int " + line);
-    if (line == 1) return; // HTIF
-    this.csr[CSR_MIP] |= MIP_SEIP; // EXT
+    //message.Debug("raise int " + line);
+    if (line == IRQ_S_EXT) {
+        this.csr[CSR_MIP] |= MIP_SEIP; // EXT
+    }
 };
 
 SafeCPU.prototype.ClearInterrupt = function (line, cpuid) {
     //message.Debug("clear int " + line);
+    if (line == IRQ_S_EXT) {
+        this.csr[CSR_MIP] &= ~MIP_SEIP; // EXT
+    }
 };
 
 SafeCPU.prototype.CheckForInterrupt = function () {
@@ -349,23 +348,42 @@ SafeCPU.prototype.MemAccessTrap = function(addr, op) {
 
 
 SafeCPU.prototype.CheckVMPrivilege = function (pte, op) {
-    var type = (pte >> 1) & 0xF;
+    pte = pte | 0;
+    op = op | 0;
+    //var type = (pte >> 1) & 0xF;
     var supervisor = this.prv == PRV_S;
     var sum = this.csr[CSR_MSTATUS] & MSTATUS_SUM; // protect user memory
     var mxr = this.csr[CSR_MSTATUS] & MSTATUS_MXR; // make executable readable
 
-    if ((pte & PTE_U) ? supervisor && !sum : !supervisor) {
-      return false;
-    } else
-    if (!(pte & PTE_V) || (!(pte & PTE_R) && (pte & PTE_W))) {
-      return false;
-    } else
-    if (op == VM_FETCH ? !(pte & PTE_X) :
-               op == VM_READ ?  !(pte & PTE_R) && !(mxr && (pte & PTE_X)) :
-                                !((pte & PTE_R) && (pte & PTE_W))) {
-        return false;
+    if (pte & PTE_U) {
+        if (supervisor && !sum) {
+            message.Debug("Illegal access from privilege mode at pc=" + utils.ToHex(this.pc) + " " + op);
+            message.Abort();
+            return false;
+        }
+    } else {
+        if (!supervisor) return false;
     }
-    return true;
+
+    // not valid or reserved for future use
+    if (!(pte & PTE_V) || (!(pte & PTE_R) && (pte & PTE_W))) {
+        //message.Debug("Unknown access from privilege mode at pc=" + utils.ToHex(this.pc) + " " + op);
+        //message.Abort();
+        return false;
+    } 
+
+    switch(op|0) {
+        case VM_FETCH:
+            return pte & PTE_X;
+
+        case VM_READ:
+            return (pte & PTE_R) || (mxr && (pte & PTE_X));
+
+        case VM_WRITE:
+            return (pte & PTE_R) && (pte & PTE_W);
+    }
+    message.Debug("Error in CheckVMPRivilege: unknown operation");
+    message.Abort();
 }
 
 
@@ -374,6 +392,8 @@ SafeCPU.prototype.CheckVMPrivilege = function (pte, op) {
  * the page table and checking  the rights
  */
 SafeCPU.prototype.TranslateVM = function (addr, op) {
+    op = op | 0;
+    addr = addr | 0;
     var vm = (this.csr[CSR_SPTBR] >> 31) & 1;
     var PGSIZE = 4096;
     var PGMASK = ~(PGSIZE-1);
@@ -387,7 +407,8 @@ SafeCPU.prototype.TranslateVM = function (addr, op) {
     // LEVEL 1
     // get first entry in page table
     var base = (this.csr[CSR_SPTBR] & SPTBR32_PPN) << PGSHIFT;
-    var pte = this.ram.Read32(base + ((addr >>> 22) << 2)) | 0;
+    var pteaddr = base + ((addr >>> 22) << 2);
+    var pte = this.ram.Read32(pteaddr) | 0;
 
     //message.Debug("VM Start " + utils.ToHex(addr) + " " + utils.ToHex(base) + " " + utils.ToHex(pte));
     /* check if pagetable is finished here */
@@ -396,16 +417,18 @@ SafeCPU.prototype.TranslateVM = function (addr, op) {
             this.MemAccessTrap(addr, op);
             return -1;
         }
-    //message.Debug("VM L1 " + utils.ToHex(addr) + " " + utils.ToHex(base) + " " + utils.ToHex(((pte >> 10) << 12) | (addr&0x3FFFFF)));
-    //message.Abort();
+        //this.ram.Write32(pteaddr, pte | PTE_A | ((op==VM_WRITE)?PTE_D:0));
+        //message.Debug("VM L1 " + utils.ToHex(addr) + " " + utils.ToHex(base) + " " + utils.ToHex(((pte >> 10) << 12) | (addr&0x3FFFFF)));
+        //message.Abort();
         return ((pte >> 10) << 12) | (addr&0x3FFFFF);
     }
 
     // LEVEL 2
     base = (pte & 0xFFFFFC00) << 2;
     var new_page_num = (addr >> 12) & 0x3FF;
-    pte = this.ram.Read32(base + (new_page_num << 2)) | 0;
+    var pteaddr = base + (new_page_num << 2);
 
+    pte = this.ram.Read32(pteaddr) | 0;
     //message.Debug("Level 2 " + utils.ToHex(addr) + " " + utils.ToHex(base) + " " + utils.ToHex(pte));
     //message.Abort();
 
@@ -419,6 +442,7 @@ SafeCPU.prototype.TranslateVM = function (addr, op) {
         this.MemAccessTrap(addr, op);
         return -1;
     }
+    //this.ram.Write32(pteaddr, pte | PTE_A | ((op==VM_WRITE)?PTE_D:0));
     //message.Debug("VM L2 " + utils.ToHex(addr) + " " + utils.ToHex(base) + " " + utils.ToHex( ((pte >> 10) << 12) | (addr & 0xFFF) ));
     //message.Abort();
     return ((pte >> 10) << 12) | (addr & 0xFFF);
@@ -455,12 +479,12 @@ SafeCPU.prototype.SetCSR = function (addr, value) {
         case CSR_MIE:
             var mask = MIP_SSIP | MIP_STIP | MIP_SEIP | (1 << IRQ_COP) | MIP_MSIP | MIP_MTIP;
             csr[CSR_MIE] = (csr[CSR_MIE] & ~mask) | (value & mask);
-            //message.Debug("Write MIE: " + utils.ToHex(csr[CSR_MIE]));
+            //message.Debug("Write MIE: " + utils.ToHex(csr[CSR_MIE]) + " at pc=" + utils.ToHex(this.pc));
             break;
 
         case CSR_SIE:
             csr[CSR_MIE] = (csr[CSR_MIE] & ~csr[CSR_MIDELEG]) | (value & csr[CSR_MIDELEG]);
-            //message.Debug("Write SIE: " + utils.ToHex(csr[CSR_MIE]));
+            //message.Debug("Write SIE: " + utils.ToHex(csr[CSR_MIE]) + " at pc=" + utils.ToHex(this.pc));
             break;
 
         case CSR_MISA:
@@ -516,6 +540,10 @@ SafeCPU.prototype.SetCSR = function (addr, value) {
             csr[addr] = value;
             break;
 
+        case CSR_TDATA1:
+            csr[addr] = value;
+            break;
+
 /*
         case CSR_FRM:
             csr[addr] = value;
@@ -559,7 +587,7 @@ SafeCPU.prototype.GetCSR = function (addr) {
             break;
 
         case CSR_SIE:
-            return csr[addr] & csr[CSR_MIDELEG];
+            return csr[CSR_MIE] & csr[CSR_MIDELEG];
             break;
 
         case CSR_MIE:
@@ -620,6 +648,11 @@ SafeCPU.prototype.GetCSR = function (addr) {
         case CSR_PMPADDR0:
             return 0x0;
             break;
+
+        case CSR_TDATA1:
+            return csr[addr];
+            break;
+
 /*
         case CSR_FRM:
             return csr[addr];
@@ -728,25 +761,6 @@ SafeCPU.prototype.SUMul64 = function (a,b) {
     return result;
 };
 
-
-SafeCPU.prototype.PushPrivilegeStack = function () {
-
-    var csr = this.csr;
-    var mstatus = csr[CSR_MSTATUS];
-    var privilege_level_stack = mstatus & 0x1FF;
-    var new_privilege_level_stack = (((privilege_level_stack << 2) | PRV_M) << 1) & 0x1FF;
-    csr[CSR_MSTATUS] = ((mstatus & (~0xFFF)) + new_privilege_level_stack) & 0xFFFEFFFF; //Last "and" to set mprv(bit 16) to zero
-};
-
-SafeCPU.prototype.PopPrivilegeStack = function () {
-
-    var csr = this.csr;
-    var mstatus = csr[CSR_MSTATUS];
-    var privilege_level_stack =  (mstatus & 0x1FF);
-    var new_privilege_level_stack = ((privilege_level_stack >>> 3) | ((PRV_U << 1) | 0x1) << 6);
-    csr[CSR_MSTATUS] = (mstatus & (~0xFFF)) + new_privilege_level_stack;
-};
-
 SafeCPU.prototype.Step = function (steps, clockspeed) {
     var r = this.r;
     var fi = this.fi;
@@ -775,6 +789,8 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
     steps = steps | 0;
     clockspeed = clockspeed | 0;
     var delta = 0;
+this.n = 0;
+
     do {
         r[0] = 0x00;
         
@@ -786,7 +802,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
             //if (this.csr[CSR_MIE] & MIP_MTIP)
             if ((this.ticks&0xFFFF) == 1) {
                 this.csr[CSR_MIP] |= MIP_STIP
-                message.Debug("Tick");
+                //message.Debug("Tick");
             }
             this.CheckForInterrupt();
 
@@ -1106,8 +1122,8 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
 
                     case 0x01:
                         // mul, mulh, mulhsu, mulhu, div, divu, rem, remu
-                        rs1 = r[(ins >> 15) & 0x1F];
-                        rs2 = r[(ins >> 20) & 0x1F];
+                        rs1 = r[(ins >> 15) & 0x1F]|0;
+                        rs2 = r[(ins >> 20) & 0x1F]|0;
                         rindex = (ins >> 7) & 0x1F;
                         switch((ins >> 12)&0x7) {
                             case 0x00:
@@ -1139,34 +1155,34 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                                 if(rs2 == 0)
                                     quo = -1;
                                 else
-                                    quo = rs1 / rs2;
+                                    quo = (rs1 / rs2)|0;
                                 r[rindex] = quo;
                                 break;
 
                             case 0x05:
                                 // divu
                                 if(rs2 == 0)
-                                    quo = 0xFFFFFFFF;
+                                    quo = -1;
                                 else
-                                    quo = (rs1 >>> 0) / (rs2 >>> 0);
+                                    quo = ((rs1 >>> 0) / (rs2 >>> 0))|0;
                                 r[rindex] = quo;
                                 break;
 
                             case 0x06:
                                 // rem
                                 if(rs2 == 0)
-                                    rem = rs1;
+                                    rem = rs1|0;
                                 else
-                                    rem = rs1 % rs2;
+                                    rem = (rs1 % rs2)|0;
                                 r[rindex] = rem;
                                 break;
 
                             case 0x07:
                                 // remu
                                 if(rs2 == 0)
-                                    rem = (rs1 >>> 0);
+                                    rem = rs1|0;
                                 else
-                                    rem = (rs1 >>> 0) % (rs2 >>> 0);
+                                    rem = ((rs1 >>> 0) % (rs2 >>> 0))|0;
                                 r[rindex] = rem;
                                 break;
                         }
@@ -1207,6 +1223,8 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
 
             case 0x67:
                 // jalr
+                //if ((this.pc>>>0) >= 0xC0000000)
+	        //        message.Debug("jump from " + utils.ToHex(this.pc));
                 imm = ins >> 20;
                 rs1 = r[(ins >> 15) & 0x1F];
                 rindex = (ins >> 7) & 0x1F;
@@ -1221,8 +1239,8 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                 imm3 = (ins >> 8) & 0x0F;
                 imm4 = ((ins >> 7) & 0x01) << 10;
                 imm =  ((imm1 | imm2 | imm3 | imm4) << 1 );
-                rs1 = r[(ins >> 15) & 0x1F];
-                rs2 = r[(ins >> 20) & 0x1F];
+                rs1 = r[(ins >> 15) & 0x1F]|0;
+                rs2 = r[(ins >> 20) & 0x1F]|0;
 
                 switch((ins >> 12)&0x7) {
                     
@@ -1354,13 +1372,6 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                                 // ebreak
                                 this.Trap(CAUSE_BREAKPOINT, this.pc - 4|0, -1);
                                 break;
-/*
-                            case 0x7b2:
-                                // dret
-                                message.Debug("Error in safecpu: Instruction " + "dret" + " not implemented");
-                                message.Abort();
-                              break;
-*/
 
                             case 0x102:
                                 // sret
