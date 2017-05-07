@@ -10,7 +10,6 @@ var imul = require('../imul');
 // CPUs
 var SafeCPU = require('./safecpu');
 var FastCPU = require('./fastcpu');
-var DynamicCPU = require('./dynamiccpu');
 
 var stdlib = {
     Int32Array : Int32Array,
@@ -51,11 +50,6 @@ function createCPU(cpuname, ram, htif, heap, ncores) {
     }
     else if (cpuname === "asm") {
         cpu = FastCPU(stdlib, foreign, heap);
-        cpu.Init();
-        return cpu;
-    }
-    else if (cpuname === "dynamic") {
-        cpu = DynamicCPU(stdlib, foreign, heap);
         cpu.Init();
         return cpu;
     }
