@@ -1771,24 +1771,27 @@ function jor1kGUI(parameters)
 
     this.params.path = this.params.path || "";
 
-    this.params.system.kernelURL = this.params.system.kernelURL || "vmlinux.bin.bz2";
+    console.log("kernel URL: " + this.params.system.kernelURL);
     this.params.system.memorysize = this.params.system.memorysize || 32;
     this.params.system.arch = this.params.system.arch || "or1k";
     this.params.system.cpu = this.params.system.cpu || "asm";
     this.params.system.ncores = this.params.system.ncores || 1;
     this.params.syncURL = this.params.syncURL || "";
 
-    this.params.fs = this.params.fs  || {};
-    this.params.fs.basefsURL = this.params.fs.basefsURL || "basefs.json";
-    this.params.fs.earlyload = this.params.fs.earlyload  || [];
-    this.params.fs.lazyloadimages = this.params.fs.lazyloadimages  || [];
+    if (typeof this.params.fs !== "undefined") {
+        this.params.fs.path = this.params.fs.path || this.params.path;
+        this.params.fs.basefsURL = this.params.fs.basefsURL || "basefs.json";
+        this.params.fs.basefsURL = this.params.fs.path + this.params.fs.basefsURL;
+        if (this.params.fs.extendedfsURL) {
+            this.params.fs.extendedfsURL = this.params.fs.path + this.params.fs.extendedfsURL;
+        }
+        this.params.fs.earlyload = this.params.fs.earlyload  || [];
+        this.params.fs.lazyloadimages = this.params.fs.lazyloadimages  || [];
+    }
 
     // add path to every URL
     this.params.system.kernelURL = this.params.path + this.params.system.kernelURL;
-    this.params.fs.basefsURL = this.params.path + this.params.fs.basefsURL;
-    if (this.params.fs.extendedfsURL) {
-        this.params.fs.extendedfsURL = this.params.path + this.params.fs.extendedfsURL;
-    }
+    this.params.system.dtbURL = this.params.path + this.params.system.dtbURL;
 
     this.params.userid = this.params.userid || "";
 
@@ -1881,7 +1884,6 @@ function jor1kGUI(parameters)
     else
       Window.onmousedown = recordTarget; // IE 10 support (untested)
 
-
     document.onkeypress = function(event) {
         if(this.IgnoreKeys()) return true;
         if ((this.lastMouseDownTarget == TERMINAL) || (this.lastMouseDownTarget == this.clipboard)) {
@@ -1966,7 +1968,8 @@ jor1kGUI.prototype.Reset = function () {
     message.Send("Init", this.params.system);
     message.Send("Reset");
     message.Send("LoadAndStart", this.params.system.kernelURL);
-    message.Send("LoadFilesystem", this.params.fs);
+
+    if (this.params.fs) message.Send("LoadFilesystem", this.params.fs);
 
     if (this.terms.length > 0) {
         this.terms.forEach(function (term) {
