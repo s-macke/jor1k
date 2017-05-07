@@ -36,7 +36,7 @@ Lawrence Angrave [github.com/angrave](http://github.com/angrave)
 Neelabh Gupta [github.com/neelabhg](http://github.com/neelabhg)
 
 
-[or1k specification]: http://opencores.org/or1k/Main_Page
+[openrisc website]: http://openrisc.io
 [project demo]: http://s-macke.github.com/jor1k/demos/main.html
 [project issues]: https://github.com/s-macke/jor1k/issues
 [project wiki]: https://github.com/s-macke/jor1k/wiki

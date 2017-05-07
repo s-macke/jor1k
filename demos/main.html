@@ -12,7 +12,6 @@
         Framebuffer uses canvas
     </canvas>
     <div class="heading">
-    <a href="http://opencores.org/or1k/"><img src="images/globe.png"/></a>
     <h1>jor1k: OpenRISC OR1K Javascript Emulator Running Linux With Network Support</h1>
     </div>
     <div class="windows">
@@ -48,7 +47,7 @@
                     <img src="images/sync.png" width="20px" height="20px"  onclick='jor1k.fs.Sync("home/user")' title="Sync with server" />
                     <img src="images/fullscreen.png" width="20px" height="20px"  onclick='Fullscreen()' title="Windowed fullscreen of framebuffer" />
                     <textarea style="height: 20px;" type=text cols="5" rows="1" id="clipboard">clipb</textarea>
-                    <input type="checkbox" onclick='jor1k.sound.Enabled(this.checked)'>Sound
+                    <input type="checkbox" onclick='jor1k.sound.Enabled(this.checked)'>Audio
                     </span>
                     <span id="stats" style="float: right"></span>
                     </td></tr>
@@ -73,7 +72,7 @@
                 <li><a href="https://github.com/s-macke/jor1k/">Project</a> page at github</li>
                 <li><a href="https://github.com/s-macke/jor1k/issues">Bugtracker</a> to report any issues or feature requests</li>
                 <li><a href="https://github.com/s-macke/jor1k/wiki">Wiki</a> containing more detailed descriptions</li>
-                <li><a href="http://opencores.org/or1k/">Official site</a> of the openrisc project</li>
+                <li><a href="http://openrisc.io">Official site</a> of the openrisc project</li>
             </ul>
 
             <h3>Developer and contributors</h3>
@@ -106,21 +105,6 @@
 
             </ul>
 
-            <h3>Donate</h3>
-            
-            <ul>
-                <li>If you like the project, please support it</li>
-                <li class="donate">
-                    <form action="https://www.paypal.com/cgi-bin/webscr" method="post" target="_top">
-                    <input type="hidden" name="cmd" value="_s-xclick">
-                    <input type="hidden" name="hosted_button_id" value="YNEZT8JALL7VS">
-                    <input type="image" src="https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif" border="0" name="submit" alt="PayPal - The safer, easier way to pay online!">
-                    <img alt="" border="0" src="https://www.paypalobjects.com/de_DE/i/scr/pixel.gif" width="1" height="1">
-                    </form>
-                </li>
-            </ul>
-            
-            
         </div>
 
     <script src="jor1k-master-min.js"></script> 
@@ -128,7 +112,6 @@
 <script>
 var Jor1k = require("Jor1k");
 var LinuxTerm = require("LinuxTerm");
-
 
 function Fullscreen()
 {
@@ -198,15 +181,16 @@ function Start() {
     }
 
     jor1kparameters = {
+        path: "../openrisc-sys/",
         system: {
-            kernelURL: "vmlinux.bin.bz2", // kernel image
+            kernelURL: "kernel/vmlinux.bin.bz2", // kernel image
             memorysize: 32, // in MB, must be a power of two
             cpu: "asm", // short name for the cpu to use
             ncores: 1,
         },
         fs: {
             basefsURL: "basefs.json", // json file with the basic filesystem configuration.
-            extendedfsURL: "../fs.json", // json file with extended filesystem informations. Loaded after the basic filesystem has been loaded.
+            extendedfsURL: "fs.json", // json file with extended filesystem informations. Loaded after the basic filesystem has been loaded.
             earlyload: [], // list of files which should be loaded immediately after they appear in the filesystem
             lazyloadimages: [
             ] // list of automatically loaded images after the basic filesystem has been loaded
@@ -219,8 +203,7 @@ function Start() {
         fps: 10, // update interval of framebuffer
         relayURL: relayURL, // relay url for the network
         userid: userid, // unique user id string. Empty, choosen randomly, from a url, or from a cookie.
-        syncURL: "//jor1k.com/sync/upload.php", // url to sync a certain folder
-        path: "../sys/or1k/",
+        syncURL: "//jor1k.com/sync/upload.php" // url to sync a certain folder
     }
 
     // --------------------------------------------------------
@@ -238,7 +221,7 @@ function Start() {
        jor1kparameters.system.cpu = cpu;
        if (jor1kparameters.system.cpu == "smp") {
              console.log("Load smp kernel");
-             jor1kparameters.system.kernelURL = "vmlinuxsmp.bin.bz2";
+             jor1kparameters.system.kernelURL = "kernel/vmlinuxsmp.bin.bz2";
        }
     } else {
        pushState = true;
@@ -253,8 +236,6 @@ function Start() {
 
 }
 </script>
-
-
 
 <script>
 (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){

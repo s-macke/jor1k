@@ -19,7 +19,17 @@
 var Jor1k = require("Jor1k");
 var LinuxTerm = require("LinuxTerm");
 
-jor1kgui = new Jor1k({term: new LinuxTerm("tty"), path: "../sys/or1k/"});
+jor1kgui = new Jor1k(
+    {
+        term: new LinuxTerm("tty"),
+        path: "../openrisc-sys/",
+        system: {
+            kernelURL: "kernel/vmlinux.bin.bz2"
+        },
+        fs: {
+            basefsURL: "basefs-compile.json"
+        }
+    });
 
     var readFile = (function(fileName) {
         var report = (function(file) {
@@ -46,7 +56,7 @@ jor1kgui = new Jor1k({term: new LinuxTerm("tty"), path: "../sys/or1k/"});
         jor1kgui.fs.WatchFile("home/user/.ash_history", readFile);
     });
 
-    startWatching();
+    setTimeout(function(){ startWatching(); }, 2000);
 
 </script>
 

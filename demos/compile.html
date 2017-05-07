@@ -7,7 +7,6 @@
     </head>
     <body onload="Start()">
     <div class="heading">
-    <a href="http://opencores.org/or1k/"><img src="images/globe.png"/></a>
     <h1>Web-based C-Compiler demo for <a href='.'>jor1k</a></h1>
     </div>
     
@@ -128,16 +127,17 @@ function Start() {
     var term = new LinuxTerm("tty");   // canvas id for the terminal
 
     jor1kparameters = {
+        path: "../openrisc-sys/",
+
         system: {
-            kernelURL: "vmlinux.bin.bz2", // kernel image
+            kernelURL: "kernel/vmlinux.bin.bz2", // kernel image
             memorysize: 32, // in MB, must be a power of two
             cpu: "asm", // short name for the cpu to use
             ncores: 1,
         },
-
         fs: {
             basefsURL: "basefs-compile.json", // json file with the basic filesystem configuration.
-            extendedfsURL: "../fs.json", // json file with extended filesystem informations. Loaded after the basic filesystem has been loaded.
+            extendedfsURL: "fs.json", // json file with extended filesystem informations. Loaded after the basic filesystem has been loaded.
             earlyload: [
                 "usr/bin/gcc", 
                 "usr/libexec/gcc/or1k-linux-musl/4.9.0/cc1",
@@ -158,7 +158,6 @@ function Start() {
         syncURL: "//jor1k.com/sync/upload.php", // url to sync a certain folder
         fps: 10, // update interval of framebuffer
         memorysize: 32, // in MB, must be a power of two
-        path: "../sys/or1k/",
     }
 
     // --------------------------------------------------------
@@ -177,7 +176,7 @@ function Start() {
                 jor1kparameters.system.cpu = params[i].split('=')[1];
                 if (jor1kparameters.system.cpu == "smp") {
                     console.log("Load smp kernel");
-                    jor1kparameters.system.kernelURL = "vmlinuxsmp.bin.bz2";
+                    jor1kparameters.system.kernelURL = "kernel/vmlinuxsmp.bin.bz2";
                     jor1kparameters.system.ncores = 4;
                 }
             }

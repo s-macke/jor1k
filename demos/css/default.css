@@ -25,9 +25,9 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 h1 {
-    text-indent: 30px;
-    display: inline;
-    margin-bottom: 100px;
+    margin-left: 30px;
+    margin-right: 30px;
+    display: block;
     /*vertical-align:middle*/
 	bottom: 20px;
     
