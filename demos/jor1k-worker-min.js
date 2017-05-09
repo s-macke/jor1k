@@ -919,6 +919,9 @@ module.exports = ATADev;
 // -------------------------------------------------
 // CLINT (clock interrupt?) device for RISC-V
 
+// Actually this is mainly a dummy device as the timer
+// logic is managed directly by the CPU
+
 "use strict";
 var message = require('../messagehandler');
 var utils = require('../utils');
@@ -936,7 +939,10 @@ var utils = require('../utils');
  * bffc mtime hi
  */
 
-function CLINTDev() {
+var CSR_TIMECMP   = 0xC41;
+
+function CLINTDev(csr) {
+    this.csr = csr;
     this.Reset();
 }
 
@@ -946,30 +952,19 @@ CLINTDev.prototype.Reset = function() {
 }
 
 CLINTDev.prototype.ReadReg32 = function (addr) {
-    //message.Debug("CLINT: unknown ReadReg32: " + utils.ToHex(addr));
-    //message.Abort();
+    // no one ever read it
+    message.Debug("CLINT: unknown ReadReg32: " + utils.ToHex(addr));
+    message.Abort();
     return 0x0;
 }
 
+
 CLINTDev.prototype.WriteReg32 = function (addr, value) {
     //message.Debug("CLINT: unknown WriteReg32: " + utils.ToHex(addr) + ": " + utils.ToHex(value));
-/*
-    if (addr == 0x1000) return; // ignore ipi
-    if (addr < 0 || addr > 12) {
-        message.Debug("CLINT: unknown  WriteReg32: " + utils.ToHex(addr) + ": " + utils.ToHex(value));
-        message.Abort();
-    }
-*/
     this.regs[addr >> 2] = value;
-}
-
-CLINTDev.prototype.Step = function (inc) {
-    this.regs[0] += inc;
-    /*
-        procs[0]->state.mip &= ~MIP_MTIP;
-        if (regs[0] >= regs[1])
-            procs[i]->state.mip |= MIP_MTIP;
-    */
+    if (addr == 0x4000) {
+        this.csr[CSR_TIMECMP] = value;
+    }
 }
 
 module.exports = CLINTDev;
@@ -6632,7 +6627,7 @@ function InitRISCV(system, initdata) {
 
     system.romdev = new ROMDev(system.rom);
     system.uartdev0 = new UARTDev(0, irqhandler, 2);
-    system.clintdev = new CLINTDev(irqhandler);
+    system.clintdev = new CLINTDev(system.csr);
     system.plicdev = new PLICDev(system.cpu);
 
     system.devices.push(system.romdev);
@@ -15141,6 +15136,11 @@ var CSR_CYCLEH    = 0xC80; // Upper 32 bits of cycle, RV32I only
 var CSR_TIMEH     = 0xC81; // Upper 32 bits of time, RV32I only
 var CSR_INSTRETH  = 0xC82; // Upper 32 bits of instret, RV32I only
 
+// This is a special CSR just for this emulator to connect the CLINT to the CPU
+// because the timer is handled in the CPU part
+var CSR_TIMECMP   = 0xC41;
+
+
 // machine CSRs non-standard read-only
 //var CSR_MCPUID    = 0xF00;
 //var CSR_MIMPID    = 0xF01;
@@ -15207,7 +15207,7 @@ SafeCPU.prototype.GetTimeToNextInterrupt = function () {
 }
 
 SafeCPU.prototype.GetTicks = function () {
-    return this.ticks;
+    return this.ticks | 0;
 }
 
 SafeCPU.prototype.ProgressTime = function (delta) {
@@ -15530,11 +15530,6 @@ SafeCPU.prototype.SetCSR = function (addr, value) {
             csr[addr] = value;
             break;
 
-        case CSR_TIME:
-        case CSR_TIMEH:
-            csr[addr] = value;
-            break;
-
         case CSR_TDATA1:
             csr[addr] = value;
             break;
@@ -15791,49 +15786,13 @@ this.n = 0;
         
         if (!(steps & 63)) {
             // ---------- TICK ----------
-            this.ticks = this.ticks + 1 | 0;
-
-            //if (this.csr[CSR_MSTATUS] & MSTATUS_MIE)
-            //if (this.csr[CSR_MIE] & MIP_MTIP)
-            if ((this.ticks&0xFFFF) == 1) {
-                this.csr[CSR_MIP] |= MIP_STIP
-                //message.Debug("Tick");
-            }
-            this.CheckForInterrupt();
-
-            /*
-            // interrupt is state.mip &= ~MIP_MTIP
-            var delta = csr[CSR_MTIMECMP] - this.ticks | 0;
-            delta = delta + (delta<0?0xFFFFFFFF:0x0) | 0;
+            var delta = csr[CSR_TIMECMP] - this.ticks | 0;
+            delta += delta + (delta<0?0xFFFFFFFF:0x0) | 0;
             this.ticks = this.ticks + clockspeed | 0;
             if (delta < clockspeed) {
-                csr[CSR_MIP] = csr[CSR_MIP] | 0x20;
+                csr[CSR_MIP] = csr[CSR_MIP] | MIP_STIP;
             }
-
-            interrupts = csr[CSR_MIE] & csr[CSR_MIP];
-            ie = csr[CSR_MSTATUS] & 0x01;
-
-            if ((this.prv < 3) || ((this.prv == 3) && ie)) {
-                if (interrupts & 0x8) {
-                    this.Trap(CAUSE_SOFTWARE_INTERRUPT, this.pc, -1);
-                    continue;
-                } else
-                if (!this.htif.IsQueueEmpty()) {
-                    this.Trap(CAUSE_HOST_INTERRUPT, this.pc, -1);
-                    continue;
-                }
-            }
-            if ((this.prv < 1) || ((this.prv == 1) && ie)) {
-                if (interrupts & 0x2) {
-                    this.Trap(CAUSE_SOFTWARE_INTERRUPT, this.pc, -1);
-                    continue;
-                } else
-                if (interrupts & 0x20) {
-                     this.Trap(CAUSE_TIMER_INTERRUPT, this.pc, -1);
-                     continue;
-                }
-            }
-            */
+            this.CheckForInterrupt();
         }
 
         paddr = this.TranslateVM(this.pc, VM_FETCH)|0;
@@ -17096,6 +17055,7 @@ System.prototype.Init = function(system) {
     this.heap = new ArrayBuffer(this.memorysize*0x100000); 
     this.memorysize--; // - the lower 1 MB are used for the cpu cores
     this.ram = new RAM(this.heap, ramoffset);
+    this.csr = new Int32Array(this.heap, 0x2000, 4096);
 
     this.devices = [];
     this.filesystem = new FS();
@@ -17112,6 +17072,7 @@ System.prototype.Init = function(system) {
         }
     } catch (e) {
         message.Debug("Error: failed to create SoC: " + e);
+        message.Abort();
     }
 };
 
