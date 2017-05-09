@@ -97,6 +97,7 @@ System.prototype.Init = function(system) {
     this.heap = new ArrayBuffer(this.memorysize*0x100000); 
     this.memorysize--; // - the lower 1 MB are used for the cpu cores
     this.ram = new RAM(this.heap, ramoffset);
+    this.csr = new Int32Array(this.heap, 0x2000, 4096);
 
     this.devices = [];
     this.filesystem = new FS();
@@ -113,6 +114,7 @@ System.prototype.Init = function(system) {
         }
     } catch (e) {
         message.Debug("Error: failed to create SoC: " + e);
+        message.Abort();
     }
 };
 

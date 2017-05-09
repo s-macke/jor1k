@@ -3,6 +3,9 @@
 // -------------------------------------------------
 // CLINT (clock interrupt?) device for RISC-V
 
+// Actually this is mainly a dummy device as the timer
+// logic is managed directly by the CPU
+
 "use strict";
 var message = require('../messagehandler');
 var utils = require('../utils');
@@ -20,7 +23,10 @@ var utils = require('../utils');
  * bffc mtime hi
  */
 
-function CLINTDev() {
+var CSR_TIMECMP   = 0xC41;
+
+function CLINTDev(csr) {
+    this.csr = csr;
     this.Reset();
 }
 
@@ -30,30 +36,19 @@ CLINTDev.prototype.Reset = function() {
 }
 
 CLINTDev.prototype.ReadReg32 = function (addr) {
-    //message.Debug("CLINT: unknown ReadReg32: " + utils.ToHex(addr));
-    //message.Abort();
+    // no one ever read it
+    message.Debug("CLINT: unknown ReadReg32: " + utils.ToHex(addr));
+    message.Abort();
     return 0x0;
 }
 
+
 CLINTDev.prototype.WriteReg32 = function (addr, value) {
     //message.Debug("CLINT: unknown WriteReg32: " + utils.ToHex(addr) + ": " + utils.ToHex(value));
-/*
-    if (addr == 0x1000) return; // ignore ipi
-    if (addr < 0 || addr > 12) {
-        message.Debug("CLINT: unknown  WriteReg32: " + utils.ToHex(addr) + ": " + utils.ToHex(value));
-        message.Abort();
-    }
-*/
     this.regs[addr >> 2] = value;
-}
-
-CLINTDev.prototype.Step = function (inc) {
-    this.regs[0] += inc;
-    /*
-        procs[0]->state.mip &= ~MIP_MTIP;
-        if (regs[0] >= regs[1])
-            procs[i]->state.mip |= MIP_MTIP;
-    */
+    if (addr == 0x4000) {
+        this.csr[CSR_TIMECMP] = value;
+    }
 }
 
 module.exports = CLINTDev;

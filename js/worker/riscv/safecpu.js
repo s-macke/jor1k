@@ -146,6 +146,11 @@ var CSR_CYCLEH    = 0xC80; // Upper 32 bits of cycle, RV32I only
 var CSR_TIMEH     = 0xC81; // Upper 32 bits of time, RV32I only
 var CSR_INSTRETH  = 0xC82; // Upper 32 bits of instret, RV32I only
 
+// This is a special CSR just for this emulator to connect the CLINT to the CPU
+// because the timer is handled in the CPU part
+var CSR_TIMECMP   = 0xC41;
+
+
 // machine CSRs non-standard read-only
 //var CSR_MCPUID    = 0xF00;
 //var CSR_MIMPID    = 0xF01;
@@ -212,7 +217,7 @@ SafeCPU.prototype.GetTimeToNextInterrupt = function () {
 }
 
 SafeCPU.prototype.GetTicks = function () {
-    return this.ticks;
+    return this.ticks | 0;
 }
 
 SafeCPU.prototype.ProgressTime = function (delta) {
@@ -535,11 +540,6 @@ SafeCPU.prototype.SetCSR = function (addr, value) {
             csr[addr] = value;
             break;
 
-        case CSR_TIME:
-        case CSR_TIMEH:
-            csr[addr] = value;
-            break;
-
         case CSR_TDATA1:
             csr[addr] = value;
             break;
@@ -796,49 +796,13 @@ this.n = 0;
         
         if (!(steps & 63)) {
             // ---------- TICK ----------
-            this.ticks = this.ticks + 1 | 0;
-
-            //if (this.csr[CSR_MSTATUS] & MSTATUS_MIE)
-            //if (this.csr[CSR_MIE] & MIP_MTIP)
-            if ((this.ticks&0xFFFF) == 1) {
-                this.csr[CSR_MIP] |= MIP_STIP
-                //message.Debug("Tick");
-            }
-            this.CheckForInterrupt();
-
-            /*
-            // interrupt is state.mip &= ~MIP_MTIP
-            var delta = csr[CSR_MTIMECMP] - this.ticks | 0;
-            delta = delta + (delta<0?0xFFFFFFFF:0x0) | 0;
+            var delta = csr[CSR_TIMECMP] - this.ticks | 0;
+            delta += delta + (delta<0?0xFFFFFFFF:0x0) | 0;
             this.ticks = this.ticks + clockspeed | 0;
             if (delta < clockspeed) {
-                csr[CSR_MIP] = csr[CSR_MIP] | 0x20;
+                csr[CSR_MIP] = csr[CSR_MIP] | MIP_STIP;
             }
-
-            interrupts = csr[CSR_MIE] & csr[CSR_MIP];
-            ie = csr[CSR_MSTATUS] & 0x01;
-
-            if ((this.prv < 3) || ((this.prv == 3) && ie)) {
-                if (interrupts & 0x8) {
-                    this.Trap(CAUSE_SOFTWARE_INTERRUPT, this.pc, -1);
-                    continue;
-                } else
-                if (!this.htif.IsQueueEmpty()) {
-                    this.Trap(CAUSE_HOST_INTERRUPT, this.pc, -1);
-                    continue;
-                }
-            }
-            if ((this.prv < 1) || ((this.prv == 1) && ie)) {
-                if (interrupts & 0x2) {
-                    this.Trap(CAUSE_SOFTWARE_INTERRUPT, this.pc, -1);
-                    continue;
-                } else
-                if (interrupts & 0x20) {
-                     this.Trap(CAUSE_TIMER_INTERRUPT, this.pc, -1);
-                     continue;
-                }
-            }
-            */
+            this.CheckForInterrupt();
         }
 
         paddr = this.TranslateVM(this.pc, VM_FETCH)|0;

@@ -90,7 +90,7 @@ function InitRISCV(system, initdata) {
 
     system.romdev = new ROMDev(system.rom);
     system.uartdev0 = new UARTDev(0, irqhandler, 2);
-    system.clintdev = new CLINTDev(irqhandler);
+    system.clintdev = new CLINTDev(system.csr);
     system.plicdev = new PLICDev(system.cpu);
 
     system.devices.push(system.romdev);
