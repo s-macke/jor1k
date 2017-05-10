@@ -338,7 +338,6 @@ function TimerGetTicksToNextInterrupt(coreid) {
     coreid = coreid|0;
     var delta = 0;
     delta = (h[(coreid<<15) + TTMRp >>2] & 0xFFFFFFF) - (h[TTCRp >>2] & 0xFFFFFFF) |0;
-    if ((delta|0) < 0) delta = delta + 0xFFFFFFF | 0;
     return delta|0;
 }
 

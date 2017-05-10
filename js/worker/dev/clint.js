@@ -24,6 +24,7 @@ var utils = require('../utils');
  */
 
 var CSR_TIMECMP   = 0xC41;
+var CSR_TIME      = 0xC01;
 
 function CLINTDev(csr) {
     this.csr = csr;
@@ -44,10 +45,12 @@ CLINTDev.prototype.ReadReg32 = function (addr) {
 
 
 CLINTDev.prototype.WriteReg32 = function (addr, value) {
+    addr = addr | 0;
     //message.Debug("CLINT: unknown WriteReg32: " + utils.ToHex(addr) + ": " + utils.ToHex(value));
     this.regs[addr >> 2] = value;
     if (addr == 0x4000) {
         this.csr[CSR_TIMECMP] = value;
+        //message.Debug("delta: " + (this.csr[CSR_TIMECMP] - this.csr[CSR_TIME]));
     }
 }
 

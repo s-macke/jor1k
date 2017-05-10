@@ -150,7 +150,6 @@ var CSR_INSTRETH  = 0xC82; // Upper 32 bits of instret, RV32I only
 // because the timer is handled in the CPU part
 var CSR_TIMECMP   = 0xC41;
 
-
 // machine CSRs non-standard read-only
 //var CSR_MCPUID    = 0xF00;
 //var CSR_MIMPID    = 0xF01;
@@ -211,9 +210,8 @@ SafeCPU.prototype.InvalidateTLB = function() {
 }
 
 SafeCPU.prototype.GetTimeToNextInterrupt = function () {
-    var delta = (this.csr[CSR_CMP]>>>0) - (this.ticks & 0xFFFFFFFF);
-    delta = delta + (delta<0?0xFFFFFFFF:0x0) | 0;
-    return delta;
+    var delta = ((this.csr[CSR_TIMECMP]|0) - (this.ticks|0))|0;
+    return delta|0;
 }
 
 SafeCPU.prototype.GetTicks = function () {
@@ -221,7 +219,15 @@ SafeCPU.prototype.GetTicks = function () {
 }
 
 SafeCPU.prototype.ProgressTime = function (delta) {
+    delta = delta | 0;
     this.ticks = this.ticks + delta | 0;
+    this.csr[CSR_TIME] = this.ticks | 0;
+
+    delta = this.csr[CSR_TIMECMP] - this.ticks | 0;
+    if (delta <= 1) {
+        this.csr[CSR_MIP] = this.csr[CSR_MIP] | MIP_STIP;
+    }
+    this.CheckForInterrupt();
 }
 
 // we haveto define these to copy the cpus
@@ -797,8 +803,8 @@ this.n = 0;
         if (!(steps & 63)) {
             // ---------- TICK ----------
             var delta = csr[CSR_TIMECMP] - this.ticks | 0;
-            delta += delta + (delta<0?0xFFFFFFFF:0x0) | 0;
             this.ticks = this.ticks + clockspeed | 0;
+            csr[CSR_TIME] = this.ticks | 0;
             if (delta < clockspeed) {
                 csr[CSR_MIP] = csr[CSR_MIP] | MIP_STIP;
             }
@@ -1358,11 +1364,8 @@ this.n = 0;
                             case 0x105:
                                 // wfi
                                 //message.Debug("wfi");
-                                /*
-                                interrupts = csr[CSR_MIE] & csr[CSR_MIP];
-                                if ((!interrupts) && (this.htif.IsQueueEmpty()))
+                                if ((csr[CSR_MIE] & csr[CSR_MIP]) == 0)
                                     return steps;
-                                */
                                 break;
 
 

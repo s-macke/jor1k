@@ -120,7 +120,6 @@ SafeCPU.prototype.GetTimeToNextInterrupt = function () {
 
     if ((this.TTMR >> 30) == 0) return -1;
     var delta = (this.TTMR & 0xFFFFFFF) - (this.TTCR & 0xFFFFFFF);
-    delta += delta<0?0xFFFFFFF:0x0;
     return delta;
 }
 
@@ -510,7 +509,6 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
     var tlbtr = 0x0;
     var jump = 0x0;
     var delta = 0x0;
-
    
     do {
         this.clock++;
@@ -521,7 +519,6 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
             // timer enabled
             if ((this.TTMR >> 30) != 0) {
                 delta = (this.TTMR & 0xFFFFFFF) - (this.TTCR & 0xFFFFFFF);
-                delta += delta<0?0xFFFFFFF:0x0;
                 this.TTCR = (this.TTCR + clockspeed) & 0xFFFFFFFF;
                 if (delta < clockspeed) {
                     // if interrupt enabled
