@@ -940,6 +940,7 @@ var utils = require('../utils');
  */
 
 var CSR_TIMECMP   = 0xC41;
+var CSR_TIME      = 0xC01;
 
 function CLINTDev(csr) {
     this.csr = csr;
@@ -960,10 +961,12 @@ CLINTDev.prototype.ReadReg32 = function (addr) {
 
 
 CLINTDev.prototype.WriteReg32 = function (addr, value) {
+    addr = addr | 0;
     //message.Debug("CLINT: unknown WriteReg32: " + utils.ToHex(addr) + ": " + utils.ToHex(value));
     this.regs[addr >> 2] = value;
     if (addr == 0x4000) {
         this.csr[CSR_TIMECMP] = value;
+        //message.Debug("delta: " + (this.csr[CSR_TIMECMP] - this.csr[CSR_TIME]));
     }
 }
 
@@ -6974,9 +6977,6 @@ function GetTimeToNextInterrupt() {
     var delta = 0x0;
     if ((TTMR >> 30) == 0) return -1;    
     delta = (TTMR & 0xFFFFFFF) - (TTCR & 0xFFFFFFF) |0;
-    if ((delta|0) < 0) {
-        delta = delta + 0xFFFFFFF | 0;
-    }    
     return delta|0;
 }
 
@@ -8231,9 +8231,6 @@ function Step(steps, clockspeed) {
                 // timer enabled
                 if ((TTMR >> 30) != 0) {
                     delta = (TTMR & 0xFFFFFFF) - (TTCR & 0xFFFFFFF) |0;
-                    if ((delta|0) < 0) {
-                        delta = delta + 0xFFFFFFF | 0;
-                    }
                     TTCR = (TTCR + clockspeed|0);
                     if ((delta|0) < (clockspeed|0)) {
                         // if interrupt enabled
@@ -8676,7 +8673,6 @@ SafeCPU.prototype.GetTimeToNextInterrupt = function () {
 
     if ((this.TTMR >> 30) == 0) return -1;
     var delta = (this.TTMR & 0xFFFFFFF) - (this.TTCR & 0xFFFFFFF);
-    delta += delta<0?0xFFFFFFF:0x0;
     return delta;
 }
 
@@ -9066,7 +9062,6 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
     var tlbtr = 0x0;
     var jump = 0x0;
     var delta = 0x0;
-
    
     do {
         this.clock++;
@@ -9077,7 +9072,6 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
             // timer enabled
             if ((this.TTMR >> 30) != 0) {
                 delta = (this.TTMR & 0xFFFFFFF) - (this.TTCR & 0xFFFFFFF);
-                delta += delta<0?0xFFFFFFF:0x0;
                 this.TTCR = (this.TTCR + clockspeed) & 0xFFFFFFFF;
                 if (delta < clockspeed) {
                     // if interrupt enabled
@@ -10010,7 +10004,6 @@ function TimerGetTicksToNextInterrupt(coreid) {
     coreid = coreid|0;
     var delta = 0;
     delta = (h[(coreid<<15) + TTMRp >>2] & 0xFFFFFFF) - (h[TTCRp >>2] & 0xFFFFFFF) |0;
-    if ((delta|0) < 0) delta = delta + 0xFFFFFFF | 0;
     return delta|0;
 }
 
@@ -15140,7 +15133,6 @@ var CSR_INSTRETH  = 0xC82; // Upper 32 bits of instret, RV32I only
 // because the timer is handled in the CPU part
 var CSR_TIMECMP   = 0xC41;
 
-
 // machine CSRs non-standard read-only
 //var CSR_MCPUID    = 0xF00;
 //var CSR_MIMPID    = 0xF01;
@@ -15201,9 +15193,8 @@ SafeCPU.prototype.InvalidateTLB = function() {
 }
 
 SafeCPU.prototype.GetTimeToNextInterrupt = function () {
-    var delta = (this.csr[CSR_CMP]>>>0) - (this.ticks & 0xFFFFFFFF);
-    delta = delta + (delta<0?0xFFFFFFFF:0x0) | 0;
-    return delta;
+    var delta = ((this.csr[CSR_TIMECMP]|0) - (this.ticks|0))|0;
+    return delta|0;
 }
 
 SafeCPU.prototype.GetTicks = function () {
@@ -15211,7 +15202,15 @@ SafeCPU.prototype.GetTicks = function () {
 }
 
 SafeCPU.prototype.ProgressTime = function (delta) {
+    delta = delta | 0;
     this.ticks = this.ticks + delta | 0;
+    this.csr[CSR_TIME] = this.ticks | 0;
+
+    delta = this.csr[CSR_TIMECMP] - this.ticks | 0;
+    if (delta <= 1) {
+        this.csr[CSR_MIP] = this.csr[CSR_MIP] | MIP_STIP;
+    }
+    this.CheckForInterrupt();
 }
 
 // we haveto define these to copy the cpus
@@ -15787,8 +15786,8 @@ this.n = 0;
         if (!(steps & 63)) {
             // ---------- TICK ----------
             var delta = csr[CSR_TIMECMP] - this.ticks | 0;
-            delta += delta + (delta<0?0xFFFFFFFF:0x0) | 0;
             this.ticks = this.ticks + clockspeed | 0;
+            csr[CSR_TIME] = this.ticks | 0;
             if (delta < clockspeed) {
                 csr[CSR_MIP] = csr[CSR_MIP] | MIP_STIP;
             }
@@ -16348,11 +16347,8 @@ this.n = 0;
                             case 0x105:
                                 // wfi
                                 //message.Debug("wfi");
-                                /*
-                                interrupts = csr[CSR_MIE] & csr[CSR_MIP];
-                                if ((!interrupts) && (this.htif.IsQueueEmpty()))
+                                if ((csr[CSR_MIE] & csr[CSR_MIP]) == 0)
                                     return steps;
-                                */
                                 break;
 
 
