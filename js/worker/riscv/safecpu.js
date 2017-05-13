@@ -839,8 +839,10 @@ this.n = 0;
                     case 0x01:
                         // lh
                         if (rs1+imm & 1) {
-                             message.Debug("Error in lh: unaligned address");
-                             message.Abort();
+                             this.Trap(CAUSE_MISALIGNED_LOAD, this.pc - 4|0, rs1+imm|0);
+                             //message.Debug("Error in lh: unaligned address");
+                             //message.Abort();
+                             break;
                         }
                         paddr = this.TranslateVM(rs1 + imm|0, VM_READ)|0;
                         if(paddr == -1) break;
@@ -850,8 +852,10 @@ this.n = 0;
                     case 0x02:
                         // lw
                         if (rs1+imm & 3) {
-                             message.Debug("Error in lw: unaligned address");
-                             message.Abort();
+                             this.Trap(CAUSE_MISALIGNED_LOAD, this.pc - 4|0, rs1+imm|0);
+                             //message.Debug("Error in lw: unaligned address");
+                             //message.Abort();
+                             break;
                         }
                         paddr = this.TranslateVM(rs1 + imm|0, VM_READ)|0;
                         if(paddr == -1) break;
@@ -911,8 +915,10 @@ this.n = 0;
                     case 0x01:
                         // sh
                         if (rs1+imm & 1) {
-                             message.Debug("Error in sh: unaligned address");
-                             message.Abort();
+                             this.Trap(CAUSE_MISALIGNED_STORE, this.pc - 4|0, rs1+imm|0);
+                             //message.Debug("Error in sh: unaligned address");
+                             //message.Abort();
+                             break;
                         }
                         paddr = this.TranslateVM(rs1 + imm|0, VM_WRITE)|0;
                         if(paddr == -1) break;
@@ -922,8 +928,10 @@ this.n = 0;
                     case 0x02:
                         // sw
                         if (rs1+imm & 3) {
-                             message.Debug("Error in sw: unaligned address");
-                             message.Abort();
+                             this.Trap(CAUSE_MISALIGNED_STORE, this.pc - 4|0, rs1+imm|0);
+                             //message.Debug("Error in sw: unaligned address");
+                             //message.Abort();
+                             break;
                         }
                         paddr = this.TranslateVM(rs1 + imm|0, VM_WRITE)|0;
                         if(paddr == -1) break;
@@ -1782,8 +1790,13 @@ this.n = 0;
                 // fence
                 break;
 
+
             default:
-                message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + " not found at "+utils.ToHex(this.pc-4));
+                if ((ins&3) != 3) {
+                    message.Debug("Error in safecpu: Compressed Instruction " + utils.ToHex(ins&0xFFFF) + " not supported at "+utils.ToHex(this.pc-4));
+                } else {
+                    message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + " not found at "+utils.ToHex(this.pc-4));
+                }
                 message.Abort();
                 break;
         }
