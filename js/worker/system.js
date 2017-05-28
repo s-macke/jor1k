@@ -91,12 +91,19 @@ System.prototype.Init = function(system) {
 
     this.timer = new Timer(this.ticksperms, this.loopspersecond);
 
-    // this must be a power of two.
     message.Debug("Allocate " + this.memorysize + " MB");
+    // this must be a power of two.
+    if ((system.arch == "or1k") && (system.cpu == "dynamic")  && (typeof WebAssembly !== "undefined")) {
+        message.Debug("Use webassembly memory");
+        this.memory = new WebAssembly.Memory({initial: this.memorysize*16, maximum: this.memorysize*16});
+        this.heap = this.memory.buffer;
+    } else {
+        this.heap = new ArrayBuffer(this.memorysize*0x100000);
+    }
     var ramoffset = 0x100000;
-    this.heap = new ArrayBuffer(this.memorysize*0x100000); 
     this.memorysize--; // - the lower 1 MB are used for the cpu cores
     this.ram = new RAM(this.heap, ramoffset);
+    if (this.memory) this.ram.memory = this.memory;
     this.csr = new Int32Array(this.heap, 0x2000, 4096);
 
     this.devices = [];

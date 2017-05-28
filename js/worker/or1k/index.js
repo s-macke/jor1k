@@ -11,9 +11,10 @@ var imul = require('../imul');
 var FastCPU = require('./fastcpu');
 var SafeCPU = require('./safecpu');
 var SMPCPU = require('./smpcpu');
+var DynamicCPU = require('./dynamic/dynamiccpu');
 
 // The asm.js ("Fast") and SMP cores must be singletons
-//  because of Firefox limitations.
+// because of Firefox limitations.
 var fastcpu = null;
 var smpcpu = null;
 
@@ -57,6 +58,9 @@ function createCPU(cpuname, ram, heap, ncores) {
 
     if (cpuname === "safe") {
         return new SafeCPU(ram);
+    }
+    if (cpuname === "dynamic") {
+        return new DynamicCPU(ram);
     }
     if (cpuname === "asm") {
         cpu = createCPUSingleton(cpuname, ram, heap, ncores);
@@ -204,10 +208,12 @@ var forwardedMethods = [
     "GetTimeToNextInterrupt",
     "ProgressTime", 
     "ClearInterrupt"];
+
 forwardedMethods.forEach(function(m) {
     CPU.prototype[m] = function() {
         return this.cpu[m].apply(this.cpu, arguments);        
     };
+
 });
 
 module.exports = CPU;
