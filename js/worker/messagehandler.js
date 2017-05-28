@@ -5,6 +5,7 @@
 "use strict";
 
 var run = true;
+var workingpath = '';
 
 function Send(command, data) {
     postMessage(
@@ -60,7 +61,8 @@ onmessage = function(e) {
     }
 }
 
-Register("Abort", function(){run = false;});
+Register("Abort", function(){ run = false; });
+Register("WorkingPath", function(data){ workingpath = data; });
 
 module.exports.Register = Register;
 module.exports.Debug = Debug;
@@ -68,4 +70,4 @@ module.exports.Error = DoError;
 module.exports.Warning = Warning;
 module.exports.Abort = Abort;
 module.exports.Send = Send;
-
+module.exports.GetWorkingPath = function() { return workingpath; };

@@ -56,6 +56,7 @@ function jor1kGUI(parameters)
         this.params.worker : new Worker("jor1k-worker-min.js");
 
     message.SetWorker(this.worker);
+    message.Send("WorkingPath", this.params.path);
 
     // ----
 
