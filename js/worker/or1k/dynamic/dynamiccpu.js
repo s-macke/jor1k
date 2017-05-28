@@ -283,10 +283,7 @@ DynamicCPU.prototype.SetSPR = function (idx, x) {
                     },
                 };
                 if (this.recompilepath == "/usr/bin/fbdemo")
-                this.FetchAndInstantiate("fbdemo.wasm", importObject);
-                if (this.recompilepath == "/usr/bin/nbench")
-                this.FetchAndInstantiate("nbench.wasm", importObject);
-
+                this.FetchAndInstantiate(message.GetWorkingPath()+"/precompiled/fbdemo.wasm", importObject);
             }
         } else
         if (address == 22) {
