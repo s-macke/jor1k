@@ -27,7 +27,7 @@ function Timer(_ticksperms, _loopspersecond) {
     this.nins = 0;
     this.lastlooptime = -1; // last time the loop was executed in ms, without idle in between
 
-    this.ipms = 5000; // initial guess for: 5 MIPS
+    this.ipms = 10000; // initial guess for: 10 MIPS
     this.instructionsperloop = 0;  // return value
     this.timercyclesperinstruction = 10; // return value
     this.UpdateTimings();
@@ -47,7 +47,7 @@ Timer.prototype.Update = function(nins, ticks, gotoidle) {
 Timer.prototype.UpdateTimings = function(_nins, gotoidle) {
     this.instructionsperloop = Math.floor(this.ipms*1000. / this.loopspersecond);
     this.instructionsperloop = this.instructionsperloop<2000?2000:this.instructionsperloop;
-    this.instructionsperloop = this.instructionsperloop>4000000?4000000:this.instructionsperloop;
+    this.instructionsperloop = this.instructionsperloop>100000000?100000000:this.instructionsperloop;
 
     this.timercyclesperinstruction = Math.floor(this.ticksperms * 64 / this.ipms * this.correction);
     this.timercyclesperinstruction = this.timercyclesperinstruction<=1?1:this.timercyclesperinstruction;
