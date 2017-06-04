@@ -29,13 +29,14 @@ var UART_MSR   = 6; /* R: Modem Status Register */
 var UART_SCR   = 7; /* R/W: Scratch Register*/
 
 // Line Status register bits
-var UART_LSR_DATA_READY        = 0x1;  // data available
-var UART_LSR_TX_EMPTY        = 0x20; // TX (THR) buffer is empty
+var UART_LSR_DATA_READY        = 0x01; // data available
+var UART_LSR_TX_EMPTY          = 0x20; // TX (THR) buffer is empty
 var UART_LSR_TRANSMITTER_EMPTY = 0x40; // TX empty and line is idle
+var UART_LSR_INT_ANY           = 0x1E; // Any of the lsr-interrupt-triggering status bits
 
 // Interrupt enable register bits
 var UART_IER_MSI  = 0x08; /* Modem Status Changed int. */
-var UART_IER_BRK  = 0x04; /* Enable Break int. */
+var UART_IER_RLSI = 0x04; /* Enable Break int. Enable receiver line status interrupt */
 var UART_IER_THRI = 0x02; /* Enable Transmitter holding register int. */
 var UART_IER_RDI  = 0x01; /* Enable receiver data interrupt */
 
@@ -75,7 +76,7 @@ function UARTDev(id, intdev, intno) {
     this.intno = intno;
     this.intdev = intdev;
     this.id = id;
-    //this.verboseuart = true;
+    this.verboseuart = false;
     message.Register("tty" + id, this.ReceiveChar.bind(this) );
     this.Reset();
 }
@@ -108,7 +109,7 @@ UARTDev.prototype.Reset = function() {
 
 UARTDev.prototype.Step = function() {
     if(this.txbuf.length != 0) {
-        message.Send("tty"+this.id, this.txbuf);
+        message.Send("tty" + this.id, this.txbuf);
         this.txbuf = new Array();
     }
 }
@@ -118,6 +119,7 @@ UARTDev.prototype.ReceiveChar = function(data) {
     data.forEach(function(c) {
         this.rxbuf.push(c&0xFF);
     }.bind(this));
+    if (this.verboseuart) message.Debug("Received bytes: " + this.rxbuf.length);
     if (this.rxbuf.length > 0) {
         this.LSR |= UART_LSR_DATA_READY;
         this.ThrowInterrupt(UART_IIR_CTI);
@@ -125,19 +127,30 @@ UARTDev.prototype.ReceiveChar = function(data) {
 }
 
 UARTDev.prototype.CheckInterrupt = function() {
-    if ((this.ints & (1 << UART_IIR_CTI))  && (this.IER & UART_IER_RDI)) {
+    if (this.verboseuart) message.Debug("Check Interrupt " + this.ints);
+
+    if ((this.LSR & UART_LSR_INT_ANY) && (this.IER & UART_IER_RLSI)) {
+        this.IIR = UART_IIR_RLSI;
+        if (this.verboseuart) message.Debug('IIR_RLSI ' + this.intno);
+        this.intdev.RaiseInterrupt(this.intno);
+    } else
+    if ((this.ints & (1 << UART_IIR_CTI)) && (this.IER & UART_IER_RDI)) {
         this.IIR = UART_IIR_CTI;
+        if (this.verboseuart) message.Debug('IIR_CTI ' + this.intno);
         this.intdev.RaiseInterrupt(this.intno);
     } else
     if ((this.ints & (1 << UART_IIR_THRI)) && (this.IER & UART_IER_THRI)) {
         this.IIR = UART_IIR_THRI;
+        if (this.verboseuart) message.Debug('IIR_THRI ' + this.intno);
         this.intdev.RaiseInterrupt(this.intno);
     } else
     if ((this.ints & (1 << UART_IIR_MSI))  && (this.IER & UART_IER_MSI)) {
         this.IIR = UART_IIR_MSI;
+        if (this.verboseuart) message.Debug('IIR_MSI ' + this.intno);
         this.intdev.RaiseInterrupt(this.intno);
     } else {
         this.IIR = UART_IIR_NO_INT;
+        if (this.verboseuart) message.Debug('IIR_NO_INT ' + this.intno);
         this.intdev.ClearInterrupt(this.intno);
     }
 };
@@ -156,6 +169,7 @@ UARTDev.prototype.ReadReg8 = function(addr) {
 
     if (this.LCR & UART_LCR_DLAB) {  // Divisor latch access bit
         switch (addr) {
+
         case UART_DLL:
             return this.DLL;
             break;
@@ -167,11 +181,13 @@ UARTDev.prototype.ReadReg8 = function(addr) {
     }
 
     switch (addr) {
+
     case UART_RXBUF:
         var ret = 0x0; // if the buffer is empty, return 0
         if (this.rxbuf.length > 0) {
             ret = this.rxbuf.shift();
         }
+        if (this.verboseuart) message.Debug("Get RXBUF");
         if (this.rxbuf.length == 0) {
             this.LSR &= ~UART_LSR_DATA_READY;
             this.ClearInterrupt(UART_IIR_CTI);
@@ -194,11 +210,11 @@ UARTDev.prototype.ReadReg8 = function(addr) {
         {
             // the two top bits (fifo enabled) are always set
             var ret = (this.IIR & 0x0F) | 0xC0;
-             
+
             if (this.IIR == UART_IIR_THRI) {
                 this.ClearInterrupt(UART_IIR_THRI);
             }
-            
+
             return ret;
             break;
         }
@@ -209,7 +225,7 @@ UARTDev.prototype.ReadReg8 = function(addr) {
 
     case UART_LSR:
         // This gets polled many times a second, so logging is commented out
-        // if(this.verboseuart) message.Debug("Get UART_LSR " + this.ToBitDescription(this.LSR, LSR_BIT_DESC));
+        if (this.verboseuart) message.Debug("Get UART_LSR " + this.ToBitDescription(this.LSR, LSR_BIT_DESC));
         return this.LSR;
         break;
 
@@ -225,10 +241,12 @@ UARTDev.prototype.WriteReg8 = function(addr, x) {
 
     if (this.LCR & UART_LCR_DLAB) {
         switch (addr) {
+
         case UART_DLL:
             this.DLL = x;
             return;
             break;
+
         case UART_DLH:
             this.DLH = x;
             return;
@@ -237,15 +255,16 @@ UARTDev.prototype.WriteReg8 = function(addr, x) {
     }
 
     switch (addr) {
+
     case UART_TXBUF: 
          // we assume here, that the fifo is on
 
          // In the uart spec we reset UART_IIR_THRI now ...
         this.LSR &= ~UART_LSR_TRANSMITTER_EMPTY;
-        //this.LSR &= ~UART_LSR_TX_EMPTY;
+        this.LSR &= ~UART_LSR_TX_EMPTY;
 
         this.txbuf.push(x);
-        //message.Debug("send " + x);
+        if (this.verboseuart) message.Debug("send " + x);
         // the data is sent immediately
         this.LSR |= UART_LSR_TRANSMITTER_EMPTY | UART_LSR_TX_EMPTY; // txbuffer is empty immediately
         this.ThrowInterrupt(UART_IIR_THRI);
@@ -254,25 +273,27 @@ UARTDev.prototype.WriteReg8 = function(addr, x) {
     case UART_IER:
         // 2 = 10b ,5=101b, 7=111b
         this.IER = x & 0x0F; // only the first four bits are valid
-        //if(this.verboseuart) message.Debug("Set UART_IER " + this.ToBitDescription(x, IER_BIT_DESC));
+        this.ints &= ~(1 << UART_IER_THRI);
+        if (this.verboseuart) message.Debug("Set UART_IER " + this.ToBitDescription(x, IER_BIT_DESC));
         // Check immediately if there is a interrupt pending
         this.CheckInterrupt();
         break;
 
     case UART_FCR:
-        if(this.verboseuart) message.Debug("Set UART_FCR " + this.ToBitDescription(x, FCR_BIT_DESC));
+        if (this.verboseuart) message.Debug("Set UART_FCR " + this.ToBitDescription(x, FCR_BIT_DESC));
         this.FCR = x & 0xC9;
-        if (this.FCR & 2) {
+        if (x & 2) {
             this.ClearInterrupt(UART_IIR_CTI);
             this.rxbuf = new Array(); // clear receive fifo buffer
         }
-        if (this.FCR & 4) {
+        if (x & 4) {
             this.txbuf = new Array(); // clear transmit fifo buffer
+            this.ClearInterrupt(UART_IIR_THRI);
         }
         break;
 
     case UART_LCR:
-        if(this.verboseuart)  message.Debug("Set UART_LCR " + this.ToBitDescription(x, LCR_BIT_DESC));
+        if (this.verboseuart)  message.Debug("Set UART_LCR " + this.ToBitDescription(x, LCR_BIT_DESC));
         if ((this.LCR & 3) != 3) {
             message.Debug("Warning in UART: Data word length other than 8 bits are not supported");
         }
@@ -280,7 +301,7 @@ UARTDev.prototype.WriteReg8 = function(addr, x) {
         break;
 
     case UART_MCR:
-        if(this.verboseuart) message.Debug("Set UART_MCR " + this.ToBitDescription(x,MCR_BIT_DESC));
+        if (this.verboseuart) message.Debug("Set UART_MCR " + this.ToBitDescription(x,MCR_BIT_DESC));
         this.MCR = x;
         break;
 
