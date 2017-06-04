@@ -86,58 +86,6 @@ function CPU(cpuname, ram, heap, ncores) {
     return this;
 }
 
-CPU.prototype.switchImplementation = function(cpuname) {
-    var oldcpu = this.cpu;
-    var oldcpuname = this.name;
-    if (oldcpuname == "smp") return;
-
-    this.cpu = createCPU(cpuname, this.ram, this.heap, this.ncores);
-
-    this.cpu.InvalidateTLB(); // reset TLB
-    var f = oldcpu.GetFlags();
-    this.cpu.SetFlags(f|0);
-    var h;
-    if (oldcpuname === "asm") {
-        h = new Int32Array(this.heap);
-        oldcpu.GetState();
-        this.cpu.pc = h[(0x40 + 0)];
-        this.cpu.nextpc = h[(0x40 + 1)];
-        this.cpu.delayedins = h[(0x40 + 2)]?true:false;
-        this.cpu.TTMR = h[(0x40 + 4)];
-        this.cpu.TTCR = h[(0x40 + 5)];
-        this.cpu.PICMR = h[(0x40 + 6)];
-        this.cpu.PICSR = h[(0x40 + 7)];
-        this.cpu.boot_dtlb_misshandler_address = h[(0x40 + 8)];
-        this.cpu.boot_itlb_misshandler_address = h[(0x40 + 9)];
-        this.cpu.current_pgd = h[(0x40 + 10)];
-    } else if (cpuname === "asm") {
-        h = new Int32Array(this.heap);
-        h[(0x40 + 0)] = oldcpu.pc;
-        h[(0x40 + 1)] = oldcpu.nextpc;
-        h[(0x40 + 2)] = oldcpu.delayedins;
-        h[(0x40 + 3)] = 0x0;
-        h[(0x40 + 4)] = oldcpu.TTMR;
-        h[(0x40 + 5)] = oldcpu.TTCR;
-        h[(0x40 + 6)] = oldcpu.PICMR;
-        h[(0x40 + 7)] = oldcpu.PICSR;
-        h[(0x40 + 8)] = oldcpu.boot_dtlb_misshandler_address;
-        h[(0x40 + 9)] = oldcpu.boot_itlb_misshandler_address;
-        h[(0x40 + 10)] = oldcpu.current_pgd;
-        this.cpu.PutState();
-    } else {
-        this.cpu.pc = oldcpu.pc;
-        this.cpu.nextpc = oldcpu.nextpc;
-        this.cpu.delayedins = oldcpu.delayedins;
-        this.cpu.TTMR = oldcpu.TTMR;
-        this.cpu.TTCR = oldcpu.TTCR;
-        this.cpu.PICMR = oldcpu.PICMR;
-        this.cpu.PICSR = oldcpu.PICSR;
-        this.cpu.boot_dtlb_misshandler_address = oldcpu.boot_dtlb_misshandler_address;
-        this.cpu.boot_itlb_misshandler_address = oldcpu.itlb_misshandler_address;
-        this.cpu.current_pgd = oldcpu.current_pgd;
-    }
-};
-
 CPU.prototype.toString = function() {
     var r = new Uint32Array(this.heap);
     var str = '';

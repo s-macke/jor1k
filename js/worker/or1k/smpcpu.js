@@ -309,14 +309,6 @@ function InvalidateTLB() {
 
 // ------------------------------------------
 
-// SMP cpus cannot be switched.
-function PutState() {
-}
-
-function GetState() {
-}
-
-// ------------------------------------------
 // Timer functions
 
 function TimerSetInterruptFlag(coreid) {
@@ -1798,8 +1790,6 @@ return {
     Step: Step,
     GetFlags: GetFlags,
     SetFlags: SetFlags,
-    PutState: PutState,
-    GetState: GetState,    
     GetTimeToNextInterrupt: GetTimeToNextInterrupt,
     ProgressTime: ProgressTime,
     GetTicks: GetTicks,
@@ -1809,6 +1799,5 @@ return {
 };
 
 }
-
 
 module.exports = SMPCPU;

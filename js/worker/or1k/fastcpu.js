@@ -194,45 +194,6 @@ function GetStat() {
     return (pc>>>2)|0;
 }
 
-function PutState() {
-    pc = h[(0x100 + 0) >> 2] << 2;
-    nextpc = h[(0x100 + 4) >> 2] << 2;
-    delayedins = h[(0x100 + 8) >> 2]|0;
-    TTMR = h[(0x100 + 16) >> 2]|0;
-    TTCR = h[(0x100 + 20) >> 2]|0;
-    PICMR = h[(0x100 + 24) >> 2]|0;
-    PICSR = h[(0x100 + 28) >> 2]|0;
-    boot_dtlb_misshandler_address = h[(0x100 + 32) >> 2]|0;
-    boot_itlb_misshandler_address = h[(0x100 + 36) >> 2]|0;
-    current_pgd = h[(0x100 + 40) >> 2]|0;
-
-    // we have to call the fence
-    ppc = 0x0;  
-    ppcorigin = 0x0; 
-    fence = 0x0;
-
-    nextpc = pc;    
-}
-
-function GetState() {
-    // pc is always valid when this function is called
-    h[(0x100 + 0) >> 2] = pc >>> 2;
-
-    h[(0x100 + 4) >> 2] = (pc+4) >>> 2;
-    if ((ppc|0) == (fence|0)) {
-        h[(0x100 + 4) >> 2] = nextpc >>> 2; 
-    }
-    h[(0x100 + 8) >> 2] = delayedins|0;
-    h[(0x100 + 12) >> 2] = 0;
-    h[(0x100 + 16) >> 2] = TTMR|0;
-    h[(0x100 + 20) >> 2] = TTCR|0;
-    h[(0x100 + 24) >> 2] = PICMR|0;
-    h[(0x100 + 28) >> 2] = PICSR|0;
-    h[(0x100 + 32) >> 2] = boot_dtlb_misshandler_address|0;
-    h[(0x100 + 36) >> 2] = boot_itlb_misshandler_address|0;
-    h[(0x100 + 40) >> 2] = current_pgd|0;
-}
-
 function GetTimeToNextInterrupt() {
     var delta = 0x0;
     if ((TTMR >> 30) == 0) return -1;    
@@ -1573,8 +1534,6 @@ return {
     Step: Step,
     GetFlags: GetFlags,
     SetFlags: SetFlags,
-    PutState: PutState,
-    GetState: GetState,    
     GetTimeToNextInterrupt: GetTimeToNextInterrupt,
     ProgressTime: ProgressTime,
     GetTicks: GetTicks,

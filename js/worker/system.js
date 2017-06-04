@@ -47,7 +47,6 @@ function System() {
     message.Register("execute", this.MainLoop.bind(this));
     message.Register("Init", this.Init.bind(this) );
     message.Register("Reset", this.Reset.bind(this) );
-    message.Register("ChangeCore", this.ChangeCPU.bind(this) );
     message.Register("PrintOnAbort", this.PrintState.bind(this) );
 
     message.Register("GetIPS", function(data) {
@@ -55,10 +54,6 @@ function System() {
         this.ips=0;
     }.bind(this));
 }
-
-System.prototype.ChangeCPU = function(cpuname) {
-    this.cpu.switchImplementation(cpuname);
-};
 
 System.prototype.Reset = function() {
     this.status = SYSTEM_STOP;

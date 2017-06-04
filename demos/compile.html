@@ -22,11 +22,6 @@
                     <tr><td>
                     <span style="float: left">
                     <form>VM Control
-                        <select id="coreselect" onchange='jor1kgui.ChangeCore(this.options[this.selectedIndex].value)'>
-                            <option value="asm">asm.js Core</option>
-                            <option value="safe">Safe Core (Slow)</option>
-                        </select>
-
                     <button type='button' onclick='term_output="";waitingForActivate=true;jor1kgui.Reset()'>Reset</button>
                     <button type='button' onclick='jor1kgui.Pause(true)'>Pause</button>
                     <button type='button' onclick='jor1kgui.Pause(false)'>Run</button>
