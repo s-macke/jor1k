@@ -579,8 +579,8 @@ DynamicCPU.prototype.Step = function (steps, clockspeed) {
             // do this not so often
             if (dsteps < 0)
             if (!this.delayedins_at_fence) { // Not sure, if we need this check
-                dsteps = dsteps + 64|0;
-                steps = steps - 64|0;
+                dsteps = dsteps + 1024|0;
+                steps = steps - 1024|0;
                 if (steps < 0) return 0;
 
                 // ---------- TICK ----------
@@ -602,14 +602,16 @@ DynamicCPU.prototype.Step = function (steps, clockspeed) {
                         this.Exception(EXCEPT_TICK, this.group0[SPR_EEAR_BASE]);
                         this.pc = this.nextpc|0;
                         this.nextpc = this.nextpc + 1|0;
-                    } else
-                    if (this.raise_interrupt) {
-                        this.raise_interrupt = false;
-                        this.Exception(EXCEPT_INT, this.group0[SPR_EEAR_BASE]);
-                        this.pc = this.nextpc|0;
-                        this.nextpc = this.nextpc + 1|0;
                     }
                 }
+            }
+
+            if (this.SR_IEE)
+            if (this.raise_interrupt) {
+                this.raise_interrupt = false;
+                this.Exception(EXCEPT_INT, this.group0[SPR_EEAR_BASE]);
+                this.pc = this.nextpc|0;
+                this.nextpc = this.nextpc + 1|0;
             }
 
             var ppc = this.GetInstructionPointer(this.pc<<2)|0;

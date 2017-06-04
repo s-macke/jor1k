@@ -994,8 +994,8 @@ function Step(steps, clockspeed) {
             // do this not so often
             if ((dsteps|0) <= 0)
             if (!(delayedins_at_page_boundary|0)) { // for now. Not sure if we need this check
-                dsteps = dsteps + 64|0;
-                steps = steps - 64|0;
+                dsteps = dsteps + 1024|0;
+                steps = steps - 1024|0;
 
                 // --------- START TICK ---------
                 for(i=0; (i|0)<(ncores|0); i = i + 1|0) {
@@ -1016,19 +1016,18 @@ function Step(steps, clockspeed) {
             // check for any interrupts
             // SR_TEE is set or cleared at the same time as SR_IEE in Linux, so skip this check
             if (SR_IEE|0) {
-                if (h[corep + TTMRp >> 2] & (1 << 28)) {
-                    Exception(EXCEPT_TICK, h[corep + group0p + (SPR_EEAR_BASE<<2) >> 2]|0);
-                    // treat exception directly here
-                    pc = nextpc;
-                } else
                 if (h[corep + raise_interruptp >> 2]|0) {
                     h[corep + raise_interruptp >> 2] = 0;
                     Exception(EXCEPT_INT, h[corep + group0p + (SPR_EEAR_BASE<<2) >> 2]|0);
                     // treat exception directly here
                     pc = nextpc;
+                } else
+                if (h[corep + TTMRp >> 2] & (1 << 28)) {
+                    Exception(EXCEPT_TICK, h[corep + group0p + (SPR_EEAR_BASE<<2) >> 2]|0);
+                    // treat exception directly here
+                    pc = nextpc;
                 }
             }
- //     }
 
             // Get instruction pointer
             if ((instlbcheck ^ pc) & 0xFFFFE000) // short check if it is still the correct page

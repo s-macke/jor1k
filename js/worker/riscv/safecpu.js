@@ -800,7 +800,7 @@ this.n = 0;
     do {
         r[0] = 0x00;
         
-        if (!(steps & 63)) {
+        if (!(steps & 1023)) {
             // ---------- TICK ----------
             var delta = csr[CSR_TIMECMP] - this.ticks | 0;
             this.ticks = this.ticks + clockspeed | 0;

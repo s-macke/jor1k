@@ -138,7 +138,6 @@ var raise_interrupt = 0;
 
 var doze = 0x0;
 
-
 function Init() {
     AnalyzeImage();
     Reset();
@@ -191,7 +190,6 @@ function InvalidateTLB() {
     write16tlbcheck = -1;
 }
 
-
 function GetStat() {
     return (pc>>>2)|0;
 }
@@ -213,12 +211,7 @@ function PutState() {
     ppcorigin = 0x0; 
     fence = 0x0;
 
-    if (delayedins|0) { 
-    }
     nextpc = pc;    
-
-
-
 }
 
 function GetState() {
@@ -267,8 +260,9 @@ function AnalyzeImage() { // get addresses for fast refill
 
 function SetFlags(x) {
     x = x|0;
-    var old_SR_IEE = 0;
-    old_SR_IEE = SR_IEE;
+
+    //if (((x&2) == 0) && SR_TEE) message.Debug('Disable Tee');
+
     SR_SM = (x & (1 << 0));
     SR_TEE = (x & (1 << 1));
     SR_IEE = (x & (1 << 2));
@@ -304,11 +298,6 @@ function SetFlags(x) {
         DebugMessage(ERROR_SETFLAGS_DELAY_SLOT|0);
         abort();
     }
-    if (SR_IEE) {
-        if ((old_SR_IEE|0) == (0|0)) {
-            CheckForInterrupt();
-        }
-    }
 }
 
 function GetFlags() {
@@ -335,12 +324,7 @@ function GetFlags() {
 }
 
 function CheckForInterrupt() {
-    if (!SR_IEE) {
-        return;
-    }
-    if (PICMR & PICSR) {
-        raise_interrupt = 1;
-    }
+    raise_interrupt = PICMR & PICSR;
 }
 
 function RaiseInterrupt(line, cpuid) {
@@ -349,6 +333,12 @@ function RaiseInterrupt(line, cpuid) {
     var lmask = 0;
     lmask = (1 << (line))|0;
     PICSR = PICSR | lmask;
+/*
+    message.Debug("raise " + line + " " + SR_TEE + " " + SR_IEE);
+    if (raise_interrupt|0) {
+        message.Debug('two interrupts ' + (PICSR|0) + ' ' + (raise_interrupt|0));
+    }
+*/
     CheckForInterrupt();
 }
 
@@ -356,6 +346,7 @@ function ClearInterrupt(line, cpuid) {
     line = line|0;
     cpuid = cpuid|0;
     PICSR = PICSR & (~(1 << line));
+    raise_interrupt = PICMR & PICSR;
 }
 
 
@@ -563,6 +554,7 @@ function Exception(excepttype, addr) {
         abort();
     }
     delayedins = 0;
+    delayedins_at_page_boundary = 0;
     SR_IME = 0;
 }
 
@@ -814,7 +806,8 @@ function Step(steps, clockspeed) {
     var tlbtr = 0x0;
     var delta = 0x0;
 
-    var dsteps = 0; // small counter
+    var dsteps = -1; // small counter
+    //fence = ppc|0;
 
 // -----------------------------------------------------
 
@@ -858,7 +851,7 @@ function Step(steps, clockspeed) {
         case 0x3:
             // bnf
             if (SR_F) {
-                break;
+                continue;
             }
             pc = pcbase + ppc|0;
             jump = pc + ((ins << 6) >> 4)|0;
@@ -1054,11 +1047,6 @@ function Step(steps, clockspeed) {
             // addi signed 
             rA = r[((ins >> 14) & 0x7C)>>2]|0;
             r[((ins >> 19) & 0x7C) >> 2] = rA + ((ins << 16) >> 16)|0;
-            //rindex = ((ins >> 19) & 0x7C);
-            //SR_CY = r[rindex] < rA;
-            //SR_OV = (((rA ^ imm ^ -1) & (rA ^ r[rindex])) & 0x80000000)?true:false;
-            //TODO overflow and carry
-            // maybe wrong
             continue;
 
         case 0x29:
@@ -1162,13 +1150,15 @@ function Step(steps, clockspeed) {
             imm = (ins & 0x7FF) | ((ins >> 10) & 0xF800);
             //pc = pcbase + ppc|0;
             SetSPR(r[((ins >> 14) & 0x7C)>>2] | imm, r[((ins >> 9) & 0x7C)>>2]|0); // can raise an interrupt
+
             if (doze) { // doze
                 doze = 0x0;
                 if ((raise_interrupt|0) == 0)
-                if (!(TTMR & (1 << 28))) {
+                if ((TTMR & (1 << 28)) == 0) {
                     return steps|0;
                 }
             }
+
             continue;
 
        case 0x32:
@@ -1332,16 +1322,10 @@ function Step(steps, clockspeed) {
             case 0x0:
                 // add signed 
                 r[rindex>>2] = rA + rB;
-                //SR_CY = r[rindex] < rA;
-                //SR_OV = (((rA ^ rB ^ -1) & (rA ^ r[rindex])) & 0x80000000)?true:false;
-                //TODO overflow and carry
                 continue;
             case 0x2:
                 // sub signed
                 r[rindex>>2] = rA - rB;
-                //TODO overflow and carry
-                //SR_CY = (rB > rA);
-                //SR_OV = (((rA ^ rB) & (rA ^ r[rindex])) & 0x80000000)?true:false;                
                 continue;
             case 0x3:
                 // and
@@ -1480,26 +1464,27 @@ function Step(steps, clockspeed) {
 
             pc = nextpc;
 
-            if ((!delayedins_at_page_boundary|0)) {
+            if (!(delayedins_at_page_boundary|0)) {
                 delayedins = 0;
-            } 
+            }
 
-            dsteps = dsteps + ((ppc - ppcorigin) >> 2)|0;
+            dsteps = dsteps - ((ppc - ppcorigin) >> 2)|0;
 
             // do this not so often
-            if ((dsteps|0) >= 64)
+            if ((dsteps|0) < 0)
             if (!(delayedins_at_page_boundary|0)) { // for now. Not sure if we need this
 
-                dsteps = dsteps - 64|0;
-                steps = steps - 64|0;
+                dsteps = dsteps + 1024|0;
+                steps = steps - 1024|0;
                 if ((steps|0) < 0) return 0x0; // return to main loop
 
                 // ---------- TICK ----------
                 // timer enabled
                 if ((TTMR >> 30) != 0) {
                     delta = (TTMR & 0xFFFFFFF) - (TTCR & 0xFFFFFFF) |0;
-                    TTCR = (TTCR + clockspeed|0);
-                    if ((delta|0) < (clockspeed|0)) {
+                    //if (delta < 0) message.Debug("" + (TTCR & 0xFFFFFFF) + " " + SR_TEE + " " + (TTMR & 0xFFFFFFF) + " " + (TTMR >> 28));
+                    TTCR = TTCR + clockspeed | 0;
+                    if ((delta|0) <= (clockspeed|0)) {
                         // if interrupt enabled
                         if (TTMR & (1 << 29)) {
                             TTMR = TTMR | (1 << 28); // set pending interrupt
@@ -1509,19 +1494,21 @@ function Step(steps, clockspeed) {
 
                 // check if pending and check if interrupt must be triggered
                 if (TTMR & (1 << 28)) {
-                    if (SR_TEE) {
+                    if (SR_TEE|0) {
                         Exception(EXCEPT_TICK, h[group0p + (SPR_EEAR_BASE<<2) >> 2]|0);
                         // treat exception directly here
                         pc = nextpc;
                     }
-                } else
-                if (SR_IEE|0) 
-                if (raise_interrupt|0) {
-                    raise_interrupt = 0;
-                    Exception(EXCEPT_INT, h[group0p + (SPR_EEAR_BASE<<2)>>2]|0);
-                    pc = nextpc;
                 }
+
             } // dsteps
+
+            if (SR_IEE|0)
+            if (raise_interrupt|0) {
+                Exception(EXCEPT_INT, h[group0p + (SPR_EEAR_BASE<<2)>>2]|0);
+                pc = nextpc;
+            }
+
 
             // Get Instruction Fast version
             if ((instlbcheck ^ pc) & 0xFFFFE000) // short check if it is still the correct page
@@ -1559,7 +1546,6 @@ function Step(steps, clockspeed) {
             }
 
             // set pc and set the correcponding physical pc pointer
-            //pc = pc;
             ppc = ramp + (instlblookup ^ pc)|0;
             ppcorigin = ppc;
             pcbase = pc - 4 - ppcorigin|0;

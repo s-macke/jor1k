@@ -281,7 +281,6 @@ System.prototype.HandleHalt = function() {
 System.prototype.MainLoop = function() {
     if (this.status != SYSTEM_RUN) return;
     message.Send("execute", 0);
-
     // execute the cpu loop for "instructionsperloop" instructions.
     var stepsleft = this.cpu.Step(this.timer.instructionsperloop, this.timer.timercyclesperinstruction);
     //message.Debug(stepsleft);

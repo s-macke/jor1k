@@ -218,8 +218,7 @@ SafeCPU.prototype.CheckForInterrupt = function () {
 };
 
 SafeCPU.prototype.RaiseInterrupt = function (line, cpuid) {
-    var lmask = 1 << line;
-    this.PICSR |= lmask;
+    this.PICSR |= 1 << line;
     this.CheckForInterrupt();
 };
 
@@ -514,7 +513,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
         this.clock++;
 
         // do this not so often
-        if (!(steps & 63)) {
+        if (!(steps & 1023)) {
             // ---------- TICK ----------
             // timer enabled
             if ((this.TTMR >> 30) != 0) {
