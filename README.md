@@ -10,6 +10,7 @@ More information can be found on the [Wiki][project wiki] pages.
 
 * Main [demo][project demo] page
 * [Edit, compile and run](http://s-macke.github.io/jor1k/demos/compile.html) C code in your browser
+* [Edit, compile and run](https://cs-education.github.io/sys/#VM) C code from the University of Illinois
 * Symmetric multiprocessing with  [2 cores](http://s-macke.github.io/jor1k/demos/main.html?cpu=smp&n=2), [4 cores](http://s-macke.github.io/jor1k/demos/main.html?cpu=smp&n=4), [8 cores](http://s-macke.github.io/jor1k/demos/main.html?cpu=smp&n=8), [16 cores](http://s-macke.github.io/jor1k/demos/main/index.html?cpu=smp&n=16) (unstable with inreasing cores)
 * Simple [demo](http://s-macke.github.io/jor1k/demos/simple.html)
 * RTEMS (real time operating system) [demo](http://s-macke.github.io/jor1k/demos/rtems.html)
