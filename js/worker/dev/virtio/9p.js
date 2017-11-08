@@ -69,7 +69,7 @@ function Virtio9p(ramdev, filesystem) {
 }
 
 Virtio9p.prototype.Createfid = function(inode, type, uid) {
-	return {inodeid: inode, type: type, uid: uid};
+    return {inodeid: inode, type: type, uid: uid};
 }
 
 Virtio9p.prototype.Reset = function() {
@@ -285,7 +285,7 @@ Virtio9p.prototype.ReceiveRequest = function (ringidx, index, GetByte) {
             req[3] = inode.uid; // user id
             req[4] = inode.gid; // group id
             
-            req[5] = 0x1; // number of hard links
+            req[5] = inode.nlinks; // number of hard links
             req[6] = (inode.major<<8) | (inode.minor); // device id low
             req[7] = inode.size; // size low
             req[8] = this.BLOCKSIZE;

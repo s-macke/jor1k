@@ -46,6 +46,7 @@ FSLoader.prototype.HandleDirContents = function(list, parentid) {
          inode.uid = tag.uid|0;
          inode.gid = tag.gid|0;
          inode.parentid = parentid;
+         this.fs.inodes[inode.parentid].nlinks++;
          inode.mode = parseInt(tag.mode, 8);
 
          if (tag.path) { // link
@@ -55,6 +56,7 @@ FSLoader.prototype.HandleDirContents = function(list, parentid) {
          } else if (typeof tag.size === "undefined") { // dir
              inode.mode |= S_IFDIR;
              inode.updatedir = true;
+             inode.nlinks = 2; // . and ..
              this.fs.PushInode(inode);
              if (tag.child)
                  this.HandleDirContents(tag.child, id != -1 ? id : this.fs.inodes.length-1);

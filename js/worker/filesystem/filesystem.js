@@ -96,22 +96,25 @@ function FS() {
             this.watchFiles[file.name] = true;
         }.bind(this)
     );
+
     message.Register("WatchDirectory",
         function(file) {
             this.watchDirectories[file.name] = true;
         }.bind(this)
     );
-    //message.Debug("registering readfile on worker");
+
     message.Register("ReadFile",
         function(file) {
             message.Send("ReadFile", (this.ReadFile.bind(this))(file));
         }.bind(this)
     );
+
     message.Register("tar",
         function(data) {
             message.Send("tar", this.tar.Pack(data));
         }.bind(this)
     );
+
     message.Register("sync",
         function(data) {
             message.Send("sync", this.tar.Pack(data));
@@ -337,6 +340,7 @@ FS.prototype.CreateInode = function() {
         minor : 0x0,
         data : new Uint8Array(0),
         symlink : "",
+        nlinks : 1,
         mode : 0x01ED,
         qid: {type: 0, version: 0, path: this.qidnumber},
         url: "", // url to download the file
@@ -344,18 +348,18 @@ FS.prototype.CreateInode = function() {
     };
 }
 
-
-
 FS.prototype.CreateDirectory = function(name, parentid) {
     var x = this.CreateInode();
     x.name = name;
     x.parentid = parentid;
     x.mode = 0x01FF | S_IFDIR;
     x.updatedir = true;
+    x.nlinks = 2; // . and ..
     if (parentid >= 0) {
         x.uid = this.inodes[parentid].uid;
         x.gid = this.inodes[parentid].gid;
         x.mode = (this.inodes[parentid].mode & 0x1FF) | S_IFDIR;
+        this.inodes[parentid].nlinks++;
     }
     x.qid.type = S_IFDIR >> 8;
     this.PushInode(x);
@@ -369,6 +373,7 @@ FS.prototype.CreateFile = function(filename, parentid) {
     x.parentid = parentid;
     x.uid = this.inodes[parentid].uid;
     x.gid = this.inodes[parentid].gid;
+    this.inodes[parentid].nlinks++;
     x.qid.type = S_IFREG >> 8;
     x.mode = (this.inodes[parentid].mode & 0x1B6) | S_IFREG;
     this.PushInode(x);
@@ -385,6 +390,7 @@ FS.prototype.CreateNode = function(filename, parentid, major, minor) {
     x.minor = minor;
     x.uid = this.inodes[parentid].uid;
     x.gid = this.inodes[parentid].gid;
+    this.inodes[parentid].nlinks++;
     x.qid.type = S_IFSOCK >> 8;
     x.mode = (this.inodes[parentid].mode & 0x1B6);
     this.PushInode(x);
@@ -397,6 +403,7 @@ FS.prototype.CreateSymlink = function(filename, parentid, symlink) {
     x.parentid = parentid;
     x.uid = this.inodes[parentid].uid;
     x.gid = this.inodes[parentid].gid;
+    this.inodes[parentid].nlinks++;
     x.qid.type = S_IFLNK >> 8;
     x.symlink = symlink;
     x.mode = S_IFLNK;
@@ -447,7 +454,7 @@ FS.prototype.CloseInode = function(id) {
     var inode = this.GetInode(id);
     if (inode.status == STATUS_UNLINKED) {
         //message.Debug("Filesystem: Delete unlinked file");
-        inode.status == STATUS_INVALID;
+        inode.status = STATUS_INVALID;
         inode.data = new Uint8Array(0);
         inode.size = 0;
     }
@@ -492,6 +499,8 @@ FS.prototype.Rename = function(olddirid, oldname, newdirid, newname) {
 
     this.inodes[olddirid].updatedir = true;
     this.inodes[newdirid].updatedir = true;
+    this.inodes[olddirid].nlinks--;
+    this.inodes[newdirid].nlinks++;
 
     this.NotifyListeners(idx, "rename", {oldpath: oldpath});
     
@@ -582,10 +591,12 @@ FS.prototype.Unlink = function(idx) {
     }
     // don't delete the content. The file is still accessible
     this.inodes[inode.parentid].updatedir = true;
+    this.inodes[inode.parentid].nlinks--;
     inode.status = STATUS_UNLINKED;
     inode.nextid = -1;
     inode.firstid = -1;
     inode.parentid = -1;
+    inode.nlinks--;
     return true;
 }
 
