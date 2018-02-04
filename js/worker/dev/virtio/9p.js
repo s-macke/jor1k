@@ -336,12 +336,6 @@ Virtio9p.prototype.ReceiveRequest = function (ringidx, index, GetByte) {
             if (req[1] & P9_SETATTR_GID) {
                 inode.gid = req[4];
             }
-            if (req[1] & P9_SETATTR_ATIME_SET) {
-                inode.atime = req[6];
-            }
-            if (req[1] & P9_SETATTR_MTIME_SET) {
-                inode.atime = req[8];
-            }
             if (req[1] & P9_SETATTR_ATIME) {
                 inode.atime = Math.floor((new Date()).getTime()/1000);
             }
@@ -350,6 +344,12 @@ Virtio9p.prototype.ReceiveRequest = function (ringidx, index, GetByte) {
             }
             if (req[1] & P9_SETATTR_CTIME) {
                 inode.ctime = Math.floor((new Date()).getTime()/1000);
+            }
+            if (req[1] & P9_SETATTR_ATIME_SET) {
+                inode.atime = req[6];
+            }
+            if (req[1] & P9_SETATTR_MTIME_SET) {
+                inode.mtime = req[8];
             }
             if (req[1] & P9_SETATTR_SIZE) {
                 this.fs.ChangeSize(this.fids[fid].inodeid, req[5]);
