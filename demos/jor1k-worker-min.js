@@ -2789,13 +2789,14 @@ var UART_MSR   = 6; /* R: Modem Status Register */
 var UART_SCR   = 7; /* R/W: Scratch Register*/
 
 // Line Status register bits
-var UART_LSR_DATA_READY        = 0x1;  // data available
-var UART_LSR_TX_EMPTY        = 0x20; // TX (THR) buffer is empty
+var UART_LSR_DATA_READY        = 0x01; // data available
+var UART_LSR_TX_EMPTY          = 0x20; // TX (THR) buffer is empty
 var UART_LSR_TRANSMITTER_EMPTY = 0x40; // TX empty and line is idle
+var UART_LSR_INT_ANY           = 0x1E; // Any of the lsr-interrupt-triggering status bits
 
 // Interrupt enable register bits
 var UART_IER_MSI  = 0x08; /* Modem Status Changed int. */
-var UART_IER_BRK  = 0x04; /* Enable Break int. */
+var UART_IER_RLSI = 0x04; /* Enable Break int. Enable receiver line status interrupt */
 var UART_IER_THRI = 0x02; /* Enable Transmitter holding register int. */
 var UART_IER_RDI  = 0x01; /* Enable receiver data interrupt */
 
@@ -2835,7 +2836,7 @@ function UARTDev(id, intdev, intno) {
     this.intno = intno;
     this.intdev = intdev;
     this.id = id;
-    //this.verboseuart = true;
+    this.verboseuart = false;
     message.Register("tty" + id, this.ReceiveChar.bind(this) );
     this.Reset();
 }
@@ -2868,7 +2869,7 @@ UARTDev.prototype.Reset = function() {
 
 UARTDev.prototype.Step = function() {
     if(this.txbuf.length != 0) {
-        message.Send("tty"+this.id, this.txbuf);
+        message.Send("tty" + this.id, this.txbuf);
         this.txbuf = new Array();
     }
 }
@@ -2878,6 +2879,7 @@ UARTDev.prototype.ReceiveChar = function(data) {
     data.forEach(function(c) {
         this.rxbuf.push(c&0xFF);
     }.bind(this));
+    if (this.verboseuart) message.Debug("Received bytes: " + this.rxbuf.length);
     if (this.rxbuf.length > 0) {
         this.LSR |= UART_LSR_DATA_READY;
         this.ThrowInterrupt(UART_IIR_CTI);
@@ -2885,19 +2887,30 @@ UARTDev.prototype.ReceiveChar = function(data) {
 }
 
 UARTDev.prototype.CheckInterrupt = function() {
-    if ((this.ints & (1 << UART_IIR_CTI))  && (this.IER & UART_IER_RDI)) {
+    if (this.verboseuart) message.Debug("Check Interrupt " + this.ints);
+
+    if ((this.LSR & UART_LSR_INT_ANY) && (this.IER & UART_IER_RLSI)) {
+        this.IIR = UART_IIR_RLSI;
+        if (this.verboseuart) message.Debug('IIR_RLSI ' + this.intno);
+        this.intdev.RaiseInterrupt(this.intno);
+    } else
+    if ((this.ints & (1 << UART_IIR_CTI)) && (this.IER & UART_IER_RDI)) {
         this.IIR = UART_IIR_CTI;
+        if (this.verboseuart) message.Debug('IIR_CTI ' + this.intno);
         this.intdev.RaiseInterrupt(this.intno);
     } else
     if ((this.ints & (1 << UART_IIR_THRI)) && (this.IER & UART_IER_THRI)) {
         this.IIR = UART_IIR_THRI;
+        if (this.verboseuart) message.Debug('IIR_THRI ' + this.intno);
         this.intdev.RaiseInterrupt(this.intno);
     } else
     if ((this.ints & (1 << UART_IIR_MSI))  && (this.IER & UART_IER_MSI)) {
         this.IIR = UART_IIR_MSI;
+        if (this.verboseuart) message.Debug('IIR_MSI ' + this.intno);
         this.intdev.RaiseInterrupt(this.intno);
     } else {
         this.IIR = UART_IIR_NO_INT;
+        if (this.verboseuart) message.Debug('IIR_NO_INT ' + this.intno);
         this.intdev.ClearInterrupt(this.intno);
     }
 };
@@ -2916,6 +2929,7 @@ UARTDev.prototype.ReadReg8 = function(addr) {
 
     if (this.LCR & UART_LCR_DLAB) {  // Divisor latch access bit
         switch (addr) {
+
         case UART_DLL:
             return this.DLL;
             break;
@@ -2927,11 +2941,13 @@ UARTDev.prototype.ReadReg8 = function(addr) {
     }
 
     switch (addr) {
+
     case UART_RXBUF:
         var ret = 0x0; // if the buffer is empty, return 0
         if (this.rxbuf.length > 0) {
             ret = this.rxbuf.shift();
         }
+        if (this.verboseuart) message.Debug("Get RXBUF");
         if (this.rxbuf.length == 0) {
             this.LSR &= ~UART_LSR_DATA_READY;
             this.ClearInterrupt(UART_IIR_CTI);
@@ -2954,11 +2970,11 @@ UARTDev.prototype.ReadReg8 = function(addr) {
         {
             // the two top bits (fifo enabled) are always set
             var ret = (this.IIR & 0x0F) | 0xC0;
-             
+
             if (this.IIR == UART_IIR_THRI) {
                 this.ClearInterrupt(UART_IIR_THRI);
             }
-            
+
             return ret;
             break;
         }
@@ -2969,7 +2985,7 @@ UARTDev.prototype.ReadReg8 = function(addr) {
 
     case UART_LSR:
         // This gets polled many times a second, so logging is commented out
-        // if(this.verboseuart) message.Debug("Get UART_LSR " + this.ToBitDescription(this.LSR, LSR_BIT_DESC));
+        if (this.verboseuart) message.Debug("Get UART_LSR " + this.ToBitDescription(this.LSR, LSR_BIT_DESC));
         return this.LSR;
         break;
 
@@ -2985,10 +3001,12 @@ UARTDev.prototype.WriteReg8 = function(addr, x) {
 
     if (this.LCR & UART_LCR_DLAB) {
         switch (addr) {
+
         case UART_DLL:
             this.DLL = x;
             return;
             break;
+
         case UART_DLH:
             this.DLH = x;
             return;
@@ -2997,15 +3015,16 @@ UARTDev.prototype.WriteReg8 = function(addr, x) {
     }
 
     switch (addr) {
+
     case UART_TXBUF: 
          // we assume here, that the fifo is on
 
          // In the uart spec we reset UART_IIR_THRI now ...
         this.LSR &= ~UART_LSR_TRANSMITTER_EMPTY;
-        //this.LSR &= ~UART_LSR_TX_EMPTY;
+        this.LSR &= ~UART_LSR_TX_EMPTY;
 
         this.txbuf.push(x);
-        //message.Debug("send " + x);
+        if (this.verboseuart) message.Debug("send " + x);
         // the data is sent immediately
         this.LSR |= UART_LSR_TRANSMITTER_EMPTY | UART_LSR_TX_EMPTY; // txbuffer is empty immediately
         this.ThrowInterrupt(UART_IIR_THRI);
@@ -3014,25 +3033,27 @@ UARTDev.prototype.WriteReg8 = function(addr, x) {
     case UART_IER:
         // 2 = 10b ,5=101b, 7=111b
         this.IER = x & 0x0F; // only the first four bits are valid
-        //if(this.verboseuart) message.Debug("Set UART_IER " + this.ToBitDescription(x, IER_BIT_DESC));
+        this.ints &= ~(1 << UART_IER_THRI);
+        if (this.verboseuart) message.Debug("Set UART_IER " + this.ToBitDescription(x, IER_BIT_DESC));
         // Check immediately if there is a interrupt pending
         this.CheckInterrupt();
         break;
 
     case UART_FCR:
-        if(this.verboseuart) message.Debug("Set UART_FCR " + this.ToBitDescription(x, FCR_BIT_DESC));
+        if (this.verboseuart) message.Debug("Set UART_FCR " + this.ToBitDescription(x, FCR_BIT_DESC));
         this.FCR = x & 0xC9;
-        if (this.FCR & 2) {
+        if (x & 2) {
             this.ClearInterrupt(UART_IIR_CTI);
             this.rxbuf = new Array(); // clear receive fifo buffer
         }
-        if (this.FCR & 4) {
+        if (x & 4) {
             this.txbuf = new Array(); // clear transmit fifo buffer
+            this.ClearInterrupt(UART_IIR_THRI);
         }
         break;
 
     case UART_LCR:
-        if(this.verboseuart)  message.Debug("Set UART_LCR " + this.ToBitDescription(x, LCR_BIT_DESC));
+        if (this.verboseuart)  message.Debug("Set UART_LCR " + this.ToBitDescription(x, LCR_BIT_DESC));
         if ((this.LCR & 3) != 3) {
             message.Debug("Warning in UART: Data word length other than 8 bits are not supported");
         }
@@ -3040,7 +3061,7 @@ UARTDev.prototype.WriteReg8 = function(addr, x) {
         break;
 
     case UART_MCR:
-        if(this.verboseuart) message.Debug("Set UART_MCR " + this.ToBitDescription(x,MCR_BIT_DESC));
+        if (this.verboseuart) message.Debug("Set UART_MCR " + this.ToBitDescription(x,MCR_BIT_DESC));
         this.MCR = x;
         break;
 
@@ -3629,7 +3650,7 @@ function Virtio9p(ramdev, filesystem) {
 }
 
 Virtio9p.prototype.Createfid = function(inode, type, uid) {
-	return {inodeid: inode, type: type, uid: uid};
+    return {inodeid: inode, type: type, uid: uid};
 }
 
 Virtio9p.prototype.Reset = function() {
@@ -3845,7 +3866,7 @@ Virtio9p.prototype.ReceiveRequest = function (ringidx, index, GetByte) {
             req[3] = inode.uid; // user id
             req[4] = inode.gid; // group id
             
-            req[5] = 0x1; // number of hard links
+            req[5] = inode.nlinks; // number of hard links
             req[6] = (inode.major<<8) | (inode.minor); // device id low
             req[7] = inode.size; // size low
             req[8] = this.BLOCKSIZE;
@@ -5219,22 +5240,25 @@ function FS() {
             this.watchFiles[file.name] = true;
         }.bind(this)
     );
+
     message.Register("WatchDirectory",
         function(file) {
             this.watchDirectories[file.name] = true;
         }.bind(this)
     );
-    //message.Debug("registering readfile on worker");
+
     message.Register("ReadFile",
         function(file) {
             message.Send("ReadFile", (this.ReadFile.bind(this))(file));
         }.bind(this)
     );
+
     message.Register("tar",
         function(data) {
             message.Send("tar", this.tar.Pack(data));
         }.bind(this)
     );
+
     message.Register("sync",
         function(data) {
             message.Send("sync", this.tar.Pack(data));
@@ -5460,6 +5484,7 @@ FS.prototype.CreateInode = function() {
         minor : 0x0,
         data : new Uint8Array(0),
         symlink : "",
+        nlinks : 1,
         mode : 0x01ED,
         qid: {type: 0, version: 0, path: this.qidnumber},
         url: "", // url to download the file
@@ -5467,18 +5492,18 @@ FS.prototype.CreateInode = function() {
     };
 }
 
-
-
 FS.prototype.CreateDirectory = function(name, parentid) {
     var x = this.CreateInode();
     x.name = name;
     x.parentid = parentid;
     x.mode = 0x01FF | S_IFDIR;
     x.updatedir = true;
+    x.nlinks = 2; // . and ..
     if (parentid >= 0) {
         x.uid = this.inodes[parentid].uid;
         x.gid = this.inodes[parentid].gid;
         x.mode = (this.inodes[parentid].mode & 0x1FF) | S_IFDIR;
+        this.inodes[parentid].nlinks++;
     }
     x.qid.type = S_IFDIR >> 8;
     this.PushInode(x);
@@ -5492,6 +5517,7 @@ FS.prototype.CreateFile = function(filename, parentid) {
     x.parentid = parentid;
     x.uid = this.inodes[parentid].uid;
     x.gid = this.inodes[parentid].gid;
+    this.inodes[parentid].nlinks++;
     x.qid.type = S_IFREG >> 8;
     x.mode = (this.inodes[parentid].mode & 0x1B6) | S_IFREG;
     this.PushInode(x);
@@ -5508,6 +5534,7 @@ FS.prototype.CreateNode = function(filename, parentid, major, minor) {
     x.minor = minor;
     x.uid = this.inodes[parentid].uid;
     x.gid = this.inodes[parentid].gid;
+    this.inodes[parentid].nlinks++;
     x.qid.type = S_IFSOCK >> 8;
     x.mode = (this.inodes[parentid].mode & 0x1B6);
     this.PushInode(x);
@@ -5520,6 +5547,7 @@ FS.prototype.CreateSymlink = function(filename, parentid, symlink) {
     x.parentid = parentid;
     x.uid = this.inodes[parentid].uid;
     x.gid = this.inodes[parentid].gid;
+    this.inodes[parentid].nlinks++;
     x.qid.type = S_IFLNK >> 8;
     x.symlink = symlink;
     x.mode = S_IFLNK;
@@ -5570,7 +5598,7 @@ FS.prototype.CloseInode = function(id) {
     var inode = this.GetInode(id);
     if (inode.status == STATUS_UNLINKED) {
         //message.Debug("Filesystem: Delete unlinked file");
-        inode.status == STATUS_INVALID;
+        inode.status = STATUS_INVALID;
         inode.data = new Uint8Array(0);
         inode.size = 0;
     }
@@ -5615,6 +5643,8 @@ FS.prototype.Rename = function(olddirid, oldname, newdirid, newname) {
 
     this.inodes[olddirid].updatedir = true;
     this.inodes[newdirid].updatedir = true;
+    this.inodes[olddirid].nlinks--;
+    this.inodes[newdirid].nlinks++;
 
     this.NotifyListeners(idx, "rename", {oldpath: oldpath});
     
@@ -5705,10 +5735,12 @@ FS.prototype.Unlink = function(idx) {
     }
     // don't delete the content. The file is still accessible
     this.inodes[inode.parentid].updatedir = true;
+    this.inodes[inode.parentid].nlinks--;
     inode.status = STATUS_UNLINKED;
     inode.nextid = -1;
     inode.firstid = -1;
     inode.parentid = -1;
+    inode.nlinks--;
     return true;
 }
 
@@ -6025,6 +6057,7 @@ FSLoader.prototype.HandleDirContents = function(list, parentid) {
          inode.uid = tag.uid|0;
          inode.gid = tag.gid|0;
          inode.parentid = parentid;
+         this.fs.inodes[inode.parentid].nlinks++;
          inode.mode = parseInt(tag.mode, 8);
 
          if (tag.path) { // link
@@ -6034,6 +6067,7 @@ FSLoader.prototype.HandleDirContents = function(list, parentid) {
          } else if (typeof tag.size === "undefined") { // dir
              inode.mode |= S_IFDIR;
              inode.updatedir = true;
+             inode.nlinks = 2; // . and ..
              this.fs.PushInode(inode);
              if (tag.child)
                  this.HandleDirContents(tag.child, id != -1 ? id : this.fs.inodes.length-1);
@@ -7314,8 +7348,8 @@ DynamicCPU.prototype.Step = function (steps, clockspeed) {
             // do this not so often
             if (dsteps < 0)
             if (!this.delayedins_at_fence) { // Not sure, if we need this check
-                dsteps = dsteps + 64|0;
-                steps = steps - 64|0;
+                dsteps = dsteps + 1024|0;
+                steps = steps - 1024|0;
                 if (steps < 0) return 0;
 
                 // ---------- TICK ----------
@@ -7337,14 +7371,16 @@ DynamicCPU.prototype.Step = function (steps, clockspeed) {
                         this.Exception(EXCEPT_TICK, this.group0[SPR_EEAR_BASE]);
                         this.pc = this.nextpc|0;
                         this.nextpc = this.nextpc + 1|0;
-                    } else
-                    if (this.raise_interrupt) {
-                        this.raise_interrupt = false;
-                        this.Exception(EXCEPT_INT, this.group0[SPR_EEAR_BASE]);
-                        this.pc = this.nextpc|0;
-                        this.nextpc = this.nextpc + 1|0;
                     }
                 }
+            }
+
+            if (this.SR_IEE)
+            if (this.raise_interrupt) {
+                this.raise_interrupt = false;
+                this.Exception(EXCEPT_INT, this.group0[SPR_EEAR_BASE]);
+                this.pc = this.nextpc|0;
+                this.nextpc = this.nextpc + 1|0;
             }
 
             var ppc = this.GetInstructionPointer(this.pc<<2)|0;
@@ -7854,7 +7890,7 @@ DynamicCPU.prototype.Step = function (steps, clockspeed) {
             rindex = (ins >> 21) & 0x1F;
             switch (ins & 0x3CF) {
             case 0x0:
-                // add signed 
+                // add signed
                 r[rindex] = rA + rB;
                 break;
             case 0x2:
@@ -7877,9 +7913,21 @@ DynamicCPU.prototype.Step = function (steps, clockspeed) {
                 // sll
                 r[rindex] = rA << (rB & 0x1F);
                 break;
+            case 0xc:
+                // exths
+                r[rindex] = (rA << 16) >> 16;
+                break;
+            case 0xe:
+                // cmov
+                r[rindex] = this.SR_F?rA:rB;
+                break;
             case 0x48:
                 // srl not signed
                 r[rindex] = rA >>> (rB & 0x1F);
+                break;
+            case 0x4c:
+                // extbs
+                r[rindex] = (rA << 24) >> 24;
                 break;
             case 0xf:
                 // ff1
@@ -8128,7 +8176,7 @@ var SR_DME = 0; // Data MMU Enabled
 var SR_IME = 0; // Instruction MMU Enabled
 var SR_LEE = 0; // Little Endian Enabled
 var SR_CE = 0; // CID Enabled ?
-var SR_F = 0; // Flag for l.sf... instructions 
+var SR_F = 0; // Flag for l.sf... instructions
 var SR_CY = 0; // Carry Flag
 var SR_OV = 0; // Overflow Flag
 var SR_OVE = 0; // Overflow Flag Exception
@@ -8136,7 +8184,7 @@ var SR_DSX = 0; // Delay Slot Exception
 var SR_EPH = 0; // Exception Prefix High
 var SR_FO = 1; // Fixed One, always set
 var SR_SUMRA = 0; // SPRS User Mode Read Access, or TRAP exception disable?
-var SR_CID = 0x0; //Context ID
+var SR_CID = 0x0; // Context ID
 
 var boot_dtlb_misshandler_address = 0x0;
 var boot_itlb_misshandler_address = 0x0;
@@ -8145,7 +8193,6 @@ var current_pgd = 0x0;
 var raise_interrupt = 0;
 
 var doze = 0x0;
-
 
 function Init() {
     AnalyzeImage();
@@ -8199,58 +8246,13 @@ function InvalidateTLB() {
     write16tlbcheck = -1;
 }
 
-
 function GetStat() {
     return (pc>>>2)|0;
 }
 
-function PutState() {
-    pc = h[(0x100 + 0) >> 2] << 2;
-    nextpc = h[(0x100 + 4) >> 2] << 2;
-    delayedins = h[(0x100 + 8) >> 2]|0;
-    TTMR = h[(0x100 + 16) >> 2]|0;
-    TTCR = h[(0x100 + 20) >> 2]|0;
-    PICMR = h[(0x100 + 24) >> 2]|0;
-    PICSR = h[(0x100 + 28) >> 2]|0;
-    boot_dtlb_misshandler_address = h[(0x100 + 32) >> 2]|0;
-    boot_itlb_misshandler_address = h[(0x100 + 36) >> 2]|0;
-    current_pgd = h[(0x100 + 40) >> 2]|0;
-
-    // we have to call the fence
-    ppc = 0x0;  
-    ppcorigin = 0x0; 
-    fence = 0x0;
-
-    if (delayedins|0) { 
-    }
-    nextpc = pc;    
-
-
-
-}
-
-function GetState() {
-    // pc is always valid when this function is called
-    h[(0x100 + 0) >> 2] = pc >>> 2;
-
-    h[(0x100 + 4) >> 2] = (pc+4) >>> 2;
-    if ((ppc|0) == (fence|0)) {
-        h[(0x100 + 4) >> 2] = nextpc >>> 2; 
-    }
-    h[(0x100 + 8) >> 2] = delayedins|0;
-    h[(0x100 + 12) >> 2] = 0;
-    h[(0x100 + 16) >> 2] = TTMR|0;
-    h[(0x100 + 20) >> 2] = TTCR|0;
-    h[(0x100 + 24) >> 2] = PICMR|0;
-    h[(0x100 + 28) >> 2] = PICSR|0;
-    h[(0x100 + 32) >> 2] = boot_dtlb_misshandler_address|0;
-    h[(0x100 + 36) >> 2] = boot_itlb_misshandler_address|0;
-    h[(0x100 + 40) >> 2] = current_pgd|0;
-}
-
 function GetTimeToNextInterrupt() {
     var delta = 0x0;
-    if ((TTMR >> 30) == 0) return -1;    
+    if ((TTMR >> 30) == 0) return -1;
     delta = (TTMR & 0xFFFFFFF) - (TTCR & 0xFFFFFFF) |0;
     return delta|0;
 }
@@ -8275,8 +8277,9 @@ function AnalyzeImage() { // get addresses for fast refill
 
 function SetFlags(x) {
     x = x|0;
-    var old_SR_IEE = 0;
-    old_SR_IEE = SR_IEE;
+
+    //if (((x&2) == 0) && SR_TEE) message.Debug('Disable Tee');
+
     SR_SM = (x & (1 << 0));
     SR_TEE = (x & (1 << 1));
     SR_IEE = (x & (1 << 2));
@@ -8312,11 +8315,6 @@ function SetFlags(x) {
         DebugMessage(ERROR_SETFLAGS_DELAY_SLOT|0);
         abort();
     }
-    if (SR_IEE) {
-        if ((old_SR_IEE|0) == (0|0)) {
-            CheckForInterrupt();
-        }
-    }
 }
 
 function GetFlags() {
@@ -8343,12 +8341,7 @@ function GetFlags() {
 }
 
 function CheckForInterrupt() {
-    if (!SR_IEE) {
-        return;
-    }
-    if (PICMR & PICSR) {
-        raise_interrupt = 1;
-    }
+    raise_interrupt = PICMR & PICSR;
 }
 
 function RaiseInterrupt(line, cpuid) {
@@ -8357,6 +8350,12 @@ function RaiseInterrupt(line, cpuid) {
     var lmask = 0;
     lmask = (1 << (line))|0;
     PICSR = PICSR | lmask;
+/*
+    message.Debug("raise " + line + " " + SR_TEE + " " + SR_IEE);
+    if (raise_interrupt|0) {
+        message.Debug('two interrupts ' + (PICSR|0) + ' ' + (raise_interrupt|0));
+    }
+*/
     CheckForInterrupt();
 }
 
@@ -8364,6 +8363,7 @@ function ClearInterrupt(line, cpuid) {
     line = line|0;
     cpuid = cpuid|0;
     PICSR = PICSR & (~(1 << line));
+    raise_interrupt = PICMR & PICSR;
 }
 
 
@@ -8404,8 +8404,9 @@ function SetSPR(idx, x) {
         case 0:
             PICMR = x | 0x3; // we use non maskable interrupt here
             // check immediate for interrupt
+            CheckForInterrupt();
             if (SR_IEE) {
-                if (PICMR & PICSR) {
+                if (raise_interrupt) {
                     DebugMessage(ERROR_SETSPR_DIRECT_INTERRUPT_EXCEPTION|0);
                     abort();
                 }
@@ -8571,6 +8572,7 @@ function Exception(excepttype, addr) {
         abort();
     }
     delayedins = 0;
+    delayedins_at_page_boundary = 0;
     SR_IME = 0;
 }
 
@@ -8588,7 +8590,7 @@ function DTLBRefill(addr, nsets) {
         return 0|0;
     }
     r2 = addr;
-    // get_current_PGD  using r3 and r5 
+    // get_current_PGD  using r3 and r5
     r3 = h[ramp+current_pgd >> 2]|0; // current pgd
     r4 = (r2 >>> 0x18) << 2;
     r5 = r4 + r3|0;
@@ -8713,7 +8715,7 @@ function ITLBRefill(addr, nsets) {
 
     //fill ITLBMR register
     r2 = addr;
-    // r3 = 
+    // r3 =
     r4 = r2 & 0xFFFFE000;
     r4 = r4 | 0x1;
     h[group2p + ((0x200 | r5)<<2) >> 2] = r4; // SPR_DTLBMR_BASE(0)|r5 = r4  // SPR_DTLBMR_BASE = 0x200 * (WAY*0x100)
@@ -8735,7 +8737,7 @@ function DTLBLookup(addr, write) {
 
     setindex = (addr >> 13) & 63; // check these values
     tlmbr = h[group1p + ((0x200 | setindex) << 2) >> 2]|0; // match register
-     
+
     if ((tlmbr & 1) == 0) {
         // use tlb refill to fasten up
         if (DTLBRefill(addr, 64)|0) {
@@ -8760,7 +8762,7 @@ function DTLBLookup(addr, write) {
     }
 
     /* skipped this check
-        // set lru 
+        // set lru
         if (tlmbr & 0xC0) {
             DebugMessage("Error: LRU ist not supported");
             abort();
@@ -8815,14 +8817,15 @@ function Step(steps, clockspeed) {
         rD = 0x0;
     var vaddr = 0x0; // virtual address
     var paddr = 0x0; // physical address
-    
+
     // to get the instruction
     var setindex = 0x0;
     var tlmbr = 0x0;
     var tlbtr = 0x0;
     var delta = 0x0;
 
-    var dsteps = 0; // small counter
+    var dsteps = -1; // small counter
+    //fence = ppc|0;
 
 // -----------------------------------------------------
 
@@ -8866,7 +8869,7 @@ function Step(steps, clockspeed) {
         case 0x3:
             // bnf
             if (SR_F) {
-                break;
+                continue;
             }
             pc = pcbase + ppc|0;
             jump = pc + ((ins << 6) >> 4)|0;
@@ -8951,7 +8954,7 @@ function Step(steps, clockspeed) {
             delayedins = 1;
             continue;
 
-        case 0x1B: 
+        case 0x1B:
             // lwa
             vaddr = (r[((ins >> 14) & 0x7C) >> 2]|0) + ((ins << 16) >> 16)|0;
             if ((read32tlbcheck ^ vaddr) >> 13) {
@@ -9002,7 +9005,7 @@ function Step(steps, clockspeed) {
             continue;
 
         case 0x24:
-            // lbs 
+            // lbs
             vaddr = (r[((ins >> 14) & 0x7C)>>2]|0) + ((ins << 16) >> 16)|0;
             if ((read8stlbcheck ^ vaddr) >> 13) {
                 paddr = DTLBLookup(vaddr, 0)|0;
@@ -9021,7 +9024,7 @@ function Step(steps, clockspeed) {
             continue;
 
         case 0x25:
-            // lhz 
+            // lhz
             vaddr = (r[((ins >> 14) & 0x7C)>>2]|0) + ((ins << 16) >> 16)|0;
             if ((read16utlbcheck ^ vaddr) >> 13) {
                 paddr = DTLBLookup(vaddr, 0)|0;
@@ -9059,14 +9062,23 @@ function Step(steps, clockspeed) {
             continue;
 
         case 0x27:
-            // addi signed 
+            // addi signed
             rA = r[((ins >> 14) & 0x7C)>>2]|0;
-            r[((ins >> 19) & 0x7C) >> 2] = rA + ((ins << 16) >> 16)|0;
-            //rindex = ((ins >> 19) & 0x7C);
-            //SR_CY = r[rindex] < rA;
-            //SR_OV = (((rA ^ imm ^ -1) & (rA ^ r[rindex])) & 0x80000000)?true:false;
-            //TODO overflow and carry
-            // maybe wrong
+            rindex = (ins >> 19) & 0x7C;
+            r[rindex >> 2] = rA + ((ins << 16) >> 16)|0;
+            SR_CY = (r[rindex>>2]>>>0) < (rA>>>0);
+            continue;
+
+        case 0x28:
+            // addi with carry
+            rA = r[((ins >> 14) & 0x7C)>>2]|0;
+            rindex = (ins >> 19) & 0x7C;
+            r[rindex >> 2] = (rA + ((ins << 16) >> 16)|0) + (SR_CY?1:0)|0;
+            if (SR_CY) {
+                SR_CY = (r[rindex>>2]>>>0) <= (rA>>>0);
+            } else {
+                SR_CY = (r[rindex>>2]>>>0) < (rA>>>0);
+            }
             continue;
 
         case 0x29:
@@ -9074,17 +9086,22 @@ function Step(steps, clockspeed) {
             r[((ins >> 19) & 0x7C)>>2] = r[((ins >> 14) & 0x7C)>>2] & (ins & 0xFFFF);
             continue;
 
-
         case 0x2A:
             // ori
             r[((ins >> 19) & 0x7C)>>2] = r[((ins >> 14) & 0x7C)>>2] | (ins & 0xFFFF);
             continue;
 
         case 0x2B:
-            // xori            
+            // xori
             rA = r[((ins >> 14) & 0x7C)>>2]|0;
             r[((ins >> 19) & 0x7C)>>2] = rA ^ ((ins << 16) >> 16);
             continue;
+
+        case 0x2C:
+            // muli
+            rA = r[((ins >> 14) & 0x7C)>>2]|0;
+            r[((ins >> 19) & 0x7C)>>2] = imul(rA|0, (ins << 16) >> 16)|0;
+            break;
 
         case 0x2D:
             // mfspr
@@ -9170,12 +9187,31 @@ function Step(steps, clockspeed) {
             imm = (ins & 0x7FF) | ((ins >> 10) & 0xF800);
             //pc = pcbase + ppc|0;
             SetSPR(r[((ins >> 14) & 0x7C)>>2] | imm, r[((ins >> 9) & 0x7C)>>2]|0); // can raise an interrupt
-            if (doze) { // doze
+
+            if (doze|0) { // doze
                 doze = 0x0;
+                //message.Debug('Doze ' + raise_interrupt);
+
+                if (TTMR & (1 << 28))
+                if (SR_TEE|0) {
+                    Exception(EXCEPT_TICK, h[group0p + (SPR_EEAR_BASE<<2) >> 2]|0);
+                    continue;
+                }
+
+                if (SR_IEE|0)
+                if (raise_interrupt|0) {
+                    Exception(EXCEPT_INT, h[group0p + (SPR_EEAR_BASE<<2)>>2]|0);
+                    continue;
+                }
+
+                return steps|0;
+/*
                 if ((raise_interrupt|0) == 0)
-                if (!(TTMR & (1 << 28))) {
+                if ((TTMR & (1 << 28)) == 0) {
                     return steps|0;
                 }
+*/
+
             }
             continue;
 
@@ -9337,19 +9373,27 @@ function Step(steps, clockspeed) {
             rB = r[((ins >> 9) & 0x7C)>>2]|0;
             rindex = (ins >> 19) & 0x7C;
             switch (ins & 0x3CF) {
+
             case 0x0:
-                // add signed 
-                r[rindex>>2] = rA + rB;
-                //SR_CY = r[rindex] < rA;
-                //SR_OV = (((rA ^ rB ^ -1) & (rA ^ r[rindex])) & 0x80000000)?true:false;
-                //TODO overflow and carry
+                // add
+                r[rindex>>2] = rA + rB|0;
+                SR_CY = (r[rindex>>2]>>>0) < (rA>>>0);
                 continue;
+
+            case 0x1:
+                // add with carry
+                r[rindex>>2] = (rA + rB|0) + (SR_CY?1:0)|0;
+                if (SR_CY) {
+                    SR_CY = (r[rindex>>2]>>>0) <= (rA>>>0);
+                } else {
+                    SR_CY = (r[rindex>>2]>>>0) < (rA>>>0);
+                }
+                continue;
+
             case 0x2:
                 // sub signed
-                r[rindex>>2] = rA - rB;
-                //TODO overflow and carry
-                //SR_CY = (rB > rA);
-                //SR_OV = (((rA ^ rB) & (rA ^ r[rindex])) & 0x80000000)?true:false;                
+                r[rindex>>2] = rA - rB|0;
+                SR_CY = (rB>>>0) > (rA>>>0);
                 continue;
             case 0x3:
                 // and
@@ -9366,10 +9410,22 @@ function Step(steps, clockspeed) {
             case 0x8:
                 // sll
                 r[rindex>>2] = rA << (rB & 0x1F);
-                break;
+                continue;
+            case 0xc:
+                // exths
+                r[rindex>>2] = (rA << 16) >> 16;
+                continue;
+            case 0xe:
+                // cmov
+                r[rindex>>2] = (SR_F?rA:rB)|0;
+                continue;
             case 0x48:
                 // srl not signed
                 r[rindex>>2] = rA >>> (rB & 0x1F);
+                continue;
+            case 0x4c:
+                // extbs
+                r[rindex>>2] = (rA << 24) >> 24;
                 continue;
             case 0xf:
                 // ff1
@@ -9406,7 +9462,7 @@ function Step(steps, clockspeed) {
                 SR_CY = (rB|0) == 0;
                 SR_OV = 0;
                 if (!SR_CY) {
-                    r[rindex>>2] = /*Math.floor*/((rA>>>0) / (rB>>>0));
+                    r[rindex>>2] = (rA>>>0) / (rB>>>0);
                 }
                 continue;
 
@@ -9488,17 +9544,17 @@ function Step(steps, clockspeed) {
 
             pc = nextpc;
 
-            if ((!delayedins_at_page_boundary|0)) {
+            if (!(delayedins_at_page_boundary|0)) {
                 delayedins = 0;
-            } 
+            }
 
-            dsteps = dsteps + ((ppc - ppcorigin) >> 2)|0;
+            dsteps = dsteps - ((ppc - ppcorigin) >> 2)|0;
 
             // do this not so often
-            if ((dsteps|0) >= 64)
+            if ((dsteps|0) < 0)
             if (!(delayedins_at_page_boundary|0)) { // for now. Not sure if we need this
 
-                dsteps = dsteps - 64|0;
+                dsteps = dsteps + 64|0;
                 steps = steps - 64|0;
                 if ((steps|0) < 0) return 0x0; // return to main loop
 
@@ -9506,8 +9562,9 @@ function Step(steps, clockspeed) {
                 // timer enabled
                 if ((TTMR >> 30) != 0) {
                     delta = (TTMR & 0xFFFFFFF) - (TTCR & 0xFFFFFFF) |0;
-                    TTCR = (TTCR + clockspeed|0);
-                    if ((delta|0) < (clockspeed|0)) {
+                    //if (delta < 0) message.Debug("" + (TTCR & 0xFFFFFFF) + " " + SR_TEE + " " + (TTMR & 0xFFFFFFF) + " " + (TTMR >> 28));
+                    TTCR = TTCR + clockspeed | 0;
+                    if ((delta|0) <= (clockspeed|0)) {
                         // if interrupt enabled
                         if (TTMR & (1 << 29)) {
                             TTMR = TTMR | (1 << 28); // set pending interrupt
@@ -9517,19 +9574,20 @@ function Step(steps, clockspeed) {
 
                 // check if pending and check if interrupt must be triggered
                 if (TTMR & (1 << 28)) {
-                    if (SR_TEE) {
+                    if (SR_TEE|0) {
                         Exception(EXCEPT_TICK, h[group0p + (SPR_EEAR_BASE<<2) >> 2]|0);
                         // treat exception directly here
                         pc = nextpc;
                     }
-                } else
-                if (SR_IEE|0) 
-                if (raise_interrupt|0) {
-                    raise_interrupt = 0;
-                    Exception(EXCEPT_INT, h[group0p + (SPR_EEAR_BASE<<2)>>2]|0);
-                    pc = nextpc;
                 }
+
             } // dsteps
+
+            if (SR_IEE|0)
+            if (raise_interrupt|0) {
+                Exception(EXCEPT_INT, h[group0p + (SPR_EEAR_BASE<<2)>>2]|0);
+                pc = nextpc;
+            }
 
             // Get Instruction Fast version
             if ((instlbcheck ^ pc) & 0xFFFFE000) // short check if it is still the correct page
@@ -9567,7 +9625,6 @@ function Step(steps, clockspeed) {
             }
 
             // set pc and set the correcponding physical pc pointer
-            //pc = pc;
             ppc = ramp + (instlblookup ^ pc)|0;
             ppcorigin = ppc;
             pcbase = pc - 4 - ppcorigin|0;
@@ -9595,8 +9652,6 @@ return {
     Step: Step,
     GetFlags: GetFlags,
     SetFlags: SetFlags,
-    PutState: PutState,
-    GetState: GetState,    
     GetTimeToNextInterrupt: GetTimeToNextInterrupt,
     ProgressTime: ProgressTime,
     GetTicks: GetTicks,
@@ -9698,58 +9753,6 @@ function CPU(cpuname, ram, heap, ncores) {
 
     return this;
 }
-
-CPU.prototype.switchImplementation = function(cpuname) {
-    var oldcpu = this.cpu;
-    var oldcpuname = this.name;
-    if (oldcpuname == "smp") return;
-
-    this.cpu = createCPU(cpuname, this.ram, this.heap, this.ncores);
-
-    this.cpu.InvalidateTLB(); // reset TLB
-    var f = oldcpu.GetFlags();
-    this.cpu.SetFlags(f|0);
-    var h;
-    if (oldcpuname === "asm") {
-        h = new Int32Array(this.heap);
-        oldcpu.GetState();
-        this.cpu.pc = h[(0x40 + 0)];
-        this.cpu.nextpc = h[(0x40 + 1)];
-        this.cpu.delayedins = h[(0x40 + 2)]?true:false;
-        this.cpu.TTMR = h[(0x40 + 4)];
-        this.cpu.TTCR = h[(0x40 + 5)];
-        this.cpu.PICMR = h[(0x40 + 6)];
-        this.cpu.PICSR = h[(0x40 + 7)];
-        this.cpu.boot_dtlb_misshandler_address = h[(0x40 + 8)];
-        this.cpu.boot_itlb_misshandler_address = h[(0x40 + 9)];
-        this.cpu.current_pgd = h[(0x40 + 10)];
-    } else if (cpuname === "asm") {
-        h = new Int32Array(this.heap);
-        h[(0x40 + 0)] = oldcpu.pc;
-        h[(0x40 + 1)] = oldcpu.nextpc;
-        h[(0x40 + 2)] = oldcpu.delayedins;
-        h[(0x40 + 3)] = 0x0;
-        h[(0x40 + 4)] = oldcpu.TTMR;
-        h[(0x40 + 5)] = oldcpu.TTCR;
-        h[(0x40 + 6)] = oldcpu.PICMR;
-        h[(0x40 + 7)] = oldcpu.PICSR;
-        h[(0x40 + 8)] = oldcpu.boot_dtlb_misshandler_address;
-        h[(0x40 + 9)] = oldcpu.boot_itlb_misshandler_address;
-        h[(0x40 + 10)] = oldcpu.current_pgd;
-        this.cpu.PutState();
-    } else {
-        this.cpu.pc = oldcpu.pc;
-        this.cpu.nextpc = oldcpu.nextpc;
-        this.cpu.delayedins = oldcpu.delayedins;
-        this.cpu.TTMR = oldcpu.TTMR;
-        this.cpu.TTCR = oldcpu.TTCR;
-        this.cpu.PICMR = oldcpu.PICMR;
-        this.cpu.PICSR = oldcpu.PICSR;
-        this.cpu.boot_dtlb_misshandler_address = oldcpu.boot_dtlb_misshandler_address;
-        this.cpu.boot_itlb_misshandler_address = oldcpu.itlb_misshandler_address;
-        this.cpu.current_pgd = oldcpu.current_pgd;
-    }
-};
 
 CPU.prototype.toString = function() {
     var r = new Uint32Array(this.heap);
@@ -9910,7 +9913,7 @@ function SafeCPU(ram) {
     this.SR_IME = false; // Instruction MMU Enabled
     this.SR_LEE = false; // Little Endian Enabled
     this.SR_CE = false; // CID Enabled ?
-    this.SR_F = false; // Flag for l.sf... instructions 
+    this.SR_F = false; // Flag for l.sf... instructions
     this.SR_CY = false; // Carry Flag
     this.SR_OV = false; // Overflow Flag
     this.SR_OVE = false; // Overflow Flag Exception
@@ -9919,7 +9922,7 @@ function SafeCPU(ram) {
     this.SR_FO = true; // Fixed One, always set
     this.SR_SUMRA = false; // SPRS User Mode Read Access, or TRAP exception disable?
     this.SR_CID = 0x0; //Context ID
-    
+
     this.Reset();
 }
 
@@ -9972,7 +9975,6 @@ SafeCPU.prototype.AnalyzeImage = function() // we haveto define these to copy th
     this.boot_dtlb_misshandler_address = 0x0;
     this.boot_itlb_misshandler_address = 0x0;
     this.current_pgd = 0x0;
-
 }
 
 SafeCPU.prototype.SetFlags = function (x) {
@@ -10052,8 +10054,7 @@ SafeCPU.prototype.CheckForInterrupt = function () {
 };
 
 SafeCPU.prototype.RaiseInterrupt = function (line, cpuid) {
-    var lmask = 1 << line;
-    this.PICSR |= lmask;
+    this.PICSR |= 1 << line;
     this.CheckForInterrupt();
 };
 
@@ -10254,7 +10255,7 @@ SafeCPU.prototype.DTLBLookup = function (addr, write) {
             message.Debug("Error: LRU ist not supported");
             message.Abort();
         }
-    
+
     var tlbtr = this.group1[0x280 | setindex]; // translate register
 
     // check if supervisor mode
@@ -10286,7 +10287,7 @@ SafeCPU.prototype.GetInstruction = function (addr) {
     // pagesize is 8192 bytes
     // nways are 1
     // nsets are 64
-    
+
     var setindex = (addr >> 13) & 63;
     setindex &= 63; // number of sets
     var tlmbr = this.group2[0x200 | setindex];
@@ -10343,7 +10344,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
     var tlbtr = 0x0;
     var jump = 0x0;
     var delta = 0x0;
-   
+
     do {
         this.clock++;
 
@@ -10368,7 +10369,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                 this.pc = this.nextpc++;
             }
         }
-        
+
         ins = this.GetInstruction(this.pc<<2)
         if (ins == -1) {
             this.pc = this.nextpc++;
@@ -10403,6 +10404,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
             this.nextpc = jump;
             this.delayedins = true;
             continue;
+
         case 0x4:
             // bf
             if (!this.SR_F) {
@@ -10413,9 +10415,11 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
             this.nextpc = jump;
             this.delayedins = true;
             continue;
+
         case 0x5:
             // nop
             break;
+
         case 0x6:
             // movhi or macrc
             rindex = (ins >> 21) & 0x1F;
@@ -10453,6 +10457,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
             this.nextpc = jump;
             this.delayedins = true;
             continue;
+
         case 0x12:
             // jalr
             jump = r[(ins >> 11) & 0x1F]>>2;
@@ -10476,7 +10481,6 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
             this.EA = r[33];
             r[(ins >> 21) & 0x1F] = r[33]>0?ram.int32mem[r[33] >> 2]:ram.Read32Big(r[33]);
             break;
-
 
         case 0x21:
             // lwz
@@ -10513,7 +10517,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
             break;
 
         case 0x25:
-            // lhz 
+            // lhz
             r[32] = r[(ins >> 16) & 0x1F] + ((ins << 16) >> 16);
             r[33] = this.DTLBLookup(r[32], false);
             if (r[33] == -1) {
@@ -10533,15 +10537,29 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
             break;
 
         case 0x27:
-            // addi signed 
+            // addi signed
             imm = (ins << 16) >> 16;
             rA = r[(ins >> 16) & 0x1F];
             rindex = (ins >> 21) & 0x1F;
             r[rindex] = rA + imm;
-            this.SR_CY = r[rindex] < rA;
-            this.SR_OV = (((rA ^ imm ^ -1) & (rA ^ r[rindex])) & 0x80000000)?true:false;
+            this.SR_CY = (r[rindex]>>>0) < (rA>>>0);
+            //this.SR_OV = (((rA ^ imm ^ -1) & (rA ^ r[rindex])) & 0x80000000)?true:false;
             //TODO overflow and carry
-            // maybe wrong
+            break;
+
+        case 0x28:
+            // addi signed with carry
+            imm = (ins << 16) >> 16;
+            rA = r[(ins >> 16) & 0x1F];
+            rindex = (ins >> 21) & 0x1F;
+            r[rindex] = rA + imm + (this.SR_CY?1:0);
+            if (this.SR_CY) {
+                this.SR_CY = (r[rindex]>>>0) <= (rA>>>0);
+            } else {
+                this.SR_CY = (r[rindex]>>>0) < (rA>>>0);
+            }
+            //this.SR_OV = (((rA ^ imm ^ -1) & (rA ^ r[rindex])) & 0x80000000)?true:false;
+            //TODO overflow and carry
             break;
 
         case 0x29:
@@ -10549,16 +10567,28 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
             r[(ins >> 21) & 0x1F] = r[(ins >> 16) & 0x1F] & (ins & 0xFFFF);
             break;
 
-
         case 0x2A:
             // ori
             r[(ins >> 21) & 0x1F] = r[(ins >> 16) & 0x1F] | (ins & 0xFFFF);
             break;
 
         case 0x2B:
-            // xori            
+            // xori
             rA = r[(ins >> 16) & 0x1F];
             r[(ins >> 21) & 0x1F] = rA ^ ((ins << 16) >> 16);
+            break;
+
+        case 0x2C:
+            // muli
+            {
+            rindex = (ins >> 21) & 0x1F;
+            rA = r[(ins >> 16) & 0x1F];
+            r[rindex] = (rA * ((ins << 16) >> 16))&0xFFFFFFFF;
+            var rAl = rA & 0xFFFF;
+            var rBl = ins & 0xFFFF;
+            r[rindex] = r[rindex] & 0xFFFF0000 | ((rAl * rBl) & 0xFFFF);
+            }
+            // TODO set overflow flag
             break;
 
         case 0x2D:
@@ -10734,7 +10764,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                 ram.Write32Big(r[33], r[(ins >> 11) & 0x1F]);
             }
             break;
-            
+
         case 0x35:
             // sw
             imm = ((((ins >> 10) & 0xF800) | (ins & 0x7FF)) << 16) >> 16;
@@ -10784,19 +10814,33 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
             rindex = (ins >> 21) & 0x1F;
             switch (ins & 0x3CF) {
             case 0x0:
-                // add signed 
+                // add
                 r[rindex] = rA + rB;
-                this.SR_CY = r[rindex] < rA;
-                this.SR_OV = (((rA ^ rB ^ -1) & (rA ^ r[rindex])) & 0x80000000)?true:false;
+                this.SR_CY = (r[rindex]>>>0) < (rA>>>0);
+                //this.SR_OV = (((rA ^ rB ^ -1) & (rA ^ r[rindex])) & 0x80000000)?true:false;
                 //TODO overflow and carry
                 break;
+
+            case 0x1:
+                // add with carry
+                r[rindex] = rA + rB + (this.SR_CY?1:0);
+                if (this.SR_CY) {
+                    this.SR_CY = (r[rindex]>>>0) <= (rA>>>0);
+                } else {
+                    this.SR_CY = (r[rindex]>>>0) < (rA>>>0);
+                }
+                //this.SR_OV = (((rA ^ rB ^ -1) & (rA ^ r[rindex])) & 0x80000000)?true:false;
+                //TODO overflow and carry
+                break;
+
             case 0x2:
                 // sub signed
                 r[rindex] = rA - rB;
                 //TODO overflow and carry
-                this.SR_CY = (rB > rA);
-                this.SR_OV = (((rA ^ rB) & (rA ^ r[rindex])) & 0x80000000)?true:false;                
+                this.SR_CY = ((rB>>>0) > (rA>>>0));
+                //this.SR_OV = (((rA ^ rB) & (rA ^ r[rindex])) & 0x80000000)?true:false;
                 break;
+
             case 0x3:
                 // and
                 r[rindex] = rA & rB;
@@ -10813,9 +10857,13 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                 // sll
                 r[rindex] = rA << (rB & 0x1F);
                 break;
-            case 0x48:
-                // srl not signed
-                r[rindex] = rA >>> (rB & 0x1F);
+            case 0xc:
+                // exths
+                r[rindex] = (rA << 16) >> 16;
+                break;
+            case 0xe:
+                // cmov
+                r[rindex] = this.SR_F?rA:rB;
                 break;
             case 0xf:
                 // ff1
@@ -10826,6 +10874,14 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                         break;
                     }
                 }
+                break;
+            case 0x48:
+                // srl not signed
+                r[rindex] = rA >>> (rB & 0x1F);
+                break;
+            case 0x4c:
+                // extbs
+                r[rindex] = (rA << 24) >> 24;
                 break;
             case 0x88:
                 // sra signed
@@ -10844,15 +10900,15 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
             case 0x306:
                 // mul signed (specification seems to be wrong)
                 {
-                    // this is a hack to do 32 bit signed multiply. Seems to work but needs to be tested. 
+                    // this is a hack to do 32 bit signed multiply. Seems to work but needs to be tested.
                     r[rindex] = utils.int32(rA >> 0) * utils.int32(rB);
                     var rAl = rA & 0xFFFF;
                     var rBl = rB & 0xFFFF;
                     r[rindex] = r[rindex] & 0xFFFF0000 | ((rAl * rBl) & 0xFFFF);
-                    var result = Number(utils.int32(rA)) * Number(utils.int32(rB));
-                    this.SR_OV = (result < (-2147483647 - 1)) || (result > (2147483647));
-                    var uresult = utils.uint32(rA) * utils.uint32(rB);
-                    this.SR_CY = (uresult > (4294967295));
+                    //var result = Number(utils.int32(rA)) * Number(utils.int32(rB));
+                    //this.SR_OV = (result < (-2147483647 - 1)) || (result > (2147483647));
+                    //var uresult = utils.uint32(rA) * utils.uint32(rB);
+                    //this.SR_CY = (uresult > (4294967295));
                 }
                 break;
             case 0x30a:
@@ -11256,14 +11312,6 @@ function InvalidateTLB() {
 
 // ------------------------------------------
 
-// SMP cpus cannot be switched.
-function PutState() {
-}
-
-function GetState() {
-}
-
-// ------------------------------------------
 // Timer functions
 
 function TimerSetInterruptFlag(coreid) {
@@ -11834,7 +11882,7 @@ function DTLBLookup(addr, write) {
 
     setindex = (addr >> 13) & 63; // check these values
     tlmbr = h[corep + group1p + ((0x200 | setindex) << 2) >> 2]|0; // match register
-     
+
     if ((tlmbr & 1) == 0) {
         // use tlb refill to fasten up
         if (DTLBRefill(addr, 64)|0) {
@@ -11963,19 +12011,18 @@ function Step(steps, clockspeed) {
             // check for any interrupts
             // SR_TEE is set or cleared at the same time as SR_IEE in Linux, so skip this check
             if (SR_IEE|0) {
-                if (h[corep + TTMRp >> 2] & (1 << 28)) {
-                    Exception(EXCEPT_TICK, h[corep + group0p + (SPR_EEAR_BASE<<2) >> 2]|0);
-                    // treat exception directly here
-                    pc = nextpc;
-                } else
                 if (h[corep + raise_interruptp >> 2]|0) {
                     h[corep + raise_interruptp >> 2] = 0;
                     Exception(EXCEPT_INT, h[corep + group0p + (SPR_EEAR_BASE<<2) >> 2]|0);
                     // treat exception directly here
                     pc = nextpc;
+                } else
+                if (h[corep + TTMRp >> 2] & (1 << 28)) {
+                    Exception(EXCEPT_TICK, h[corep + group0p + (SPR_EEAR_BASE<<2) >> 2]|0);
+                    // treat exception directly here
+                    pc = nextpc;
                 }
             }
- //     }
 
             // Get instruction pointer
             if ((instlbcheck ^ pc) & 0xFFFFE000) // short check if it is still the correct page
@@ -12581,7 +12628,7 @@ function Step(steps, clockspeed) {
             rindex = (ins >> 19) & 0x7C;
             switch (ins & 0x3CF) {
             case 0x0:
-                // add signed 
+                // add signed
                 r[corep + rindex>>2] = rA + rB;
                 break;
             case 0x2:
@@ -12605,9 +12652,21 @@ function Step(steps, clockspeed) {
                 // sll
                 r[corep + rindex>>2] = rA << (rB & 0x1F);
                 break;
+            case 0xc:
+                // exths
+                r[corep + rindex>>2] = (rA << 16) >> 16;
+                continue;
+            case 0xe:
+                // cmov
+                r[corep + rindex>>2] = SR_F?rA:rB;
+                break;
             case 0x48:
                 // srl not signed
                 r[corep + rindex>>2] = rA >>> (rB & 0x1F);
+                break;
+            case 0x4c:
+                // extbs
+                r[corep + rindex>>2] = (rA << 24) >> 24;
                 break;
             case 0xf:
                 // ff1
@@ -12636,7 +12695,7 @@ function Step(steps, clockspeed) {
                 break;
             case 0x306:
                 // mul signed (specification seems to be wrong)
-                {                    
+                {
                     // this is a hack to do 32 bit signed multiply. Seems to work but needs to be tested. 
                     //r[corep + (rindex<<2)>>2] = (rA >> 0) * (rB >> 0);
                     r[corep + rindex>>2] = imul(rA|0, rB|0)|0;
@@ -12649,7 +12708,6 @@ function Step(steps, clockspeed) {
                     var uresult = uint32(rA) * uint32(rB);
                     SR_CY = (uresult > (4294967295));
                     */
-                    
                 }
                 break;
             case 0x30a:
@@ -12746,8 +12804,6 @@ return {
     Step: Step,
     GetFlags: GetFlags,
     SetFlags: SetFlags,
-    PutState: PutState,
-    GetState: GetState,    
     GetTimeToNextInterrupt: GetTimeToNextInterrupt,
     ProgressTime: ProgressTime,
     GetTicks: GetTicks,
@@ -12757,7 +12813,6 @@ return {
 };
 
 }
-
 
 module.exports = SMPCPU;
 
@@ -17063,7 +17118,7 @@ this.n = 0;
 
     do {
         r[0] = 0x00;
-        
+
         if (!(steps & 63)) {
             // ---------- TICK ----------
             var delta = csr[CSR_TIMECMP] - this.ticks | 0;
@@ -18295,7 +18350,6 @@ function System() {
     message.Register("execute", this.MainLoop.bind(this));
     message.Register("Init", this.Init.bind(this) );
     message.Register("Reset", this.Reset.bind(this) );
-    message.Register("ChangeCore", this.ChangeCPU.bind(this) );
     message.Register("PrintOnAbort", this.PrintState.bind(this) );
 
     message.Register("GetIPS", function(data) {
@@ -18303,10 +18357,6 @@ function System() {
         this.ips=0;
     }.bind(this));
 }
-
-System.prototype.ChangeCPU = function(cpuname) {
-    this.cpu.switchImplementation(cpuname);
-};
 
 System.prototype.Reset = function() {
     this.status = SYSTEM_STOP;
@@ -18529,7 +18579,6 @@ System.prototype.HandleHalt = function() {
 System.prototype.MainLoop = function() {
     if (this.status != SYSTEM_RUN) return;
     message.Send("execute", 0);
-
     // execute the cpu loop for "instructionsperloop" instructions.
     var stepsleft = this.cpu.Step(this.timer.instructionsperloop, this.timer.timercyclesperinstruction);
     //message.Debug(stepsleft);

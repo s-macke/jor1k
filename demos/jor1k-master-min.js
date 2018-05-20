@@ -1955,12 +1955,6 @@ jor1kGUI.prototype.ShowIPS = function(ips) {
    }
 };
 
-
-jor1kGUI.prototype.ChangeCore = function(core) {
-    message.Send("ChangeCore", core);
-};
-
-
 jor1kGUI.prototype.Reset = function () {
     this.stop = false; // VM Stopped/Aborted
     this.userpaused = false;
