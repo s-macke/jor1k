@@ -1121,7 +1121,7 @@ DynamicCPU.prototype.Step = function (steps, clockspeed) {
             rindex = (ins >> 21) & 0x1F;
             switch (ins & 0x3CF) {
             case 0x0:
-                // add signed 
+                // add signed
                 r[rindex] = rA + rB;
                 break;
             case 0x2:
@@ -1144,9 +1144,21 @@ DynamicCPU.prototype.Step = function (steps, clockspeed) {
                 // sll
                 r[rindex] = rA << (rB & 0x1F);
                 break;
+            case 0xc:
+                // exths
+                r[rindex] = (rA << 16) >> 16;
+                break;
+            case 0xe:
+                // cmov
+                r[rindex] = this.SR_F?rA:rB;
+                break;
             case 0x48:
                 // srl not signed
                 r[rindex] = rA >>> (rB & 0x1F);
+                break;
+            case 0x4c:
+                // extbs
+                r[rindex] = (rA << 24) >> 24;
                 break;
             case 0xf:
                 // ff1

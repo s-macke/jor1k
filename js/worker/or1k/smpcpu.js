@@ -879,7 +879,7 @@ function DTLBLookup(addr, write) {
 
     setindex = (addr >> 13) & 63; // check these values
     tlmbr = h[corep + group1p + ((0x200 | setindex) << 2) >> 2]|0; // match register
-     
+
     if ((tlmbr & 1) == 0) {
         // use tlb refill to fasten up
         if (DTLBRefill(addr, 64)|0) {
@@ -986,8 +986,8 @@ function Step(steps, clockspeed) {
             // do this not so often
             if ((dsteps|0) <= 0)
             if (!(delayedins_at_page_boundary|0)) { // for now. Not sure if we need this check
-                dsteps = dsteps + 1024|0;
-                steps = steps - 1024|0;
+                dsteps = dsteps + 64|0;
+                steps = steps - 64|0;
 
                 // --------- START TICK ---------
                 for(i=0; (i|0)<(ncores|0); i = i + 1|0) {
@@ -1625,7 +1625,7 @@ function Step(steps, clockspeed) {
             rindex = (ins >> 19) & 0x7C;
             switch (ins & 0x3CF) {
             case 0x0:
-                // add signed 
+                // add signed
                 r[corep + rindex>>2] = rA + rB;
                 break;
             case 0x2:
@@ -1649,9 +1649,21 @@ function Step(steps, clockspeed) {
                 // sll
                 r[corep + rindex>>2] = rA << (rB & 0x1F);
                 break;
+            case 0xc:
+                // exths
+                r[corep + rindex>>2] = (rA << 16) >> 16;
+                continue;
+            case 0xe:
+                // cmov
+                r[corep + rindex>>2] = SR_F?rA:rB;
+                break;
             case 0x48:
                 // srl not signed
                 r[corep + rindex>>2] = rA >>> (rB & 0x1F);
+                break;
+            case 0x4c:
+                // extbs
+                r[corep + rindex>>2] = (rA << 24) >> 24;
                 break;
             case 0xf:
                 // ff1
@@ -1680,7 +1692,7 @@ function Step(steps, clockspeed) {
                 break;
             case 0x306:
                 // mul signed (specification seems to be wrong)
-                {                    
+                {
                     // this is a hack to do 32 bit signed multiply. Seems to work but needs to be tested. 
                     //r[corep + (rindex<<2)>>2] = (rA >> 0) * (rB >> 0);
                     r[corep + rindex>>2] = imul(rA|0, rB|0)|0;
@@ -1693,7 +1705,6 @@ function Step(steps, clockspeed) {
                     var uresult = uint32(rA) * uint32(rB);
                     SR_CY = (uresult > (4294967295));
                     */
-                    
                 }
                 break;
             case 0x30a:

@@ -49,7 +49,7 @@ Timer.prototype.UpdateTimings = function(_nins, gotoidle) {
     this.instructionsperloop = this.instructionsperloop<2000?2000:this.instructionsperloop;
     this.instructionsperloop = this.instructionsperloop>100000000?100000000:this.instructionsperloop;
 
-    this.timercyclesperinstruction = Math.floor(this.ticksperms * 1024 / this.ipms * this.correction);
+    this.timercyclesperinstruction = Math.floor(this.ticksperms * 64 / this.ipms * this.correction);
     this.timercyclesperinstruction = this.timercyclesperinstruction<=1?1:this.timercyclesperinstruction;
     this.timercyclesperinstruction = this.timercyclesperinstruction>=1000?1000:this.timercyclesperinstruction;
 }

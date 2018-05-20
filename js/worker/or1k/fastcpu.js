@@ -120,7 +120,7 @@ var SR_DME = 0; // Data MMU Enabled
 var SR_IME = 0; // Instruction MMU Enabled
 var SR_LEE = 0; // Little Endian Enabled
 var SR_CE = 0; // CID Enabled ?
-var SR_F = 0; // Flag for l.sf... instructions 
+var SR_F = 0; // Flag for l.sf... instructions
 var SR_CY = 0; // Carry Flag
 var SR_OV = 0; // Overflow Flag
 var SR_OVE = 0; // Overflow Flag Exception
@@ -128,7 +128,7 @@ var SR_DSX = 0; // Delay Slot Exception
 var SR_EPH = 0; // Exception Prefix High
 var SR_FO = 1; // Fixed One, always set
 var SR_SUMRA = 0; // SPRS User Mode Read Access, or TRAP exception disable?
-var SR_CID = 0x0; //Context ID
+var SR_CID = 0x0; // Context ID
 
 var boot_dtlb_misshandler_address = 0x0;
 var boot_itlb_misshandler_address = 0x0;
@@ -196,7 +196,7 @@ function GetStat() {
 
 function GetTimeToNextInterrupt() {
     var delta = 0x0;
-    if ((TTMR >> 30) == 0) return -1;    
+    if ((TTMR >> 30) == 0) return -1;
     delta = (TTMR & 0xFFFFFFF) - (TTCR & 0xFFFFFFF) |0;
     return delta|0;
 }
@@ -348,8 +348,9 @@ function SetSPR(idx, x) {
         case 0:
             PICMR = x | 0x3; // we use non maskable interrupt here
             // check immediate for interrupt
+            CheckForInterrupt();
             if (SR_IEE) {
-                if (PICMR & PICSR) {
+                if (raise_interrupt) {
                     DebugMessage(ERROR_SETSPR_DIRECT_INTERRUPT_EXCEPTION|0);
                     abort();
                 }
@@ -533,7 +534,7 @@ function DTLBRefill(addr, nsets) {
         return 0|0;
     }
     r2 = addr;
-    // get_current_PGD  using r3 and r5 
+    // get_current_PGD  using r3 and r5
     r3 = h[ramp+current_pgd >> 2]|0; // current pgd
     r4 = (r2 >>> 0x18) << 2;
     r5 = r4 + r3|0;
@@ -658,7 +659,7 @@ function ITLBRefill(addr, nsets) {
 
     //fill ITLBMR register
     r2 = addr;
-    // r3 = 
+    // r3 =
     r4 = r2 & 0xFFFFE000;
     r4 = r4 | 0x1;
     h[group2p + ((0x200 | r5)<<2) >> 2] = r4; // SPR_DTLBMR_BASE(0)|r5 = r4  // SPR_DTLBMR_BASE = 0x200 * (WAY*0x100)
@@ -680,7 +681,7 @@ function DTLBLookup(addr, write) {
 
     setindex = (addr >> 13) & 63; // check these values
     tlmbr = h[group1p + ((0x200 | setindex) << 2) >> 2]|0; // match register
-     
+
     if ((tlmbr & 1) == 0) {
         // use tlb refill to fasten up
         if (DTLBRefill(addr, 64)|0) {
@@ -705,7 +706,7 @@ function DTLBLookup(addr, write) {
     }
 
     /* skipped this check
-        // set lru 
+        // set lru
         if (tlmbr & 0xC0) {
             DebugMessage("Error: LRU ist not supported");
             abort();
@@ -760,7 +761,7 @@ function Step(steps, clockspeed) {
         rD = 0x0;
     var vaddr = 0x0; // virtual address
     var paddr = 0x0; // physical address
-    
+
     // to get the instruction
     var setindex = 0x0;
     var tlmbr = 0x0;
@@ -897,7 +898,7 @@ function Step(steps, clockspeed) {
             delayedins = 1;
             continue;
 
-        case 0x1B: 
+        case 0x1B:
             // lwa
             vaddr = (r[((ins >> 14) & 0x7C) >> 2]|0) + ((ins << 16) >> 16)|0;
             if ((read32tlbcheck ^ vaddr) >> 13) {
@@ -948,7 +949,7 @@ function Step(steps, clockspeed) {
             continue;
 
         case 0x24:
-            // lbs 
+            // lbs
             vaddr = (r[((ins >> 14) & 0x7C)>>2]|0) + ((ins << 16) >> 16)|0;
             if ((read8stlbcheck ^ vaddr) >> 13) {
                 paddr = DTLBLookup(vaddr, 0)|0;
@@ -967,7 +968,7 @@ function Step(steps, clockspeed) {
             continue;
 
         case 0x25:
-            // lhz 
+            // lhz
             vaddr = (r[((ins >> 14) & 0x7C)>>2]|0) + ((ins << 16) >> 16)|0;
             if ((read16utlbcheck ^ vaddr) >> 13) {
                 paddr = DTLBLookup(vaddr, 0)|0;
@@ -1005,9 +1006,23 @@ function Step(steps, clockspeed) {
             continue;
 
         case 0x27:
-            // addi signed 
+            // addi signed
             rA = r[((ins >> 14) & 0x7C)>>2]|0;
-            r[((ins >> 19) & 0x7C) >> 2] = rA + ((ins << 16) >> 16)|0;
+            rindex = (ins >> 19) & 0x7C;
+            r[rindex >> 2] = rA + ((ins << 16) >> 16)|0;
+            SR_CY = (r[rindex>>2]>>>0) < (rA>>>0);
+            continue;
+
+        case 0x28:
+            // addi with carry
+            rA = r[((ins >> 14) & 0x7C)>>2]|0;
+            rindex = (ins >> 19) & 0x7C;
+            r[rindex >> 2] = (rA + ((ins << 16) >> 16)|0) + (SR_CY?1:0)|0;
+            if (SR_CY) {
+                SR_CY = (r[rindex>>2]>>>0) <= (rA>>>0);
+            } else {
+                SR_CY = (r[rindex>>2]>>>0) < (rA>>>0);
+            }
             continue;
 
         case 0x29:
@@ -1015,17 +1030,22 @@ function Step(steps, clockspeed) {
             r[((ins >> 19) & 0x7C)>>2] = r[((ins >> 14) & 0x7C)>>2] & (ins & 0xFFFF);
             continue;
 
-
         case 0x2A:
             // ori
             r[((ins >> 19) & 0x7C)>>2] = r[((ins >> 14) & 0x7C)>>2] | (ins & 0xFFFF);
             continue;
 
         case 0x2B:
-            // xori            
+            // xori
             rA = r[((ins >> 14) & 0x7C)>>2]|0;
             r[((ins >> 19) & 0x7C)>>2] = rA ^ ((ins << 16) >> 16);
             continue;
+
+        case 0x2C:
+            // muli
+            rA = r[((ins >> 14) & 0x7C)>>2]|0;
+            r[((ins >> 19) & 0x7C)>>2] = imul(rA|0, (ins << 16) >> 16)|0;
+            break;
 
         case 0x2D:
             // mfspr
@@ -1112,14 +1132,31 @@ function Step(steps, clockspeed) {
             //pc = pcbase + ppc|0;
             SetSPR(r[((ins >> 14) & 0x7C)>>2] | imm, r[((ins >> 9) & 0x7C)>>2]|0); // can raise an interrupt
 
-            if (doze) { // doze
+            if (doze|0) { // doze
                 doze = 0x0;
+                //message.Debug('Doze ' + raise_interrupt);
+
+                if (TTMR & (1 << 28))
+                if (SR_TEE|0) {
+                    Exception(EXCEPT_TICK, h[group0p + (SPR_EEAR_BASE<<2) >> 2]|0);
+                    continue;
+                }
+
+                if (SR_IEE|0)
+                if (raise_interrupt|0) {
+                    Exception(EXCEPT_INT, h[group0p + (SPR_EEAR_BASE<<2)>>2]|0);
+                    continue;
+                }
+
+                return steps|0;
+/*
                 if ((raise_interrupt|0) == 0)
                 if ((TTMR & (1 << 28)) == 0) {
                     return steps|0;
                 }
-            }
+*/
 
+            }
             continue;
 
        case 0x32:
@@ -1280,13 +1317,27 @@ function Step(steps, clockspeed) {
             rB = r[((ins >> 9) & 0x7C)>>2]|0;
             rindex = (ins >> 19) & 0x7C;
             switch (ins & 0x3CF) {
+
             case 0x0:
-                // add signed 
-                r[rindex>>2] = rA + rB;
+                // add
+                r[rindex>>2] = rA + rB|0;
+                SR_CY = (r[rindex>>2]>>>0) < (rA>>>0);
                 continue;
+
+            case 0x1:
+                // add with carry
+                r[rindex>>2] = (rA + rB|0) + (SR_CY?1:0)|0;
+                if (SR_CY) {
+                    SR_CY = (r[rindex>>2]>>>0) <= (rA>>>0);
+                } else {
+                    SR_CY = (r[rindex>>2]>>>0) < (rA>>>0);
+                }
+                continue;
+
             case 0x2:
                 // sub signed
-                r[rindex>>2] = rA - rB;
+                r[rindex>>2] = rA - rB|0;
+                SR_CY = (rB>>>0) > (rA>>>0);
                 continue;
             case 0x3:
                 // and
@@ -1303,10 +1354,22 @@ function Step(steps, clockspeed) {
             case 0x8:
                 // sll
                 r[rindex>>2] = rA << (rB & 0x1F);
-                break;
+                continue;
+            case 0xc:
+                // exths
+                r[rindex>>2] = (rA << 16) >> 16;
+                continue;
+            case 0xe:
+                // cmov
+                r[rindex>>2] = (SR_F?rA:rB)|0;
+                continue;
             case 0x48:
                 // srl not signed
                 r[rindex>>2] = rA >>> (rB & 0x1F);
+                continue;
+            case 0x4c:
+                // extbs
+                r[rindex>>2] = (rA << 24) >> 24;
                 continue;
             case 0xf:
                 // ff1
@@ -1343,7 +1406,7 @@ function Step(steps, clockspeed) {
                 SR_CY = (rB|0) == 0;
                 SR_OV = 0;
                 if (!SR_CY) {
-                    r[rindex>>2] = /*Math.floor*/((rA>>>0) / (rB>>>0));
+                    r[rindex>>2] = (rA>>>0) / (rB>>>0);
                 }
                 continue;
 
@@ -1435,8 +1498,8 @@ function Step(steps, clockspeed) {
             if ((dsteps|0) < 0)
             if (!(delayedins_at_page_boundary|0)) { // for now. Not sure if we need this
 
-                dsteps = dsteps + 1024|0;
-                steps = steps - 1024|0;
+                dsteps = dsteps + 64|0;
+                steps = steps - 64|0;
                 if ((steps|0) < 0) return 0x0; // return to main loop
 
                 // ---------- TICK ----------
@@ -1469,7 +1532,6 @@ function Step(steps, clockspeed) {
                 Exception(EXCEPT_INT, h[group0p + (SPR_EEAR_BASE<<2)>>2]|0);
                 pc = nextpc;
             }
-
 
             // Get Instruction Fast version
             if ((instlbcheck ^ pc) & 0xFFFFE000) // short check if it is still the correct page

@@ -76,7 +76,7 @@ function SafeCPU(ram) {
     this.SR_IME = false; // Instruction MMU Enabled
     this.SR_LEE = false; // Little Endian Enabled
     this.SR_CE = false; // CID Enabled ?
-    this.SR_F = false; // Flag for l.sf... instructions 
+    this.SR_F = false; // Flag for l.sf... instructions
     this.SR_CY = false; // Carry Flag
     this.SR_OV = false; // Overflow Flag
     this.SR_OVE = false; // Overflow Flag Exception
@@ -85,7 +85,7 @@ function SafeCPU(ram) {
     this.SR_FO = true; // Fixed One, always set
     this.SR_SUMRA = false; // SPRS User Mode Read Access, or TRAP exception disable?
     this.SR_CID = 0x0; //Context ID
-    
+
     this.Reset();
 }
 
@@ -138,7 +138,6 @@ SafeCPU.prototype.AnalyzeImage = function() // we haveto define these to copy th
     this.boot_dtlb_misshandler_address = 0x0;
     this.boot_itlb_misshandler_address = 0x0;
     this.current_pgd = 0x0;
-
 }
 
 SafeCPU.prototype.SetFlags = function (x) {
@@ -419,7 +418,7 @@ SafeCPU.prototype.DTLBLookup = function (addr, write) {
             message.Debug("Error: LRU ist not supported");
             message.Abort();
         }
-    
+
     var tlbtr = this.group1[0x280 | setindex]; // translate register
 
     // check if supervisor mode
@@ -451,7 +450,7 @@ SafeCPU.prototype.GetInstruction = function (addr) {
     // pagesize is 8192 bytes
     // nways are 1
     // nsets are 64
-    
+
     var setindex = (addr >> 13) & 63;
     setindex &= 63; // number of sets
     var tlmbr = this.group2[0x200 | setindex];
@@ -508,12 +507,12 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
     var tlbtr = 0x0;
     var jump = 0x0;
     var delta = 0x0;
-   
+
     do {
         this.clock++;
 
         // do this not so often
-        if (!(steps & 1023)) {
+        if (!(steps & 63)) {
             // ---------- TICK ----------
             // timer enabled
             if ((this.TTMR >> 30) != 0) {
@@ -533,7 +532,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                 this.pc = this.nextpc++;
             }
         }
-        
+
         ins = this.GetInstruction(this.pc<<2)
         if (ins == -1) {
             this.pc = this.nextpc++;
@@ -568,6 +567,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
             this.nextpc = jump;
             this.delayedins = true;
             continue;
+
         case 0x4:
             // bf
             if (!this.SR_F) {
@@ -578,9 +578,11 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
             this.nextpc = jump;
             this.delayedins = true;
             continue;
+
         case 0x5:
             // nop
             break;
+
         case 0x6:
             // movhi or macrc
             rindex = (ins >> 21) & 0x1F;
@@ -618,6 +620,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
             this.nextpc = jump;
             this.delayedins = true;
             continue;
+
         case 0x12:
             // jalr
             jump = r[(ins >> 11) & 0x1F]>>2;
@@ -641,7 +644,6 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
             this.EA = r[33];
             r[(ins >> 21) & 0x1F] = r[33]>0?ram.int32mem[r[33] >> 2]:ram.Read32Big(r[33]);
             break;
-
 
         case 0x21:
             // lwz
@@ -678,7 +680,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
             break;
 
         case 0x25:
-            // lhz 
+            // lhz
             r[32] = r[(ins >> 16) & 0x1F] + ((ins << 16) >> 16);
             r[33] = this.DTLBLookup(r[32], false);
             if (r[33] == -1) {
@@ -698,15 +700,29 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
             break;
 
         case 0x27:
-            // addi signed 
+            // addi signed
             imm = (ins << 16) >> 16;
             rA = r[(ins >> 16) & 0x1F];
             rindex = (ins >> 21) & 0x1F;
             r[rindex] = rA + imm;
-            this.SR_CY = r[rindex] < rA;
-            this.SR_OV = (((rA ^ imm ^ -1) & (rA ^ r[rindex])) & 0x80000000)?true:false;
+            this.SR_CY = (r[rindex]>>>0) < (rA>>>0);
+            //this.SR_OV = (((rA ^ imm ^ -1) & (rA ^ r[rindex])) & 0x80000000)?true:false;
             //TODO overflow and carry
-            // maybe wrong
+            break;
+
+        case 0x28:
+            // addi signed with carry
+            imm = (ins << 16) >> 16;
+            rA = r[(ins >> 16) & 0x1F];
+            rindex = (ins >> 21) & 0x1F;
+            r[rindex] = rA + imm + (this.SR_CY?1:0);
+            if (this.SR_CY) {
+                this.SR_CY = (r[rindex]>>>0) <= (rA>>>0);
+            } else {
+                this.SR_CY = (r[rindex]>>>0) < (rA>>>0);
+            }
+            //this.SR_OV = (((rA ^ imm ^ -1) & (rA ^ r[rindex])) & 0x80000000)?true:false;
+            //TODO overflow and carry
             break;
 
         case 0x29:
@@ -714,16 +730,28 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
             r[(ins >> 21) & 0x1F] = r[(ins >> 16) & 0x1F] & (ins & 0xFFFF);
             break;
 
-
         case 0x2A:
             // ori
             r[(ins >> 21) & 0x1F] = r[(ins >> 16) & 0x1F] | (ins & 0xFFFF);
             break;
 
         case 0x2B:
-            // xori            
+            // xori
             rA = r[(ins >> 16) & 0x1F];
             r[(ins >> 21) & 0x1F] = rA ^ ((ins << 16) >> 16);
+            break;
+
+        case 0x2C:
+            // muli
+            {
+            rindex = (ins >> 21) & 0x1F;
+            rA = r[(ins >> 16) & 0x1F];
+            r[rindex] = (rA * ((ins << 16) >> 16))&0xFFFFFFFF;
+            var rAl = rA & 0xFFFF;
+            var rBl = ins & 0xFFFF;
+            r[rindex] = r[rindex] & 0xFFFF0000 | ((rAl * rBl) & 0xFFFF);
+            }
+            // TODO set overflow flag
             break;
 
         case 0x2D:
@@ -899,7 +927,7 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                 ram.Write32Big(r[33], r[(ins >> 11) & 0x1F]);
             }
             break;
-            
+
         case 0x35:
             // sw
             imm = ((((ins >> 10) & 0xF800) | (ins & 0x7FF)) << 16) >> 16;
@@ -949,19 +977,33 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
             rindex = (ins >> 21) & 0x1F;
             switch (ins & 0x3CF) {
             case 0x0:
-                // add signed 
+                // add
                 r[rindex] = rA + rB;
-                this.SR_CY = r[rindex] < rA;
-                this.SR_OV = (((rA ^ rB ^ -1) & (rA ^ r[rindex])) & 0x80000000)?true:false;
+                this.SR_CY = (r[rindex]>>>0) < (rA>>>0);
+                //this.SR_OV = (((rA ^ rB ^ -1) & (rA ^ r[rindex])) & 0x80000000)?true:false;
                 //TODO overflow and carry
                 break;
+
+            case 0x1:
+                // add with carry
+                r[rindex] = rA + rB + (this.SR_CY?1:0);
+                if (this.SR_CY) {
+                    this.SR_CY = (r[rindex]>>>0) <= (rA>>>0);
+                } else {
+                    this.SR_CY = (r[rindex]>>>0) < (rA>>>0);
+                }
+                //this.SR_OV = (((rA ^ rB ^ -1) & (rA ^ r[rindex])) & 0x80000000)?true:false;
+                //TODO overflow and carry
+                break;
+
             case 0x2:
                 // sub signed
                 r[rindex] = rA - rB;
                 //TODO overflow and carry
-                this.SR_CY = (rB > rA);
-                this.SR_OV = (((rA ^ rB) & (rA ^ r[rindex])) & 0x80000000)?true:false;                
+                this.SR_CY = ((rB>>>0) > (rA>>>0));
+                //this.SR_OV = (((rA ^ rB) & (rA ^ r[rindex])) & 0x80000000)?true:false;
                 break;
+
             case 0x3:
                 // and
                 r[rindex] = rA & rB;
@@ -978,9 +1020,13 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                 // sll
                 r[rindex] = rA << (rB & 0x1F);
                 break;
-            case 0x48:
-                // srl not signed
-                r[rindex] = rA >>> (rB & 0x1F);
+            case 0xc:
+                // exths
+                r[rindex] = (rA << 16) >> 16;
+                break;
+            case 0xe:
+                // cmov
+                r[rindex] = this.SR_F?rA:rB;
                 break;
             case 0xf:
                 // ff1
@@ -991,6 +1037,14 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                         break;
                     }
                 }
+                break;
+            case 0x48:
+                // srl not signed
+                r[rindex] = rA >>> (rB & 0x1F);
+                break;
+            case 0x4c:
+                // extbs
+                r[rindex] = (rA << 24) >> 24;
                 break;
             case 0x88:
                 // sra signed
@@ -1009,15 +1063,15 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
             case 0x306:
                 // mul signed (specification seems to be wrong)
                 {
-                    // this is a hack to do 32 bit signed multiply. Seems to work but needs to be tested. 
+                    // this is a hack to do 32 bit signed multiply. Seems to work but needs to be tested.
                     r[rindex] = utils.int32(rA >> 0) * utils.int32(rB);
                     var rAl = rA & 0xFFFF;
                     var rBl = rB & 0xFFFF;
                     r[rindex] = r[rindex] & 0xFFFF0000 | ((rAl * rBl) & 0xFFFF);
-                    var result = Number(utils.int32(rA)) * Number(utils.int32(rB));
-                    this.SR_OV = (result < (-2147483647 - 1)) || (result > (2147483647));
-                    var uresult = utils.uint32(rA) * utils.uint32(rB);
-                    this.SR_CY = (uresult > (4294967295));
+                    //var result = Number(utils.int32(rA)) * Number(utils.int32(rB));
+                    //this.SR_OV = (result < (-2147483647 - 1)) || (result > (2147483647));
+                    //var uresult = utils.uint32(rA) * utils.uint32(rB);
+                    //this.SR_CY = (uresult > (4294967295));
                 }
                 break;
             case 0x30a:
