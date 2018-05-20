@@ -839,6 +839,7 @@ var Colors = new Array(
     "#000077", "#770077", "#007777", "#777777"
 );
 
+
 // constructor
 function Terminal(nrows, ncolumns, elemId) {
     this.nrows = nrows;
@@ -884,12 +885,9 @@ function Terminal(nrows, ncolumns, elemId) {
 
     this.utf8converter = new UTF8.UTF8StreamToUnicode();
 
-    this.trows = 40;
-    this.brows = this.trows - this.nrows;
-    this.bufferp = 0;
-    this.screen = new Array(this.trows);
-    this.color = new Array(this.trows);
-    for (var i = 0; i < this.trows; i++) {
+    this.screen = new Array(this.nrows);
+    this.color = new Array(this.nrows);
+    for (var i = 0; i < this.nrows; i++) {
         this.updaterow[i] = 1;
         this.screen[i] = new Uint16Array(this.ncolumns);
         this.color[i]  = new Uint16Array(this.ncolumns);
@@ -899,13 +897,8 @@ function Terminal(nrows, ncolumns, elemId) {
             this.color[i][j] = this.attr_color;
         }
     }
-    this.deletedScreenRow = this.screen[0];
-    this.deletedColorRow = this.color[0];
-    //message.Debug("Inside constructor");
     this.UpdateScreen();
     this.Blink();
-
-    //if (!this.canvas) this.Table.addEventListener("wheel", this.UpdateScreenForScroll.bind(this));
 }
 
 // Stop blinking cursor when the VM is paused
@@ -938,31 +931,10 @@ Terminal.prototype.Blink = function() {
     window.setTimeout(this.Blink.bind(this), 500); // update every half second
 };
 
-Terminal.prototype.deepCopy = function(oldObj) {
-    var newObj = oldObj;
-    if (oldObj && typeof oldObj === 'object') {
-        newObj = Object.prototype.toString.call(oldObj) === "[object Array]" ? [] : {};
-        for (var i in oldObj) {
-            newObj[i] = this.deepCopy(oldObj[i]);
-        }
-    }
-    return newObj;
-}
-
 Terminal.prototype.DeleteRow = function(row) {
-    var deletedScreenRow = this.deepCopy(this.screen[this.brows + row]);
-    var deletedColorRow = this.deepCopy(this.color[this.brows + row]);
-    if(row == 23){
-        for(var i = 0;i < this.brows - 1;i++){
-            this.screen[i] = this.screen[i + 1];
-            this.color[i] = this.color[i + 1];
-        }
-        this.screen[this.brows - 1] = deletedScreenRow;
-        this.color[this.brows - 1] = deletedColorRow;
-    }
     for (var j = 0; j < this.ncolumns; j++) {
-        this.screen[this.brows + row][j] = 0x20;
-        this.color[this.brows + row][j] = this.attr_color;
+        this.screen[row][j] = 0x20;
+        this.color[row][j] = this.attr_color;
     }
     this.PrepareUpdateRow(row);
 };
@@ -970,8 +942,8 @@ Terminal.prototype.DeleteRow = function(row) {
 Terminal.prototype.DeleteArea = function(row, column, row2, column2) {
     for (var i = row; i <= row2; i++) {
         for (var j = column; j <= column2; j++) {
-            this.screen[this.brows + i][j] = 0x20;
-            this.color[this.brows + i][j] = this.attr_color;
+            this.screen[i][j] = 0x20;
+            this.color[i][j] = this.attr_color;
         }
         this.PrepareUpdateRow(i);
     }
@@ -980,13 +952,13 @@ Terminal.prototype.DeleteArea = function(row, column, row2, column2) {
 
 Terminal.prototype.UpdateRowCanvas = function(row) {
     var y = row << 4;
-    var line = this.screen[this.brows + row];
-    var c = this.color[this.brows + row][0]|0;
+    var line = this.screen[row];
+    var c = this.color[row][0]|0;
     var n = 0;
 
     for (var column = 0; column < this.ncolumns; column++) {
 
-        var cnew = this.color[this.brows + row][column]|0;
+        var cnew = this.color[row][column]|0;
 
         if (this.cursorvisible)
         if (row == this.cursory)
@@ -1052,43 +1024,14 @@ Terminal.prototype.GetSpan = function(c, line, idx, n) {
 
 Terminal.prototype.UpdateRowTable = function(row) {
     var y = row << 4;
-    var line = this.screen[this.brows + row];
-    var c = this.color[this.brows + row][0]|0;
+    var line = this.screen[row];
+    var c = this.color[row][0]|0;
     var n = 0;
     var html = "";
 
     for (var column = 0; column < this.ncolumns; column++) {
 
-        var cnew = this.color[this.brows + row][column]|0;
-
-        if (this.cursorvisible)
-        if (row == this.cursory)
-        if (column == this.cursorx) {
-            cnew |= 0x600;
-        }
-
-        if (c != cnew) {
-            html += this.GetSpan(c, line, column - n, n);
-            c = cnew;
-            n = 0;
-        }
-        n++;
-    }
-    html += this.GetSpan(c, line, column - n, n);
-    this.rowelements[this.nrows - row - 1].innerHTML = html;
-
-};
-
-Terminal.prototype.UpdateRowTableForScroll = function(row) {
-    var y = row << 4;
-    var line = this.screen[this.brows + row - this.bufferp];
-    var c = this.color[this.brows + row - this.bufferp][0]|0;
-    var n = 0;
-    var html = "";
-
-    for (var column = 0; column < this.ncolumns; column++) {
-
-        var cnew = this.color[this.brows + row - this.bufferp][column]|0;
+        var cnew = this.color[row][column]|0;
 
         if (this.cursorvisible)
         if (row == this.cursory)
@@ -1109,8 +1052,8 @@ Terminal.prototype.UpdateRowTableForScroll = function(row) {
 };
 
 Terminal.prototype.UpdateScreen = function() {
-    var nupdated = 0,i = 0;
-    for (i = 0; i < this.nrows; i++) {
+    var nupdated = 0;
+    for (var i = 0; i < this.nrows; i++) {
         if (!this.updaterow[i]) continue;
         if (this.canvas) {
             this.UpdateRowCanvas(i);
@@ -1128,15 +1071,6 @@ Terminal.prototype.UpdateScreen = function() {
     }
 }
 
-Terminal.prototype.UpdateScreenForScroll = function() {
-    var i;
-    if(this.bufferp < this.brows) this.bufferp++;
-    else this.bufferp = 0; //show the original state before the scrolling started
-    for (i = this.nrows - 1; i >= 0; i--){
-        this.UpdateRowTableForScroll(i);
-    }
-}
-
 Terminal.prototype.PrepareUpdateRow = function(row) {
     this.updaterow[row] = 1;
     if (this.framerequested) return;
@@ -1145,34 +1079,34 @@ Terminal.prototype.PrepareUpdateRow = function(row) {
 }
 
 Terminal.prototype.ScrollDown = function(draw) {
-    var tempscreen = this.screen[this.brows + this.scrollbottom];
-    var tempcolor = this.color[this.brows + this.scrollbottom];
+    var tempscreen = this.screen[this.scrollbottom];
+    var tempcolor = this.color[this.scrollbottom];
 
     for (var i = this.scrollbottom-1; i >= this.scrolltop; i--) {
         if (i == this.nrows-1) continue;
-        this.screen[this.brows + i + 1] = this.screen[this.brows + i];
-        this.color[this.brows + i + 1] = this.color[this.brows + i];
+        this.screen[i + 1] = this.screen[i];
+        this.color[i + 1] = this.color[i];
         if (draw) this.PrepareUpdateRow(i+1);
     }
-    this.screen[this.brows + this.scrolltop] = tempscreen;
-    this.color[this.brows + this.scrolltop] = tempcolor;
+    this.screen[this.scrolltop] = tempscreen;
+    this.color[this.scrolltop] = tempcolor;
     this.DeleteRow(this.scrolltop);
     if (draw) this.PrepareUpdateRow(this.scrolltop);
 }
 
 Terminal.prototype.ScrollUp = function(draw) {
-    var tempscreen = this.screen[this.brows + this.scrolltop];
-    var tempcolor = this.color[this.brows + this.scrolltop];
+    var tempscreen = this.screen[this.scrolltop];
+    var tempcolor = this.color[this.scrolltop];
 
     for (var i = this.scrolltop+1; i <= this.scrollbottom; i++) {
         if (i == 0) continue;
-        this.screen[this.brows + i - 1] = this.screen[this.brows + i];
-        this.color[this.brows + i - 1] = this.color[this.brows + i];
+        this.screen[i - 1] = this.screen[i];
+        this.color[i - 1] = this.color[i];
         if (draw) this.PrepareUpdateRow(i-1);
     }
 
-    this.screen[this.brows + this.scrollbottom] = tempscreen;
-    this.color[this.brows + this.scrollbottom] = tempcolor;
+    this.screen[this.scrollbottom] = tempscreen;
+    this.color[this.scrollbottom] = tempcolor;
     this.DeleteRow(this.scrollbottom);
     if (draw) this.PrepareUpdateRow(this.scrollbottom);
 };
@@ -1507,8 +1441,8 @@ Terminal.prototype.HandleEscapeSequence = function() {
             if (count == 0) count = 1;
             var n = 0;n
             for (var j = this.cursorx+count; j < this.ncolumns; j++) {
-                this.screen[this.brows + this.cursory][this.cursorx+n] = this.screen[this.brows + this.cursory][j];
-                this.color[this.brows + this.cursory][this.cursorx+n] = this.color[this.brows + this.cursory][j];
+                this.screen[this.cursory][this.cursorx+n] = this.screen[this.cursory][j];
+                this.color[this.cursory][this.cursorx+n] = this.color[this.cursory][j];
                 n++;
             }
             this.DeleteArea(this.cursory, this.ncolumns-count, this.cursory, this.ncolumns-1);
@@ -1531,8 +1465,8 @@ Terminal.prototype.HandleEscapeSequence = function() {
             count = numbers.length ? numbers[0] : 1;
             if (count == 0) count = 1;
             for (var j = 0; j < count; j++) {
-                this.screen[this.brows + this.cursory][this.cursorx+j] = 0x20;
-                this.color[this.brows + this.cursory][this.cursorx+j] = this.GetColor();
+                this.screen[this.cursory][this.cursorx+j] = 0x20;
+                this.color[this.cursory][this.cursorx+j] = this.GetColor();
             }
             this.PrepareUpdateRow(this.cursory);
             break;    
@@ -1616,8 +1550,8 @@ Terminal.prototype.PutChar = function(c) {
                 this.LineFeed();
                 this.cursorx = 0;
             }
-            this.screen[this.brows + this.cursory][this.cursorx] = 0x20;
-            this.color[this.brows + this.cursory][this.cursorx] = this.attr_color;  
+            this.screen[this.cursory][this.cursorx] = 0x20;
+            this.color[this.cursory][this.cursorx] = this.attr_color;	
             this.cursorx++;
         } while(spaces--);
         this.PrepareUpdateRow(this.cursory);
@@ -1644,9 +1578,9 @@ Terminal.prototype.PutChar = function(c) {
     if (c == -1) return;
     var cx = this.cursorx;
     var cy = this.cursory;
-    this.screen[this.brows + cy][cx] = c;
+    this.screen[cy][cx] = c;
 
-    this.color[this.brows + cy][cx] = this.GetColor();
+    this.color[cy][cx] = this.GetColor();
     this.cursorx++;
     //message.Debug("Write: " + String.fromCharCode(c));
     this.PrepareUpdateRow(cy);
