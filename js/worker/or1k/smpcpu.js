@@ -1709,17 +1709,15 @@ function Step(steps, clockspeed) {
                 break;
             case 0x30a:
                 // divu (specification seems to be wrong)
-                SR_CY = (rB|0) == 0;
-                SR_OV = 0;
-                if (!SR_CY) {
+                SR_OV = (rB|0) == 0;
+                if (!SR_OV) {
                     r[corep + rindex>>2] = /*Math.floor*/((rA>>>0) / (rB>>>0));
                 }
                 break;
             case 0x309:
                 // div (specification seems to be wrong)
-                SR_CY = (rB|0) == 0;
-                SR_OV = 0;
-                if (!SR_CY) {
+                SR_OV = (rB|0) == 0;
+                if (!SR_OV) {
                     r[corep + rindex>>2] = (rA|0) / (rB|0);
                 }
 

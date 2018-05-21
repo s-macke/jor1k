@@ -1076,20 +1076,17 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                 break;
             case 0x30a:
                 // divu (specification seems to be wrong)
-                this.SR_CY = rB == 0;
-                this.SR_OV = false;
-                if (!this.SR_CY) {
-                    r[rindex] = /*Math.floor*/((rA>>>0) / (rB>>>0));
+                this.SR_OV = rB == 0;
+                if (!this.SR_OV) {
+                    r[rindex] = (rA>>>0) / (rB>>>0);
                 }
                 break;
             case 0x309:
                 // div (specification seems to be wrong)
-                this.SR_CY = rB == 0;
-                this.SR_OV = false;
-                if (!this.SR_CY) {
+                this.SR_OV = rB == 0;
+                if (!this.SR_OV) {
                     r[rindex] = rA / rB;
                 }
-
                 break;
             default:
                 message.Debug("Error: op38 opcode not supported yet");

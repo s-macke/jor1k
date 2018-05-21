@@ -6847,7 +6847,7 @@ function DynamicCPU(ram) {
     this.SR_IME = false; // Instruction MMU Enabled
     this.SR_LEE = false; // Little Endian Enabled
     this.SR_CE = false; // CID Enabled ?
-    this.SR_F = false; // Flag for l.sf... instructions 
+    this.SR_F = false; // Flag for l.sf... instructions
     this.SR_CY = false; // Carry Flag
     this.SR_OV = false; // Overflow Flag
     this.SR_OVE = false; // Overflow Flag Exception
@@ -7956,7 +7956,7 @@ DynamicCPU.prototype.Step = function (steps, clockspeed) {
             case 0x306:
                 // mul signed (specification seems to be wrong)
                 {
-                    // this is a hack to do 32 bit signed multiply. Seems to work but needs to be tested. 
+                    // this is a hack to do 32 bit signed multiply. Seems to work but needs to be tested.
                     r[rindex] = (rA|0) * (rB|0);
                     var rAl = rA & 0xFFFF;
                     var rBl = rB & 0xFFFF;
@@ -7965,20 +7965,17 @@ DynamicCPU.prototype.Step = function (steps, clockspeed) {
                 break;
             case 0x30a:
                 // divu (specification seems to be wrong)
-                this.SR_CY = rB == 0;
-                this.SR_OV = false;
-                if (!this.SR_CY) {
-                    r[rindex] = /*Math.floor*/((rA>>>0) / (rB>>>0));
+                this.SR_OV = rB == 0;
+                if (!this.SR_OV) {
+                    r[rindex] = (rA>>>0) / (rB>>>0);
                 }
                 break;
             case 0x309:
                 // div (specification seems to be wrong)
-                this.SR_CY = rB == 0;
-                this.SR_OV = false;
-                if (!this.SR_CY) {
+                this.SR_OV = rB == 0;
+                if (!this.SR_OV) {
                     r[rindex] = rA / rB;
                 }
-
                 break;
             default:
                 message.Debug("Error: op38 opcode not supported yet");
@@ -9459,18 +9456,16 @@ function Step(steps, clockspeed) {
 
             case 0x30a:
                 // divu (specification seems to be wrong)
-                SR_CY = (rB|0) == 0;
-                SR_OV = 0;
-                if (!SR_CY) {
+                SR_OV = (rB|0) == 0;
+                if (!SR_OV) {
                     r[rindex>>2] = (rA>>>0) / (rB>>>0);
                 }
                 continue;
 
             case 0x309:
                 // div (specification seems to be wrong)
-                SR_CY = (rB|0) == 0;
-                SR_OV = 0;
-                if (!SR_CY) {
+                SR_OV = (rB|0) == 0;
+                if (!SR_OV) {
                     r[rindex>>2] = (rA|0) / (rB|0);
                 }
                 continue;
@@ -10913,20 +10908,17 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
                 break;
             case 0x30a:
                 // divu (specification seems to be wrong)
-                this.SR_CY = rB == 0;
-                this.SR_OV = false;
-                if (!this.SR_CY) {
-                    r[rindex] = /*Math.floor*/((rA>>>0) / (rB>>>0));
+                this.SR_OV = rB == 0;
+                if (!this.SR_OV) {
+                    r[rindex] = (rA>>>0) / (rB>>>0);
                 }
                 break;
             case 0x309:
                 // div (specification seems to be wrong)
-                this.SR_CY = rB == 0;
-                this.SR_OV = false;
-                if (!this.SR_CY) {
+                this.SR_OV = rB == 0;
+                if (!this.SR_OV) {
                     r[rindex] = rA / rB;
                 }
-
                 break;
             default:
                 message.Debug("Error: op38 opcode not supported yet");
@@ -12712,17 +12704,15 @@ function Step(steps, clockspeed) {
                 break;
             case 0x30a:
                 // divu (specification seems to be wrong)
-                SR_CY = (rB|0) == 0;
-                SR_OV = 0;
-                if (!SR_CY) {
+                SR_OV = (rB|0) == 0;
+                if (!SR_OV) {
                     r[corep + rindex>>2] = /*Math.floor*/((rA>>>0) / (rB>>>0));
                 }
                 break;
             case 0x309:
                 // div (specification seems to be wrong)
-                SR_CY = (rB|0) == 0;
-                SR_OV = 0;
-                if (!SR_CY) {
+                SR_OV = (rB|0) == 0;
+                if (!SR_OV) {
                     r[corep + rindex>>2] = (rA|0) / (rB|0);
                 }
 
