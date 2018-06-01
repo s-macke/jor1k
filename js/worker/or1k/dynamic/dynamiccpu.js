@@ -467,12 +467,12 @@ DynamicCPU.prototype.DTLBLookup = function (addr, write) {
         this.Exception(EXCEPT_DTLBMISS, addr);
         return -1;
     }
-        // set lru 
+        // set lru
         if (tlmbr & 0xC0) {
             message.Debug("Error: LRU ist not supported");
             message.Abort();
         }
-    
+
     var tlbtr = this.group1[0x280 | setindex]; // translate register
 
     // check if supervisor mode
@@ -504,7 +504,7 @@ DynamicCPU.prototype.GetInstructionPointer = function (addr) {
     // pagesize is 8192 bytes
     // nways are 1
     // nsets are 64
-    
+
     var setindex = (addr >> 13) & 63;
     setindex &= 63; // number of sets
     var tlmbr = this.group2[0x200 | setindex];
@@ -579,8 +579,8 @@ DynamicCPU.prototype.Step = function (steps, clockspeed) {
             // do this not so often
             if (dsteps < 0)
             if (!this.delayedins_at_fence) { // Not sure, if we need this check
-                dsteps = dsteps + 1024|0;
-                steps = steps - 1024|0;
+                dsteps = dsteps + 64|0;
+                steps = steps - 64|0;
                 if (steps < 0) return 0;
 
                 // ---------- TICK ----------
@@ -847,7 +847,7 @@ DynamicCPU.prototype.Step = function (steps, clockspeed) {
             break;
 
         case 0x25:
-            // lhz 
+            // lhz
             r[32] = r[(ins >> 16) & 0x1F] + ((ins << 16) >> 16);
             r[33] = this.DTLBLookup(r[32], false);
             if (r[33] == -1) {
@@ -867,11 +867,25 @@ DynamicCPU.prototype.Step = function (steps, clockspeed) {
             break;
 
         case 0x27:
-            // addi signed 
+            // addi signed
             imm = (ins << 16) >> 16;
             rA = r[(ins >> 16) & 0x1F];
             rindex = (ins >> 21) & 0x1F;
             r[rindex] = rA + imm;
+            this.SR_CY = (r[rindex]>>>0) < (rA>>>0);
+            break;
+
+        case 0x28:
+            // addi signed with carry
+            imm = (ins << 16) >> 16;
+            rA = r[(ins >> 16) & 0x1F];
+            rindex = (ins >> 21) & 0x1F;
+            r[rindex] = (rA + imm|0) + (this.SR_CY?1:0)|0;
+            if (this.SR_CY) {
+                this.SR_CY = (r[rindex]>>>0) <= (rA>>>0);
+            } else {
+                this.SR_CY = (r[rindex]>>>0) < (rA>>>0);
+            }
             break;
 
         case 0x29:
@@ -879,16 +893,27 @@ DynamicCPU.prototype.Step = function (steps, clockspeed) {
             r[(ins >> 21) & 0x1F] = r[(ins >> 16) & 0x1F] & (ins & 0xFFFF);
             break;
 
-
         case 0x2A:
             // ori
             r[(ins >> 21) & 0x1F] = r[(ins >> 16) & 0x1F] | (ins & 0xFFFF);
             break;
 
         case 0x2B:
-            // xori            
+            // xori
             rA = r[(ins >> 16) & 0x1F];
             r[(ins >> 21) & 0x1F] = rA ^ ((ins << 16) >> 16);
+            break;
+
+        case 0x2C:
+            // muli
+            {
+            rindex = (ins >> 21) & 0x1F;
+            rA = r[(ins >> 16) & 0x1F];
+            r[rindex] = (rA * ((ins << 16) >> 16))&0xFFFFFFFF;
+            var rAl = rA & 0xFFFF;
+            var rBl = ins & 0xFFFF;
+            r[rindex] = r[rindex] & 0xFFFF0000 | ((rAl * rBl) & 0xFFFF);
+            }
             break;
 
         case 0x2D:
@@ -1071,7 +1096,7 @@ DynamicCPU.prototype.Step = function (steps, clockspeed) {
                 ram.Write32Big(r[33], r[(ins >> 11) & 0x1F]);
             }
             break;
-            
+
         case 0x35:
             // sw
             imm = ((((ins >> 10) & 0xF800) | (ins & 0x7FF)) << 16) >> 16;
@@ -1123,10 +1148,21 @@ DynamicCPU.prototype.Step = function (steps, clockspeed) {
             case 0x0:
                 // add signed
                 r[rindex] = rA + rB;
+                this.SR_CY = (r[rindex]>>>0) < (rA>>>0);
+                break;
+            case 0x1:
+                // add with carry
+                r[rindex] = rA + rB + (this.SR_CY?1:0);
+                if (this.SR_CY) {
+                    this.SR_CY = (r[rindex]>>>0) <= (rA>>>0);
+                } else {
+                    this.SR_CY = (r[rindex]>>>0) < (rA>>>0);
+                }
                 break;
             case 0x2:
                 // sub signed
                 r[rindex] = rA - rB;
+                this.SR_CY = ((rB>>>0) > (rA>>>0));
                 break;
             case 0x3:
                 // and

@@ -132,7 +132,7 @@ var SR_DME = 0; // Data MMU Enabled
 var SR_IME = 0; // Instruction MMU Enabled
 var SR_LEE = 0; // Little Endian Enabled
 var SR_CE = 0; // CID Enabled ?
-var SR_F = 0; // Flag for l.sf... instructions 
+var SR_F = 0; // Flag for l.sf... instructions
 var SR_CY = 0; // Carry Flag
 var SR_OV = 0; // Overflow Flag
 var SR_OVE = 0; // Overflow Flag Exception
@@ -151,8 +151,8 @@ var snoopbitfield = 0x0; // fot atomic instructions
 function Init(_ncores) {
     _ncores = _ncores|0;
     ncores = _ncores|0;
-    if ((ncores|0) == 32) 
-        ncoresmask = 0xFFFFFFFF; 
+    if ((ncores|0) == 32)
+        ncoresmask = 0xFFFFFFFF;
     else
         ncoresmask =  (1 << ncores)-1|0;
     AnalyzeImage();
@@ -1309,17 +1309,26 @@ function Step(steps, clockspeed) {
             }
             break;
 
-
         case 0x27:
-            // addi signed 
+            // addi signed
             imm = (ins << 16) >> 16;
             rA = r[corep + ((ins >> 14) & 0x7C)>>2]|0;
-            r[corep + ((ins >> 19) & 0x7C) >> 2] = rA + imm|0;
-            //rindex = ((ins >> 19) & 0x7C);
-            //SR_CY = r[corep + rindex] < rA;
-            //SR_OV = (((rA ^ imm ^ -1) & (rA ^ r[corep + rindex])) & 0x80000000)?true:false;
-            //TODO overflow and carry
-            // maybe wrong
+            rindex = corep + ((ins >> 19) & 0x7C)|0;
+            r[rindex >> 2] = rA + imm|0;
+            SR_CY = (r[rindex>>2]>>>0) < (rA>>>0);
+            break;
+
+        case 0x28:
+            // addi signed with carry
+            imm = (ins << 16) >> 16;
+            rA = r[corep + ((ins >> 14) & 0x7C)>>2]|0;
+            rindex = corep + ((ins >> 19) & 0x7C)|0;
+            r[rindex >> 2] = (rA + imm|0) + (SR_CY?1:0)|0;
+            if (SR_CY|0) {
+                SR_CY = (r[rindex>>2]>>>0) <= (rA>>>0);
+            } else {
+                SR_CY = (r[rindex>>2]>>>0) < (rA>>>0);
+            }
             break;
 
         case 0x29:
@@ -1334,9 +1343,15 @@ function Step(steps, clockspeed) {
             break;
 
         case 0x2B:
-            // xori            
+            // xori
             rA = r[corep + ((ins >> 14) & 0x7C)>>2]|0;
             r[corep + ((ins >> 19) & 0x7C)>>2] = rA ^ ((ins << 16) >> 16);
+            break;
+
+        case 0x2C:
+            // muli
+            rA = r[corep + ((ins >> 14) & 0x7C)>>2]|0;
+            r[corep + ((ins >> 19) & 0x7C)>>2] = imul(rA|0, (ins << 16) >> 16)|0;
             break;
 
         case 0x2D:
@@ -1625,13 +1640,23 @@ function Step(steps, clockspeed) {
             rindex = (ins >> 19) & 0x7C;
             switch (ins & 0x3CF) {
             case 0x0:
-                // add signed
-                r[corep + rindex>>2] = rA + rB;
+                // add
+                r[corep + rindex>>2] = rA + rB|0;
+                SR_CY = (r[corep + rindex>>2]>>>0) < (rA>>>0);
+                break;
+            case 0x1:
+                // add with carry
+                r[corep + rindex>>2] = (rA + rB|0) + (SR_CY?1:0)|0;
+                if (SR_CY|0) {
+                    SR_CY = (r[corep + rindex>>2]>>>0) <= (rA>>>0);
+                } else {
+                    SR_CY = (r[corep + rindex>>2]>>>0) < (rA>>>0);
+                }
                 break;
             case 0x2:
                 // sub signed
                 r[corep + rindex>>2] = rA - rB;
-                //TODO overflow and carry
+                SR_CY = (rB>>>0) > (rA>>>0);
                 break;
             case 0x3:
                 // and
@@ -1693,25 +1718,15 @@ function Step(steps, clockspeed) {
             case 0x306:
                 // mul signed (specification seems to be wrong)
                 {
-                    // this is a hack to do 32 bit signed multiply. Seems to work but needs to be tested. 
-                    //r[corep + (rindex<<2)>>2] = (rA >> 0) * (rB >> 0);
+                    // this is a hack to do 32 bit signed multiply. Seems to work but needs to be tested.
                     r[corep + rindex>>2] = imul(rA|0, rB|0)|0;
-                    /*
-                    var rAl = rA & 0xFFFF;
-                    var rBl = rB & 0xFFFF;
-                    r[corep + rindex<<2>>2] = r[corep + rindex<<2>>2] & 0xFFFF0000 | ((rAl * rBl) & 0xFFFF);
-                    var result = Number(int32(rA)) * Number(int32(rB));
-                    SR_OV = (result < (-2147483647 - 1)) || (result > (2147483647));
-                    var uresult = uint32(rA) * uint32(rB);
-                    SR_CY = (uresult > (4294967295));
-                    */
                 }
                 break;
             case 0x30a:
                 // divu (specification seems to be wrong)
                 SR_OV = (rB|0) == 0;
                 if (!SR_OV) {
-                    r[corep + rindex>>2] = /*Math.floor*/((rA>>>0) / (rB>>>0));
+                    r[corep + rindex>>2] = (rA>>>0) / (rB>>>0);
                 }
                 break;
             case 0x309:
@@ -1720,7 +1735,6 @@ function Step(steps, clockspeed) {
                 if (!SR_OV) {
                     r[corep + rindex>>2] = (rA|0) / (rB|0);
                 }
-
                 break;
             default:
                 //DebugMessage("Error: op38 opcode not supported yet");
