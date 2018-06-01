@@ -7236,12 +7236,12 @@ DynamicCPU.prototype.DTLBLookup = function (addr, write) {
         this.Exception(EXCEPT_DTLBMISS, addr);
         return -1;
     }
-        // set lru 
+        // set lru
         if (tlmbr & 0xC0) {
             message.Debug("Error: LRU ist not supported");
             message.Abort();
         }
-    
+
     var tlbtr = this.group1[0x280 | setindex]; // translate register
 
     // check if supervisor mode
@@ -7273,7 +7273,7 @@ DynamicCPU.prototype.GetInstructionPointer = function (addr) {
     // pagesize is 8192 bytes
     // nways are 1
     // nsets are 64
-    
+
     var setindex = (addr >> 13) & 63;
     setindex &= 63; // number of sets
     var tlmbr = this.group2[0x200 | setindex];
@@ -7348,8 +7348,8 @@ DynamicCPU.prototype.Step = function (steps, clockspeed) {
             // do this not so often
             if (dsteps < 0)
             if (!this.delayedins_at_fence) { // Not sure, if we need this check
-                dsteps = dsteps + 1024|0;
-                steps = steps - 1024|0;
+                dsteps = dsteps + 64|0;
+                steps = steps - 64|0;
                 if (steps < 0) return 0;
 
                 // ---------- TICK ----------
@@ -7616,7 +7616,7 @@ DynamicCPU.prototype.Step = function (steps, clockspeed) {
             break;
 
         case 0x25:
-            // lhz 
+            // lhz
             r[32] = r[(ins >> 16) & 0x1F] + ((ins << 16) >> 16);
             r[33] = this.DTLBLookup(r[32], false);
             if (r[33] == -1) {
@@ -7636,11 +7636,25 @@ DynamicCPU.prototype.Step = function (steps, clockspeed) {
             break;
 
         case 0x27:
-            // addi signed 
+            // addi signed
             imm = (ins << 16) >> 16;
             rA = r[(ins >> 16) & 0x1F];
             rindex = (ins >> 21) & 0x1F;
             r[rindex] = rA + imm;
+            this.SR_CY = (r[rindex]>>>0) < (rA>>>0);
+            break;
+
+        case 0x28:
+            // addi signed with carry
+            imm = (ins << 16) >> 16;
+            rA = r[(ins >> 16) & 0x1F];
+            rindex = (ins >> 21) & 0x1F;
+            r[rindex] = (rA + imm|0) + (this.SR_CY?1:0)|0;
+            if (this.SR_CY) {
+                this.SR_CY = (r[rindex]>>>0) <= (rA>>>0);
+            } else {
+                this.SR_CY = (r[rindex]>>>0) < (rA>>>0);
+            }
             break;
 
         case 0x29:
@@ -7648,16 +7662,27 @@ DynamicCPU.prototype.Step = function (steps, clockspeed) {
             r[(ins >> 21) & 0x1F] = r[(ins >> 16) & 0x1F] & (ins & 0xFFFF);
             break;
 
-
         case 0x2A:
             // ori
             r[(ins >> 21) & 0x1F] = r[(ins >> 16) & 0x1F] | (ins & 0xFFFF);
             break;
 
         case 0x2B:
-            // xori            
+            // xori
             rA = r[(ins >> 16) & 0x1F];
             r[(ins >> 21) & 0x1F] = rA ^ ((ins << 16) >> 16);
+            break;
+
+        case 0x2C:
+            // muli
+            {
+            rindex = (ins >> 21) & 0x1F;
+            rA = r[(ins >> 16) & 0x1F];
+            r[rindex] = (rA * ((ins << 16) >> 16))&0xFFFFFFFF;
+            var rAl = rA & 0xFFFF;
+            var rBl = ins & 0xFFFF;
+            r[rindex] = r[rindex] & 0xFFFF0000 | ((rAl * rBl) & 0xFFFF);
+            }
             break;
 
         case 0x2D:
@@ -7840,7 +7865,7 @@ DynamicCPU.prototype.Step = function (steps, clockspeed) {
                 ram.Write32Big(r[33], r[(ins >> 11) & 0x1F]);
             }
             break;
-            
+
         case 0x35:
             // sw
             imm = ((((ins >> 10) & 0xF800) | (ins & 0x7FF)) << 16) >> 16;
@@ -7892,10 +7917,21 @@ DynamicCPU.prototype.Step = function (steps, clockspeed) {
             case 0x0:
                 // add signed
                 r[rindex] = rA + rB;
+                this.SR_CY = (r[rindex]>>>0) < (rA>>>0);
+                break;
+            case 0x1:
+                // add with carry
+                r[rindex] = rA + rB + (this.SR_CY?1:0);
+                if (this.SR_CY) {
+                    this.SR_CY = (r[rindex]>>>0) <= (rA>>>0);
+                } else {
+                    this.SR_CY = (r[rindex]>>>0) < (rA>>>0);
+                }
                 break;
             case 0x2:
                 // sub signed
                 r[rindex] = rA - rB;
+                this.SR_CY = ((rB>>>0) > (rA>>>0));
                 break;
             case 0x3:
                 // and
@@ -11127,7 +11163,7 @@ var SR_DME = 0; // Data MMU Enabled
 var SR_IME = 0; // Instruction MMU Enabled
 var SR_LEE = 0; // Little Endian Enabled
 var SR_CE = 0; // CID Enabled ?
-var SR_F = 0; // Flag for l.sf... instructions 
+var SR_F = 0; // Flag for l.sf... instructions
 var SR_CY = 0; // Carry Flag
 var SR_OV = 0; // Overflow Flag
 var SR_OVE = 0; // Overflow Flag Exception
@@ -11146,8 +11182,8 @@ var snoopbitfield = 0x0; // fot atomic instructions
 function Init(_ncores) {
     _ncores = _ncores|0;
     ncores = _ncores|0;
-    if ((ncores|0) == 32) 
-        ncoresmask = 0xFFFFFFFF; 
+    if ((ncores|0) == 32)
+        ncoresmask = 0xFFFFFFFF;
     else
         ncoresmask =  (1 << ncores)-1|0;
     AnalyzeImage();
@@ -12304,17 +12340,26 @@ function Step(steps, clockspeed) {
             }
             break;
 
-
         case 0x27:
-            // addi signed 
+            // addi signed
             imm = (ins << 16) >> 16;
             rA = r[corep + ((ins >> 14) & 0x7C)>>2]|0;
-            r[corep + ((ins >> 19) & 0x7C) >> 2] = rA + imm|0;
-            //rindex = ((ins >> 19) & 0x7C);
-            //SR_CY = r[corep + rindex] < rA;
-            //SR_OV = (((rA ^ imm ^ -1) & (rA ^ r[corep + rindex])) & 0x80000000)?true:false;
-            //TODO overflow and carry
-            // maybe wrong
+            rindex = corep + ((ins >> 19) & 0x7C)|0;
+            r[rindex >> 2] = rA + imm|0;
+            SR_CY = (r[rindex>>2]>>>0) < (rA>>>0);
+            break;
+
+        case 0x28:
+            // addi signed with carry
+            imm = (ins << 16) >> 16;
+            rA = r[corep + ((ins >> 14) & 0x7C)>>2]|0;
+            rindex = corep + ((ins >> 19) & 0x7C)|0;
+            r[rindex >> 2] = (rA + imm|0) + (SR_CY?1:0)|0;
+            if (SR_CY|0) {
+                SR_CY = (r[rindex>>2]>>>0) <= (rA>>>0);
+            } else {
+                SR_CY = (r[rindex>>2]>>>0) < (rA>>>0);
+            }
             break;
 
         case 0x29:
@@ -12329,9 +12374,15 @@ function Step(steps, clockspeed) {
             break;
 
         case 0x2B:
-            // xori            
+            // xori
             rA = r[corep + ((ins >> 14) & 0x7C)>>2]|0;
             r[corep + ((ins >> 19) & 0x7C)>>2] = rA ^ ((ins << 16) >> 16);
+            break;
+
+        case 0x2C:
+            // muli
+            rA = r[corep + ((ins >> 14) & 0x7C)>>2]|0;
+            r[corep + ((ins >> 19) & 0x7C)>>2] = imul(rA|0, (ins << 16) >> 16)|0;
             break;
 
         case 0x2D:
@@ -12620,13 +12671,23 @@ function Step(steps, clockspeed) {
             rindex = (ins >> 19) & 0x7C;
             switch (ins & 0x3CF) {
             case 0x0:
-                // add signed
-                r[corep + rindex>>2] = rA + rB;
+                // add
+                r[corep + rindex>>2] = rA + rB|0;
+                SR_CY = (r[corep + rindex>>2]>>>0) < (rA>>>0);
+                break;
+            case 0x1:
+                // add with carry
+                r[corep + rindex>>2] = (rA + rB|0) + (SR_CY?1:0)|0;
+                if (SR_CY|0) {
+                    SR_CY = (r[corep + rindex>>2]>>>0) <= (rA>>>0);
+                } else {
+                    SR_CY = (r[corep + rindex>>2]>>>0) < (rA>>>0);
+                }
                 break;
             case 0x2:
                 // sub signed
                 r[corep + rindex>>2] = rA - rB;
-                //TODO overflow and carry
+                SR_CY = (rB>>>0) > (rA>>>0);
                 break;
             case 0x3:
                 // and
@@ -12688,25 +12749,15 @@ function Step(steps, clockspeed) {
             case 0x306:
                 // mul signed (specification seems to be wrong)
                 {
-                    // this is a hack to do 32 bit signed multiply. Seems to work but needs to be tested. 
-                    //r[corep + (rindex<<2)>>2] = (rA >> 0) * (rB >> 0);
+                    // this is a hack to do 32 bit signed multiply. Seems to work but needs to be tested.
                     r[corep + rindex>>2] = imul(rA|0, rB|0)|0;
-                    /*
-                    var rAl = rA & 0xFFFF;
-                    var rBl = rB & 0xFFFF;
-                    r[corep + rindex<<2>>2] = r[corep + rindex<<2>>2] & 0xFFFF0000 | ((rAl * rBl) & 0xFFFF);
-                    var result = Number(int32(rA)) * Number(int32(rB));
-                    SR_OV = (result < (-2147483647 - 1)) || (result > (2147483647));
-                    var uresult = uint32(rA) * uint32(rB);
-                    SR_CY = (uresult > (4294967295));
-                    */
                 }
                 break;
             case 0x30a:
                 // divu (specification seems to be wrong)
                 SR_OV = (rB|0) == 0;
                 if (!SR_OV) {
-                    r[corep + rindex>>2] = /*Math.floor*/((rA>>>0) / (rB>>>0));
+                    r[corep + rindex>>2] = (rA>>>0) / (rB>>>0);
                 }
                 break;
             case 0x309:
@@ -12715,7 +12766,6 @@ function Step(steps, clockspeed) {
                 if (!SR_OV) {
                     r[corep + rindex>>2] = (rA|0) / (rB|0);
                 }
-
                 break;
             default:
                 //DebugMessage("Error: op38 opcode not supported yet");
