@@ -1,3 +1,5 @@
+set -e
+emcc -s WASM=1 -s ALLOW_MEMORY_GROWTH=1 -s ERROR_ON_UNDEFINED_SYMBOLS=0 -s TOTAL_MEMORY=32MB -Os js/wasm/or1k.c -o demos/or1k.wasm
 browserify -r ./js/plugins/terminal-linux.js:LinuxTerm -r ./js/master/master.js:Jor1k -o demos/jor1k-master-min.js
 browserify js/worker/worker.js -o demos/jor1k-worker-min.js
 

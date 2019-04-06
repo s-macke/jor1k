@@ -95,9 +95,9 @@ function jor1kGUI(parameters)
    if (this.clipboard) {
    this.clipboard.onpaste = function(event) {
        this.clipboard.value = "";
-       setTimeout(this.SendClipboard.bind(this), 4);    
+       setTimeout(this.SendClipboard.bind(this), 4);
    }.bind(this);
-   
+
 
    this.SendClipboard = function() {
        var chars = [];
@@ -193,7 +193,7 @@ jor1kGUI.prototype.Execute = function() {
     if(this.userpaused) {
         this.executepending = true;
     } else {
-        this.executepending = false; 
+        this.executepending = false;
         message.Send("execute", 0);
     }
 };
@@ -201,7 +201,7 @@ jor1kGUI.prototype.Execute = function() {
 jor1kGUI.prototype.ShowIPS = function(ips) {
     if (!this.stats) return;
     if (this.userpaused) {
-        this.stats.innerHTML = "Paused"; 
+        this.stats.innerHTML = "Paused";
     } else {
         this.stats.innerHTML = ips<1000000?
         Math.floor(ips/1000) + " KIPS"
@@ -213,9 +213,13 @@ jor1kGUI.prototype.ShowIPS = function(ips) {
 jor1kGUI.prototype.Reset = function () {
     this.stop = false; // VM Stopped/Aborted
     this.userpaused = false;
-    this.executepending = false; // if we rec an execute message while paused      
+    this.executepending = false; // if we rec an execute message while paused
 
+    message.Register("InitDone", this.OnInit.bind(this));
     message.Send("Init", this.params.system);
+}
+
+jor1kGUI.prototype.OnInit = function () {
     message.Send("Reset");
     message.Send("LoadAndStart", this.params.system.kernelURL);
 
@@ -233,7 +237,7 @@ jor1kGUI.prototype.Reset = function () {
 
 jor1kGUI.prototype.Pause = function(pause) {
     pause = !! pause; // coerce to boolean
-    if(pause == this.userpaused) return; 
+    if(pause == this.userpaused) return;
     this.userpaused = pause;
     if(! this.userpaused && this.executepending) {
       this.executepending = false;

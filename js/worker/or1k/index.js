@@ -26,7 +26,7 @@ var stdlib = {
     Math : Math
 };
 
-function createCPUSingleton(cpuname, ram, heap, ncores) {
+function createCPUAsm(cpuname, ram, heap, ncores) {
     var foreign = {
         DebugMessage: message.Debug,
         abort : message.Abort,
@@ -44,7 +44,8 @@ function createCPUSingleton(cpuname, ram, heap, ncores) {
             fastcpu.Init();
         }
         return fastcpu;
-    } else if (cpuname === 'smp') {
+    }
+    if (cpuname === 'smp') {
         if (smpcpu === null) {
             smpcpu = SMPCPU(stdlib, foreign, heap);
             smpcpu.Init(ncores);
@@ -53,7 +54,63 @@ function createCPUSingleton(cpuname, ram, heap, ncores) {
     }
 }
 
-function createCPU(cpuname, ram, heap, ncores) {
+async function createCPUWasm(cpuname, ram, heap, ncores) {
+
+    let importObj = {
+        env: {
+            memory : ram.memory,
+            abort : function(err) { message.Debug("abort " + err) },
+            _DebugMessage: message.Debug,
+            _abort : message.Abort,
+            _Read32 : ram.Read32Big.bind(ram),
+            _Write32 : ram.Write32Big.bind(ram),
+            _Read16 : ram.Read16Big.bind(ram),
+            _Write16 : ram.Write16Big.bind(ram),
+            _Read8 : ram.Read8Big.bind(ram),
+            _Write8 : ram.Write8Big.bind(ram)
+        }
+    };
+    let response = await fetch('or1k.wasm');
+    let obj = await WebAssembly.instantiate(await response.arrayBuffer(), importObj);
+    let exports = obj.instance.exports;
+    return {
+      AnalyzeImage : exports._AnalyzeImage,
+      ClearInterrupt : exports._ClearInterrupt,
+      GetFlags : exports._GetFlags,
+      GetStat : exports._GetStat,
+      GetTicks : exports._GetTicks,
+      GetTimeToNextInterrupt : exports._GetTimeToNextInterrupt,
+      Init : exports._Init,
+      InvalidateTLB : exports._InvalidateTLB,
+      ProgressTime : exports._ProgressTime,
+      RaiseInterrupt : exports._RaiseInterrupt,
+      Reset : exports._Reset,
+      SetFlags : exports._SetFlags,
+      Step : exports._Step
+    };
+    /*
+    fetch('or1k.wasm').then(response =>
+        response.arrayBuffer()
+    ).then(bytes => {
+            message.Debug("instantiate wasm");
+            WebAssembly.instantiate(bytes, importObj)
+        }
+    ).then(
+        obj => {
+            message.Debug("compiled sucessfully");
+            exports = obj.instance.exports;
+            return  exports;
+        },
+        err => {
+            message.Debug("error");
+            message.Debug(err.toString());
+        }
+    );
+    */
+
+}
+
+async function createCPU(cpuname, ram, heap, ncores) {
     var cpu = null;
 
     if (cpuname === "safe") {
@@ -63,27 +120,33 @@ function createCPU(cpuname, ram, heap, ncores) {
         return new DynamicCPU(ram);
     }
     if (cpuname === "asm") {
-        cpu = createCPUSingleton(cpuname, ram, heap, ncores);
+        cpu = createCPUAsm(cpuname, ram, heap, ncores);
         cpu.Init();
         return cpu;
     }
     if (cpuname === "smp") {
-        cpu = createCPUSingleton(cpuname, ram, heap, ncores);
+        cpu = createCPUAsm(cpuname, ram, heap, ncores);
         cpu.Init(ncores);
+        return cpu;
+    }
+    if (cpuname === "wasm") {
+        cpu = await createCPUWasm(cpuname, ram, heap, ncores);
+        cpu.Init();
         return cpu;
     }
     throw new Error("invalid CPU name:" + cpuname);
 }
 
 function CPU(cpuname, ram, heap, ncores) {
-    this.cpu = createCPU(cpuname, ram, heap, ncores);
     this.name = cpuname;
     this.ncores = ncores;
     this.ram = ram;
     this.heap = heap;
     this.littleendian = false;
+}
 
-    return this;
+CPU.prototype.Init = async function() {
+    this.cpu = await createCPU(this.name, this.ram, this.heap, this.ncores);
 }
 
 CPU.prototype.toString = function() {
@@ -105,7 +168,7 @@ CPU.prototype.toString = function() {
             toHex(r[i + 2]) + "   r" + (i + 3) + ": " +
             toHex(r[i + 3]) + "\n";
     }
-    
+
     if (this.cpu.delayedins) {
         str += "delayed instruction\n";
     }
@@ -147,19 +210,19 @@ CPU.prototype.toString = function() {
 
 // forward a couple of methods to the CPU implementation
 var forwardedMethods = [
-    "Reset", 
+    "Reset",
     "Step",
-    "RaiseInterrupt", 
+    "RaiseInterrupt",
     "Step",
     "AnalyzeImage",
     "GetTicks",
     "GetTimeToNextInterrupt",
-    "ProgressTime", 
+    "ProgressTime",
     "ClearInterrupt"];
 
 forwardedMethods.forEach(function(m) {
     CPU.prototype[m] = function() {
-        return this.cpu[m].apply(this.cpu, arguments);        
+        return this.cpu[m].apply(this.cpu, arguments);
     };
 
 });

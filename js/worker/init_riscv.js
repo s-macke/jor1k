@@ -41,15 +41,21 @@ var VirtioNET = require('./dev/virtio/net');
 //var VirtioGPU = require('./dev/virtio/gpu');
 //var VirtioConsole = require('./dev/virtio/console');
 
-function InitRISCV(system, initdata) {
+async function InitRISCV(system, initdata) {
     message.Debug("Init RISCV SoC");
     var irqhandler = system;
 
     // at the moment the htif interface is part of the CPU initialization.
     // However, it uses uartdev0
     system.htif = new HTIF(system.ram, system);
-   
-    system.cpu = new RISCVCPU(initdata.cpu, system.ram, system.htif, system.heap, system.ncores);
+
+    try {
+        system.cpu = new RISCVCPU(initdata.cpu, system.ram, system.htif, system.heap, system.ncores);
+        await system.cpu.Init();
+    } catch (e) {
+        message.Debug("Error: failed to create CPU:" + e);
+        message.Abort();
+    }
 
     system.devices.push(system.cpu);
 
@@ -73,7 +79,6 @@ function InitRISCV(system, initdata) {
         for(var i=0; i<configstring.length; i++) buffer8view[0x1020+i] = configstring[i];
     }.bind(this)
     , false, function(error){throw error;});
-
 
     system.virtionetdev = new VirtioNET(system.ram);
     system.virtiodummydev = new VirtioDummy(system.ram);

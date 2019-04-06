@@ -15,27 +15,7 @@ var InitRISCV = require('./init_riscv');
 var FS = require('./filesystem/filesystem');
 
 // Devices
-var UARTDev = require('./dev/uart');
-var IRQDev = require('./dev/irq');
-var TimerDev = require('./dev/timer');
-var FBDev = require('./dev/framebuffer');
-var EthDev = require('./dev/ethmac');
-var ATADev = require('./dev/ata');
-var RTCDev = require('./dev/rtc');
-var CLINTDev = require('./dev/clint');
-var PLICDev = require('./dev/plic');
-var ROMDev = require('./dev/rom');
-var TouchscreenDev = require('./dev/touchscreen');
-var KeyboardDev = require('./dev/keyboard');
-var SoundDev = require('./dev/sound');
-var VirtIODev = require('./dev/virtio');
 var Virtio9p = require('./dev/virtio/9p');
-var VirtioDummy = require('./dev/virtio/dummy');
-var VirtioInput = require('./dev/virtio/input');
-var VirtioNET = require('./dev/virtio/net');
-var VirtioBlock = require('./dev/virtio/block');
-var VirtioGPU = require('./dev/virtio/gpu');
-var VirtioConsole = require('./dev/virtio/console');
 
 var SYSTEM_RUN = 0x1;
 var SYSTEM_STOP = 0x2;
@@ -57,7 +37,6 @@ function System() {
 
 System.prototype.Reset = function() {
     this.status = SYSTEM_STOP;
-    
     for(var i=0; i<this.devices.length; i++) {
         this.devices[i].Reset();
     }
@@ -65,7 +44,7 @@ System.prototype.Reset = function() {
     this.ips = 0;
 };
 
-System.prototype.Init = function(system) {
+System.prototype.Init = async function(system) {
     message.Debug("Init with following JSON structure: ");
     message.Debug(system);
 
@@ -88,11 +67,12 @@ System.prototype.Init = function(system) {
 
     message.Debug("Allocate " + this.memorysize + " MB");
     // this must be a power of two.
-    if ((system.arch == "or1k") && (system.cpu == "dynamic")  && (typeof WebAssembly !== "undefined")) {
+    if ((system.arch == "or1k") && ((system.cpu == "dynamic") || (system.cpu == "wasm"))  && (typeof WebAssembly !== "undefined")) {
         message.Debug("Use webassembly memory");
         this.memory = new WebAssembly.Memory({initial: this.memorysize*16, maximum: this.memorysize*16});
         this.heap = this.memory.buffer;
     } else {
+        message.Debug("Use arraybuffer memory");
         this.heap = new ArrayBuffer(this.memorysize*0x100000);
     }
     var ramoffset = 0x100000;
@@ -107,10 +87,10 @@ System.prototype.Init = function(system) {
 
     try {
         if (system.arch == "or1k") {
-            InitOpenRISC(this, system);
+            await InitOpenRISC(this, system);
         } else
         if (system.arch == "riscv") {
-            InitRISCV(this, system);
+            await InitRISCV(this, system);
         } else {
             throw "Architecture " + system.arch + " not supported";
         }
@@ -118,6 +98,8 @@ System.prototype.Init = function(system) {
         message.Debug("Error: failed to create SoC: " + e);
         message.Abort();
     }
+    message.Debug("Init Done");
+    message.Send("InitDone", null);
 };
 
 System.prototype.RaiseInterrupt = function(line) {
@@ -159,7 +141,7 @@ System.prototype.PrintState = function() {
     // Flush the buffer of the terminal
     this.uartdev0 && this.uartdev0.Step();
     this.uartdev1 && this.uartdev1.Step();
-    message.Debug(this.cpu.toString());
+    this.cpu && message.Debug(this.cpu.toString());
 };
 
 System.prototype.SendStringToTerminal = function(str)
@@ -177,8 +159,8 @@ System.prototype.LoadImageAndStart = function(url) {
     if (typeof url == 'string') {
         this.SendStringToTerminal("\r\nLoading kernel and hard and basic file system from web server. Please wait ...\r\n");
         utils.LoadBinaryResource(
-            url, 
-            this.OnKernelLoaded.bind(this), 
+            url,
+            this.OnKernelLoaded.bind(this),
             function(error){throw error;}
         );
     } else {
@@ -198,10 +180,10 @@ System.prototype.PatchKernel = function(length)
         if (m[i+3] === 0x6f)
         if (m[i+4] === 0x72)
         if (m[i+5] === 0x79)
-        if (m[i+6] === 0x00) 
-        if (m[i+24] === 0x01) 
-        if (m[i+25] === 0xF0) 
-        if (m[i+26] === 0x00) 
+        if (m[i+6] === 0x00)
+        if (m[i+24] === 0x01)
+        if (m[i+25] === 0xF0)
+        if (m[i+26] === 0x00)
         if (m[i+27] === 0x00) {
             m[i+24] = (this.memorysize*0x100000)>>24;
             m[i+25] = (this.memorysize*0x100000)>>16;
@@ -218,7 +200,7 @@ System.prototype.OnKernelLoaded = function(buffer) {
 
     if (elf.IsELF(buffer8)) {
         elf.Extract(buffer8, this.ram);
-    } else 
+    } else
     if (bzip2.IsBZIP2(buffer8)) {
         length = 0;
         bzip2.simple(buffer8, function(x){this.ram.uint8mem[length++] = x;}.bind(this));
@@ -258,7 +240,7 @@ System.prototype.HandleHalt = function() {
         this.idlemaxwait = delta;
         var mswait = Math.floor(delta / this.ticksperms / this.timer.correction + 0.5);
         //message.Debug("wait " + mswait);
-        
+
         if (mswait <= 1) return;
         if (mswait > 1000) message.Debug("Warning: idle for " + mswait + "ms");
         this.idletime = utils.GetMilliseconds();
@@ -293,7 +275,7 @@ System.prototype.MainLoop = function() {
     this.timer.Update(totalsteps, this.cpu.GetTicks(), gotoidle);
 
     if (gotoidle) {
-        this.HandleHalt(); 
+        this.HandleHalt();
     }
 
     // go to worker thread idle state that onmessage is executed

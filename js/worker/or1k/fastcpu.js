@@ -389,7 +389,7 @@ function SetSPR(idx, x) {
         abort();
         break;
     }
-};
+}
 
 function GetSPR(idx) {
     idx = idx|0;

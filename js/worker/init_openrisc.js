@@ -54,15 +54,19 @@ var VirtioConsole = require('./dev/virtio/console');
     0x100000 -  ...     RAM
 */
 
-function InitOpenRISC(system, initdata) {
-    message.Debug("Init OpenRISC SoC");
+async function InitOpenRISC(system, initdata) {
+    message.Debug("Init OpenRISC SoC with CPU type " + initdata.cpu);
+
     var irqhandler = system;
+    system.cpu = new OR1KCPU(initdata.cpu, system.ram, system.heap, system.ncores);
 
     try {
-        system.cpu = new OR1KCPU(initdata.cpu, system.ram, system.heap, system.ncores);
+        await system.cpu.Init();
     } catch (e) {
         message.Debug("Error: failed to create CPU:" + e);
+        message.Abort();
     }
+
     system.devices.push(system.cpu);
 
     system.irqdev = new IRQDev(irqhandler);
@@ -128,7 +132,7 @@ function InitOpenRISC(system, initdata) {
     system.ram.AddDevice(system.virtiodev2, 0x9C000000, 0x1000);
     system.ram.AddDevice(system.virtiodev3, 0x9D000000, 0x1000);
     system.ram.AddDevice(system.atadev,     0x9E000000, 0x1000);
-
+    message.Debug("Init OpenRISC SoC finished");
 }
 
 module.exports = InitOpenRISC;

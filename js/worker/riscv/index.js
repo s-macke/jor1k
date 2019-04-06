@@ -57,15 +57,19 @@ function createCPU(cpuname, ram, htif, heap, ncores) {
 }
 
 function CPU(cpuname, ram, htif, heap, ncores) {
-    this.cpu = createCPU(cpuname, ram, htif, heap, ncores);
     this.name = cpuname;
     this.ncores = ncores;
     this.ram = ram;
     this.heap = heap;
+    this.htif = htif;
     this.littleendian = true;
-
     return this;
 }
+
+CPU.prototype.Init = function() {
+    this.cpu = createCPU(this.name, this.ram, this.htif, this.heap, this.ncores);
+};
+
 
 CPU.prototype.switchImplementation = function(cpuname) {
 };
@@ -78,9 +82,9 @@ CPU.prototype.toString = function() {
 
 
     if (typeof this.cpu.pc != 'undefined') {
-        str += "PC: " + utils.ToHex(this.cpu.pc) + "\n"; 
+        str += "PC: " + utils.ToHex(this.cpu.pc) + "\n";
     } else {
-        str += "PC: " + utils.ToHex(this.cpu.GetPC()) + "\n"; 
+        str += "PC: " + utils.ToHex(this.cpu.GetPC()) + "\n";
     }
 
     for (var i = 0; i < 32; i += 4) {
@@ -91,27 +95,27 @@ CPU.prototype.toString = function() {
             utils.ToHex(r[i + 3]) + "\n";
     }
     str += "mstatus: " + utils.ToBin(csr[0x300]) + "\n";
-    str += 
-        "mcause: " + utils.ToHex(csr[0x342]) + 
-        " mbadaddress: " + utils.ToHex(csr[0x343]) + 
+    str +=
+        "mcause: " + utils.ToHex(csr[0x342]) +
+        " mbadaddress: " + utils.ToHex(csr[0x343]) +
         " mepc: " + utils.ToHex(csr[0x341]) + "\n";
     return str;
 };
 
 // forward a couple of methods to the CPU implementation
 var forwardedMethods = [
-    "Reset", 
+    "Reset",
     "Step",
-    "RaiseInterrupt", 
+    "RaiseInterrupt",
     "Step",
     "AnalyzeImage",
     "GetTicks",
     "GetTimeToNextInterrupt",
-    "ProgressTime", 
+    "ProgressTime",
     "ClearInterrupt"];
 forwardedMethods.forEach(function(m) {
     CPU.prototype[m] = function() {
-        return this.cpu[m].apply(this.cpu, arguments);        
+        return this.cpu[m].apply(this.cpu, arguments);
     };
 });
 
