@@ -59,34 +59,33 @@ async function createCPUWasm(cpuname, ram, heap, ncores) {
     let importObj = {
         env: {
             memory : ram.memory,
-            abort : function(err) { message.Debug("abort " + err) },
-            _DebugMessage: message.Debug,
-            _abort : message.Abort,
-            _Read32 : ram.Read32Big.bind(ram),
-            _Write32 : ram.Write32Big.bind(ram),
-            _Read16 : ram.Read16Big.bind(ram),
-            _Write16 : ram.Write16Big.bind(ram),
-            _Read8 : ram.Read8Big.bind(ram),
-            _Write8 : ram.Write8Big.bind(ram)
+            DebugMessage: message.Debug,
+            abort : message.Abort,
+            Read32 : ram.Read32Big.bind(ram),
+            Write32 : ram.Write32Big.bind(ram),
+            Read16 : ram.Read16Big.bind(ram),
+            Write16 : ram.Write16Big.bind(ram),
+            Read8 : ram.Read8Big.bind(ram),
+            Write8 : ram.Write8Big.bind(ram)
         }
     };
     let response = await fetch('or1k.wasm');
     let obj = await WebAssembly.instantiate(await response.arrayBuffer(), importObj);
     let exports = obj.instance.exports;
     return {
-      AnalyzeImage : exports._AnalyzeImage,
-      ClearInterrupt : exports._ClearInterrupt,
-      GetFlags : exports._GetFlags,
-      GetStat : exports._GetStat,
-      GetTicks : exports._GetTicks,
-      GetTimeToNextInterrupt : exports._GetTimeToNextInterrupt,
-      Init : exports._Init,
-      InvalidateTLB : exports._InvalidateTLB,
-      ProgressTime : exports._ProgressTime,
-      RaiseInterrupt : exports._RaiseInterrupt,
-      Reset : exports._Reset,
-      SetFlags : exports._SetFlags,
-      Step : exports._Step
+      AnalyzeImage : exports.AnalyzeImage,
+      ClearInterrupt : exports.ClearInterrupt,
+      GetFlags : exports.GetFlags,
+      GetStat : exports.GetStat,
+      GetTicks : exports.GetTicks,
+      GetTimeToNextInterrupt : exports.GetTimeToNextInterrupt,
+      Init : exports.Init,
+      InvalidateTLB : exports.InvalidateTLB,
+      ProgressTime : exports.ProgressTime,
+      RaiseInterrupt : exports.RaiseInterrupt,
+      Reset : exports.Reset,
+      SetFlags : exports.SetFlags,
+      Step : exports.Step
     };
     /*
     fetch('or1k.wasm').then(response =>

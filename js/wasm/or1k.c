@@ -1,5 +1,3 @@
-#include <emscripten.h>
-
 typedef signed int int32;
 typedef signed short int int16;
 typedef signed char int8;
@@ -7,15 +5,35 @@ typedef unsigned int uint32;
 typedef unsigned short int uint16;
 typedef unsigned char uint8;
 
+// exports
+
 extern void abort();
 extern void DebugMessage(int32 messageid);
 extern int32 Read32(int32 p);
 extern int16 Read16(int32 p);
 extern int8 Read8(int32 p);
 extern void Write32(int32 p, int32 x);
-extern void Write16(int32 p, int16 x);
-extern void Write8(int32 p, int8 x);
+extern void Write16(int32 p, uint16 x);
+extern void Write8(int32 p, uint8 x);
 
+// imports
+void  AnalyzeImage();
+void  Reset();
+void  Init();
+void  Reset();
+void  InvalidateTLB();
+int32   GetStat();
+int32   GetTimeToNextInterrupt();
+void  ProgressTime(int32 delta);
+int32   GetTicks();
+void  AnalyzeImage();
+void  SetFlags(int32 x);
+int32   GetFlags();
+void  RaiseInterrupt(int32 line, int32 cpuid);
+void  ClearInterrupt(int32 line, int32 cpuid);
+int32 Step(int32 steps, int32 clockspeed);
+
+// constants
 #define ERROR_SETFLAGS_LITTLE_ENDIAN            0 // "Little endian is not supported"
 #define ERROR_SETFLAGS_CONTEXT_ID               1 // "Context ID is not supported"
 #define ERROR_SETFLAGS_PREFIX                   2 // "exception prefix not supported"
@@ -50,107 +68,109 @@ extern void Write8(int32 p, int8 x);
 #define EXCEPT_SYSCALL  0xC00 // syscall, jump into supervisor mode
 #define EXCEPT_TRAP     0xE00 // trap
 
-int32 *r = (int32*)0;
-float *f = (float*)0;
+static int32 *r = (int32*)0;
+static float *f = (float*)0;
 
 // memory
-int8*  ramb = (int8*)0x100000;
-int16* ramh = (int16*)0x100000;
-int32* ramw = (int32*)0x100000;
+static int8*  ramb = (int8*)0x100000;
+static int16* ramh = (int16*)0x100000;
+static int32* ramw = (int32*)0x100000;
 
-int32 *group0p = (int32*)0x2000; // special purpose registers
-int32 *group1p = (int32*)0x4000; // data tlb registers
-int32 *group2p = (int32*)0x6000; // instruction tlb registers
+static int32 *group0p = (int32*)0x2000; // special purpose registers
+static int32 *group1p = (int32*)0x4000; // data tlb registers
+static int32 *group2p = (int32*)0x6000; // instruction tlb registers
 
-// define variables and initialize
+// define global variables
+typedef struct
+{
+    int32 pc;
+    int32 ppc;
+    int32 ppcorigin;
+    int32 pcbase; // helper variable to calculate the real pc
+    int32 fence; // the ppc pointer to the next jump or page boundary
+    int32 delayedins; // the current instruction is an delayed instruction, one cycle before a jump
 
-int32 pc = 0x0;
-int32 ppc = 0;
-int32 ppcorigin = 0;
-int32 pcbase = -4; // helper variable to calculate the real pc
-int32 fence = 0; // the ppc pointer to the next jump or page boundary
+    int32 delayedins_at_page_boundary; //flag
 
-int32 delayedins = 0; // the current instruction is an delayed instruction, one cycle before a jump
+    int32 nextpc; // pointer to the next instruction after the fence
+    int32 jump; // in principle the jump variable should contain the same as nextpc.
+                    // But for delayed ins at page boundaries, this is taken as temporary
+                    // storage for nextpc
 
-int32 nextpc = 0x0; // pointer to the next instruction after the fence
-int32 jump = 0x0; // in principle the jump variable should contain the same as nextpc.
-                // But for delayed ins at page boundaries, this is taken as temporary
-                // storage for nextpc
-int32 delayedins_at_page_boundary = 0; //flag
+    // fast tlb lookup tables, invalidate
+    int32 instlblookup;
+    int32 read32tlblookup;
+    int32 read8stlblookup;
+    int32 read8utlblookup;
+    int32 read16stlblookup;
+    int32 read16utlblookup;
+    int32 write32tlblookup;
+    int32 write8tlblookup;
+    int32 write16tlblookup;
 
-// fast tlb lookup tables, invalidate
-int32 instlblookup = -1;
-int32 read32tlblookup = -1;
-int32 read8stlblookup = -1;
-int32 read8utlblookup = -1;
-int32 read16stlblookup = -1;
-int32 read16utlblookup = -1;
-int32 write32tlblookup = -1;
-int32 write8tlblookup = -1;
-int32 write16tlblookup = -1;
+    int32 instlbcheck;
+    int32 read32tlbcheck;
+    int32 read8stlbcheck;
+    int32 read8utlbcheck;
+    int32 read16stlbcheck;
+    int32 read16utlbcheck;
+    int32 write32tlbcheck;
+    int32 write8tlbcheck;
+    int32 write16tlbcheck;
 
-int32 instlbcheck = -1;
-int32 read32tlbcheck = -1;
-int32 read8stlbcheck = -1;
-int32 read8utlbcheck = -1;
-int32 read16stlbcheck = -1;
-int32 read16utlbcheck = -1;
-int32 write32tlbcheck = -1;
-int32 write8tlbcheck = -1;
-int32 write16tlbcheck = -1;
+    int32 EA; // hidden register for atomic lwa and swa operation
 
-int32 EA = -1; // hidden register for atomic lwa and swa operation
+    uint32 TTMR; // Tick timer mode register
+    uint32 TTCR; // Tick timer count register
 
-int32 TTMR = 0x0; // Tick timer mode register
-int32 TTCR = 0x0; // Tick timer count register
+    uint32 PICMR; // interrupt controller mode register (use nmi)
+    uint32 PICSR; // interrupt controller set register
 
-int32 PICMR = 0x3; // interrupt controller mode register (use nmi)
-int32 PICSR = 0x0; // interrupt controller set register
+    // flags
+    int32 SR_SM; // supervisor mode
+    int32 SR_TEE; // tick timer Exception Enabled
+    int32 SR_IEE; // interrupt Exception Enabled
+    int32 SR_DCE; // Data Cache Enabled
+    int32 SR_ICE; // Instruction Cache Enabled
+    int32 SR_DME; // Data MMU Enabled
+    int32 SR_IME; // Instruction MMU Enabled
+    int32 SR_LEE; // Little Endian Enabled
+    int32 SR_CE; // CID Enabled ?
+    int32 SR_F; // Flag for l.sf... instructions
+    int32 SR_CY; // Carry Flag
+    int32 SR_OV; // Overflow Flag
+    int32 SR_OVE; // Overflow Flag Exception
+    int32 SR_DSX; // Delay Slot Exception
+    int32 SR_EPH; // Exception Prefix High
+    int32 SR_FO; // Fixed One, always set
+    int32 SR_SUMRA; // SPRS User Mode Read Access, or TRAP exception disable?
+    int32 SR_CID; // Context ID
 
-// flags
-int32 SR_SM = 1; // supervisor mode
-int32 SR_TEE = 0; // tick timer Exception Enabled
-int32 SR_IEE = 0; // interrupt Exception Enabled
-int32 SR_DCE = 0; // Data Cache Enabled
-int32 SR_ICE = 0; // Instruction Cache Enabled
-int32 SR_DME = 0; // Data MMU Enabled
-int32 SR_IME = 0; // Instruction MMU Enabled
-int32 SR_LEE = 0; // Little Endian Enabled
-int32 SR_CE = 0; // CID Enabled ?
-int32 SR_F = 0; // Flag for l.sf... instructions
-int32 SR_CY = 0; // Carry Flag
-int32 SR_OV = 0; // Overflow Flag
-int32 SR_OVE = 0; // Overflow Flag Exception
-int32 SR_DSX = 0; // Delay Slot Exception
-int32 SR_EPH = 0; // Exception Prefix High
-int32 SR_FO = 1; // Fixed One, always set
-int32 SR_SUMRA = 0; // SPRS User Mode Read Access, or TRAP exception disable?
-int32 SR_CID = 0x0; // Context ID
+    int32 boot_dtlb_misshandler_address;
+    int32 boot_itlb_misshandler_address;
+    int32 current_pgd;
 
-int32 boot_dtlb_misshandler_address = 0x0;
-int32 boot_itlb_misshandler_address = 0x0;
-int32 current_pgd = 0x0;
+    int32 raise_interrupt;
+    int32 doze;
+} global;
+static global *g = (global*)0x1000;
 
-int raise_interrupt = 0;
+void Exception(int32 excepttype, int32 addr);
 
-int doze = 0x0;
-
-void EMSCRIPTEN_KEEPALIVE AnalyzeImage();
-void EMSCRIPTEN_KEEPALIVE Reset();
-void Exception(int excepttype, int addr);
-
-void EMSCRIPTEN_KEEPALIVE Init()
+void Init()
 {
     AnalyzeImage();
     Reset();
 }
 
-void EMSCRIPTEN_KEEPALIVE Reset()
+void Reset()
 {
-    TTMR = 0x0;
-    TTCR = 0x0;
-    PICMR = 0x3;
-    PICSR = 0x0;
+    g->TTMR = 0x0;
+    g->TTCR = 0x0;
+    g->PICMR = 0x3;
+    g->PICSR = 0x0;
+    g->raise_interrupt = 0;
+    g->doze = 0;
 
     group0p[SPR_IMMUCFGR] = 0x18; // 0 ITLB has one way and 64 sets
     group0p[SPR_DMMUCFGR] = 0x18; // 0 DTLB has one way and 64 sets
@@ -165,105 +185,105 @@ void EMSCRIPTEN_KEEPALIVE Reset()
     // Tick timer present
     group0p[SPR_UPR] = 0x619;
 
-    ppc = 0;
-    ppcorigin = 0;
-    pcbase = -4;
+    g->ppc = 0;
+    g->ppcorigin = 0;
+    g->pcbase = -4;
 
     Exception(EXCEPT_RESET, 0x0);
 }
 
-void EMSCRIPTEN_KEEPALIVE InvalidateTLB()
+void InvalidateTLB()
 {
-    instlblookup     = -1;
-    read32tlblookup  = -1;
-    read8stlblookup  = -1;
-    read8utlblookup  = -1;
-    read16stlblookup = -1;
-    read16utlblookup = -1;
-    write32tlblookup = -1;
-    write8tlblookup  = -1;
-    write16tlblookup = -1;
-    instlbcheck      = -1;
-    read32tlbcheck   = -1;
-    read8stlbcheck   = -1;
-    read8utlbcheck   = -1;
-    read16stlbcheck  = -1;
-    read16utlbcheck  = -1;
-    write32tlbcheck  = -1;
-    write8tlbcheck   = -1;
-    write16tlbcheck  = -1;
+    g->instlblookup     = -1;
+    g->read32tlblookup  = -1;
+    g->read8stlblookup  = -1;
+    g->read8utlblookup  = -1;
+    g->read16stlblookup = -1;
+    g->read16utlblookup = -1;
+    g->write32tlblookup = -1;
+    g->write8tlblookup  = -1;
+    g->write16tlblookup = -1;
+    g->instlbcheck      = -1;
+    g->read32tlbcheck   = -1;
+    g->read8stlbcheck   = -1;
+    g->read8utlbcheck   = -1;
+    g->read16stlbcheck  = -1;
+    g->read16utlbcheck  = -1;
+    g->write32tlbcheck  = -1;
+    g->write8tlbcheck   = -1;
+    g->write16tlbcheck  = -1;
 }
 
-int EMSCRIPTEN_KEEPALIVE GetStat()
+int32 GetStat()
 {
-    return (unsigned int)pc >> 2;
+    return (uint32)g->pc >> 2;
 }
 
-int EMSCRIPTEN_KEEPALIVE GetTimeToNextInterrupt()
+int32 GetTimeToNextInterrupt()
 {
-    int delta = 0x0;
-    if ((TTMR >> 30) == 0) return -1;
-    delta = (TTMR & 0xFFFFFFF) - (TTCR & 0xFFFFFFF);
+    int32 delta = 0x0;
+    if ((g->TTMR >> 30) == 0) return -1;
+    delta = (g->TTMR & 0xFFFFFFF) - (g->TTCR & 0xFFFFFFF);
     return delta;
 }
 
-void EMSCRIPTEN_KEEPALIVE ProgressTime(int delta)
+void ProgressTime(int32 delta)
 {
-    TTCR = (TTCR + delta)|0;
+    g->TTCR += delta;
 }
 
-int EMSCRIPTEN_KEEPALIVE GetTicks()
+int32 GetTicks()
 {
-    if ((TTMR >> 30) == 0) return -1;
-    return (TTCR & 0xFFFFFFF)|0;
+    if ((g->TTMR >> 30) == 0) return -1;
+    return g->TTCR & 0xFFFFFFF;
 }
 
 // get addresses for fast refill
-void EMSCRIPTEN_KEEPALIVE AnalyzeImage()
+void AnalyzeImage()
 {
-    boot_dtlb_misshandler_address = ramw[0x900 >> 2];
-    boot_itlb_misshandler_address = ramw[0xA00 >> 2];
-    current_pgd = ((ramw[0x2010 >> 2]&0xFFF)<<16) | (ramw[0x2014 >> 2] & 0xFFFF);
+    g->boot_dtlb_misshandler_address = ramw[0x900 >> 2];
+    g->boot_itlb_misshandler_address = ramw[0xA00 >> 2];
+    g->current_pgd = ((ramw[0x2010 >> 2]&0xFFF)<<16) | (ramw[0x2014 >> 2] & 0xFFFF);
 }
 
 
-void EMSCRIPTEN_KEEPALIVE SetFlags(int x)
+void SetFlags(int32 x)
 {
-    SR_SM = (x & (1 << 0));
-    SR_TEE = (x & (1 << 1));
-    SR_IEE = (x & (1 << 2));
-    SR_DCE = (x & (1 << 3));
-    SR_ICE = (x & (1 << 4));
-    SR_DME = (x & (1 << 5));
-    SR_IME = (x & (1 << 6));
-    SR_LEE = (x & (1 << 7));
-    SR_CE = (x & (1 << 8));
-    SR_F = (x & (1 << 9));
-    SR_CY = (x & (1 << 10));
-    SR_OV = (x & (1 << 11));
-    SR_OVE = (x & (1 << 12));
-    SR_DSX = (x & (1 << 13));
-    SR_EPH = (x & (1 << 14));
-    SR_FO = 1;
-    SR_SUMRA = (x & (1 << 16));
-    SR_CID = (x >> 28) & 0xF;
+    g->SR_SM = (x & (1 << 0));
+    g->SR_TEE = (x & (1 << 1));
+    g->SR_IEE = (x & (1 << 2));
+    g->SR_DCE = (x & (1 << 3));
+    g->SR_ICE = (x & (1 << 4));
+    g->SR_DME = (x & (1 << 5));
+    g->SR_IME = (x & (1 << 6));
+    g->SR_LEE = (x & (1 << 7));
+    g->SR_CE = (x & (1 << 8));
+    g->SR_F = (x & (1 << 9));
+    g->SR_CY = (x & (1 << 10));
+    g->SR_OV = (x & (1 << 11));
+    g->SR_OVE = (x & (1 << 12));
+    g->SR_DSX = (x & (1 << 13));
+    g->SR_EPH = (x & (1 << 14));
+    g->SR_FO = 1;
+    g->SR_SUMRA = (x & (1 << 16));
+    g->SR_CID = (x >> 28) & 0xF;
 
-    if (SR_LEE)
+    if (g->SR_LEE)
     {
         DebugMessage(ERROR_SETFLAGS_LITTLE_ENDIAN|0);
         abort();
     }
-    if (SR_CID)
+    if (g->SR_CID)
     {
         DebugMessage(ERROR_SETFLAGS_CONTEXT_ID|0);
         abort();
     }
-    if (SR_EPH)
+    if (g->SR_EPH)
     {
         DebugMessage(ERROR_SETFLAGS_PREFIX|0);
         abort();
     }
-    if (SR_DSX)
+    if (g->SR_DSX)
     {
         DebugMessage(ERROR_SETFLAGS_DELAY_SLOT|0);
         abort();
@@ -271,52 +291,52 @@ void EMSCRIPTEN_KEEPALIVE SetFlags(int x)
 }
 
 
-int EMSCRIPTEN_KEEPALIVE GetFlags()
+int32 GetFlags()
 {
-    int x = 0x0;
-    x = x | (SR_SM ? (1 << 0) : 0);
-    x = x | (SR_TEE ? (1 << 1) : 0);
-    x = x | (SR_IEE ? (1 << 2) : 0);
-    x = x | (SR_DCE ? (1 << 3) : 0);
-    x = x | (SR_ICE ? (1 << 4) : 0);
-    x = x | (SR_DME ? (1 << 5) : 0);
-    x = x | (SR_IME ? (1 << 6) : 0);
-    x = x | (SR_LEE ? (1 << 7) : 0);
-    x = x | (SR_CE ? (1 << 8) : 0);
-    x = x | (SR_F ? (1 << 9) : 0);
-    x = x | (SR_CY ? (1 << 10) : 0);
-    x = x | (SR_OV ? (1 << 11) : 0);
-    x = x | (SR_OVE ? (1 << 12) : 0);
-    x = x | (SR_DSX ? (1 << 13) : 0);
-    x = x | (SR_EPH ? (1 << 14) : 0);
-    x = x | (SR_FO ? (1 << 15) : 0);
-    x = x | (SR_SUMRA ? (1 << 16) : 0);
-    x = x | (SR_CID << 28);
+    int32 x = 0x0;
+    x = x | (g->SR_SM ? (1 << 0) : 0);
+    x = x | (g->SR_TEE ? (1 << 1) : 0);
+    x = x | (g->SR_IEE ? (1 << 2) : 0);
+    x = x | (g->SR_DCE ? (1 << 3) : 0);
+    x = x | (g->SR_ICE ? (1 << 4) : 0);
+    x = x | (g->SR_DME ? (1 << 5) : 0);
+    x = x | (g->SR_IME ? (1 << 6) : 0);
+    x = x | (g->SR_LEE ? (1 << 7) : 0);
+    x = x | (g->SR_CE ? (1 << 8) : 0);
+    x = x | (g->SR_F ? (1 << 9) : 0);
+    x = x | (g->SR_CY ? (1 << 10) : 0);
+    x = x | (g->SR_OV ? (1 << 11) : 0);
+    x = x | (g->SR_OVE ? (1 << 12) : 0);
+    x = x | (g->SR_DSX ? (1 << 13) : 0);
+    x = x | (g->SR_EPH ? (1 << 14) : 0);
+    x = x | (g->SR_FO ? (1 << 15) : 0);
+    x = x | (g->SR_SUMRA ? (1 << 16) : 0);
+    x = x | (g->SR_CID << 28);
     return x;
 }
 
 void CheckForInterrupt()
 {
-    raise_interrupt = PICMR & PICSR;
+    g->raise_interrupt = g->PICMR & g->PICSR;
 }
 
-void EMSCRIPTEN_KEEPALIVE RaiseInterrupt(int line, int cpuid)
+void RaiseInterrupt(int32 line, int32 cpuid)
 {
-    int lmask = 1 << line;
-    PICSR = PICSR | lmask;
+    int32 lmask = 1 << line;
+    g->PICSR = g->PICSR | lmask;
     CheckForInterrupt();
 }
 
-void EMSCRIPTEN_KEEPALIVE ClearInterrupt(int line, int cpuid)
+void ClearInterrupt(int32 line, int32 cpuid)
 {
-    PICSR = PICSR & (~(1 << line));
-    raise_interrupt = PICMR & PICSR;
+    g->PICSR &= ~(1 << line);
+    g->raise_interrupt = g->PICMR & g->PICSR;
 }
 
-void SetSPR(int idx, int x)
+void SetSPR(int32 idx, int32 x)
 {
-    int address = 0;
-    int group = 0;
+    int32 address = 0;
+    int32 group = 0;
     address = (idx & 0x7FF);
     group = (idx >> 11) & 0x1F;
 
@@ -342,17 +362,17 @@ void SetSPR(int idx, int x)
         // ins cache, not supported
         break;
     case 8:
-        doze = 0x1; // doze mode
+        g->doze = 0x1; // doze mode
         break;
     case 9:
         // pic
-        switch (address|0) {
+        switch (address) {
         case 0:
-            PICMR = x | 0x3; // we use non maskable interrupt here
+            g->PICMR = x | 0x3; // we use non maskable interrupt here
             // check immediate for interrupt
             CheckForInterrupt();
-            if (SR_IEE) {
-                if (raise_interrupt) {
+            if (g->SR_IEE) {
+                if (g->raise_interrupt) {
                     DebugMessage(ERROR_SETSPR_DIRECT_INTERRUPT_EXCEPTION);
                     abort();
                 }
@@ -369,14 +389,14 @@ void SetSPR(int idx, int x)
         //tick timer
         switch (address) {
         case 0:
-            TTMR = x;
-            if (((TTMR >> 30)&3) != 0x3) {
+            g->TTMR = x;
+            if (((g->TTMR >> 30)&3) != 0x3) {
                 DebugMessage(ERROR_SETSPR_TIMER_MODE_NOT_CONTINUOUS);
                 abort();
             }
             break;
         case 1:
-            TTCR = x;
+            g->TTCR = x;
             break;
         default:
             //DebugMessage("Error in SetSPR: Tick timer address not supported");
@@ -393,10 +413,10 @@ void SetSPR(int idx, int x)
     }
 }
 
-int GetSPR(int idx)
+int32 GetSPR(int32 idx)
 {
-    int address = idx & 0x7FF;
-    int group = (idx >> 11) & 0x1F;
+    int32 address = idx & 0x7FF;
+    int32 group = (idx >> 11) & 0x1F;
     switch (group)
     {
     case 0:
@@ -413,9 +433,9 @@ int GetSPR(int idx)
         switch (address)
         {
         case 0:
-            return PICMR;
+            return g->PICMR;
         case 2:
-            return PICSR;
+            return g->PICSR;
         default:
             //DebugMessage("Error in GetSPR: PIC address unknown");
             DebugMessage(ERROR_UNKNOWN);
@@ -429,9 +449,9 @@ int GetSPR(int idx)
         switch (address)
         {
         case 0:
-            return TTMR;
+            return g->TTMR;
         case 1:
-            return TTCR; // or clock
+            return g->TTCR; // or clock
         default:
             DebugMessage(ERROR_UNKNOWN);
             //DebugMessage("Error in GetSPR: Tick timer address unknown");
@@ -448,41 +468,41 @@ int GetSPR(int idx)
     return 0;
 }
 
-void Exception(int excepttype, int addr)
+void Exception(int32 excepttype, int32 addr)
 {
-    int except_vector = excepttype | (SR_EPH ? 0xf0000000 : 0x0);
+    int32 except_vector = excepttype | (g->SR_EPH ? 0xf0000000 : 0x0);
 
     SetSPR(SPR_EEAR_BASE, addr);
     SetSPR(SPR_ESR_BASE, GetFlags());
 
-    EA = -1;
-    SR_OVE = 0;
-    SR_SM = 1;
-    SR_IEE = 0;
-    SR_TEE = 0;
-    SR_DME = 0;
+    g->EA = -1;
+    g->SR_OVE = 0;
+    g->SR_SM = 1;
+    g->SR_IEE = 0;
+    g->SR_TEE = 0;
+    g->SR_DME = 0;
 
-    instlblookup = 0;
-    read32tlblookup = 0;
-    read8stlblookup = 0;
-    read8utlblookup = 0;
-    read16stlblookup = 0;
-    read16utlblookup = 0;
-    write32tlblookup = 0;
-    write8tlblookup = 0;
-    write16tlblookup = 0;
-    instlbcheck = 0;
-    read32tlbcheck = 0;
-    read8utlbcheck = 0;
-    read8stlbcheck = 0;
-    read16utlbcheck = 0;
-    read16stlbcheck = 0;
-    write32tlbcheck = 0;
-    write8tlbcheck = 0;
-    write16tlbcheck = 0;
+    g->instlblookup = 0;
+    g->read32tlblookup = 0;
+    g->read8stlblookup = 0;
+    g->read8utlblookup = 0;
+    g->read16stlblookup = 0;
+    g->read16utlblookup = 0;
+    g->write32tlblookup = 0;
+    g->write8tlblookup = 0;
+    g->write16tlblookup = 0;
+    g->instlbcheck = 0;
+    g->read32tlbcheck = 0;
+    g->read8utlbcheck = 0;
+    g->read8stlbcheck = 0;
+    g->read16utlbcheck = 0;
+    g->read16stlbcheck = 0;
+    g->write32tlbcheck = 0;
+    g->write8tlbcheck = 0;
+    g->write16tlbcheck = 0;
 
-    fence = ppc|0;
-    nextpc = except_vector;
+    g->fence = g->ppc;
+    g->nextpc = except_vector;
 
     switch (excepttype) {
 
@@ -493,8 +513,8 @@ void Exception(int excepttype, int addr)
     case 0x900: // EXCEPT_DTLBMISS
     case 0xE00: // EXCEPT_TRAP
     case 0x200: // EXCEPT_BUSERR
-        pc = pcbase + ppc;
-        SetSPR(SPR_EPCR_BASE, pc - (delayedins ? 4 : 0));
+        g->pc = g->pcbase + g->ppc;
+        SetSPR(SPR_EPCR_BASE, g->pc - (g->delayedins ? 4 : 0));
         break;
 
     case 0xA00: // EXCEPT_ITLBMISS
@@ -502,21 +522,21 @@ void Exception(int excepttype, int addr)
     case 0x500: // EXCEPT_TICK
     case 0x800: // EXCEPT_INT
         // per definition, the pc must be valid here
-        SetSPR(SPR_EPCR_BASE, pc - (delayedins ? 4 : 0));
+        SetSPR(SPR_EPCR_BASE, g->pc - (g->delayedins ? 4 : 0));
         break;
 
     case 0xC00: // EXCEPT_SYSCALL
-        pc = pcbase + ppc|0;
-        SetSPR(SPR_EPCR_BASE, pc + 4 - (delayedins ? 4 : 0));
+        g->pc = g->pcbase + g->ppc;
+        SetSPR(SPR_EPCR_BASE, g->pc + 4 - (g->delayedins ? 4 : 0));
         break;
 
     default:
         DebugMessage(ERROR_EXCEPTION_UNKNOWN);
         abort();
     }
-    delayedins = 0;
-    delayedins_at_page_boundary = 0;
-    SR_IME = 0;
+    g->delayedins = 0;
+    g->delayedins_at_page_boundary = 0;
+    g->SR_IME = 0;
 }
 
 
@@ -529,14 +549,14 @@ int32 DTLBRefill(int32 addr, int32 nsets)
     int32 r3 = 0;
     int32 r4 = 0;
     int32 r5 = 0;
-    if (ramw[0x900 >> 2] == boot_dtlb_misshandler_address)
+    if (ramw[0x900 >> 2] == g->boot_dtlb_misshandler_address)
     {
         Exception(EXCEPT_DTLBMISS, addr);
         return 0;
     }
     r2 = addr;
     // get_current_PGD  using r3 and r5
-    r3 = ramw[current_pgd >> 2]; // current pgd
+    r3 = ramw[g->current_pgd >> 2]; // current pgd
     r4 = ((uint32)r2 >> 0x18) << 2;
     r5 = r4 + r3;
 
@@ -594,20 +614,20 @@ int32 DTLBRefill(int32 addr, int32 nsets)
 }
 
 // disassembled itlb miss exception handler arch/openrisc/kernel/head.S, kernel dependent
-int ITLBRefill(int addr, int nsets)
+int32 ITLBRefill(int32 addr, int32 nsets)
 {
-    int r2 = 0;
-    int r3 = 0;
-    int r4 = 0;
-    int r5 = 0;
-    if (ramw[0xA00 >> 2] == boot_itlb_misshandler_address) {
+    int32 r2 = 0;
+    int32 r3 = 0;
+    int32 r4 = 0;
+    int32 r5 = 0;
+    if (ramw[0xA00 >> 2] == g->boot_itlb_misshandler_address) {
         Exception(EXCEPT_ITLBMISS, addr);
         return 0;
     }
 
     r2 = addr;
     // get_current_PGD  using r3 and r5
-    r3 = ramw[current_pgd >> 2]; // current pgd
+    r3 = ramw[g->current_pgd >> 2]; // current pgd
     r4 = ((uint32)r2 >> 0x18) << 2;
     r5 = r4 + r3;
 
@@ -676,7 +696,7 @@ int32 DTLBLookup(int32 addr, int32 write)
     int32 setindex = 0;
     int32 tlmbr = 0;
     int32 tlbtr = 0;
-    if (!SR_DME)
+    if (!g->SR_DME)
     {
         return addr;
     }
@@ -729,7 +749,7 @@ int32 DTLBLookup(int32 addr, int32 write)
     // Skip this to be faster
 
     // check if supervisor mode
-    if (SR_SM)
+    if (g->SR_SM)
     {
         if (!write)
         {
@@ -768,7 +788,7 @@ int32 DTLBLookup(int32 addr, int32 write)
 }
 
 
-int32 EMSCRIPTEN_KEEPALIVE Step(int32 steps, int32 clockspeed)
+int32 Step(int32 steps, int32 clockspeed)
 {
     int32 ins = 0x0;
     int32 imm = 0x0;
@@ -791,12 +811,11 @@ int32 EMSCRIPTEN_KEEPALIVE Step(int32 steps, int32 clockspeed)
 
     for(;;)
     {
-
-        if (ppc != fence)
+        if (g->ppc != g->fence)
         {
 
-        ins = ramw[ppc >> 2];
-        ppc = ppc + 4;
+        ins = ramw[g->ppc >> 2];
+        g->ppc += 4;
 
 // --------------------------------------------
 
@@ -805,65 +824,65 @@ int32 EMSCRIPTEN_KEEPALIVE Step(int32 steps, int32 clockspeed)
 
         case 0x0:
             // j
-            pc = pcbase + ppc;
-            jump = pc + ((ins << 6) >> 4);
-            if (fence == ppc) // delayed instruction directly at page boundary
+            g->pc = g->pcbase + g->ppc;
+            g->jump = g->pc + ((ins << 6) >> 4);
+            if (g->fence == g->ppc) // delayed instruction directly at page boundary
             {
-                delayedins_at_page_boundary = 1;
+                g->delayedins_at_page_boundary = 1;
             } else
             {
-                fence = ppc + 4;
-                nextpc = jump;
+                g->fence = g->ppc + 4;
+                g->nextpc = g->jump;
             }
-            delayedins = 1;
+            g->delayedins = 1;
             continue;
 
         case 0x1:
             // jal
-            pc = pcbase + ppc;
-            jump = pc + ((ins << 6) >> 4);
-            r[9] = pc + 8;
-            if (fence == ppc) // delayed instruction directly at page boundary
+            g->pc = g->pcbase + g->ppc;
+            g->jump = g->pc + ((ins << 6) >> 4);
+            r[9] = g->pc + 8;
+            if (g->fence == g->ppc) // delayed instruction directly at page boundary
             {
-                delayedins_at_page_boundary = 1;
+                g->delayedins_at_page_boundary = 1;
             } else
             {
-                fence = ppc + 4;
-                nextpc = jump;
+                g->fence = g->ppc + 4;
+                g->nextpc = g->jump;
             }
-            delayedins = 1;
+            g->delayedins = 1;
             continue;
 
         case 0x3:
             // bnf
-            if (SR_F) continue;
-            pc = pcbase + ppc;
-            jump = pc + ((ins << 6) >> 4);
-            if (fence == ppc) // delayed instruction directly at page boundary
+            if (g->SR_F) continue;
+            g->pc = g->pcbase + g->ppc;
+            g->jump = g->pc + ((ins << 6) >> 4);
+            if (g->fence == g->ppc) // delayed instruction directly at page boundary
             {
-                delayedins_at_page_boundary = 1;
+                g->delayedins_at_page_boundary = 1;
             } else
             {
-                fence = ppc + 4;
-                nextpc = jump;
+                g->fence = g->ppc + 4;
+                g->nextpc = g->jump;
             }
-            delayedins = 1;
+            g->delayedins = 1;
             continue;
 
         case 0x4:
             // bf
-            if (!SR_F) continue;
-            pc = pcbase + ppc;
-            jump = pc + ((ins << 6) >> 4);
-            if (fence == ppc) // delayed instruction directly at page boundary
+            if (!g->SR_F) continue;
+            g->pc = g->pcbase + g->ppc;
+            g->jump = g->pc + ((ins << 6) >> 4);
+            if (g->fence == g->ppc) // delayed instruction directly at page boundary
             {
-                delayedins_at_page_boundary = 1;
+                g->delayedins_at_page_boundary = 1;
             } else
             {
-                fence = ppc + 4;
-                nextpc = jump;
+                g->fence = g->ppc + 4;
+                g->nextpc = g->jump;
             }
-            delayedins = 1;
+            g->delayedins = 1;
             continue;
 
         case 0x5:
@@ -889,90 +908,90 @@ int32 EMSCRIPTEN_KEEPALIVE Step(int32 steps, int32 clockspeed)
 
         case 0x9:
             // rfe
-            jump = GetSPR(SPR_EPCR_BASE);
+            g->jump = GetSPR(SPR_EPCR_BASE);
             InvalidateTLB();
-            fence = ppc;
-            nextpc = jump;
-            //pc = jump; // set the correct pc in case of an EXCEPT_INT
-            //delayedins = 0;
+            g->fence = g->ppc;
+            g->nextpc = g->jump;
+            //g->pc = g->jump; // set the correct pc in case of an EXCEPT_INT
+            //g->delayedins = 0;
             SetFlags(GetSPR(SPR_ESR_BASE)); // could raise an exception
             continue;
 
         case 0x11:
             // jr
-            jump = r[(ins >> 11) & 0x1F];
-            if (fence == ppc) // delayed instruction directly at page boundary
+            g->jump = r[(ins >> 11) & 0x1F];
+            if (g->fence == g->ppc) // delayed instruction directly at page boundary
             {
-                delayedins_at_page_boundary = 1;
+                g->delayedins_at_page_boundary = 1;
             } else
             {
-                fence = ppc + 4;
-                nextpc = jump;
+                g->fence = g->ppc + 4;
+                g->nextpc = g->jump;
             }
-            delayedins = 1;
+            g->delayedins = 1;
             continue;
 
         case 0x12:
             // jalr
-            pc = pcbase + ppc;
-            jump = r[(ins >> 11) & 0x1F];
-            r[9] = pc + 8;
-            if (fence == ppc) // delayed instruction directly at page boundary
+            g->pc = g->pcbase + g->ppc;
+            g->jump = r[(ins >> 11) & 0x1F];
+            r[9] = g->pc + 8;
+            if (g->fence == g->ppc) // delayed instruction directly at page boundary
             {
-                delayedins_at_page_boundary = 1;
+                g->delayedins_at_page_boundary = 1;
             } else
             {
-                fence = ppc + 4;
-                nextpc = jump;
+                g->fence = g->ppc + 4;
+                g->nextpc = g->jump;
             }
-            delayedins = 1;
+            g->delayedins = 1;
             continue;
 
         case 0x1B:
             // lwa
             vaddr = r[(ins >> 16) & 0x1F] + ((ins << 16) >> 16);
-            if ((read32tlbcheck ^ vaddr) >> 13)
+            if ((g->read32tlbcheck ^ vaddr) >> 13)
             {
                 paddr = DTLBLookup(vaddr, 0);
                 if (paddr == -1)
                 {
                     break;
                 }
-                read32tlbcheck = vaddr;
-                read32tlblookup = ((paddr^vaddr) >> 13) << 13;
+                g->read32tlbcheck = vaddr;
+                g->read32tlblookup = ((paddr^vaddr) >> 13) << 13;
             }
-            paddr = read32tlblookup ^ vaddr;
-            EA = paddr;
+            paddr = g->read32tlblookup ^ vaddr;
+            g->EA = paddr;
             r[(ins >> 21) & 0x1F] = paddr>0?ramw[paddr >> 2]:Read32(paddr);
             continue;
 
         case 0x21:
             // lwz
             vaddr = r[(ins >> 16) & 0x1F] + ((ins << 16) >> 16);
-            if ((read32tlbcheck ^ vaddr) >> 13) {
+            if ((g->read32tlbcheck ^ vaddr) >> 13) {
                 paddr = DTLBLookup(vaddr, 0);
                 if (paddr == -1) {
                     break;
                 }
-                read32tlbcheck = vaddr;
-                read32tlblookup = ((paddr^vaddr) >> 13) << 13;
+                g->read32tlbcheck = vaddr;
+                g->read32tlblookup = ((paddr^vaddr) >> 13) << 13;
             }
-            paddr = read32tlblookup ^ vaddr;
+            paddr = g->read32tlblookup ^ vaddr;
             r[(ins >> 21) & 0x1F] = paddr>0?ramw[paddr >> 2]:Read32(paddr);
             continue;
 
         case 0x23:
             // lbz
             vaddr = r[(ins >> 16) & 0x1F] + ((ins << 16) >> 16);
-            if ((read8utlbcheck ^ vaddr) >> 13) {
+            if ((g->read8utlbcheck ^ vaddr) >> 13) {
                 paddr = DTLBLookup(vaddr, 0);
                 if (paddr == -1) {
                     break;
                 }
-                read8utlbcheck = vaddr;
-                read8utlblookup = ((paddr^vaddr) >> 13) << 13;
+                g->read8utlbcheck = vaddr;
+                g->read8utlblookup = ((paddr^vaddr) >> 13) << 13;
             }
-            paddr = read8utlblookup ^ vaddr;
+            paddr = g->read8utlblookup ^ vaddr;
             if (paddr >= 0) {
                 r[(ins >> 21) & 0x1F] = (uint8)ramb[paddr ^ 3];
             } else {
@@ -983,17 +1002,17 @@ int32 EMSCRIPTEN_KEEPALIVE Step(int32 steps, int32 clockspeed)
         case 0x24:
             // lbs
             vaddr = r[(ins >> 16) & 0x1F] + ((ins << 16) >> 16);
-            if ((read8stlbcheck ^ vaddr) >> 13)
+            if ((g->read8stlbcheck ^ vaddr) >> 13)
             {
                 paddr = DTLBLookup(vaddr, 0);
                 if (paddr == -1)
                 {
                     break;
                 }
-                read8stlbcheck = vaddr;
-                read8stlblookup = ((paddr^vaddr) >> 13) << 13;
+                g->read8stlbcheck = vaddr;
+                g->read8stlblookup = ((paddr^vaddr) >> 13) << 13;
             }
-            paddr = read8stlblookup ^ vaddr;
+            paddr = g->read8stlblookup ^ vaddr;
             if (paddr >= 0)
             {
                 r[(ins >> 21) & 0x1F] = (int32)ramb[(paddr ^ 3)];
@@ -1006,17 +1025,17 @@ int32 EMSCRIPTEN_KEEPALIVE Step(int32 steps, int32 clockspeed)
         case 0x25:
             // lhz
             vaddr = r[(ins >> 16) & 0x1F] + ((ins << 16) >> 16);
-            if ((read16utlbcheck ^ vaddr) >> 13)
+            if ((g->read16utlbcheck ^ vaddr) >> 13)
             {
                 paddr = DTLBLookup(vaddr, 0);
                 if (paddr == -1)
                 {
                     break;
                 }
-                read16utlbcheck = vaddr;
-                read16utlblookup = ((paddr^vaddr) >> 13) << 13;
+                g->read16utlbcheck = vaddr;
+                g->read16utlblookup = ((paddr^vaddr) >> 13) << 13;
             }
-            paddr = read16utlblookup ^ vaddr;
+            paddr = g->read16utlblookup ^ vaddr;
             if (paddr >= 0)
             {
                 r[(ins >> 21) & 0x1F] = (uint16)ramh[(paddr ^ 2) >> 1];
@@ -1029,17 +1048,17 @@ int32 EMSCRIPTEN_KEEPALIVE Step(int32 steps, int32 clockspeed)
         case 0x26:
             // lhs
             vaddr = r[(ins >> 16) & 0x1F] + ((ins << 16) >> 16);
-            if ((read16stlbcheck ^ vaddr) >> 13)
+            if ((g->read16stlbcheck ^ vaddr) >> 13)
             {
                 paddr = DTLBLookup(vaddr, 0);
                 if (paddr == -1)
                 {
                     break;
                 }
-                read16stlbcheck = vaddr;
-                read16stlblookup = ((paddr^vaddr) >> 13) << 13;
+                g->read16stlbcheck = vaddr;
+                g->read16stlblookup = ((paddr^vaddr) >> 13) << 13;
             }
-            paddr = read16stlblookup ^ vaddr;
+            paddr = g->read16stlblookup ^ vaddr;
             if (paddr >= 0)
             {
                 r[(ins >> 21) & 0x1F] = (int32)ramh[(paddr ^ 2) >> 1];
@@ -1054,20 +1073,20 @@ int32 EMSCRIPTEN_KEEPALIVE Step(int32 steps, int32 clockspeed)
             rA = r[(ins >> 16) & 0x1F];
             rindex = (ins >> 21) & 0x1F;
             r[rindex] = rA + ((ins << 16) >> 16);
-            SR_CY = (uint32)r[rindex] < (uint32)rA;
+            g->SR_CY = (uint32)r[rindex] < (uint32)rA;
             continue;
 
         case 0x28:
             // addi with carry
             rA = r[(ins >> 16) & 0x1F];
             rindex = (ins >> 21) & 0x1F;
-            r[rindex] = (rA + ((ins << 16) >> 16)) + (SR_CY?1:0);
-            if (SR_CY)
+            r[rindex] = (rA + ((ins << 16) >> 16)) + (g->SR_CY?1:0);
+            if (g->SR_CY)
             {
-                SR_CY = ((uint32)r[rindex]) <= ((uint32)rA);
+                g->SR_CY = ((uint32)r[rindex]) <= ((uint32)rA);
             } else
             {
-                SR_CY = ((uint32)r[rindex]) < ((uint32)rA);
+                g->SR_CY = ((uint32)r[rindex]) < ((uint32)rA);
             }
             continue;
 
@@ -1129,43 +1148,43 @@ int32 EMSCRIPTEN_KEEPALIVE Step(int32 steps, int32 clockspeed)
             {
             case 0x0:
                 // sfnei
-                SR_F = r[rindex] == imm;
+                g->SR_F = r[rindex] == imm;
                 continue;
             case 0x1:
                 // sfnei
-                SR_F = r[rindex] != imm;
+                g->SR_F = r[rindex] != imm;
                 continue;
             case 0x2:
                 // sfgtui
-                SR_F = ((uint32)r[rindex]) > ((uint32)imm);
+                g->SR_F = ((uint32)r[rindex]) > ((uint32)imm);
                 continue;
             case 0x3:
                 // sfgeui
-                SR_F = ((uint32)r[rindex]) >= ((uint32)imm);
+                g->SR_F = ((uint32)r[rindex]) >= ((uint32)imm);
                 continue;
             case 0x4:
                 // sfltui
-                SR_F = ((uint32)r[rindex]) < ((uint32)imm);
+                g->SR_F = ((uint32)r[rindex]) < ((uint32)imm);
                 continue;
             case 0x5:
                 // sfleui
-                SR_F = ((uint32)r[rindex]) <= ((uint32)imm);
+                g->SR_F = ((uint32)r[rindex]) <= ((uint32)imm);
                 continue;
             case 0xa:
                 // sfgtsi
-                SR_F = r[rindex] > imm;
+                g->SR_F = r[rindex] > imm;
                 continue;
             case 0xb:
                 // sfgesi
-                SR_F = r[rindex] >= imm;
+                g->SR_F = r[rindex] >= imm;
                 continue;
             case 0xc:
                 // sfltsi
-                SR_F = r[rindex] < imm;
+                g->SR_F = r[rindex] < imm;
                 continue;
             case 0xd:
                 // sflesi
-                SR_F = r[rindex] <= imm;
+                g->SR_F = r[rindex] <= imm;
                 continue;
             default:
                 //DebugMessage("Error: sf...i not supported yet");
@@ -1178,23 +1197,23 @@ int32 EMSCRIPTEN_KEEPALIVE Step(int32 steps, int32 clockspeed)
         case 0x30:
             // mtspr
             imm = (ins & 0x7FF) | ((ins >> 10) & 0xF800);
-            //pc = pcbase + ppc|0;
+            //pc = g->pcbase + g->ppc|0;
             SetSPR(r[(ins >> 16) & 0x1F] | imm, r[(ins >> 11) & 0x1F]); // can raise an interrupt
 
-            if (doze) // doze
+            if (g->doze) // doze
             {
-                doze = 0x0;
-                //message.Debug('Doze ' + raise_interrupt);
+                g->doze = 0x0;
+                //message.Debug('Doze ' + g->raise_interrupt);
 
-                if (TTMR & (1 << 28))
-                if (SR_TEE)
+                if (g->TTMR & (1 << 28))
+                if (g->SR_TEE)
                 {
                     Exception(EXCEPT_TICK, group0p[SPR_EEAR_BASE]);
                     continue;
                 }
 
-                if (SR_IEE)
-                if (raise_interrupt)
+                if (g->SR_IEE)
+                if (g->raise_interrupt)
                 {
                     Exception(EXCEPT_INT, group0p[SPR_EEAR_BASE]);
                     continue;
@@ -1202,8 +1221,8 @@ int32 EMSCRIPTEN_KEEPALIVE Step(int32 steps, int32 clockspeed)
 
                 return steps;
 
-//                if ((raise_interrupt|0) == 0)
-//                if ((TTMR & (1 << 28)) == 0) {
+//                if ((g->raise_interrupt|0) == 0)
+//                if ((g->TTMR & (1 << 28)) == 0) {
 //                    return steps|0;
 //                }
             }
@@ -1247,27 +1266,27 @@ int32 EMSCRIPTEN_KEEPALIVE Step(int32 steps, int32 clockspeed)
                 continue;
             case 0x8:
                 // lf.sfeq.s
-                SR_F = f[rA] == f[rB];
+                g->SR_F = f[rA] == f[rB];
                 continue;
             case 0x9:
                 // lf.sfne.s
-                SR_F = f[rA] != f[rB];
+                g->SR_F = f[rA] != f[rB];
                 continue;
             case 0xa:
                 // lf.sfgt.s
-                SR_F = f[rA] > f[rB];
+                g->SR_F = f[rA] > f[rB];
                 continue;
             case 0xb:
                 // lf.sfge.s
-                SR_F = f[rA] >= f[rB];
+                g->SR_F = f[rA] >= f[rB];
                 continue;
             case 0xc:
                 // lf.sflt.s
-                SR_F = f[rA] < f[rB];
+                g->SR_F = f[rA] < f[rB];
                 continue;
             case 0xd:
                 // lf.sfle.s
-                SR_F = f[rA] <= f[rB];
+                g->SR_F = f[rA] <= f[rB];
                 continue;
             default:
                 DebugMessage(ERROR_UNKNOWN);
@@ -1280,20 +1299,20 @@ int32 EMSCRIPTEN_KEEPALIVE Step(int32 steps, int32 clockspeed)
             // swa
             imm = ((((ins >> 10) & 0xF800) | (ins & 0x7FF)) << 16) >> 16;
             vaddr = r[(ins >> 16) & 0x1F] + imm;
-            if ((write32tlbcheck ^ vaddr) >> 13)
+            if ((g->write32tlbcheck ^ vaddr) >> 13)
             {
                 paddr = DTLBLookup(vaddr, 1);
                 if (paddr == -1)
                 {
                     break;
                 }
-                write32tlbcheck = vaddr;
-                write32tlblookup = ((paddr^vaddr) >> 13) << 13;
+                g->write32tlbcheck = vaddr;
+                g->write32tlblookup = ((paddr^vaddr) >> 13) << 13;
             }
-            paddr = write32tlblookup ^ vaddr;
-            SR_F = (paddr == EA)?1:0;
-            EA = -1;
-            if (SR_F == 0)
+            paddr = g->write32tlblookup ^ vaddr;
+            g->SR_F = (paddr == g->EA)?1:0;
+            g->EA = -1;
+            if (g->SR_F == 0)
             {
                 break;
             }
@@ -1310,17 +1329,17 @@ int32 EMSCRIPTEN_KEEPALIVE Step(int32 steps, int32 clockspeed)
             // sw
             imm = ((((ins >> 10) & 0xF800) | (ins & 0x7FF)) << 16) >> 16;
             vaddr = r[(ins >> 16) & 0x1F] + imm;
-            if ((write32tlbcheck ^ vaddr) >> 13)
+            if ((g->write32tlbcheck ^ vaddr) >> 13)
             {
                 paddr = DTLBLookup(vaddr, 1);
                 if (paddr == -1)
                 {
                     break;
                 }
-                write32tlbcheck = vaddr;
-                write32tlblookup = ((paddr^vaddr) >> 13) << 13;
+                g->write32tlbcheck = vaddr;
+                g->write32tlblookup = ((paddr^vaddr) >> 13) << 13;
             }
-            paddr = write32tlblookup ^ vaddr;
+            paddr = g->write32tlblookup ^ vaddr;
             if (paddr > 0)
             {
                 ramw[paddr >> 2] = r[(ins >> 11) & 0x1F];
@@ -1334,23 +1353,23 @@ int32 EMSCRIPTEN_KEEPALIVE Step(int32 steps, int32 clockspeed)
             // sb
             imm = ((((ins >> 10) & 0xF800) | (ins & 0x7FF)) << 16) >> 16;
             vaddr = r[(ins >> 16) & 0x1F] + imm;
-            if ((write8tlbcheck ^ vaddr) >> 13) {
+            if ((g->write8tlbcheck ^ vaddr) >> 13) {
                 paddr = DTLBLookup(vaddr, 1);
                 if (paddr == -1)
                 {
                     break;
                 }
-                write8tlbcheck = vaddr;
-                write8tlblookup = ((paddr^vaddr) >> 13) << 13;
+                g->write8tlbcheck = vaddr;
+                g->write8tlblookup = ((paddr^vaddr) >> 13) << 13;
             }
-            paddr = write8tlblookup ^ vaddr;
+            paddr = g->write8tlblookup ^ vaddr;
             if (paddr > 0)
             {
                 // consider that the data is saved in little endian
                 ramb[paddr ^ 3] = r[(ins >> 11) & 0x1F];
             } else
             {
-                Write8(paddr, r[(ins >> 11) & 0x1F]);
+                Write8(paddr, r[(ins >> 11) & 0x1F]&0xFF);
             }
             continue;
 
@@ -1358,17 +1377,17 @@ int32 EMSCRIPTEN_KEEPALIVE Step(int32 steps, int32 clockspeed)
             // sh
             imm = ((((ins >> 10) & 0xF800) | (ins & 0x7FF)) << 16) >> 16;
             vaddr = r[(ins >> 16) & 0x1F] + imm;
-            if ((write16tlbcheck ^ vaddr) >> 13)
+            if ((g->write16tlbcheck ^ vaddr) >> 13)
             {
                 paddr = DTLBLookup(vaddr, 1);
                 if (paddr == -1)
                 {
                     break;
                 }
-                write16tlbcheck = vaddr;
-                write16tlblookup = ((paddr^vaddr) >> 13) << 13;
+                g->write16tlbcheck = vaddr;
+                g->write16tlblookup = ((paddr^vaddr) >> 13) << 13;
             }
-            paddr = write16tlblookup ^ vaddr;
+            paddr = g->write16tlblookup ^ vaddr;
             if (paddr >= 0)
             {
                 ramh[(paddr ^ 2) >> 1] = r[(ins >> 11) & 0x1F];
@@ -1388,25 +1407,25 @@ int32 EMSCRIPTEN_KEEPALIVE Step(int32 steps, int32 clockspeed)
             case 0x0:
                 // add
                 r[rindex] = rA + rB;
-                SR_CY = ((uint32)r[rindex]) < ((uint32)rA);
+                g->SR_CY = ((uint32)r[rindex]) < ((uint32)rA);
                 continue;
 
             case 0x1:
                 // add with carry
-                r[rindex] = rA + rB + (SR_CY?1:0);
-                if (SR_CY)
+                r[rindex] = rA + rB + (g->SR_CY?1:0);
+                if (g->SR_CY)
                 {
-                    SR_CY = ((uint32)r[rindex]) <= ((uint32)rA);
+                    g->SR_CY = ((uint32)r[rindex]) <= ((uint32)rA);
                 } else
                 {
-                    SR_CY = ((uint32)r[rindex]) < ((uint32)rA);
+                    g->SR_CY = ((uint32)r[rindex]) < ((uint32)rA);
                 }
                 continue;
 
             case 0x2:
                 // sub signed
                 r[rindex] = rA - rB;
-                SR_CY = ((uint32)rB) > ((uint32)rA);
+                g->SR_CY = ((uint32)rB) > ((uint32)rA);
                 continue;
             case 0x3:
                 // and
@@ -1430,7 +1449,7 @@ int32 EMSCRIPTEN_KEEPALIVE Step(int32 steps, int32 clockspeed)
                 continue;
             case 0xe:
                 // cmov
-                r[rindex] = SR_F?rA:rB;
+                r[rindex] = g->SR_F?rA:rB;
                 continue;
             case 0x48:
                 // srl not signed
@@ -1477,16 +1496,16 @@ int32 EMSCRIPTEN_KEEPALIVE Step(int32 steps, int32 clockspeed)
 
             case 0x30a:
                 // divu (specification seems to be wrong)
-                SR_OV = rB == 0;
-                if (!SR_OV) {
+                g->SR_OV = rB == 0;
+                if (!g->SR_OV) {
                     r[rindex] = ((uint32)rA) / ((uint32)rB);
                 }
                 continue;
 
             case 0x309:
                 // div (specification seems to be wrong)
-                SR_OV = rB == 0;
-                if (!SR_OV)
+                g->SR_OV = rB == 0;
+                if (!g->SR_OV)
                 {
                     r[rindex] = rA / rB;
                 }
@@ -1506,43 +1525,43 @@ int32 EMSCRIPTEN_KEEPALIVE Step(int32 steps, int32 clockspeed)
             {
             case 0x0:
                 // sfeq
-                SR_F = r[(ins >> 16) & 0x1F] == r[(ins >> 11) & 0x1F];
+                g->SR_F = r[(ins >> 16) & 0x1F] == r[(ins >> 11) & 0x1F];
                 continue;
             case 0x1:
                 // sfne
-                SR_F = r[(ins >> 16) & 0x1F] != r[(ins >> 11) & 0x1F];
+                g->SR_F = r[(ins >> 16) & 0x1F] != r[(ins >> 11) & 0x1F];
                 continue;
             case 0x2:
                 // sfgtu
-                SR_F = ((uint32)r[(ins >> 16) & 0x1F]) > ((uint32)r[(ins >> 11) & 0x1F]);
+                g->SR_F = ((uint32)r[(ins >> 16) & 0x1F]) > ((uint32)r[(ins >> 11) & 0x1F]);
                 continue;
             case 0x3:
                 // sfgeu
-                SR_F = ((uint32)r[(ins >> 16) & 0x1F]) >= ((uint32)r[(ins >> 11) & 0x1F]);
+                g->SR_F = ((uint32)r[(ins >> 16) & 0x1F]) >= ((uint32)r[(ins >> 11) & 0x1F]);
                 continue;
             case 0x4:
                 // sfltu
-                SR_F = ((uint32)r[(ins >> 16) & 0x1F]) < ((uint32)r[(ins >> 11) & 0x1F]);
+                g->SR_F = ((uint32)r[(ins >> 16) & 0x1F]) < ((uint32)r[(ins >> 11) & 0x1F]);
                 continue;
             case 0x5:
                 // sfleu
-                SR_F = ((uint32)r[(ins >> 16) & 0x1F]) <= ((uint32)r[(ins >> 11) & 0x1F]);
+                g->SR_F = ((uint32)r[(ins >> 16) & 0x1F]) <= ((uint32)r[(ins >> 11) & 0x1F]);
                 continue;
             case 0xa:
                 // sfgts
-                SR_F = r[(ins >> 16) & 0x1F] > r[(ins >> 11) & 0x1F];
+                g->SR_F = r[(ins >> 16) & 0x1F] > r[(ins >> 11) & 0x1F];
                 continue;
             case 0xb:
                 // sfges
-                SR_F = r[(ins >> 16) & 0x1F] >= r[(ins >> 11) & 0x1F];
+                g->SR_F = r[(ins >> 16) & 0x1F] >= r[(ins >> 11) & 0x1F];
                 continue;
             case 0xc:
                 // sflts
-                SR_F = r[(ins >> 16) & 0x1F] < r[(ins >> 11) & 0x1F];
+                g->SR_F = r[(ins >> 16) & 0x1F] < r[(ins >> 11) & 0x1F];
                 continue;
             case 0xd:
                 // sfles
-                SR_F = r[(ins >> 16) & 0x1F] <= r[(ins >> 11) & 0x1F];
+                g->SR_F = r[(ins >> 16) & 0x1F] <= r[(ins >> 11) & 0x1F];
                 continue;
             default:
                 //DebugMessage("Error: sf.... function supported yet");
@@ -1560,18 +1579,18 @@ int32 EMSCRIPTEN_KEEPALIVE Step(int32 steps, int32 clockspeed)
 
         } else { // fence
 
-            pc = nextpc;
+            g->pc = g->nextpc;
 
-            if (!delayedins_at_page_boundary)
+            if (!g->delayedins_at_page_boundary)
             {
-                delayedins = 0;
+                g->delayedins = 0;
             }
 
-            dsteps = dsteps - ((ppc - ppcorigin) >> 2);
+            dsteps = dsteps - ((g->ppc - g->ppcorigin) >> 2);
 
             // do this not so often
             if (dsteps < 0)
-            if (!delayedins_at_page_boundary) // for now. Not sure if we need this
+            if (!g->delayedins_at_page_boundary) // for now. Not sure if we need this
             {
                 dsteps = dsteps + 64;
                 steps = steps - 64;
@@ -1579,95 +1598,95 @@ int32 EMSCRIPTEN_KEEPALIVE Step(int32 steps, int32 clockspeed)
 
                 // ---------- TICK ----------
                 // timer enabled
-                if ((TTMR >> 30) != 0)
+                if ((g->TTMR >> 30) != 0)
                 {
-                    delta = (TTMR & 0xFFFFFFF) - (TTCR & 0xFFFFFFF);
+                    delta = (g->TTMR & 0xFFFFFFF) - (g->TTCR & 0xFFFFFFF);
                     //if (delta < 0) message.Debug("" + (TTCR & 0xFFFFFFF) + " " + SR_TEE + " " + (TTMR & 0xFFFFFFF) + " " + (TTMR >> 28));
-                    TTCR = TTCR + clockspeed;
+                    g->TTCR += clockspeed;
                     if (delta <= clockspeed)
                     {
                         // if interrupt enabled
-                        if (TTMR & (1 << 29))
+                        if (g->TTMR & (1 << 29))
                         {
-                            TTMR = TTMR | (1 << 28); // set pending interrupt
+                            g->TTMR = g->TTMR | (1 << 28); // set pending interrupt
                         }
                     }
                 }
 
                 // check if pending and check if interrupt must be triggered
-                if (TTMR & (1 << 28))
+                if (g->TTMR & (1 << 28))
                 {
-                    if (SR_TEE)
+                    if (g->SR_TEE)
                     {
                         Exception(EXCEPT_TICK, group0p[SPR_EEAR_BASE]);
                         // treat exception directly here
-                        pc = nextpc;
+                        g->pc = g->nextpc;
                     }
                 }
 
             } // dsteps
 
-            if (SR_IEE)
-            if (raise_interrupt) {
+            if (g->SR_IEE)
+            if (g->raise_interrupt) {
                 Exception(EXCEPT_INT, group0p[SPR_EEAR_BASE]);
-                pc = nextpc;
+                g->pc = g->nextpc;
             }
 
             // Get Instruction Fast version
-            if ((instlbcheck ^ pc) & 0xFFFFE000) // short check if it is still the correct page
+            if ((g->instlbcheck ^ g->pc) & 0xFFFFE000) // short check if it is still the correct page
             {
-                instlbcheck = pc; // save the new page, lower 11 bits are ignored
-                if (!SR_IME) {
-                    instlblookup = 0x0;
+                g->instlbcheck = g->pc; // save the new page, lower 11 bits are ignored
+                if (!g->SR_IME) {
+                    g->instlblookup = 0x0;
                 } else {
-                    setindex = (pc >> 13) & 63; // check this values
+                    setindex = (g->pc >> 13) & 63; // check this values
                     tlmbr = group2p[0x200 | setindex];
                     // test if tlmbr is valid
                     if ((tlmbr & 1) == 0)
                     {
-                        if (ITLBRefill(pc, 64))
+                        if (ITLBRefill(g->pc, 64))
                         {
                             tlmbr = group2p[0x200 | setindex]; // reload the new value
                         } else
                         {
                             // just make sure he doesn't count this 'continue' as steps
-                            ppcorigin = ppc;
-                            delayedins_at_page_boundary = 0;
+                            g->ppcorigin = g->ppc;
+                            g->delayedins_at_page_boundary = 0;
                             continue;
                         }
                     }
-                    if ((tlmbr >> 19) != (pc >> 19))
+                    if ((tlmbr >> 19) != (g->pc >> 19))
                     {
-                        if (ITLBRefill(pc, 64))
+                        if (ITLBRefill(g->pc, 64))
                         {
                             tlmbr = group2p[0x200 | setindex]; // reload the new value
                         } else
                         {
                             // just make sure he doesn't count this 'continue' as steps
-                            ppcorigin = ppc;
-                            delayedins_at_page_boundary = 0;
+                            g->ppcorigin = g->ppc;
+                            g->delayedins_at_page_boundary = 0;
                             continue;
                         }
                     }
                     tlbtr = group2p[0x280 | setindex];
-                    instlblookup = ((tlbtr ^ tlmbr) >> 13) << 13;
+                    g->instlblookup = ((tlbtr ^ tlmbr) >> 13) << 13;
                 }
             }
 
             // set pc and set the correcponding physical pc pointer
-            ppc = instlblookup ^ pc;
-            ppcorigin = ppc;
-            pcbase = pc - 4 - ppcorigin;
+            g->ppc = g->instlblookup ^ g->pc;
+            g->ppcorigin = g->ppc;
+            g->pcbase = g->pc - 4 - g->ppcorigin;
 
-            if (delayedins_at_page_boundary)
+            if (g->delayedins_at_page_boundary)
             {
-                delayedins_at_page_boundary = 0;
-                fence = ppc + 4;
-                nextpc = jump;
+                g->delayedins_at_page_boundary = 0;
+                g->fence = g->ppc + 4;
+                g->nextpc = g->jump;
             } else
             {
-                fence  = ((ppc >> 13) + 1) << 13; // next page
-                nextpc = ((pc  >> 13) + 1) << 13;
+                g->fence  = ((g->ppc >> 13) + 1) << 13; // next page
+                g->nextpc = ((g->pc  >> 13) + 1) << 13;
             }
 
         } // fence

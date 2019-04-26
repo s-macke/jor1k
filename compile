@@ -1,7 +1,14 @@
 set -e
-emcc -s WASM=1 -s ALLOW_MEMORY_GROWTH=1 -s ERROR_ON_UNDEFINED_SYMBOLS=0 -s TOTAL_MEMORY=32MB -Os js/wasm/or1k.c -o demos/or1k.wasm
+
+clang -Os --target=wasm32 -fno-delete-null-pointer-checks -c js/wasm/or1k.c -o or1k.o
+clang -Os --target=wasm32 -fno-delete-null-pointer-checks -c js/wasm/riscv.c -o riscv.o
+wasm-ld --global-base=0 --no-entry --strip-all --import-memory --export-all --allow-undefined or1k.o -o demos/or1k.wasm
+wasm-ld --global-base=0 --no-entry --strip-all --import-memory --export-all --allow-undefined riscv.o -o demos/riscv.wasm
+
+#emcc -s WASM=1 -s ALLOW_MEMORY_GROWTH=1 -s ERROR_ON_UNDEFINED_SYMBOLS=0 -s TOTAL_MEMORY=32MB -s BINARYEN_IGNORE_IMPLICIT_TRAPS=1 -Os js/wasm/or1k.c -o demos/or1k.wasm
+#emcc -s WASM=1 -s ALLOW_MEMORY_GROWTH=1 -s ERROR_ON_UNDEFINED_SYMBOLS=0 -s TOTAL_MEMORY=32MB -s BINARYEN_IGNORE_IMPLICIT_TRAPS=1 -Os js/wasm/riscv.c -o demos/riscv.wasm
+
 browserify -r ./js/plugins/terminal-linux.js:LinuxTerm -r ./js/master/master.js:Jor1k -o demos/jor1k-master-min.js
 browserify js/worker/worker.js -o demos/jor1k-worker-min.js
 
 #browserify -r ./js/plugins/terminal-linux.js:LinuxTerm -r ./js/plugins/terminal-termjs.js:TermJSTerm -r ./js/master/master.js:Jor1k -o demos/jor1k-master-min.js
-
