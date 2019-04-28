@@ -28,7 +28,6 @@ extern void  HtifWriteToHost(int32 d);
 extern void  HtifWriteDEVCMDFromHost(int32 d);
 extern void  HtifWriteFromHost(int32 d);
 
-
 // imports
 void  AnalyzeImage();
 void  Reset();
@@ -218,6 +217,24 @@ typedef struct
 
 } global;
 static global *g = (global*)0x1000;
+
+// faster version of read32
+inline int32 RamRead32(int32 paddr)
+{
+    if ((paddr) < 0)
+        return ramw[((paddr)^0x80000000)>>2];
+    else
+        return Read32(paddr);
+}
+
+// faster version of write32
+inline void RamWrite32(int32 paddr, int32 x)
+{
+    if ((paddr) < 0)
+        ramw[((paddr)^0x80000000)>>2] = x;
+    else
+        Write32(paddr, x);
+}
 
 int32 get_field(int32 reg, int32 mask)
 {
@@ -478,7 +495,7 @@ int32 TranslateVM(int32 addr, int32 op)
     // get first entry in page table
     int32 base = (csr[CSR_SPTBR] & SPTBR32_PPN) << PGSHIFT;
     int32 pteaddr = base + ((((uint32)addr) >> 22) << 2);
-    int32 pte = Read32(pteaddr);
+    int32 pte = ramw[(pteaddr^0x80000000) >> 2];
 
     //message.Debug("VM Start " + utils.ToHex(addr) + " " + utils.ToHex(base) + " " + utils.ToHex(pte));
     //check if pagetable is finished here
@@ -489,7 +506,7 @@ int32 TranslateVM(int32 addr, int32 op)
             MemAccessTrap(addr, op);
             return -1;
         }
-        //this.ram.Write32(pteaddr, pte | PTE_A | ((op==VM_WRITE)?PTE_D:0));
+        //Write32(pteaddr, pte | PTE_A | ((op==VM_WRITE)?PTE_D:0));
         //message.Debug("VM L1 " + utils.ToHex(addr) + " " + utils.ToHex(base) + " " + utils.ToHex(((pte >> 10) << 12) | (addr&0x3FFFFF)));
         //message.Abort();
         return ((pte >> 10) << 12) | (addr&0x3FFFFF);
@@ -500,7 +517,7 @@ int32 TranslateVM(int32 addr, int32 op)
     int32 new_page_num = (addr >> 12) & 0x3FF;
     pteaddr = base + (new_page_num << 2);
 
-    pte = Read32(pteaddr);
+    pte = ramw[(pteaddr^0x80000000) >> 2];
     //message.Debug("Level 2 " + utils.ToHex(addr) + " " + utils.ToHex(base) + " " + utils.ToHex(pte));
     //message.Abort();
 
@@ -516,7 +533,7 @@ int32 TranslateVM(int32 addr, int32 op)
         MemAccessTrap(addr, op);
         return -1;
     }
-    //this.ram.Write32(pteaddr, pte | PTE_A | ((op==VM_WRITE)?PTE_D:0));
+    //Write32(pteaddr, pte | PTE_A | ((op==VM_WRITE)?PTE_D:0));
     //message.Debug("VM L2 " + utils.ToHex(addr) + " " + utils.ToHex(base) + " " + utils.ToHex( ((pte >> 10) << 12) | (addr & 0xFFF) ));
     //message.Abort();
     return ((pte >> 10) << 12) | (addr & 0xFFF);
@@ -771,9 +788,7 @@ int32 Step(int32 steps, int32 clockspeed)
         paddr = TranslateVM(g->pc, VM_FETCH);
         if (paddr == -1) continue;
 
-        //ins = ramw[paddr >> 2];
-        ins = Read32(paddr);
-        //DebugIns.Disassemble(ins, r, csr, this.pc);
+        ins = RamRead32(paddr);
         g->pc += 4;
 
         switch(ins&0x7F)
@@ -789,7 +804,13 @@ int32 Step(int32 steps, int32 clockspeed)
                         // lb
                         paddr = TranslateVM(rs1 + imm, VM_READ);
                         if (paddr == -1) break;
-                        r[rindex] = (int8)Read8(paddr);
+                        if (paddr < 0)
+                        {
+                            r[rindex] = (int8)ramb[paddr^0x80000000];
+                        } else
+                        {
+                            r[rindex] = (int8)Read8(paddr);
+                        }
                         break;
 
                     case 0x01:
@@ -803,7 +824,13 @@ int32 Step(int32 steps, int32 clockspeed)
                         }
                         paddr = TranslateVM(rs1 + imm, VM_READ);
                         if (paddr == -1) break;
-                        r[rindex] = (int16)Read16(paddr);
+                        if (paddr < 0)
+                        {
+                            r[rindex] = (int16)ramh[(paddr^0x80000000)>>1];
+                        } else
+                        {
+                            r[rindex] = (int16)Read16(paddr);
+                        }
                         break;
 
                     case 0x02:
@@ -820,21 +847,28 @@ int32 Step(int32 steps, int32 clockspeed)
 
                         if (((uint32)paddr) == 0x8000a008)
                         {
-                            Write32(paddr+0, HtifReadToHost());
-                            Write32(paddr+4, HtifReadDEVCMDToHost());
+                            RamWrite32(paddr+0, HtifReadToHost());
+                            RamWrite32(paddr+4, HtifReadDEVCMDToHost());
                         }
                         if (((uint32)paddr) == 0x8000a000) {
-                            Write32(paddr+0, HtifReadFromHost());
-                            Write32(paddr+4, HtifReadDEVCMDFromHost());
+                            RamWrite32(paddr+0, HtifReadFromHost());
+                            RamWrite32(paddr+4, HtifReadDEVCMDFromHost());
                         }
-                        r[rindex] = Read32(paddr);
+
+                        r[rindex] = RamRead32(paddr);
                         break;
 
                     case 0x04:
                         // lbu
                         paddr = TranslateVM(rs1 + imm, VM_READ);
                         if (paddr == -1) break;
-                        r[rindex] = (uint8)Read8(paddr);
+                        if (paddr < 0)
+                        {
+                            r[rindex] = (uint8)ramb[paddr^0x80000000];
+                        } else
+                        {
+                            r[rindex] = (uint8)Read8(paddr);
+                        }
                         break;
 
                     case 0x05:
@@ -847,7 +881,13 @@ int32 Step(int32 steps, int32 clockspeed)
                         }
                         paddr = TranslateVM(rs1 + imm, VM_READ);
                         if (paddr == -1) break;
-                        r[rindex] = (uint16)Read16(paddr);
+                        if (paddr < 0)
+                        {
+                            r[rindex] = (uint16)ramh[(paddr^0x80000000)>>1];
+                        } else
+                        {
+                            r[rindex] = (uint16)Read16(paddr);
+                        }
                         break;
 
                     default:
@@ -871,7 +911,13 @@ int32 Step(int32 steps, int32 clockspeed)
                         // sb
                         paddr = TranslateVM(rs1 + imm, VM_WRITE);
                         if(paddr == -1) break;
-                        Write8(paddr, r[rindex] & 0xFF);
+                        if (paddr < 0)
+                        {
+                            ramb[paddr^0x80000000] = r[rindex];
+                        } else
+                        {
+                            Write8(paddr, r[rindex] & 0xFF);
+                        }
                         break;
 
                     case 0x01:
@@ -884,7 +930,13 @@ int32 Step(int32 steps, int32 clockspeed)
                         }
                         paddr = TranslateVM(rs1 + imm, VM_WRITE);
                         if (paddr == -1) break;
-                        Write16(paddr, r[rindex] & 0xFFFF);
+                        if (paddr < 0)
+                        {
+                            ramh[(paddr^0x80000000)>>1] = r[rindex];
+                        } else
+                        {
+                            Write16(paddr, r[rindex] & 0xFFFF);
+                        }
                         break;
 
                     case 0x02:
@@ -898,16 +950,17 @@ int32 Step(int32 steps, int32 clockspeed)
                         }
                         paddr = TranslateVM(rs1 + imm, VM_WRITE);
                         if (paddr == -1) break;
-                        Write32(paddr, r[rindex]);
+                        RamWrite32(paddr, r[rindex]);
+
                         if (((uint32)paddr) == 0x8000a00c)
                         {
                             //message.Debug("Write tohost at " + utils.ToHex(this.pc));
-                            HtifWriteDEVCMDToHost(Read32(paddr));
-                            HtifWriteToHost(Read32(paddr-4));
+                            HtifWriteDEVCMDToHost(RamRead32(paddr));
+                            HtifWriteToHost(RamRead32(paddr-4));
                         }
                         if (((uint32)paddr) == 0x8000a004) {
-                            HtifWriteDEVCMDFromHost(Read32(paddr));
-                            HtifWriteFromHost(Read32(paddr-4));
+                            HtifWriteDEVCMDFromHost(RamRead32(paddr));
+                            HtifWriteFromHost(RamRead32(paddr-4));
                         }
                         break;
 
@@ -1420,7 +1473,7 @@ int32 Step(int32 steps, int32 clockspeed)
                         }
                         paddr = TranslateVM(rs1 + imm, VM_READ);
                         if (paddr == -1) break;
-                        r[0] = Read32(paddr);
+                        r[0] = RamRead32(paddr);
                         f[rindex] = ff[0];
                         r[0] = 0;
                         break;
@@ -1436,8 +1489,9 @@ int32 Step(int32 steps, int32 clockspeed)
                         }
                         paddr = TranslateVM(rs1 + imm, VM_READ);
                         if (paddr == -1) break;
-                        fi[(rindex<<1) + 0] = Read32(paddr + 0);
-                        fi[(rindex<<1) + 1] = Read32(paddr + 4);
+                        // TODO maybe bug, because of alignment accross page boundary
+                        fi[(rindex<<1) + 0] = RamRead32(paddr + 0);
+                        fi[(rindex<<1) + 1] = RamRead32(paddr + 4);
                         break;
 
                     default:
@@ -1470,7 +1524,7 @@ int32 Step(int32 steps, int32 clockspeed)
                         paddr = TranslateVM(rs1 + imm, VM_WRITE);
                         if (paddr == -1) break;
                         ff[0] = f[rindex];
-                        Write32(paddr, r[0]);
+                        RamWrite32(paddr, r[0]);
                         r[0] = 0;
                         break;
 
@@ -1485,8 +1539,9 @@ int32 Step(int32 steps, int32 clockspeed)
                         }
                         paddr = TranslateVM(rs1 + imm, VM_WRITE);
                         if (paddr == -1) break;
-                        Write32(paddr+0, fi[(rindex<<1) + 0]);
-                        Write32(paddr+4, fi[(rindex<<1) + 1]);
+                        // TODO maybe bug, because of alignment accross page boundary
+                        RamWrite32(paddr+0, fi[(rindex<<1) + 0]);
+                        RamWrite32(paddr+4, fi[(rindex<<1) + 1]);
                         break;
 
                     default:
@@ -1684,86 +1739,86 @@ int32 Step(int32 steps, int32 clockspeed)
                 {
                     case 0x01:
                         // amoswap
-                        r[rindex] = Read32(paddr);
+                        r[rindex] = RamRead32(paddr);
                         paddr = TranslateVM(rs1, VM_WRITE);
                         if(paddr == -1) break;
-                        Write32(paddr, rs2);
+                        RamWrite32(paddr, rs2);
                         break;
 
                     case 0x00:
                         // amoadd
-                        r[rindex] = Read32(paddr);
+                        r[rindex] = RamRead32(paddr);
                         paddr = TranslateVM(rs1, VM_WRITE);
                         if(paddr == -1) break;
-                        Write32(paddr, r[rindex] + rs2);
+                        RamWrite32(paddr, r[rindex] + rs2);
                         break;
 
                     case 0x04:
                         // amoxor
-                        r[rindex] = Read32(paddr);
+                        r[rindex] = RamRead32(paddr);
                         paddr = TranslateVM(rs1, VM_WRITE);
                         if(paddr == -1) break;
-                        Write32(paddr, r[rindex] ^ rs2);
+                        RamWrite32(paddr, r[rindex] ^ rs2);
                         break;
 
                     case 0x0C:
                         // amoand
-                        r[rindex] = Read32(paddr);
+                        r[rindex] = RamRead32(paddr);
                         paddr = TranslateVM(rs1, VM_WRITE);
                         if(paddr == -1) break;
-                        Write32(paddr, r[rindex] & rs2);
+                        RamWrite32(paddr, r[rindex] & rs2);
                         break;
 
                     case 0x08:
                         // amoor
-                        r[rindex] = Read32(paddr);
+                        r[rindex] = RamRead32(paddr);
                         paddr = TranslateVM(rs1, VM_WRITE);
                         if (paddr == -1) break;
-                        Write32(paddr, r[rindex] | rs2);
+                        RamWrite32(paddr, r[rindex] | rs2);
                         break;
 
                     case 0x10:
                         // amomin
-                        r[rindex] = Read32(paddr);
+                        r[rindex] = RamRead32(paddr);
                         if ((rs2 >> 0) > (r[rindex] >> 0)) r[0] = r[rindex];
                         else r[0] = rs2;
                         paddr = TranslateVM(rs1, VM_WRITE);
                         if (paddr == -1) break;
-                        Write32(paddr, r[0]);
+                        RamWrite32(paddr, r[0]);
                         break;
 
                    case 0x14:
                         // amomax
-                        r[rindex] = Read32(paddr);
+                        r[rindex] = RamRead32(paddr);
                         if (rs2 < r[rindex]) r[0] = r[rindex];
                         else r[0] = rs2;
                         paddr = TranslateVM(rs1, VM_WRITE);
                         if(paddr == -1) break;
-                        Write32(paddr, r[0]);
+                        RamWrite32(paddr, r[0]);
                         break;
 
                     case 0x18:
                         // amominu
-                        r[rindex] = Read32(paddr);
+                        r[rindex] = RamRead32(paddr);
                         if (((uint32)rs2) > ((uint32)r[rindex])) r[0] = r[rindex];
                         else r[0] = rs2;
                         paddr = TranslateVM(rs1, VM_WRITE);
                         if(paddr == -1) break;
-                        Write32(paddr, r[0]);
+                        RamWrite32(paddr, r[0]);
                         break;
 
                     case 0x1C:
                         // amomaxu
-                        r[rindex] = Read32(paddr);
+                        r[rindex] = RamRead32(paddr);
                         if (((uint32)rs2) < ((uint32)r[rindex])) r[0] = r[rindex]; else r[0] = rs2;
                         paddr = TranslateVM(rs1, VM_WRITE);
                         if (paddr == -1) break;
-                        Write32(paddr, r[0]);
+                        RamWrite32(paddr, r[0]);
                         break;
 
                     case 0x02:
                         // lr.d
-                        r[rindex] = Read32(paddr);
+                        r[rindex] = RamRead32(paddr);
                         g->amoaddr = rs1;
                         g->amovalue = r[rindex];
                         break;
@@ -1775,7 +1830,7 @@ int32 Step(int32 steps, int32 clockspeed)
                             r[rindex] = 0x01;
                             break;
                         }
-                        if (Read32(paddr) != g->amovalue)
+                        if (RamRead32(paddr) != g->amovalue)
                         {
                             r[rindex] = 0x01;
                             break;
@@ -1783,7 +1838,7 @@ int32 Step(int32 steps, int32 clockspeed)
                         r[rindex] = 0x00;
                         paddr = TranslateVM(rs1, VM_WRITE);
                         if (paddr == -1) break;
-                        Write32(paddr, rs2);
+                        RamWrite32(paddr, rs2);
                         break;
 
                     default:
