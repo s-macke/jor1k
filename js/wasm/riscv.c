@@ -213,6 +213,27 @@ typedef struct
   int32 amoaddr; // for atomic load & store instructions
   int32 amovalue; // for atomic load & store instructions
 
+  // fast tlb lookup tables, invalidate
+  int32 instlblookup;
+  int32 read32tlblookup;
+  int32 read8stlblookup;
+  int32 read8utlblookup;
+  int32 read16stlblookup;
+  int32 read16utlblookup;
+  int32 write32tlblookup;
+  int32 write8tlblookup;
+  int32 write16tlblookup;
+
+  int32 instlbcheck;
+  int32 read32tlbcheck;
+  int32 read8stlbcheck;
+  int32 read8utlbcheck;
+  int32 read16stlbcheck;
+  int32 read16utlbcheck;
+  int32 write32tlbcheck;
+  int32 write8tlbcheck;
+  int32 write16tlbcheck;
+
   int32 ticks;
 
 } global;
@@ -234,6 +255,18 @@ inline void RamWrite32(int32 paddr, int32 x)
         ramw[((paddr)^0x80000000)>>2] = x;
     else
         Write32(paddr, x);
+}
+
+#define FastTLBLookup(vaddr, mode, check, lookup)     \
+{                                                     \
+    if ((check ^ (vaddr)) & 0xFFFFF000)               \
+    {                                                 \
+        paddr = TranslateVM((vaddr), (mode));         \
+        if (paddr == -1) break;                       \
+        check = (vaddr);                              \
+        lookup = ((paddr^(vaddr)) >> 12) << 12;       \
+    }                                                 \
+    paddr = lookup ^ vaddr;                           \
 }
 
 int32 get_field(int32 reg, int32 mask)
@@ -272,7 +305,24 @@ void Reset()
 
 void InvalidateTLB()
 {
-    // No TLB
+  g->instlblookup     = -1;
+  g->read32tlblookup  = -1;
+  g->read8stlblookup  = -1;
+  g->read8utlblookup  = -1;
+  g->read16stlblookup = -1;
+  g->read16utlblookup = -1;
+  g->write32tlblookup = -1;
+  g->write8tlblookup  = -1;
+  g->write16tlblookup = -1;
+  g->instlbcheck      = -1;
+  g->read32tlbcheck   = -1;
+  g->read8stlbcheck   = -1;
+  g->read8utlbcheck   = -1;
+  g->read16stlbcheck  = -1;
+  g->read16utlbcheck  = -1;
+  g->write32tlbcheck  = -1;
+  g->write8tlbcheck   = -1;
+  g->write16tlbcheck  = -1;
 }
 
 int32 GetTimeToNextInterrupt()
@@ -322,7 +372,6 @@ int32 ctz(int32 val)
     }
     return res;
 }
-
 
 void RaiseInterrupt(int32 line, int32 cpuid)
 {
@@ -409,7 +458,7 @@ void Trap(int32 cause, int32 epc, int32 addr)
 
         g->prv = PRV_M;
     }
-
+    InvalidateTLB();
     g->amoaddr = 0x00;
     g->amovalue = 0x00;
 };
@@ -747,7 +796,7 @@ int32 GetCSR(int32 addr)
 
 int32 Step(int32 steps, int32 clockspeed)
 {
-    int32 rindex = 0x00;
+    int32 rindex;
     int32 imm = 0x00;
     int32 imm1 = 0x00;
     int32 imm2 = 0x00;
@@ -763,8 +812,9 @@ int32 Step(int32 steps, int32 clockspeed)
     double fs3 = 0.0;
     int32 interrupts = 0x0;
     int32 ie = 0x0;
-    int32 ins = 0x0;
-    int32 paddr = 0x0;
+    int32 ins;
+    int32 paddr;
+    int32 vaddr;
 
     int32 delta = 0;
     int32 n = 0;
@@ -785,8 +835,14 @@ int32 Step(int32 steps, int32 clockspeed)
             CheckForInterrupt();
         }
 
-        paddr = TranslateVM(g->pc, VM_FETCH);
-        if (paddr == -1) continue;
+        if ((g->instlbcheck ^ g->pc) & 0xFFFFF000) // short check if it is still the correct page
+        {
+            paddr = TranslateVM(g->pc, VM_FETCH);
+            if (paddr == -1) continue;
+            g->instlbcheck = g->pc; // save the new page, lower 11 bits are ignored
+            g->instlblookup = ((paddr^g->pc) >> 12) << 12;
+        }
+        paddr = g->instlblookup ^ g->pc;
 
         ins = RamRead32(paddr);
         g->pc += 4;
@@ -798,12 +854,12 @@ int32 Step(int32 steps, int32 clockspeed)
                 imm = ins >> 20;
                 rs1 = r[(ins >> 15) & 0x1F];
                 rindex = (ins >> 7) & 0x1F;
+                vaddr = rs1 + imm;
                 switch((ins >> 12)&0x7) {
 
                     case 0x00:
                         // lb
-                        paddr = TranslateVM(rs1 + imm, VM_READ);
-                        if (paddr == -1) break;
+                        FastTLBLookup(vaddr, VM_READ, g->read8stlbcheck, g->read8stlblookup)
                         if (paddr < 0)
                         {
                             r[rindex] = (int8)ramb[paddr^0x80000000];
@@ -815,15 +871,14 @@ int32 Step(int32 steps, int32 clockspeed)
 
                     case 0x01:
                         // lh
-                        if (rs1+imm & 1)
+                        if (vaddr & 1)
                         {
-                             Trap(CAUSE_MISALIGNED_LOAD, g->pc - 4, rs1 + imm);
+                             Trap(CAUSE_MISALIGNED_LOAD, g->pc - 4, vaddr);
                              //message.Debug("Error in lh: unaligned address");
                              //message.Abort();
                              break;
                         }
-                        paddr = TranslateVM(rs1 + imm, VM_READ);
-                        if (paddr == -1) break;
+                        FastTLBLookup(vaddr, VM_READ, g->read16stlbcheck, g->read16stlblookup)
                         if (paddr < 0)
                         {
                             r[rindex] = (int16)ramh[(paddr^0x80000000)>>1];
@@ -835,15 +890,16 @@ int32 Step(int32 steps, int32 clockspeed)
 
                     case 0x02:
                         // lw
-                        if (rs1+imm & 3)
+                        if (vaddr & 3)
                         {
-                             Trap(CAUSE_MISALIGNED_LOAD, g->pc - 4, rs1+imm);
+                             Trap(CAUSE_MISALIGNED_LOAD, g->pc - 4, vaddr);
                              //message.Debug("Error in lw: unaligned address");
                              //message.Abort();
                              break;
                         }
-                        paddr = TranslateVM(rs1 + imm, VM_READ);
-                        if (paddr == -1) break;
+                        FastTLBLookup(vaddr, VM_READ, g->read32tlbcheck, g->read32tlblookup)
+                        //paddr = TranslateVM(vaddr, VM_READ);
+                        //if (paddr == -1) break;
 
                         if (((uint32)paddr) == 0x8000a008)
                         {
@@ -860,8 +916,7 @@ int32 Step(int32 steps, int32 clockspeed)
 
                     case 0x04:
                         // lbu
-                        paddr = TranslateVM(rs1 + imm, VM_READ);
-                        if (paddr == -1) break;
+                        FastTLBLookup(vaddr, VM_READ, g->read8utlbcheck, g->read8utlblookup)
                         if (paddr < 0)
                         {
                             r[rindex] = (uint8)ramb[paddr^0x80000000];
@@ -873,14 +928,13 @@ int32 Step(int32 steps, int32 clockspeed)
 
                     case 0x05:
                         // lhu
-                        if (rs1+imm & 1)
+                        if (vaddr & 1)
                         {
                              //DebugMessage("Error in lhu: unaligned address");
                              DebugMessage(6);
                              abort();
                         }
-                        paddr = TranslateVM(rs1 + imm, VM_READ);
-                        if (paddr == -1) break;
+                        FastTLBLookup(vaddr, VM_READ, g->read16utlbcheck, g->read16utlblookup)
                         if (paddr < 0)
                         {
                             r[rindex] = (uint16)ramh[(paddr^0x80000000)>>1];
@@ -905,12 +959,12 @@ int32 Step(int32 steps, int32 clockspeed)
                 imm = (imm1 << 5) | imm2;
                 rs1 = r[(ins >> 15) & 0x1F];
                 rindex = (ins >> 20) & 0x1F;
+                vaddr = rs1 + imm;
                 switch((ins >> 12)&0x7)
                 {
                     case 0x00:
                         // sb
-                        paddr = TranslateVM(rs1 + imm, VM_WRITE);
-                        if(paddr == -1) break;
+                        FastTLBLookup(vaddr, VM_WRITE, g->write8tlbcheck, g->write8tlblookup)
                         if (paddr < 0)
                         {
                             ramb[paddr^0x80000000] = r[rindex];
@@ -923,13 +977,12 @@ int32 Step(int32 steps, int32 clockspeed)
                     case 0x01:
                         // sh
                         if (rs1+imm & 1) {
-                             Trap(CAUSE_MISALIGNED_STORE, g->pc - 4, rs1 + imm);
+                             Trap(CAUSE_MISALIGNED_STORE, g->pc - 4, vaddr);
                              //message.Debug("Error in sh: unaligned address");
                              //message.Abort();
                              break;
                         }
-                        paddr = TranslateVM(rs1 + imm, VM_WRITE);
-                        if (paddr == -1) break;
+                        FastTLBLookup(vaddr, VM_WRITE, g->write16tlbcheck, g->write16tlblookup)
                         if (paddr < 0)
                         {
                             ramh[(paddr^0x80000000)>>1] = r[rindex];
@@ -941,15 +994,14 @@ int32 Step(int32 steps, int32 clockspeed)
 
                     case 0x02:
                         // sw
-                        if (rs1+imm & 3)
+                        if (vaddr & 3)
                         {
-                             Trap(CAUSE_MISALIGNED_STORE, g->pc - 4, rs1 + imm);
+                             Trap(CAUSE_MISALIGNED_STORE, g->pc - 4, vaddr);
                              //message.Debug("Error in sw: unaligned address");
                              //message.Abort();
                              break;
                         }
-                        paddr = TranslateVM(rs1 + imm, VM_WRITE);
-                        if (paddr == -1) break;
+                        FastTLBLookup(vaddr, VM_WRITE, g->write32tlbcheck, g->write32tlblookup)
                         RamWrite32(paddr, r[rindex]);
 
                         if (((uint32)paddr) == 0x8000a00c)
