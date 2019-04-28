@@ -10,14 +10,24 @@ typedef unsigned char uint8;
 #define fabs(x) ((x)<0 ? -(x) : (x))
 
 // exports
-extern void abort();
-extern void DebugMessage(int32 messageid);
+extern void  abort();
+extern void  DebugMessage(int32 messageid);
 extern int32 Read32(int32 p);
-extern int16 Read16(int32 p);
-extern int8 Read8(int32 p);
-extern void Write32(int32 p, int32 x);
-extern void Write16(int32 p, uint16 x);
-extern void Write8(int32 p, uint8 x);
+extern uint16 Read16(int32 p);
+extern uint8 Read8(int32 p);
+extern void  Write32(int32 p, int32 x);
+extern void  Write16(int32 p, uint16 x);
+extern void  Write8(int32 p, uint8 x);
+
+extern int32 HtifReadToHost();
+extern int32 HtifReadDEVCMDToHost();
+extern int32 HtifReadFromHost();
+extern int32 HtifReadDEVCMDFromHost();
+extern void  HtifWriteDEVCMDToHost(int32 d);
+extern void  HtifWriteToHost(int32 d);
+extern void  HtifWriteDEVCMDFromHost(int32 d);
+extern void  HtifWriteFromHost(int32 d);
+
 
 // imports
 void  AnalyzeImage();
@@ -32,161 +42,161 @@ void  ClearInterrupt(int32 line, int32 cpuid);
 int32 Step(int32 steps, int32 clockspeed);
 
 // constants
-const int32 PRV_U = 0x00;  // user mode
-const int32 PRV_S = 0x01;  // supervisor mode
-const int32 PRV_H = 0x02;  // hypervisor mode
-const int32 PRV_M = 0x03;  // machine mode
+#define PRV_U  0x00  // user mode
+#define PRV_S  0x01  // supervisor mode
+#define PRV_H  0x02  // hypervisor mode
+#define PRV_M  0x03  // machine mode
 
-const int32 VM_READ  = 0;
-const int32 VM_WRITE = 1;
-const int32 VM_FETCH = 2;
+#define VM_READ   0
+#define VM_WRITE  1
+#define VM_FETCH  2
 
-const int32 CAUSE_MISALIGNED_FETCH    = 0x0;
-const int32 CAUSE_FETCH_ACCESS        = 0x1;
-const int32 CAUSE_ILLEGAL_INSTRUCTION = 0x2;
-const int32 CAUSE_BREAKPOINT          = 0x3;
-const int32 CAUSE_MISALIGNED_LOAD     = 0x4;
-const int32 CAUSE_LOAD_ACCESS         = 0x5;
-const int32 CAUSE_MISALIGNED_STORE    = 0x6;
-const int32 CAUSE_STORE_ACCESS        = 0x7;
-const int32 CAUSE_USER_ECALL          = 0x8;
-const int32 CAUSE_SUPERVISOR_ECALL    = 0x9;
-const int32 CAUSE_HYPERVISOR_ECALL    = 0xa;
-const int32 CAUSE_MACHINE_ECALL       = 0xb;
-const int32 CAUSE_FETCH_PAGE_FAULT    = 0xc;
-const int32 CAUSE_LOAD_PAGE_FAULT     = 0xd;
-const int32 CAUSE_STORE_PAGE_FAULT    = 0xf;
+#define CAUSE_MISALIGNED_FETCH    0x0
+#define CAUSE_FETCH_ACCESS        0x1
+#define CAUSE_ILLEGAL_INSTRUCTION 0x2
+#define CAUSE_BREAKPOINT          0x3
+#define CAUSE_MISALIGNED_LOAD     0x4
+#define CAUSE_LOAD_ACCESS         0x5
+#define CAUSE_MISALIGNED_STORE    0x6
+#define CAUSE_STORE_ACCESS        0x7
+#define CAUSE_USER_ECALL          0x8
+#define CAUSE_SUPERVISOR_ECALL    0x9
+#define CAUSE_HYPERVISOR_ECALL    0xa
+#define CAUSE_MACHINE_ECALL       0xb
+#define CAUSE_FETCH_PAGE_FAULT    0xc
+#define CAUSE_LOAD_PAGE_FAULT     0xd
+#define CAUSE_STORE_PAGE_FAULT    0xf
 
-const int32 MSTATUS_UIE     = 0x00000001; // interrupt enable bits
-const int32 MSTATUS_SIE     = 0x00000002;
-const int32 MSTATUS_HIE     = 0x00000004;
-const int32 MSTATUS_MIE     = 0x00000008; // machine
-const int32 MSTATUS_UPIE    = 0x00000010; // interrupt-enable bit active prior to the trap
-const int32 MSTATUS_SPIE    = 0x00000020;
-const int32 MSTATUS_HPIE    = 0x00000040;
-const int32 MSTATUS_MPIE    = 0x00000080;
-const int32 MSTATUS_SPP     = 0x00000100; // previous privilege  mode
-const int32 MSTATUS_HPP     = 0x00000600;
-const int32 MSTATUS_MPP     = 0x00001800; // privilege mode
-const int32 MSTATUS_FS      = 0x00006000; // tracking current state of floating point unit
-const int32 MSTATUS_XS      = 0x00018000; // status of user-mode extensions
-const int32 MSTATUS_MPRV    = 0x00020000; // priviege level at which loads and stores execute
-const int32 MSTATUS_SUM     = 0x00040000; // supervisor may access user memory
-const int32 MSTATUS_MXR     = 0x00080000; // make executable readable
-const int32 MSTATUS_TVM     = 0x00100000;
-const int32 MSTATUS_TW      = 0x00200000;
-const int32 MSTATUS_TSR     = 0x00400000;
-const int32 MSTATUS_SD      = 0x80000000;
+#define MSTATUS_UIE     0x00000001 // interrupt enable bits
+#define MSTATUS_SIE     0x00000002
+#define MSTATUS_HIE     0x00000004
+#define MSTATUS_MIE     0x00000008 // machine
+#define MSTATUS_UPIE    0x00000010 // interrupt-enable bit active prior to the trap
+#define MSTATUS_SPIE    0x00000020
+#define MSTATUS_HPIE    0x00000040
+#define MSTATUS_MPIE    0x00000080
+#define MSTATUS_SPP     0x00000100 // previous privilege  mode
+#define MSTATUS_HPP     0x00000600
+#define MSTATUS_MPP     0x00001800 // privilege mode
+#define MSTATUS_FS      0x00006000 // tracking current state of floating point unit
+#define MSTATUS_XS      0x00018000 // status of user-mode extensions
+#define MSTATUS_MPRV    0x00020000 // priviege level at which loads and stores execute
+#define MSTATUS_SUM     0x00040000 // supervisor may access user memory
+#define MSTATUS_MXR     0x00080000 // make executable readable
+#define MSTATUS_TVM     0x00100000
+#define MSTATUS_TW      0x00200000
+#define MSTATUS_TSR     0x00400000
+#define MSTATUS_SD      0x80000000
 
-const int32 SPTBR_MODE_OFF  = 0;
-const int32 SPTBR_MODE_SV32 = 1;
-const int32 SPTBR32_MODE = 0x80000000;
-const int32 SPTBR32_ASID = 0x7FC00000;
-const int32 SPTBR32_PPN  = 0x003FFFFF;
+#define SPTBR_MODE_OFF  0
+#define SPTBR_MODE_SV32 1
+#define SPTBR32_MODE 0x80000000
+#define SPTBR32_ASID 0x7FC00000
+#define SPTBR32_PPN  0x003FFFFF
 
 // page table entry (PTE) fields
-const int32 PTE_V     = 0x001; // Valid
-const int32 PTE_R     = 0x002; // Read
-const int32 PTE_W     = 0x004; // Write
-const int32 PTE_X     = 0x008; // Execute
-const int32 PTE_U     = 0x010; // User
-const int32 PTE_G     = 0x020; // Global
-const int32 PTE_A     = 0x040; // Accessed
-const int32 PTE_D     = 0x080; // Dirty
-const int32 PTE_SOFT  = 0x300; // Reserved for Software
+#define PTE_V     0x001 // Valid
+#define PTE_R     0x002 // Read
+#define PTE_W     0x004 // Write
+#define PTE_X     0x008 // Execute
+#define PTE_U     0x010 // User
+#define PTE_G     0x020 // Global
+#define PTE_A     0x040 // Accessed
+#define PTE_D     0x080 // Dirty
+#define PTE_SOFT  0x300 // Reserved for Software
 
-const int32 IRQ_S_SOFT  = 1;
-const int32 IRQ_H_SOFT  = 2;
-const int32 IRQ_M_SOFT  = 3;
-const int32 IRQ_S_TIMER = 5;
-const int32 IRQ_H_TIMER = 6;
-const int32 IRQ_M_TIMER = 7;
-const int32 IRQ_S_EXT   = 9;
-const int32 IRQ_H_EXT   = 10;
-const int32 IRQ_M_EXT   = 11;
-const int32 IRQ_COP     = 12; // computer operating properly
-const int32 IRQ_HOST    = 13;
+#define IRQ_S_SOFT  1
+#define IRQ_H_SOFT  2
+#define IRQ_M_SOFT  3
+#define IRQ_S_TIMER 5
+#define IRQ_H_TIMER 6
+#define IRQ_M_TIMER 7
+#define IRQ_S_EXT   9
+#define IRQ_H_EXT   10
+#define IRQ_M_EXT   11
+#define IRQ_COP     12 // computer operating properly
+#define IRQ_HOST    13
 
-const int32 MIP_SSIP = (1 << IRQ_S_SOFT);
-const int32 MIP_HSIP = (1 << IRQ_H_SOFT);
-const int32 MIP_MSIP = (1 << IRQ_M_SOFT);
-const int32 MIP_STIP = (1 << IRQ_S_TIMER);
-const int32 MIP_HTIP = (1 << IRQ_H_TIMER);
-const int32 MIP_MTIP = (1 << IRQ_M_TIMER);
-const int32 MIP_SEIP = (1 << IRQ_S_EXT);
-const int32 MIP_HEIP = (1 << IRQ_H_EXT);
-const int32 MIP_MEIP = (1 << IRQ_M_EXT);
+#define MIP_SSIP (1 << IRQ_S_SOFT)
+#define MIP_HSIP (1 << IRQ_H_SOFT)
+#define MIP_MSIP (1 << IRQ_M_SOFT)
+#define MIP_STIP (1 << IRQ_S_TIMER)
+#define MIP_HTIP (1 << IRQ_H_TIMER)
+#define MIP_MTIP (1 << IRQ_M_TIMER)
+#define MIP_SEIP (1 << IRQ_S_EXT)
+#define MIP_HEIP (1 << IRQ_H_EXT)
+#define MIP_MEIP (1 << IRQ_M_EXT)
 
 // User CSRs standard read/write
-const int32 CSR_FFLAGS    = 0x001; // Floating-Point Accrued Exceptions
-const int32 CSR_FRM       = 0x002; // Floating-Point Dynamic Rounding Mode
-const int32 CSR_FCSR      = 0x003; // Floating-Point Control and Status Register
+#define CSR_FFLAGS    0x001 // Floating-Point Accrued Exceptions
+#define CSR_FRM       0x002 // Floating-Point Dynamic Rounding Mode
+#define CSR_FCSR      0x003 // Floating-Point Control and Status Register
 
 // Supervisor CSRs standard read/write
-const int32 CSR_SSTATUS    = 0x100; // Supervisor status register
-const int32 CSR_SIE        = 0x104; // Supervisor interrupt-enable register
-const int32 CSR_STVEC      = 0x105; // Supervisor trap handler base address.
-const int32 CSR_SCOUNTEREN = 0x106; // machine counter enable register (supervisor)
-const int32 CSR_SSCRATCH   = 0x140; // Scratch register for supervisor trap handlers.
-const int32 CSR_SEPC       = 0x141; // Supervisor exception program counter
-const int32 CSR_SCAUSE     = 0x142; // Supervisor trap cause
-const int32 CSR_SBADADDR   = 0x143; // Supervisor bad address
-const int32 CSR_SIP        = 0x144; // Supervisor interrupt pending
-const int32 CSR_SPTBR      = 0x180; // Page-table base register
+#define CSR_SSTATUS    0x100 // Supervisor status register
+#define CSR_SIE        0x104 // Supervisor interrupt-enable register
+#define CSR_STVEC      0x105 // Supervisor trap handler base address.
+#define CSR_SCOUNTEREN 0x106 // machine counter enable register (supervisor)
+#define CSR_SSCRATCH   0x140 // Scratch register for supervisor trap handlers.
+#define CSR_SEPC       0x141 // Supervisor exception program counter
+#define CSR_SCAUSE     0x142 // Supervisor trap cause
+#define CSR_SBADADDR   0x143 // Supervisor bad address
+#define CSR_SIP        0x144 // Supervisor interrupt pending
+#define CSR_SPTBR      0x180 // Page-table base register
 
 // Hypervisor CSR standard read/write
-const int32 CSR_HEPC      = 0x241; // Hypervisor exception program counte
+#define CSR_HEPC      0x241 // Hypervisor exception program counte
 
 // Machine CSRs standard read/write
-const int32 CSR_MSTATUS   = 0x300; // Machine status register
-const int32 CSR_MISA      = 0x301; // ISA and extensions supported
-const int32 CSR_MEDELEG   = 0x302; // Machine exception delegation register.
-const int32 CSR_MIDELEG   = 0x303; // Machine interrupt delegation register.
-const int32 CSR_MIE       = 0x304; // Machine interrupt-enable register
-const int32 CSR_MTVEC     = 0x305; // Machine trap-handler base address.
+#define CSR_MSTATUS   0x300 // Machine status register
+#define CSR_MISA      0x301 // ISA and extensions supported
+#define CSR_MEDELEG   0x302 // Machine exception delegation register.
+#define CSR_MIDELEG   0x303 // Machine interrupt delegation register.
+#define CSR_MIE       0x304 // Machine interrupt-enable register
+#define CSR_MTVEC     0x305 // Machine trap-handler base address.
 
-const int32 CSR_MCOUNTEREN = 0x306; // machine counter enable register (user)
+#define CSR_MCOUNTEREN 0x306 // machine counter enable register (user)
 
-const int32 CSR_MSCRATCH  = 0x340; // Scratch register for machine trap handlers
-const int32 CSR_MEPC      = 0x341; // Machine exception program counter
-const int32 CSR_MCAUSE    = 0x342; // Machine trap cause
-const int32 CSR_MBADADDR  = 0x343; // Machine bad address
-const int32 CSR_MIP       = 0x344; // Machine interrupt pending
+#define CSR_MSCRATCH  0x340 // Scratch register for machine trap handlers
+#define CSR_MEPC      0x341 // Machine exception program counter
+#define CSR_MCAUSE    0x342 // Machine trap cause
+#define CSR_MBADADDR  0x343 // Machine bad address
+#define CSR_MIP       0x344 // Machine interrupt pending
 
-const int32 CSR_PMPCFG0   = 0x3a0;
-const int32 CSR_PMPADDR0  = 0x3b0;
+#define CSR_PMPCFG0   0x3a0
+#define CSR_PMPADDR0  0x3b0
 
 // Machine CSRs standard read/write and unknown
-const int32 CSR_MRESET    = 0x782;
-const int32 CSR_SEND_IPI  = 0x783;
+#define CSR_MRESET    0x782
+#define CSR_SEND_IPI  0x783
 
 // debug tdata1
-const int32 CSR_TDATA1  = 0x7A1;
+#define CSR_TDATA1    0x7A1
 
 // user CSRs standard read only
-const int32 CSR_CYCLE     = 0xC00; // Cycle counter for RDCYCLE instruction
-const int32 CSR_TIME      = 0xC01; // Timer for RDTIME instruction
-const int32 CSR_INSTRET   = 0xC02; // Instructions-retired counter for RDINSTRET instruction
-const int32 CSR_CYCLEH    = 0xC80; // Upper 32 bits of cycle, RV32I only
-const int32 CSR_TIMEH     = 0xC81; // Upper 32 bits of time, RV32I only
-const int32 CSR_INSTRETH  = 0xC82; // Upper 32 bits of instret, RV32I only
+#define CSR_CYCLE     0xC00 // Cycle counter for RDCYCLE instruction
+#define CSR_TIME      0xC01 // Timer for RDTIME instruction
+#define CSR_INSTRET   0xC02 // Instructions-retired counter for RDINSTRET instruction
+#define CSR_CYCLEH    0xC80 // Upper 32 bits of cycle, RV32I only
+#define CSR_TIMEH     0xC81 // Upper 32 bits of time, RV32I only
+#define CSR_INSTRETH  0xC82 // Upper 32 bits of instret, RV32I only
 
 // This is a special CSR just for this emulator to connect the CLINT to the CPU
 // because the timer is handled in the CPU part
-const int32 CSR_TIMECMP   = 0xC41;
+#define CSR_TIMECMP     0xC41
 
 // machine CSRs non-standard read-only
 //const int32 CSR_MCPUID    = 0xF00;
 //const int32 CSR_MIMPID    = 0xF01;
-const int32 CSR_MHARTID   = 0xF14;
+#define CSR_MHARTID     0xF14
 
-const int32 QUIET_NAN = 0xFFFFFFFF;
-const int32 SIGNALLING_NAN = 0x7FFFFFFF;
+#define QUIET_NAN       0xFFFFFFFF
+#define SIGNALLING_NAN  0x7FFFFFFF
 
-static int32  *r = (int32*)0;
-static double *f = (double*)(32<<2);
+static int32  *r  = (int32*)0;
+static double *f  = (double*)(32<<2);
 static int32  *fi = (int32*)(32<<2); // for copying operations
-static float *ff = (float*)(0); // the zero register is used to convert to single precision
+static float  *ff = (float*)(0); // the zero register is used to convert to single precision
 
 // memory
 static int8*  ramb = (int8*)0x100000;
@@ -195,22 +205,19 @@ static int32* ramw = (int32*)0x100000;
 
 static int32 *csr = (int32*)0x2000; // special purpose registers
 
-
 // define global variables
 typedef struct
 {
-  int32 amoaddr; // for atomic load & store instructions
-  int32 amovalue; // for atomic load & store instructions
-
   int32 pc;
   int32 prv;
+
+  int32 amoaddr; // for atomic load & store instructions
+  int32 amovalue; // for atomic load & store instructions
 
   int32 ticks;
 
 } global;
 static global *g = (global*)0x1000;
-
-
 
 int32 get_field(int32 reg, int32 mask)
 {
@@ -261,6 +268,11 @@ int32 GetTicks()
     return g->ticks;
 }
 
+int32 GetPC()
+{
+    return g->pc;
+}
+
 void ProgressTime(int32 delta)
 {
     g->ticks += delta;
@@ -269,12 +281,11 @@ void ProgressTime(int32 delta)
     delta = csr[CSR_TIMECMP] - g->ticks;
     if (delta <= 1)
     {
-        csr[CSR_MIP] = csr[CSR_MIP] | MIP_STIP;
+        csr[CSR_MIP] |= MIP_STIP;
     }
     CheckForInterrupt();
 }
 
-// we haveto define these to copy the cpus
 void AnalyzeImage()
 {
   // no reason
@@ -284,13 +295,13 @@ void AnalyzeImage()
 int32 ctz(int32 val)
 {
     int32 res = 0;
-    if (val)
+
+    if (val == 0) return 0;
+
+    while ((val & 1) == 0)
     {
-        while ((val & 1) == 0)
-        {
-            val >>= 1;
-            res++;
-        }
+        val >>= 1;
+        res++;
     }
     return res;
 }
@@ -335,7 +346,7 @@ void CheckForInterrupt()
         //DebugMessage("Take interrupt: " + ctz(enabled_interrupts));
         Trap(0x80000000 | ctz(enabled_interrupts), g->pc, -1);
     }
-};
+}
 
 void Trap(int32 cause, int32 epc, int32 addr)
 {
@@ -359,10 +370,10 @@ void Trap(int32 cause, int32 epc, int32 addr)
         csr[CSR_SEPC] = epc;
         csr[CSR_SBADADDR] = addr;
 
-        int32 s = csr[CSR_MSTATUS] | 0;
-        s = set_field(s, MSTATUS_SPIE, get_field(s, MSTATUS_SIE))|0;
-        s = set_field(s, MSTATUS_SPP, g->prv)|0;
-        s = set_field(s, MSTATUS_SIE, 0)|0;
+        int32 s = csr[CSR_MSTATUS];
+        s = set_field(s, MSTATUS_SPIE, get_field(s, MSTATUS_SIE));
+        s = set_field(s, MSTATUS_SPP, g->prv);
+        s = set_field(s, MSTATUS_SIE, 0);
         csr[CSR_MSTATUS] = s;
 
         g->prv = PRV_S;
@@ -373,10 +384,10 @@ void Trap(int32 cause, int32 epc, int32 addr)
         csr[CSR_MCAUSE] = cause;
         csr[CSR_MBADADDR] = addr;
 
-        int32 s = csr[CSR_MSTATUS] | 0;
-        s = set_field(s, MSTATUS_MPIE, get_field(s, MSTATUS_MIE))|0;
-        s = set_field(s, MSTATUS_MPP, g->prv)|0;
-        s = set_field(s, MSTATUS_MIE, 0)|0;
+        int32 s = csr[CSR_MSTATUS];
+        s = set_field(s, MSTATUS_MPIE, get_field(s, MSTATUS_MIE));
+        s = set_field(s, MSTATUS_MPP, g->prv);
+        s = set_field(s, MSTATUS_MIE, 0);
         csr[CSR_MSTATUS] = s;
 
         g->prv = PRV_M;
@@ -429,11 +440,11 @@ int32 CheckVMPrivilege(int32 pte, int32 op)
     if (!(pte & PTE_V) || (!(pte & PTE_R) && (pte & PTE_W))) {
         // DebugMessage("Unknown access from privilege mode at pc=" + utils.ToHex(this.pc) + " " + op);
         // abort();
-        DebugMessage(2);
+        //DebugMessage(2);
         return 0;
     }
 
-    switch(op|0)
+    switch(op)
     {
         case VM_FETCH:
             return pte & PTE_X;
@@ -467,7 +478,7 @@ int32 TranslateVM(int32 addr, int32 op)
     // get first entry in page table
     int32 base = (csr[CSR_SPTBR] & SPTBR32_PPN) << PGSHIFT;
     int32 pteaddr = base + ((((uint32)addr) >> 22) << 2);
-    int32 pte = ramw[pteaddr>>2];
+    int32 pte = Read32(pteaddr);
 
     //message.Debug("VM Start " + utils.ToHex(addr) + " " + utils.ToHex(base) + " " + utils.ToHex(pte));
     //check if pagetable is finished here
@@ -489,7 +500,7 @@ int32 TranslateVM(int32 addr, int32 op)
     int32 new_page_num = (addr >> 12) & 0x3FF;
     pteaddr = base + (new_page_num << 2);
 
-    pte = ramw[pteaddr>>2];
+    pte = Read32(pteaddr);
     //message.Debug("Level 2 " + utils.ToHex(addr) + " " + utils.ToHex(base) + " " + utils.ToHex(pte));
     //message.Abort();
 
@@ -598,7 +609,6 @@ void SetCSR(int32 addr, int32 value)
         case CSR_MTVEC:
             csr[addr] = value&(~3);
             break;
-
 
         case CSR_MCOUNTEREN:
         case CSR_SCOUNTEREN:
@@ -716,7 +726,6 @@ int32 GetCSR(int32 addr)
             return csr[addr];
             break;
     }
-
 }
 
 int32 Step(int32 steps, int32 clockspeed)
@@ -744,7 +753,7 @@ int32 Step(int32 steps, int32 clockspeed)
     int32 n = 0;
 
     do {
-        r[0] = 0x00;
+        r[0] = 0;
 
         if (!(steps & 63))
         {
@@ -754,18 +763,16 @@ int32 Step(int32 steps, int32 clockspeed)
             csr[CSR_TIME] = g->ticks;
             if (delta < clockspeed)
             {
-                csr[CSR_MIP] = csr[CSR_MIP] | MIP_STIP;
+                csr[CSR_MIP] |= MIP_STIP;
             }
             CheckForInterrupt();
         }
 
         paddr = TranslateVM(g->pc, VM_FETCH);
-        if(paddr == -1)
-        {
-            continue;
-        }
+        if (paddr == -1) continue;
 
-        ins = ramw[paddr >> 2];
+        //ins = ramw[paddr >> 2];
+        ins = Read32(paddr);
         //DebugIns.Disassemble(ins, r, csr, this.pc);
         g->pc += 4;
 
@@ -773,7 +780,7 @@ int32 Step(int32 steps, int32 clockspeed)
         {
             case 0x03:
                 // lb, lh, lw, lbu, lhu
-                imm = (ins >> 20);
+                imm = ins >> 20;
                 rs1 = r[(ins >> 15) & 0x1F];
                 rindex = (ins >> 7) & 0x1F;
                 switch((ins >> 12)&0x7) {
@@ -782,7 +789,7 @@ int32 Step(int32 steps, int32 clockspeed)
                         // lb
                         paddr = TranslateVM(rs1 + imm, VM_READ);
                         if (paddr == -1) break;
-                        r[rindex] = (Read8(paddr) << 24) >> 24;
+                        r[rindex] = (int8)Read8(paddr);
                         break;
 
                     case 0x01:
@@ -796,7 +803,7 @@ int32 Step(int32 steps, int32 clockspeed)
                         }
                         paddr = TranslateVM(rs1 + imm, VM_READ);
                         if (paddr == -1) break;
-                        r[rindex] = (Read16(paddr) << 16) >> 16;
+                        r[rindex] = (int16)Read16(paddr);
                         break;
 
                     case 0x02:
@@ -810,17 +817,16 @@ int32 Step(int32 steps, int32 clockspeed)
                         }
                         paddr = TranslateVM(rs1 + imm, VM_READ);
                         if (paddr == -1) break;
-                        /* TODO HTIF
-                        if ((paddr>>>0) == 0x8000a008)
+
+                        if (((uint32)paddr) == 0x8000a008)
                         {
-                            Write32(paddr+0, htif.ReadToHost());
-                            Write32(paddr+4, htif.ReadDEVCMDToHost());
+                            Write32(paddr+0, HtifReadToHost());
+                            Write32(paddr+4, HtifReadDEVCMDToHost());
                         }
-                        if ((paddr>>>0) == 0x8000a000) {
-                            Write32(paddr+0, htif.ReadFromHost());
-                            Write32(paddr+4, htif.ReadDEVCMDFromHost());
+                        if (((uint32)paddr) == 0x8000a000) {
+                            Write32(paddr+0, HtifReadFromHost());
+                            Write32(paddr+4, HtifReadDEVCMDFromHost());
                         }
-                        */
                         r[rindex] = Read32(paddr);
                         break;
 
@@ -828,7 +834,7 @@ int32 Step(int32 steps, int32 clockspeed)
                         // lbu
                         paddr = TranslateVM(rs1 + imm, VM_READ);
                         if (paddr == -1) break;
-                        r[rindex] = Read8(paddr) & 0xFF;
+                        r[rindex] = (uint8)Read8(paddr);
                         break;
 
                     case 0x05:
@@ -841,7 +847,7 @@ int32 Step(int32 steps, int32 clockspeed)
                         }
                         paddr = TranslateVM(rs1 + imm, VM_READ);
                         if (paddr == -1) break;
-                        r[rindex] = Read16(paddr) & 0xFFFF;
+                        r[rindex] = (uint16)Read16(paddr);
                         break;
 
                     default:
@@ -849,7 +855,6 @@ int32 Step(int32 steps, int32 clockspeed)
                         DebugMessage(7);
                         abort();
                         break;
-
                 }
                 break;
 
@@ -862,12 +867,11 @@ int32 Step(int32 steps, int32 clockspeed)
                 rindex = (ins >> 20) & 0x1F;
                 switch((ins >> 12)&0x7)
                 {
-
                     case 0x00:
                         // sb
                         paddr = TranslateVM(rs1 + imm, VM_WRITE);
                         if(paddr == -1) break;
-                        Write8(paddr, (r[rindex] & 0xFF));
+                        Write8(paddr, r[rindex] & 0xFF);
                         break;
 
                     case 0x01:
@@ -895,26 +899,24 @@ int32 Step(int32 steps, int32 clockspeed)
                         paddr = TranslateVM(rs1 + imm, VM_WRITE);
                         if (paddr == -1) break;
                         Write32(paddr, r[rindex]);
-                        /* TODO HTIF
-                        if ((paddr>>>0) == 0x8000a00c)
+                        if (((uint32)paddr) == 0x8000a00c)
                         {
                             //message.Debug("Write tohost at " + utils.ToHex(this.pc));
-                            this.htif.WriteDEVCMDToHost(this.ram.Read32(paddr));
-                            this.htif.WriteToHost(this.ram.Read32(paddr-4));
+                            HtifWriteDEVCMDToHost(Read32(paddr));
+                            HtifWriteToHost(Read32(paddr-4));
                         }
-                        if ((paddr>>>0) == 0x8000a004) {
-                            this.htif.WriteDEVCMDFromHost(this.ram.Read32(paddr));
-                            this.htif.WriteFromHost(this.ram.Read32(paddr-4));
+                        if (((uint32)paddr) == 0x8000a004) {
+                            HtifWriteDEVCMDFromHost(Read32(paddr));
+                            HtifWriteFromHost(Read32(paddr-4));
                         }
-                        */
                         break;
 
                     default:
                         //message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + " not found");
                         //message.Abort();
+                        DebugMessage(8);
                         abort();
                         break;
-
                 }
                 break;
 
@@ -922,10 +924,9 @@ int32 Step(int32 steps, int32 clockspeed)
                 // addi, slti, sltiu, xori, ori, andi, slli, srli, srai
                 rindex = (ins >> 7) & 0x1F;
                 rs1 = r[(ins >> 15) & 0x1F];
-                imm = (ins >> 20);
+                imm = ins >> 20;
                 switch((ins >> 12)&0x7)
                 {
-
                     case 0x00:
                         // addi
                         r[rindex] = rs1 + imm;
@@ -965,7 +966,7 @@ int32 Step(int32 steps, int32 clockspeed)
                         if(((ins >> 25) & 0x7F) == 0x00)
                         {
                             // srli
-                            r[rindex] = ((uint32)rs1) >> imm;
+                            r[rindex] = ((uint32)rs1) >> (uint32)imm;
                         }
                         else if(((ins >> 25) & 0x7F) == 0x20)
                         {
@@ -973,6 +974,7 @@ int32 Step(int32 steps, int32 clockspeed)
                             r[rindex] = rs1 >> imm;
                         } else
                         {
+                            DebugMessage(9);
                             abort();
                             //message.Debug("Error in safecpu: Instruction (sra, srl)" + utils.ToHex(ins) + " not found");
                             //message.Abort();
@@ -980,6 +982,7 @@ int32 Step(int32 steps, int32 clockspeed)
                         break;
 
                     default:
+                        DebugMessage(10);
                         abort();
                         //message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + " not found");
                         //message.Abort();
@@ -1011,7 +1014,7 @@ int32 Step(int32 steps, int32 clockspeed)
 
                             case 0x02:
                                 // slt
-                                if(rs1 < rs2) r[rindex] = 0x01; else r[rindex] = 0x00;
+                                if (rs1 < rs2) r[rindex] = 0x01; else r[rindex] = 0x00;
                                 break;
 
                             case 0x03:
@@ -1026,7 +1029,7 @@ int32 Step(int32 steps, int32 clockspeed)
 
                             case 0x05:
                                 // srl
-                                r[rindex] = ((uint32)rs1) >> (rs2 & 0x1F);
+                                r[rindex] = ((uint32)rs1) >> ((uint32)rs2 & 0x1F);
                                 break;
 
                             case 0x06:
@@ -1038,7 +1041,6 @@ int32 Step(int32 steps, int32 clockspeed)
                                 // and
                                 r[rindex] = rs1 & rs2;
                                 break;
-
                         }
                         break;
 
@@ -1060,9 +1062,11 @@ int32 Step(int32 steps, int32 clockspeed)
                                 break;
 
                             default:
+                                DebugMessage(12);
                                 abort();
                                 //message.Debug("Error in safecpu: Instruction (sub,sra) " + utils.ToHex(ins) + " not found");
                                 //message.Abort();
+                                break;
                         }
                         break;
 
@@ -1080,17 +1084,17 @@ int32 Step(int32 steps, int32 clockspeed)
 
                             case 0x01:
                                 // mulh
-                                r[rindex] = ((int64)rs1 * (int64)rs2)>>32;
+                                r[rindex] = ((((int64)rs1) * ((int64)rs2))>>32)&0xFFFFFFFF;
                                 break;
 
                             case 0x02:
                                 // mulhsu
-                                r[rindex] = ((int64)rs1 * (uint64)rs2)>>32;
+                                r[rindex] = (((int64)rs1 * (uint64)(uint32)rs2)>>32)&0xFFFFFFFF;
                                 break;
 
                             case 0x03:
                                 // mulhu
-                                r[rindex] = ((uint64)rs1 * (uint64)rs2)>>32;
+                                r[rindex] = ((((uint64)(uint32)rs1) * ((uint64)(uint32)rs2))>>32)&0xFFFFFFFF;
                                 break;
 
                             case 0x04:
@@ -1098,7 +1102,7 @@ int32 Step(int32 steps, int32 clockspeed)
                                 if(rs2 == 0)
                                     quo = -1;
                                 else
-                                    quo = (rs1 / rs2)|0;
+                                    quo = rs1 / rs2;
                                 r[rindex] = quo;
                                 break;
 
@@ -1107,7 +1111,7 @@ int32 Step(int32 steps, int32 clockspeed)
                                 if(rs2 == 0)
                                     quo = -1;
                                 else
-                                    quo = (((uint32)rs1) / ((uint32)rs2));
+                                    quo = ((uint32)rs1) / ((uint32)rs2);
                                 r[rindex] = quo;
                                 break;
 
@@ -1116,7 +1120,7 @@ int32 Step(int32 steps, int32 clockspeed)
                                 if(rs2 == 0)
                                     rem = rs1;
                                 else
-                                    rem = (rs1 % rs2);
+                                    rem = rs1 % rs2;
                                 r[rindex] = rem;
                                 break;
 
@@ -1134,9 +1138,9 @@ int32 Step(int32 steps, int32 clockspeed)
                     default:
                         //message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + " not found");
                         //message.Abort();
+                        DebugMessage(13);
                         abort();
                         break;
-
                 }
                 break;
 
@@ -1150,7 +1154,7 @@ int32 Step(int32 steps, int32 clockspeed)
                 // auipc
                 imm = ins & 0xFFFFF000;
                 rindex = (ins >> 7) & 0x1F;
-                r[rindex] = g->pc + imm - 4|0;
+                r[rindex] = g->pc + imm - 4;
                 break;
 
             case 0x6F:
@@ -1168,7 +1172,7 @@ int32 Step(int32 steps, int32 clockspeed)
             case 0x67:
                 // jalr
                 //if ((this.pc>>>0) >= 0xC0000000)
-	        //        message.Debug("jump from " + utils.ToHex(this.pc));
+	              //message.Debug("jump from " + utils.ToHex(this.pc));
                 imm = ins >> 20;
                 rs1 = r[(ins >> 15) & 0x1F];
                 rindex = (ins >> 7) & 0x1F;
@@ -1183,8 +1187,8 @@ int32 Step(int32 steps, int32 clockspeed)
                 imm3 = (ins >> 8) & 0x0F;
                 imm4 = ((ins >> 7) & 0x01) << 10;
                 imm =  ((imm1 | imm2 | imm3 | imm4) << 1 );
-                rs1 = r[(ins >> 15) & 0x1F]|0;
-                rs2 = r[(ins >> 20) & 0x1F]|0;
+                rs1 = r[(ins >> 15) & 0x1F];
+                rs2 = r[(ins >> 20) & 0x1F];
 
                 switch((ins >> 12)&0x7) {
 
@@ -1219,11 +1223,11 @@ int32 Step(int32 steps, int32 clockspeed)
                         break;
 
                     default:
+                        DebugMessage(14);
                         abort();
                         //message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + " not found");
                         //message.Abort();
                         break;
-
                 }
                 break;
 
@@ -1265,7 +1269,6 @@ int32 Step(int32 steps, int32 clockspeed)
                         SetCSR(imm, (zimm >> 0));
                         break;
 
-
                     case 0x06:
                         // csrrsi
                         r[rindex] = GetCSR(imm);
@@ -1304,6 +1307,7 @@ int32 Step(int32 steps, int32 clockspeed)
 
                                     case PRV_H:
                                         Trap(CAUSE_HYPERVISOR_ECALL, g->pc - 4, -1);
+                                        DebugMessage(15);
                                         abort();
                                         break;
 
@@ -1314,6 +1318,7 @@ int32 Step(int32 steps, int32 clockspeed)
                                     default:
                                         //message.Debug("Error in ecall: Don't know how to handle privilege level " + privilege_mode);
                                         //message.Abort();
+                                        DebugMessage(16);
                                         abort();
                                         break;
                                 }
@@ -1330,6 +1335,7 @@ int32 Step(int32 steps, int32 clockspeed)
                                 {
                                     //message.Debug("Error in sret: privilege_mode isn't allowed access");
                                     //message.Abort();
+                                    DebugMessage(17);
                                     abort();
                                     break;
                                 }
@@ -1359,6 +1365,7 @@ int32 Step(int32 steps, int32 clockspeed)
                                 {
                                     //message.Debug("Error in mret: privilege_mode isn't allowed access");
                                     //message.Abort();
+                                    DebugMessage(18);
                                     abort();
                                     break;
                                 }
@@ -1380,26 +1387,26 @@ int32 Step(int32 steps, int32 clockspeed)
                             default:
                                 //message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + " not found");
                                 //message.Abort();
+                                DebugMessage(19);
                                 abort();
                                 break;
-
                         }
                         break;
 
                     default:
                         //message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + " not found");
                         //message.Abort();
+                        DebugMessage(20);
                         abort();
                         break;
-
                 }
                 break;
 
             case 0x07:
                 // flw, fld
-                imm = (ins >> 20);
+                imm = ins >> 20;
                 rs1 = r[(ins >> 15) & 0x1F];
-                rindex = ((ins >> 7) & 0x1F);
+                rindex = (ins >> 7) & 0x1F;
                 switch((ins >> 12)&0x7)
                 {
                     case 0x02:
@@ -1408,12 +1415,14 @@ int32 Step(int32 steps, int32 clockspeed)
                         {
                              //message.Debug("Error in flw: unaligned address");
                              //message.Abort();
+                             DebugMessage(21);
                              abort();
                         }
                         paddr = TranslateVM(rs1 + imm, VM_READ);
                         if (paddr == -1) break;
                         r[0] = Read32(paddr);
                         f[rindex] = ff[0];
+                        r[0] = 0;
                         break;
 
                     case 0x03:
@@ -1422,6 +1431,7 @@ int32 Step(int32 steps, int32 clockspeed)
                         {
                              //message.Debug("Error in flw: unaligned address");
                              //message.Abort();
+                             DebugMessage(22);
                              abort();
                         }
                         paddr = TranslateVM(rs1 + imm, VM_READ);
@@ -1433,9 +1443,9 @@ int32 Step(int32 steps, int32 clockspeed)
                     default:
                         //message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + " not found");
                         //message.Abort();
+                        DebugMessage(23);
                         abort();
                         break;
-
                 }
                 break;
 
@@ -1450,22 +1460,25 @@ int32 Step(int32 steps, int32 clockspeed)
                 {
                     case 0x02:
                         // fsw
-                        ff[0] = f[rindex];
                         if (rs1+imm & 3)
                         {
+                            DebugMessage(24);
                             abort();
                             //message.Debug("Error in fsw: unaligned address");
                             //message.Abort();
                         }
                         paddr = TranslateVM(rs1 + imm, VM_WRITE);
                         if (paddr == -1) break;
+                        ff[0] = f[rindex];
                         Write32(paddr, r[0]);
+                        r[0] = 0;
                         break;
 
                     case 0x03:
                         // fsd
                         if (rs1+imm & 7)
                         {
+                            DebugMessage(25);
                             abort();
                             //message.Debug("Error in fsd: unaligned address");
                             //message.Abort();
@@ -1479,9 +1492,9 @@ int32 Step(int32 steps, int32 clockspeed)
                     default:
                         //message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + " not found");
                         //message.Abort();
+                        DebugMessage(26);
                         abort();
                         break;
-
                 }
                 break;
 
@@ -1528,6 +1541,7 @@ int32 Step(int32 steps, int32 clockspeed)
                             default:
                                 //message.Debug("Error in safecpu: Instruction (fcmp) " + utils.ToHex(ins) + " not found");
                                 //message.Abort();
+                                DebugMessage(27);
                                 abort();
                                 break;
                         }
@@ -1600,6 +1614,7 @@ int32 Step(int32 steps, int32 clockspeed)
                             default:
                                 //message.Debug("Error in safecpu: Instruction (fsgn) " + utils.ToHex(ins) + " not found");
                                 //message.Abort();
+                                DebugMessage(28);
                                 abort();
                         }
                         break;
@@ -1609,12 +1624,13 @@ int32 Step(int32 steps, int32 clockspeed)
                         rs1 = r[(ins >> 15) & 0x1F];
                         r[0] = rs1;
                         f[rindex] = ff[0];
+                        r[0] = 0;
                         break;
-
 
                     default:
                         //message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + " not found");
                         //message.Abort();
+                        DebugMessage(29);
                         abort();
                         break;
                 }
@@ -1666,7 +1682,6 @@ int32 Step(int32 steps, int32 clockspeed)
 
                 switch((ins >> 27) & 0x1F)
                 {
-
                     case 0x01:
                         // amoswap
                         r[rindex] = Read32(paddr);
@@ -1774,9 +1789,9 @@ int32 Step(int32 steps, int32 clockspeed)
                     default:
                         //message.Debug("Error in Atomic Memory Instruction " + utils.ToHex(ins) + " not found");
                         //message.Abort();
+                        DebugMessage(30);
                         abort();
                         break;
-
                 }
                 break;
 
@@ -1796,10 +1811,9 @@ int32 Step(int32 steps, int32 clockspeed)
                 }
                 abort();
                 break;
-
         }
 
-      } while(steps--);
+      } while(--steps);
 
     return 0;
 }

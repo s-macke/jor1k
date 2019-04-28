@@ -87,26 +87,6 @@ async function createCPUWasm(cpuname, ram, heap, ncores) {
       SetFlags : exports.SetFlags,
       Step : exports.Step
     };
-    /*
-    fetch('or1k.wasm').then(response =>
-        response.arrayBuffer()
-    ).then(bytes => {
-            message.Debug("instantiate wasm");
-            WebAssembly.instantiate(bytes, importObj)
-        }
-    ).then(
-        obj => {
-            message.Debug("compiled sucessfully");
-            exports = obj.instance.exports;
-            return  exports;
-        },
-        err => {
-            message.Debug("error");
-            message.Debug(err.toString());
-        }
-    );
-    */
-
 }
 
 async function createCPU(cpuname, ram, heap, ncores) {

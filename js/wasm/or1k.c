@@ -7,14 +7,14 @@ typedef unsigned char uint8;
 
 // exports
 
-extern void abort();
-extern void DebugMessage(int32 messageid);
+extern void  abort();
+extern void  DebugMessage(int32 messageid);
 extern int32 Read32(int32 p);
-extern int16 Read16(int32 p);
-extern int8 Read8(int32 p);
-extern void Write32(int32 p, int32 x);
-extern void Write16(int32 p, uint16 x);
-extern void Write8(int32 p, uint8 x);
+extern uint16 Read16(int32 p);
+extern uint8 Read8(int32 p);
+extern void  Write32(int32 p, int32 x);
+extern void  Write16(int32 p, uint16 x);
+extern void  Write8(int32 p, uint8 x);
 
 // imports
 void  AnalyzeImage();
@@ -22,13 +22,13 @@ void  Reset();
 void  Init();
 void  Reset();
 void  InvalidateTLB();
-int32   GetStat();
-int32   GetTimeToNextInterrupt();
+int32 GetStat();
+int32 GetTimeToNextInterrupt();
 void  ProgressTime(int32 delta);
-int32   GetTicks();
+int32 GetTicks();
 void  AnalyzeImage();
 void  SetFlags(int32 x);
-int32   GetFlags();
+int32 GetFlags();
 void  RaiseInterrupt(int32 line, int32 cpuid);
 void  ClearInterrupt(int32 line, int32 cpuid);
 int32 Step(int32 steps, int32 clockspeed);
@@ -1015,10 +1015,10 @@ int32 Step(int32 steps, int32 clockspeed)
             paddr = g->read8stlblookup ^ vaddr;
             if (paddr >= 0)
             {
-                r[(ins >> 21) & 0x1F] = (int32)ramb[(paddr ^ 3)];
+                r[(ins >> 21) & 0x1F] = (int8)ramb[(paddr ^ 3)];
             } else
             {
-                r[(ins >> 21) & 0x1F] = (int32)Read8(paddr);
+                r[(ins >> 21) & 0x1F] = (int8)Read8(paddr);
             }
             continue;
 
@@ -1061,10 +1061,10 @@ int32 Step(int32 steps, int32 clockspeed)
             paddr = g->read16stlblookup ^ vaddr;
             if (paddr >= 0)
             {
-                r[(ins >> 21) & 0x1F] = (int32)ramh[(paddr ^ 2) >> 1];
+                r[(ins >> 21) & 0x1F] = (int16)ramh[(paddr ^ 2) >> 1];
             } else
             {
-                r[(ins >> 21) & 0x1F] = (int32)Read16(paddr);
+                r[(ins >> 21) & 0x1F] = (int16)Read16(paddr);
             }
             continue;
 

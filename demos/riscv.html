@@ -70,7 +70,7 @@ var LinuxTerm = require("LinuxTerm");
 var term = new LinuxTerm("tty");
 var jor1kgui = new Jor1k(
     {
-        term: term, 
+        term: term,
         path: "../riscv-sys/",
         statsid: "stats",
         relayURL: "wss://relay.widgetry.org/",
@@ -78,7 +78,7 @@ var jor1kgui = new Jor1k(
             kernelURL: "kernel/bbl.bz2",
             dtbURL: "kernel/riscv.dtb",
             arch: "riscv",
-            cpu: "safe",
+            cpu: "wasm",
             memorysize: 64,
         },
         fs: {
@@ -92,9 +92,9 @@ jor1kgui.Pause(true);
 
 function OnSelectChange(sel)
 {
-	if (sel.value[0] == "c") 
+	if (sel.value[0] == "c")
 	{
-    		jor1kgui.Pause(true);    
+    		jor1kgui.Pause(true);
     		return;
 	}
 
@@ -115,4 +115,3 @@ function OnNewImage(files)
 }
 
 </script>
-

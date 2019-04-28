@@ -48,9 +48,9 @@ async function InitRISCV(system, initdata) {
     // at the moment the htif interface is part of the CPU initialization.
     // However, it uses uartdev0
     system.htif = new HTIF(system.ram, system);
+    system.cpu = new RISCVCPU(initdata.cpu, system.ram, system.htif, system.heap, system.ncores);
 
     try {
-        system.cpu = new RISCVCPU(initdata.cpu, system.ram, system.htif, system.heap, system.ncores);
         await system.cpu.Init();
     } catch (e) {
         message.Debug("Error: failed to create CPU:" + e);
@@ -92,11 +92,10 @@ async function InitRISCV(system, initdata) {
     system.virtiodev3 = new VirtIODev(irqhandler, 0x5, system.ram, system.virtiodummydev);
     system.virtiodev4 = new VirtIODev(irqhandler, 0x6, system.ram, system.virtiodummydev);
     system.virtiodev5 = new VirtIODev(irqhandler, 0x7, system.ram, system.virtiodummydev);
-
-    system.romdev = new ROMDev(system.rom);
-    system.uartdev0 = new UARTDev(0, irqhandler, 2);
-    system.clintdev = new CLINTDev(system.csr);
-    system.plicdev = new PLICDev(system.cpu);
+    system.romdev     = new ROMDev(system.rom);
+    system.uartdev0   = new UARTDev(0, irqhandler, 2);
+    system.clintdev   = new CLINTDev(system.csr);
+    system.plicdev    = new PLICDev(system.cpu);
 
     system.devices.push(system.romdev);
     system.devices.push(system.uartdev0);
@@ -118,6 +117,7 @@ async function InitRISCV(system, initdata) {
     system.ram.AddDevice(system.virtiodev3,  0x40000000, 0x2000);
     system.ram.AddDevice(system.virtiodev4,  0x50000000, 0x2000);
     system.ram.AddDevice(system.virtiodev5,  0x60000000, 0x2000);
+    message.Debug("Init RISC-V SoC finished");
 }
 
 module.exports = InitRISCV;

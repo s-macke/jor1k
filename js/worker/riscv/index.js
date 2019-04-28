@@ -22,7 +22,7 @@ var stdlib = {
     Math : Math
 };
 
-function createCPU(cpuname, ram, htif, heap, ncores) {
+async function createCPU(cpuname, ram, htif, heap, ncores) {
     var cpu = null;
     var foreign = {
         DebugMessage: message.Debug,
@@ -48,8 +48,13 @@ function createCPU(cpuname, ram, htif, heap, ncores) {
     if (cpuname === "safe") {
         return new SafeCPU(ram, htif);
     }
-    else if (cpuname === "asm") {
+    if (cpuname === "asm") {
         cpu = FastCPU(stdlib, foreign, heap);
+        cpu.Init();
+        return cpu;
+    }
+    if (cpuname === "wasm") {
+        cpu = await createCPUWasm(cpuname, ram, htif, heap, ncores);
         cpu.Init();
         return cpu;
     }
@@ -66,8 +71,51 @@ function CPU(cpuname, ram, htif, heap, ncores) {
     return this;
 }
 
-CPU.prototype.Init = function() {
-    this.cpu = createCPU(this.name, this.ram, this.htif, this.heap, this.ncores);
+async function createCPUWasm(cpuname, ram, htif, heap, ncores) {
+    let importObj = {
+        env: {
+            memory : ram.memory,
+            DebugMessage: message.Debug,
+            abort : message.Abort,
+            Read32 : ram.Read32Little.bind(ram),
+            Write32 : ram.Write32Little.bind(ram),
+            Read16 : ram.Read16Little.bind(ram),
+            Write16 : ram.Write16Little.bind(ram),
+            Read8 : ram.Read8Little.bind(ram),
+            Write8 : ram.Write8Little.bind(ram),
+            HtifReadDEVCMDToHost : htif.ReadDEVCMDToHost.bind(htif),
+            HtifReadDEVCMDFromHost : htif.ReadDEVCMDFromHost.bind(htif),
+            HtifWriteDEVCMDToHost : htif.WriteDEVCMDToHost.bind(htif),
+            HtifWriteDEVCMDFromHost : htif.WriteDEVCMDFromHost.bind(htif),
+            HtifReadToHost : htif.ReadToHost.bind(htif),
+            HtifReadFromHost : htif.ReadFromHost.bind(htif),
+            HtifWriteToHost : htif.WriteToHost.bind(htif),
+            HtifWriteFromHost : htif.WriteFromHost.bind(htif),
+        }
+    };
+    let response = await fetch('riscv.wasm');
+    let obj = await WebAssembly.instantiate(await response.arrayBuffer(), importObj);
+    let exports = obj.instance.exports;
+    return {
+      AnalyzeImage : exports.AnalyzeImage,
+      ClearInterrupt : exports.ClearInterrupt,
+      GetFlags : exports.GetFlags,
+      GetStat : exports.GetStat,
+      GetTicks : exports.GetTicks,
+      GetTimeToNextInterrupt : exports.GetTimeToNextInterrupt,
+      GetPC : exports.GetPC,
+      Init : exports.Init,
+      InvalidateTLB : exports.InvalidateTLB,
+      ProgressTime : exports.ProgressTime,
+      RaiseInterrupt : exports.RaiseInterrupt,
+      Reset : exports.Reset,
+      SetFlags : exports.SetFlags,
+      Step : exports.Step
+    };
+}
+
+CPU.prototype.Init = async function() {
+    this.cpu = await createCPU(this.name, this.ram, this.htif, this.heap, this.ncores);
 };
 
 
@@ -79,7 +127,6 @@ CPU.prototype.toString = function() {
     var csr = new Uint32Array(this.heap, 0x2000);
     var str = '';
     str += "Current state of the machine\n";
-
 
     if (typeof this.cpu.pc != 'undefined') {
         str += "PC: " + utils.ToHex(this.cpu.pc) + "\n";

@@ -40,7 +40,6 @@ System.prototype.Reset = function() {
     for(var i=0; i<this.devices.length; i++) {
         this.devices[i].Reset();
     }
-
     this.ips = 0;
 };
 
@@ -67,7 +66,7 @@ System.prototype.Init = async function(system) {
 
     message.Debug("Allocate " + this.memorysize + " MB");
     // this must be a power of two.
-    if ((system.arch == "or1k") && ((system.cpu == "dynamic") || (system.cpu == "wasm"))  && (typeof WebAssembly !== "undefined")) {
+    if (((system.cpu == "dynamic") || (system.cpu == "wasm")) && (typeof WebAssembly !== "undefined")) {
         message.Debug("Use webassembly memory");
         this.memory = new WebAssembly.Memory({initial: this.memorysize*16, maximum: this.memorysize*16});
         this.heap = this.memory.buffer;
@@ -260,7 +259,6 @@ System.prototype.MainLoop = function() {
     message.Send("execute", 0);
     // execute the cpu loop for "instructionsperloop" instructions.
     var stepsleft = this.cpu.Step(this.timer.instructionsperloop, this.timer.timercyclesperinstruction);
-    //message.Debug(stepsleft);
     var totalsteps = this.timer.instructionsperloop - stepsleft;
     totalsteps++; // at least one instruction
     this.ips += totalsteps;
