@@ -24,7 +24,7 @@ function Abort() {
     Debug("Worker: Abort execution.");
     if (typeof messagemap["PrintOnAbort"] == 'function') {
             messagemap["PrintOnAbort"]();
-    }    
+    }
     Send("Abort", {});
     run = false;
     throw new Error('Kill worker'); // Don't return
@@ -55,6 +55,7 @@ onmessage = function(e) {
             messagemap[command](e.data.data);
         } catch (error) {
             Debug("Worker: Unhandled exception in command \"" + command + "\": " + error.message);
+            Debug(error.stack);
             run = false;
         }
         return;
