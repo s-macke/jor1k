@@ -257,16 +257,16 @@ inline void RamWrite32(int32 paddr, int32 x)
         Write32(paddr, x);
 }
 
-#define FastTLBLookup(vaddr, mode, check, lookup)     \
+#define FastTLBLookupMacro(__vaddr__, __mode__, __check__, __lookup__)     \
 {                                                     \
-    if ((check ^ (vaddr)) & 0xFFFFF000)               \
+    if ((__check__ ^ (__vaddr__)) & 0xFFFFF000)               \
     {                                                 \
-        paddr = TranslateVM((vaddr), (mode));         \
+        paddr = TranslateVM((__vaddr__), (__mode__));         \
         if (paddr == -1) break;                       \
-        check = (vaddr);                              \
-        lookup = ((paddr^(vaddr)) >> 12) << 12;       \
+        __check__ = (__vaddr__);                              \
+        __lookup__ = ((paddr^(__vaddr__)) >> 12) << 12;       \
     }                                                 \
-    paddr = lookup ^ vaddr;                           \
+    paddr = __lookup__ ^ __vaddr__;                           \
 }
 
 int32 get_field(int32 reg, int32 mask)
@@ -859,7 +859,7 @@ int32 Step(int32 steps, int32 clockspeed)
 
                     case 0x00:
                         // lb
-                        FastTLBLookup(vaddr, VM_READ, g->read8stlbcheck, g->read8stlblookup)
+                        FastTLBLookupMacro(vaddr, VM_READ, g->read8stlbcheck, g->read8stlblookup)
                         if (paddr < 0)
                         {
                             r[rindex] = (int8)ramb[paddr^0x80000000];
@@ -878,7 +878,7 @@ int32 Step(int32 steps, int32 clockspeed)
                              //message.Abort();
                              break;
                         }
-                        FastTLBLookup(vaddr, VM_READ, g->read16stlbcheck, g->read16stlblookup)
+                        FastTLBLookupMacro(vaddr, VM_READ, g->read16stlbcheck, g->read16stlblookup)
                         if (paddr < 0)
                         {
                             r[rindex] = (int16)ramh[(paddr^0x80000000)>>1];
@@ -897,7 +897,7 @@ int32 Step(int32 steps, int32 clockspeed)
                              //message.Abort();
                              break;
                         }
-                        FastTLBLookup(vaddr, VM_READ, g->read32tlbcheck, g->read32tlblookup)
+                        FastTLBLookupMacro(vaddr, VM_READ, g->read32tlbcheck, g->read32tlblookup)
                         //paddr = TranslateVM(vaddr, VM_READ);
                         //if (paddr == -1) break;
 
@@ -916,7 +916,7 @@ int32 Step(int32 steps, int32 clockspeed)
 
                     case 0x04:
                         // lbu
-                        FastTLBLookup(vaddr, VM_READ, g->read8utlbcheck, g->read8utlblookup)
+                        FastTLBLookupMacro(vaddr, VM_READ, g->read8utlbcheck, g->read8utlblookup)
                         if (paddr < 0)
                         {
                             r[rindex] = (uint8)ramb[paddr^0x80000000];
@@ -934,7 +934,7 @@ int32 Step(int32 steps, int32 clockspeed)
                              DebugMessage(6);
                              abort();
                         }
-                        FastTLBLookup(vaddr, VM_READ, g->read16utlbcheck, g->read16utlblookup)
+                        FastTLBLookupMacro(vaddr, VM_READ, g->read16utlbcheck, g->read16utlblookup)
                         if (paddr < 0)
                         {
                             r[rindex] = (uint16)ramh[(paddr^0x80000000)>>1];
@@ -964,7 +964,7 @@ int32 Step(int32 steps, int32 clockspeed)
                 {
                     case 0x00:
                         // sb
-                        FastTLBLookup(vaddr, VM_WRITE, g->write8tlbcheck, g->write8tlblookup)
+                        FastTLBLookupMacro(vaddr, VM_WRITE, g->write8tlbcheck, g->write8tlblookup)
                         if (paddr < 0)
                         {
                             ramb[paddr^0x80000000] = r[rindex];
@@ -982,7 +982,7 @@ int32 Step(int32 steps, int32 clockspeed)
                              //message.Abort();
                              break;
                         }
-                        FastTLBLookup(vaddr, VM_WRITE, g->write16tlbcheck, g->write16tlblookup)
+                        FastTLBLookupMacro(vaddr, VM_WRITE, g->write16tlbcheck, g->write16tlblookup)
                         if (paddr < 0)
                         {
                             ramh[(paddr^0x80000000)>>1] = r[rindex];
@@ -1001,7 +1001,7 @@ int32 Step(int32 steps, int32 clockspeed)
                              //message.Abort();
                              break;
                         }
-                        FastTLBLookup(vaddr, VM_WRITE, g->write32tlbcheck, g->write32tlblookup)
+                        FastTLBLookupMacro(vaddr, VM_WRITE, g->write32tlbcheck, g->write32tlblookup)
                         RamWrite32(paddr, r[rindex]);
 
                         if (((uint32)paddr) == 0x8000a00c)

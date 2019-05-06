@@ -1,4 +1,4 @@
-require=(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
+require=(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
 //download.js v3.1, by dandavis; 2008-2014. [CCBY2] see http://danml.com/download.html for tests/usage
 // v1 landed a FF+Chrome compat way of downloading strings to local un-named files, upgraded to use a hidden frame and optional mime
 // v2 added named files via a[download], msSaveBlob, IE (10+) support, and window.URL support for larger+faster saves than dataURLs
@@ -1774,9 +1774,9 @@ function jor1kGUI(parameters)
    if (this.clipboard) {
    this.clipboard.onpaste = function(event) {
        this.clipboard.value = "";
-       setTimeout(this.SendClipboard.bind(this), 4);    
+       setTimeout(this.SendClipboard.bind(this), 4);
    }.bind(this);
-   
+
 
    this.SendClipboard = function() {
        var chars = [];
@@ -1872,7 +1872,7 @@ jor1kGUI.prototype.Execute = function() {
     if(this.userpaused) {
         this.executepending = true;
     } else {
-        this.executepending = false; 
+        this.executepending = false;
         message.Send("execute", 0);
     }
 };
@@ -1880,7 +1880,7 @@ jor1kGUI.prototype.Execute = function() {
 jor1kGUI.prototype.ShowIPS = function(ips) {
     if (!this.stats) return;
     if (this.userpaused) {
-        this.stats.innerHTML = "Paused"; 
+        this.stats.innerHTML = "Paused";
     } else {
         this.stats.innerHTML = ips<1000000?
         Math.floor(ips/1000) + " KIPS"
@@ -1892,9 +1892,13 @@ jor1kGUI.prototype.ShowIPS = function(ips) {
 jor1kGUI.prototype.Reset = function () {
     this.stop = false; // VM Stopped/Aborted
     this.userpaused = false;
-    this.executepending = false; // if we rec an execute message while paused      
+    this.executepending = false; // if we rec an execute message while paused
 
+    message.Register("InitDone", this.OnInit.bind(this));
     message.Send("Init", this.params.system);
+}
+
+jor1kGUI.prototype.OnInit = function () {
     message.Send("Reset");
     message.Send("LoadAndStart", this.params.system.kernelURL);
 
@@ -1912,7 +1916,7 @@ jor1kGUI.prototype.Reset = function () {
 
 jor1kGUI.prototype.Pause = function(pause) {
     pause = !! pause; // coerce to boolean
-    if(pause == this.userpaused) return; 
+    if(pause == this.userpaused) return;
     this.userpaused = pause;
     if(! this.userpaused && this.executepending) {
       this.executepending = false;

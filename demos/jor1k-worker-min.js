@@ -1,4 +1,4 @@
-(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
+(function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
 // -------------------------------------------------
 // ------------------ UTF8 Helpers -----------------
 // -------------------------------------------------
@@ -6492,15 +6492,19 @@ var VirtioConsole = require('./dev/virtio/console');
     0x100000 -  ...     RAM
 */
 
-function InitOpenRISC(system, initdata) {
-    message.Debug("Init OpenRISC SoC");
+async function InitOpenRISC(system, initdata) {
+    message.Debug("Init OpenRISC SoC with CPU type " + initdata.cpu);
+
     var irqhandler = system;
+    system.cpu = new OR1KCPU(initdata.cpu, system.ram, system.heap, system.ncores);
 
     try {
-        system.cpu = new OR1KCPU(initdata.cpu, system.ram, system.heap, system.ncores);
+        await system.cpu.Init();
     } catch (e) {
         message.Debug("Error: failed to create CPU:" + e);
+        message.Abort();
     }
+
     system.devices.push(system.cpu);
 
     system.irqdev = new IRQDev(irqhandler);
@@ -6566,7 +6570,7 @@ function InitOpenRISC(system, initdata) {
     system.ram.AddDevice(system.virtiodev2, 0x9C000000, 0x1000);
     system.ram.AddDevice(system.virtiodev3, 0x9D000000, 0x1000);
     system.ram.AddDevice(system.atadev,     0x9E000000, 0x1000);
-
+    message.Debug("Init OpenRISC SoC finished");
 }
 
 module.exports = InitOpenRISC;
@@ -6615,15 +6619,21 @@ var VirtioNET = require('./dev/virtio/net');
 //var VirtioGPU = require('./dev/virtio/gpu');
 //var VirtioConsole = require('./dev/virtio/console');
 
-function InitRISCV(system, initdata) {
+async function InitRISCV(system, initdata) {
     message.Debug("Init RISCV SoC");
     var irqhandler = system;
 
     // at the moment the htif interface is part of the CPU initialization.
     // However, it uses uartdev0
     system.htif = new HTIF(system.ram, system);
-   
     system.cpu = new RISCVCPU(initdata.cpu, system.ram, system.htif, system.heap, system.ncores);
+
+    try {
+        await system.cpu.Init();
+    } catch (e) {
+        message.Debug("Error: failed to create CPU:" + e);
+        message.Abort();
+    }
 
     system.devices.push(system.cpu);
 
@@ -6648,7 +6658,6 @@ function InitRISCV(system, initdata) {
     }.bind(this)
     , false, function(error){throw error;});
 
-
     system.virtionetdev = new VirtioNET(system.ram);
     system.virtiodummydev = new VirtioDummy(system.ram);
     //system.virtioinputdev = new VirtioInput(system.ram);
@@ -6661,11 +6670,10 @@ function InitRISCV(system, initdata) {
     system.virtiodev3 = new VirtIODev(irqhandler, 0x5, system.ram, system.virtiodummydev);
     system.virtiodev4 = new VirtIODev(irqhandler, 0x6, system.ram, system.virtiodummydev);
     system.virtiodev5 = new VirtIODev(irqhandler, 0x7, system.ram, system.virtiodummydev);
-
-    system.romdev = new ROMDev(system.rom);
-    system.uartdev0 = new UARTDev(0, irqhandler, 2);
-    system.clintdev = new CLINTDev(system.csr);
-    system.plicdev = new PLICDev(system.cpu);
+    system.romdev     = new ROMDev(system.rom);
+    system.uartdev0   = new UARTDev(0, irqhandler, 2);
+    system.clintdev   = new CLINTDev(system.csr);
+    system.plicdev    = new PLICDev(system.cpu);
 
     system.devices.push(system.romdev);
     system.devices.push(system.uartdev0);
@@ -6687,6 +6695,7 @@ function InitRISCV(system, initdata) {
     system.ram.AddDevice(system.virtiodev3,  0x40000000, 0x2000);
     system.ram.AddDevice(system.virtiodev4,  0x50000000, 0x2000);
     system.ram.AddDevice(system.virtiodev5,  0x60000000, 0x2000);
+    message.Debug("Init RISC-V SoC finished");
 }
 
 module.exports = InitRISCV;
@@ -6718,7 +6727,7 @@ function Abort() {
     Debug("Worker: Abort execution.");
     if (typeof messagemap["PrintOnAbort"] == 'function') {
             messagemap["PrintOnAbort"]();
-    }    
+    }
     Send("Abort", {});
     run = false;
     throw new Error('Kill worker'); // Don't return
@@ -6749,6 +6758,7 @@ onmessage = function(e) {
             messagemap[command](e.data.data);
         } catch (error) {
             Debug("Worker: Unhandled exception in command \"" + command + "\": " + error.message);
+            Debug(error.stack);
             run = false;
         }
         return;
@@ -8478,7 +8488,7 @@ function SetSPR(idx, x) {
         abort();
         break;
     }
-};
+}
 
 function GetSPR(idx) {
     idx = idx|0;
@@ -9725,7 +9735,7 @@ var stdlib = {
     Math : Math
 };
 
-function createCPUSingleton(cpuname, ram, heap, ncores) {
+function createCPUAsm(cpuname, ram, heap, ncores) {
     var foreign = {
         DebugMessage: message.Debug,
         abort : message.Abort,
@@ -9743,7 +9753,8 @@ function createCPUSingleton(cpuname, ram, heap, ncores) {
             fastcpu.Init();
         }
         return fastcpu;
-    } else if (cpuname === 'smp') {
+    }
+    if (cpuname === 'smp') {
         if (smpcpu === null) {
             smpcpu = SMPCPU(stdlib, foreign, heap);
             smpcpu.Init(ncores);
@@ -9752,7 +9763,42 @@ function createCPUSingleton(cpuname, ram, heap, ncores) {
     }
 }
 
-function createCPU(cpuname, ram, heap, ncores) {
+async function createCPUWasm(cpuname, ram, heap, ncores) {
+
+    let importObj = {
+        env: {
+            memory : ram.memory,
+            DebugMessage: message.Debug,
+            abort : message.Abort,
+            Read32 : ram.Read32Big.bind(ram),
+            Write32 : ram.Write32Big.bind(ram),
+            Read16 : ram.Read16Big.bind(ram),
+            Write16 : ram.Write16Big.bind(ram),
+            Read8 : ram.Read8Big.bind(ram),
+            Write8 : ram.Write8Big.bind(ram)
+        }
+    };
+    let response = await fetch('or1k.wasm');
+    let obj = await WebAssembly.instantiate(await response.arrayBuffer(), importObj);
+    let exports = obj.instance.exports;
+    return {
+      AnalyzeImage : exports.AnalyzeImage,
+      ClearInterrupt : exports.ClearInterrupt,
+      GetFlags : exports.GetFlags,
+      GetStat : exports.GetStat,
+      GetTicks : exports.GetTicks,
+      GetTimeToNextInterrupt : exports.GetTimeToNextInterrupt,
+      Init : exports.Init,
+      InvalidateTLB : exports.InvalidateTLB,
+      ProgressTime : exports.ProgressTime,
+      RaiseInterrupt : exports.RaiseInterrupt,
+      Reset : exports.Reset,
+      SetFlags : exports.SetFlags,
+      Step : exports.Step
+    };
+}
+
+async function createCPU(cpuname, ram, heap, ncores) {
     var cpu = null;
 
     if (cpuname === "safe") {
@@ -9762,27 +9808,33 @@ function createCPU(cpuname, ram, heap, ncores) {
         return new DynamicCPU(ram);
     }
     if (cpuname === "asm") {
-        cpu = createCPUSingleton(cpuname, ram, heap, ncores);
+        cpu = createCPUAsm(cpuname, ram, heap, ncores);
         cpu.Init();
         return cpu;
     }
     if (cpuname === "smp") {
-        cpu = createCPUSingleton(cpuname, ram, heap, ncores);
+        cpu = createCPUAsm(cpuname, ram, heap, ncores);
         cpu.Init(ncores);
+        return cpu;
+    }
+    if (cpuname === "wasm") {
+        cpu = await createCPUWasm(cpuname, ram, heap, ncores);
+        cpu.Init();
         return cpu;
     }
     throw new Error("invalid CPU name:" + cpuname);
 }
 
 function CPU(cpuname, ram, heap, ncores) {
-    this.cpu = createCPU(cpuname, ram, heap, ncores);
     this.name = cpuname;
     this.ncores = ncores;
     this.ram = ram;
     this.heap = heap;
     this.littleendian = false;
+}
 
-    return this;
+CPU.prototype.Init = async function() {
+    this.cpu = await createCPU(this.name, this.ram, this.heap, this.ncores);
 }
 
 CPU.prototype.toString = function() {
@@ -9804,7 +9856,7 @@ CPU.prototype.toString = function() {
             toHex(r[i + 2]) + "   r" + (i + 3) + ": " +
             toHex(r[i + 3]) + "\n";
     }
-    
+
     if (this.cpu.delayedins) {
         str += "delayed instruction\n";
     }
@@ -9846,19 +9898,19 @@ CPU.prototype.toString = function() {
 
 // forward a couple of methods to the CPU implementation
 var forwardedMethods = [
-    "Reset", 
+    "Reset",
     "Step",
-    "RaiseInterrupt", 
+    "RaiseInterrupt",
     "Step",
     "AnalyzeImage",
     "GetTicks",
     "GetTimeToNextInterrupt",
-    "ProgressTime", 
+    "ProgressTime",
     "ClearInterrupt"];
 
 forwardedMethods.forEach(function(m) {
     CPU.prototype[m] = function() {
-        return this.cpu[m].apply(this.cpu, arguments);        
+        return this.cpu[m].apply(this.cpu, arguments);
     };
 
 });
@@ -16261,7 +16313,7 @@ var stdlib = {
     Math : Math
 };
 
-function createCPU(cpuname, ram, htif, heap, ncores) {
+async function createCPU(cpuname, ram, htif, heap, ncores) {
     var cpu = null;
     var foreign = {
         DebugMessage: message.Debug,
@@ -16287,8 +16339,13 @@ function createCPU(cpuname, ram, htif, heap, ncores) {
     if (cpuname === "safe") {
         return new SafeCPU(ram, htif);
     }
-    else if (cpuname === "asm") {
+    if (cpuname === "asm") {
         cpu = FastCPU(stdlib, foreign, heap);
+        cpu.Init();
+        return cpu;
+    }
+    if (cpuname === "wasm") {
+        cpu = await createCPUWasm(cpuname, ram, htif, heap, ncores);
         cpu.Init();
         return cpu;
     }
@@ -16296,15 +16353,62 @@ function createCPU(cpuname, ram, htif, heap, ncores) {
 }
 
 function CPU(cpuname, ram, htif, heap, ncores) {
-    this.cpu = createCPU(cpuname, ram, htif, heap, ncores);
     this.name = cpuname;
     this.ncores = ncores;
     this.ram = ram;
     this.heap = heap;
+    this.htif = htif;
     this.littleendian = true;
-
     return this;
 }
+
+async function createCPUWasm(cpuname, ram, htif, heap, ncores) {
+    let importObj = {
+        env: {
+            memory : ram.memory,
+            DebugMessage: message.Debug,
+            abort : message.Abort,
+            Read32 : ram.Read32Little.bind(ram),
+            Write32 : ram.Write32Little.bind(ram),
+            Read16 : ram.Read16Little.bind(ram),
+            Write16 : ram.Write16Little.bind(ram),
+            Read8 : ram.Read8Little.bind(ram),
+            Write8 : ram.Write8Little.bind(ram),
+            HtifReadDEVCMDToHost : htif.ReadDEVCMDToHost.bind(htif),
+            HtifReadDEVCMDFromHost : htif.ReadDEVCMDFromHost.bind(htif),
+            HtifWriteDEVCMDToHost : htif.WriteDEVCMDToHost.bind(htif),
+            HtifWriteDEVCMDFromHost : htif.WriteDEVCMDFromHost.bind(htif),
+            HtifReadToHost : htif.ReadToHost.bind(htif),
+            HtifReadFromHost : htif.ReadFromHost.bind(htif),
+            HtifWriteToHost : htif.WriteToHost.bind(htif),
+            HtifWriteFromHost : htif.WriteFromHost.bind(htif),
+        }
+    };
+    let response = await fetch('riscv.wasm');
+    let obj = await WebAssembly.instantiate(await response.arrayBuffer(), importObj);
+    let exports = obj.instance.exports;
+    return {
+      AnalyzeImage : exports.AnalyzeImage,
+      ClearInterrupt : exports.ClearInterrupt,
+      GetFlags : exports.GetFlags,
+      GetStat : exports.GetStat,
+      GetTicks : exports.GetTicks,
+      GetTimeToNextInterrupt : exports.GetTimeToNextInterrupt,
+      GetPC : exports.GetPC,
+      Init : exports.Init,
+      InvalidateTLB : exports.InvalidateTLB,
+      ProgressTime : exports.ProgressTime,
+      RaiseInterrupt : exports.RaiseInterrupt,
+      Reset : exports.Reset,
+      SetFlags : exports.SetFlags,
+      Step : exports.Step
+    };
+}
+
+CPU.prototype.Init = async function() {
+    this.cpu = await createCPU(this.name, this.ram, this.htif, this.heap, this.ncores);
+};
+
 
 CPU.prototype.switchImplementation = function(cpuname) {
 };
@@ -16315,11 +16419,10 @@ CPU.prototype.toString = function() {
     var str = '';
     str += "Current state of the machine\n";
 
-
     if (typeof this.cpu.pc != 'undefined') {
-        str += "PC: " + utils.ToHex(this.cpu.pc) + "\n"; 
+        str += "PC: " + utils.ToHex(this.cpu.pc) + "\n";
     } else {
-        str += "PC: " + utils.ToHex(this.cpu.GetPC()) + "\n"; 
+        str += "PC: " + utils.ToHex(this.cpu.GetPC()) + "\n";
     }
 
     for (var i = 0; i < 32; i += 4) {
@@ -16330,27 +16433,27 @@ CPU.prototype.toString = function() {
             utils.ToHex(r[i + 3]) + "\n";
     }
     str += "mstatus: " + utils.ToBin(csr[0x300]) + "\n";
-    str += 
-        "mcause: " + utils.ToHex(csr[0x342]) + 
-        " mbadaddress: " + utils.ToHex(csr[0x343]) + 
+    str +=
+        "mcause: " + utils.ToHex(csr[0x342]) +
+        " mbadaddress: " + utils.ToHex(csr[0x343]) +
         " mepc: " + utils.ToHex(csr[0x341]) + "\n";
     return str;
 };
 
 // forward a couple of methods to the CPU implementation
 var forwardedMethods = [
-    "Reset", 
+    "Reset",
     "Step",
-    "RaiseInterrupt", 
+    "RaiseInterrupt",
     "Step",
     "AnalyzeImage",
     "GetTicks",
     "GetTimeToNextInterrupt",
-    "ProgressTime", 
+    "ProgressTime",
     "ClearInterrupt"];
 forwardedMethods.forEach(function(m) {
     CPU.prototype[m] = function() {
-        return this.cpu[m].apply(this.cpu, arguments);        
+        return this.cpu[m].apply(this.cpu, arguments);
     };
 });
 
@@ -18358,27 +18461,7 @@ var InitRISCV = require('./init_riscv');
 var FS = require('./filesystem/filesystem');
 
 // Devices
-var UARTDev = require('./dev/uart');
-var IRQDev = require('./dev/irq');
-var TimerDev = require('./dev/timer');
-var FBDev = require('./dev/framebuffer');
-var EthDev = require('./dev/ethmac');
-var ATADev = require('./dev/ata');
-var RTCDev = require('./dev/rtc');
-var CLINTDev = require('./dev/clint');
-var PLICDev = require('./dev/plic');
-var ROMDev = require('./dev/rom');
-var TouchscreenDev = require('./dev/touchscreen');
-var KeyboardDev = require('./dev/keyboard');
-var SoundDev = require('./dev/sound');
-var VirtIODev = require('./dev/virtio');
 var Virtio9p = require('./dev/virtio/9p');
-var VirtioDummy = require('./dev/virtio/dummy');
-var VirtioInput = require('./dev/virtio/input');
-var VirtioNET = require('./dev/virtio/net');
-var VirtioBlock = require('./dev/virtio/block');
-var VirtioGPU = require('./dev/virtio/gpu');
-var VirtioConsole = require('./dev/virtio/console');
 
 var SYSTEM_RUN = 0x1;
 var SYSTEM_STOP = 0x2;
@@ -18400,15 +18483,13 @@ function System() {
 
 System.prototype.Reset = function() {
     this.status = SYSTEM_STOP;
-    
     for(var i=0; i<this.devices.length; i++) {
         this.devices[i].Reset();
     }
-
     this.ips = 0;
 };
 
-System.prototype.Init = function(system) {
+System.prototype.Init = async function(system) {
     message.Debug("Init with following JSON structure: ");
     message.Debug(system);
 
@@ -18431,11 +18512,12 @@ System.prototype.Init = function(system) {
 
     message.Debug("Allocate " + this.memorysize + " MB");
     // this must be a power of two.
-    if ((system.arch == "or1k") && (system.cpu == "dynamic")  && (typeof WebAssembly !== "undefined")) {
+    if (((system.cpu == "dynamic") || (system.cpu == "wasm")) && (typeof WebAssembly !== "undefined")) {
         message.Debug("Use webassembly memory");
         this.memory = new WebAssembly.Memory({initial: this.memorysize*16, maximum: this.memorysize*16});
         this.heap = this.memory.buffer;
     } else {
+        message.Debug("Use arraybuffer memory");
         this.heap = new ArrayBuffer(this.memorysize*0x100000);
     }
     var ramoffset = 0x100000;
@@ -18450,10 +18532,10 @@ System.prototype.Init = function(system) {
 
     try {
         if (system.arch == "or1k") {
-            InitOpenRISC(this, system);
+            await InitOpenRISC(this, system);
         } else
         if (system.arch == "riscv") {
-            InitRISCV(this, system);
+            await InitRISCV(this, system);
         } else {
             throw "Architecture " + system.arch + " not supported";
         }
@@ -18461,6 +18543,8 @@ System.prototype.Init = function(system) {
         message.Debug("Error: failed to create SoC: " + e);
         message.Abort();
     }
+    message.Debug("Init Done");
+    message.Send("InitDone", null);
 };
 
 System.prototype.RaiseInterrupt = function(line) {
@@ -18502,7 +18586,7 @@ System.prototype.PrintState = function() {
     // Flush the buffer of the terminal
     this.uartdev0 && this.uartdev0.Step();
     this.uartdev1 && this.uartdev1.Step();
-    message.Debug(this.cpu.toString());
+    this.cpu && message.Debug(this.cpu.toString());
 };
 
 System.prototype.SendStringToTerminal = function(str)
@@ -18520,8 +18604,8 @@ System.prototype.LoadImageAndStart = function(url) {
     if (typeof url == 'string') {
         this.SendStringToTerminal("\r\nLoading kernel and hard and basic file system from web server. Please wait ...\r\n");
         utils.LoadBinaryResource(
-            url, 
-            this.OnKernelLoaded.bind(this), 
+            url,
+            this.OnKernelLoaded.bind(this),
             function(error){throw error;}
         );
     } else {
@@ -18541,10 +18625,10 @@ System.prototype.PatchKernel = function(length)
         if (m[i+3] === 0x6f)
         if (m[i+4] === 0x72)
         if (m[i+5] === 0x79)
-        if (m[i+6] === 0x00) 
-        if (m[i+24] === 0x01) 
-        if (m[i+25] === 0xF0) 
-        if (m[i+26] === 0x00) 
+        if (m[i+6] === 0x00)
+        if (m[i+24] === 0x01)
+        if (m[i+25] === 0xF0)
+        if (m[i+26] === 0x00)
         if (m[i+27] === 0x00) {
             m[i+24] = (this.memorysize*0x100000)>>24;
             m[i+25] = (this.memorysize*0x100000)>>16;
@@ -18561,7 +18645,7 @@ System.prototype.OnKernelLoaded = function(buffer) {
 
     if (elf.IsELF(buffer8)) {
         elf.Extract(buffer8, this.ram);
-    } else 
+    } else
     if (bzip2.IsBZIP2(buffer8)) {
         length = 0;
         bzip2.simple(buffer8, function(x){this.ram.uint8mem[length++] = x;}.bind(this));
@@ -18601,7 +18685,7 @@ System.prototype.HandleHalt = function() {
         this.idlemaxwait = delta;
         var mswait = Math.floor(delta / this.ticksperms / this.timer.correction + 0.5);
         //message.Debug("wait " + mswait);
-        
+
         if (mswait <= 1) return;
         if (mswait > 1000) message.Debug("Warning: idle for " + mswait + "ms");
         this.idletime = utils.GetMilliseconds();
@@ -18621,7 +18705,6 @@ System.prototype.MainLoop = function() {
     message.Send("execute", 0);
     // execute the cpu loop for "instructionsperloop" instructions.
     var stepsleft = this.cpu.Step(this.timer.instructionsperloop, this.timer.timercyclesperinstruction);
-    //message.Debug(stepsleft);
     var totalsteps = this.timer.instructionsperloop - stepsleft;
     totalsteps++; // at least one instruction
     this.ips += totalsteps;
@@ -18636,7 +18719,7 @@ System.prototype.MainLoop = function() {
     this.timer.Update(totalsteps, this.cpu.GetTicks(), gotoidle);
 
     if (gotoidle) {
-        this.HandleHalt(); 
+        this.HandleHalt();
     }
 
     // go to worker thread idle state that onmessage is executed
@@ -18644,7 +18727,7 @@ System.prototype.MainLoop = function() {
 
 module.exports = System;
 
-},{"./bzip2":2,"./dev/ata":3,"./dev/clint":4,"./dev/ethmac":5,"./dev/framebuffer":6,"./dev/irq":7,"./dev/keyboard":8,"./dev/plic":9,"./dev/rom":10,"./dev/rtc":11,"./dev/sound":12,"./dev/timer":13,"./dev/touchscreen":14,"./dev/uart":15,"./dev/virtio":16,"./dev/virtio/9p":17,"./dev/virtio/block":18,"./dev/virtio/console":19,"./dev/virtio/dummy":20,"./dev/virtio/gpu":21,"./dev/virtio/input":22,"./dev/virtio/net":24,"./elf":25,"./filesystem/filesystem":26,"./init_openrisc":31,"./init_riscv":32,"./messagehandler":33,"./ram":39,"./timer":47,"./utils":48}],47:[function(require,module,exports){
+},{"./bzip2":2,"./dev/virtio/9p":17,"./elf":25,"./filesystem/filesystem":26,"./init_openrisc":31,"./init_riscv":32,"./messagehandler":33,"./ram":39,"./timer":47,"./utils":48}],47:[function(require,module,exports){
 // -------------------------------------------------
 // ------------------- TIMER -----------------------
 // -------------------------------------------------
