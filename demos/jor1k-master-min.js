@@ -1962,7 +1962,7 @@ function UploadBinaryResource(url, filename, data, OnSuccess, OnError) {
     var xhr = new XMLHttpRequest();
     xhr.open('post', url, true);
     xhr.setRequestHeader("Content-Type", "multipart/form-data, boundary=" + boundary);
-    xhr.setRequestHeader("Content-Length", data.length);
+    //xhr.setRequestHeader("Content-Length", data.length);
     xhr.onreadystatechange = function () {
         if (xhr.readyState != 4) {
             return;
