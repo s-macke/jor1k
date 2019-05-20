@@ -28,7 +28,7 @@ function ReadStringFromBinary(buffer, offset, numBytes) {
     var str = "";
     for(var i=0; i<numBytes; i++) {
         if (buffer[offset+i] < 32) return str; // no special signs
-        str = str + String.fromCharCode(buffer[offset+i]); 
+        str = str + String.fromCharCode(buffer[offset+i]);
     }
     return str;
 };
@@ -46,7 +46,7 @@ TAR.prototype.Unpack = function(x) {
     this.tarbuffer[this.tarbufferofs++] = x;
     if (this.tarbufferofs != 512) return;
     this.tarbufferofs = 0;
- 
+
     if (this.tarmode == 1) {
         var n = Math.min(512, this.tarfilebuffer.length - this.tarfileoffset);
         for(var i=0; i<n; i++) {
@@ -61,7 +61,7 @@ TAR.prototype.Unpack = function(x) {
     if (magic != "ustar") return;
 
     var typeflag = String.fromCharCode(this.tarbuffer[156]);
-    var name = ReadStringFromBinary(this.tarbuffer, 0, 100);    
+    var name = ReadStringFromBinary(this.tarbuffer, 0, 100);
     //message.Debug("name:" + name);
     //TODO: use searchpath function
     var walk = name.split("/");
@@ -148,10 +148,10 @@ TAR.prototype.Pack = function(path) {
                 if (size & 511) {size = size & (~0x1FF); size += 512;}
                 break;
         }
-    }    
+    }
     message.Debug("tar: " + this.fs.GetFullPath(id) + " size: " + size + " files: " + filelist.length);
     message.Debug(filelist);
-    
+
     var buffer = new Uint8Array(size);
     var offset = 0;
     for(var i=0; i<filelist.length; i++) {
@@ -164,10 +164,13 @@ TAR.prototype.Pack = function(path) {
         WriteStringToBinary((inode.mode&0xFFF).toString(8), buffer, offset+100, 8); // mode
         WriteStringToBinary(inode.uid.toString(8), buffer, offset+108, 8); // uid
         WriteStringToBinary(inode.gid.toString(8), buffer, offset+116, 8); // gid
-        WriteStringToBinary((inode.mtime).toString(8), buffer, offset+136, 12); // mtime        
+        WriteStringToBinary((inode.mtime).toString(8), buffer, offset+136, 12); // mtime
+        if (inode.mtime === undefined) {
+            inode.mtime = Math.floor((new Date()).getTime()/1000);
+        }
         //WriteStringToBinary("root", buffer, offset+265, 7);
         //WriteStringToBinary("root", buffer, offset+297, 7); // chksum blank to calculate the checksum
-        
+
         buffer[offset+148+0] = 32; // chksum
         buffer[offset+148+1] = 32;
         buffer[offset+148+2] = 32;
@@ -199,7 +202,7 @@ TAR.prototype.Pack = function(path) {
         }
         WriteStringToBinary(chksum.toString(8), buffer, offset+148, 7);
         offset += 512;
-        
+
         if (type == S_IFREG) { // copy the file
             for(var j=0; j<inode.size; j++) {
                 buffer[offset++] = inode.data[j];
