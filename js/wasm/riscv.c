@@ -9,6 +9,18 @@ typedef unsigned char uint8;
 
 #define fabs(x) ((x)<0 ? -(x) : (x))
 
+// easy and inaccurate implementation of sqrt
+double sqrt(double x)
+{
+  double z = x/2.;
+  for (int i = 0; i < 10; i++)
+  {
+    z -= (z*z - x) / (2.*z);
+  }
+  return z;
+}
+
+
 // exports
 extern void  abort();
 extern void  DebugMessage(int32 messageid);
@@ -658,6 +670,8 @@ void SetCSR(int32 addr, int32 value)
             csr[addr] = value;
             break;
 
+        case CSR_FFLAGS:
+        case CSR_FRM:
         case CSR_FCSR:
         case CSR_MEDELEG:
         case CSR_MIDELEG:
@@ -704,7 +718,9 @@ int32 GetCSR(int32 addr)
     //DebugMessage("GetCSR: Address:" + utils.ToHex(addr));
     switch(addr)
     {
+        case CSR_FFLAGS:
         case CSR_FCSR:
+        case CSR_FRM:
             return 0x0;
             break;
 
@@ -788,6 +804,7 @@ int32 GetCSR(int32 addr)
         default:
             //DebugMessage("Error in GetCSR: PC "+utils.ToHex(this.pc)+" Address " + utils.ToHex(addr) + " unkown");
             DebugMessage(5);
+            DebugMessage(addr);
             abort();
             return csr[addr];
             break;
@@ -1626,6 +1643,35 @@ int32 Step(int32 steps, int32 clockspeed)
                         f[rindex] = fs1 - fs2;
                         break;
 
+                    case 0x2c:
+                    case 0x2d:
+                        // fsqrt.s, fsqrt.d
+                        fs1 = f[(ins >> 15) & 0x1F];
+                        f[rindex] = sqrt(fs1);
+                        break;
+
+                    case 0x14:
+                    case 0x15:
+                        fs1 = f[(ins >> 15) & 0x1F];
+                        fs2 = f[(ins >> 20) & 0x1F];
+                        switch((ins >> 12) & 0x7)
+                        {
+                            case 0:
+                                // fmin.s, fmin.d
+                                f[rindex] = (fs1<fs2)?fs1:fs2;
+                                break;
+                            case 1:
+                                // fmax.s, fmax.d
+                                f[rindex] = (fs1<fs2)?fs1:fs2;
+                                break;
+                            default:
+                                DebugMessage(31);
+                                abort();
+                                break;
+                        }
+                        break;
+
+
                     case 0x50:
                     case 0x51:
                         // fcmp.s, fcmp.d
@@ -1738,6 +1784,7 @@ int32 Step(int32 steps, int32 clockspeed)
                         //message.Debug("Error in safecpu: Instruction " + utils.ToHex(ins) + " not found");
                         //message.Abort();
                         DebugMessage(29);
+                        DebugMessage((ins >> 25)&0x7F);
                         abort();
                         break;
                 }
