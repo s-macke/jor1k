@@ -533,7 +533,7 @@ Terminal.prototype.HandleEscapeSequence = function () {
     }
 
     let j;
-    let top;
+    let top = 0;
     switch (lastsign) {
         case 'm': // colors
             this.ChangeColor(numbers);
