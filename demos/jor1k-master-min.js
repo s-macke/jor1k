@@ -857,6 +857,7 @@ function Terminal(nrows, ncolumns, elemId) {
             this.rowelements[i] = TD;
             TR.appendChild(TD);
         }
+        // after appending new elements, Firefox needs some form of reset of the root class.
         this.Table.className = this.Table.className;
     }
 
@@ -1350,7 +1351,9 @@ Terminal.prototype.HandleEscapeSequence = function () {
         return;
     }
 
-    let j;switch (lastsign) {
+    let j;
+    let top = 0;
+    switch (lastsign) {
         case 'm': // colors
             this.ChangeColor(numbers);
             return;
@@ -1419,7 +1422,7 @@ Terminal.prototype.HandleEscapeSequence = function () {
         case 'L': // scroll down
             count = numbers.length ? numbers[0] : 1;
             if (count === 0) count = 1;
-            let top = this.scrolltop;
+            top = this.scrolltop;
             this.scrolltop = this.cursory;
             if (count === 1) {
                 this.ScrollDown(true);
