@@ -29,8 +29,7 @@ h1 {
     margin-right: 30px;
     display: block;
     /*vertical-align:middle*/
-	bottom: 20px;
-    
+    bottom: 20px;   
 }
 
 .heading, .windows, .infobox {
@@ -83,12 +82,15 @@ iframe {
 
 .terminal {
     border: 2px solid black;
-    font-family: courier,fixed,swiss,monospace,sans-serif;
-    font-size: 14px;
+    font-family: monospace,courier,fixed,swiss,sans-serif;
+    font-variant-ligatures: none;
+    font-weight: normal;
+    font-size: 13px;
     color: #bbbbbb;
     background: #000000;   
     border-collapse: collapse;
     line-height: normal;
+    white-space: nowrap;
 }
 
 .screen {
