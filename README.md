@@ -38,6 +38,6 @@ Neelabh Gupta [github.com/neelabhg](https://github.com/neelabhg)
 
 
 [openrisc website]: https://openrisc.io
-[project demo]: https://s-macke.github.com/jor1k/demos/main.html
+[project demo]: https://s-macke.github.io/jor1k/demos/main.html
 [project issues]: https://github.com/s-macke/jor1k/issues
 [project wiki]: https://github.com/s-macke/jor1k/wiki
