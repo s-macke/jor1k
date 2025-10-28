@@ -1,9 +1,9 @@
 set -e
 
-clang -Os --target=wasm32 -fno-delete-null-pointer-checks -c js/wasm/or1k.c -o or1k.o
-clang -Os --target=wasm32 -fno-delete-null-pointer-checks -c js/wasm/riscv.c -o riscv.o
-wasm-ld --global-base=0 --no-entry --strip-all --import-memory --export-all --allow-undefined or1k.o -o demos/or1k.wasm
-wasm-ld --global-base=0 --no-entry --strip-all --import-memory --export-all --allow-undefined riscv.o -o demos/riscv.wasm
+# clang -Os --target=wasm32 -fno-delete-null-pointer-checks -c js/wasm/or1k.c -o or1k.o
+# clang -Os --target=wasm32 -fno-delete-null-pointer-checks -c js/wasm/riscv.c -o riscv.o
+# wasm-ld --global-base=0 --no-entry --strip-all --import-memory --export-all --allow-undefined or1k.o -o demos/or1k.wasm
+# wasm-ld --global-base=0 --no-entry --strip-all --import-memory --export-all --allow-undefined riscv.o -o demos/riscv.wasm
 
 #emcc -s WASM=1 -s ALLOW_MEMORY_GROWTH=1 -s ERROR_ON_UNDEFINED_SYMBOLS=0 -s TOTAL_MEMORY=32MB -s BINARYEN_IGNORE_IMPLICIT_TRAPS=1 -Os js/wasm/or1k.c -o demos/or1k.wasm
 #emcc -s WASM=1 -s ALLOW_MEMORY_GROWTH=1 -s ERROR_ON_UNDEFINED_SYMBOLS=0 -s TOTAL_MEMORY=32MB -s BINARYEN_IGNORE_IMPLICIT_TRAPS=1 -Os js/wasm/riscv.c -o demos/riscv.wasm

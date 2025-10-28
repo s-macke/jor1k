@@ -40,14 +40,17 @@
   "main": "index.html",
   "dependencies": {},
   "devDependencies": {
-    "browserify": "^8.1.3",
-    "expect": "^1.3.0",
-    "jshint": "latest",
-    "lab": "^5.2.0"
+    "@rollup/plugin-commonjs": "^28.0.0",
+    "@rollup/plugin-node-resolve": "^16.0.0",
+    "vite": "^7.0.0"
   },
   "scripts": {
-    "test": "lab --ignore onmessage -v test/cpu-facade.js",
-    "postinstall": "./compile"
+    "build": "npm run build:master && npm run build:worker",
+    "build:master": "BUILD_TARGET=master vite build",
+    "build:worker": "BUILD_TARGET=worker vite build",
+    "dev": "vite",
+    "preview": "vite preview",
+    "postinstall": "npm run build"
   },
   "engines": {
     "node": ">= 0.8.0"

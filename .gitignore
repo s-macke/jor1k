@@ -5,10 +5,16 @@
 .Trashes
 ehthumbs.db
 Thumbs.db
+demos/jor1k-master-min.js
+demos/jor1k-worker-min.js
 .idea/
+.kiro/
+.vscode/
 node_modules
 utils/fs.json
 utils/fs.xml
 utils/fs
 utils/fs2xml
 utils/packages
+demos/jor1k-master-min.js
+demos/jor1k-worker-min.js
