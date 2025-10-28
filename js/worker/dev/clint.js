@@ -7,8 +7,8 @@
 // logic is managed directly by the CPU
 
 "use strict";
-var message = require('../messagehandler');
-var utils = require('../utils');
+import message from '../messagehandler.js';
+import * as utils from '../utils.js';
 
 /*
  * 0000 msip hart 0
@@ -54,4 +54,4 @@ CLINTDev.prototype.WriteReg32 = function (addr, value) {
     }
 }
 
-module.exports = CLINTDev;
+export default CLINTDev;

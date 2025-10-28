@@ -6,9 +6,9 @@
 
 "use strict";
 
-var marshall = require('./marshall');
-var message = require('../../messagehandler');
-var utils = require('../../utils');
+import * as marshall from './marshall.js';
+import { Debug, Abort } from '../../messagehandler.js';
+import * as utils from '../../utils.js';
 
 // TODO
 // flush
@@ -80,7 +80,7 @@ Virtio9p.prototype.Reset = function() {
 Virtio9p.prototype.BuildReply = function(id, tag, payloadsize) {
     marshall.Marshall(["w", "b", "h"], [payloadsize+7, id+1, tag], this.replybuffer, 0);
     if ((payloadsize+7) >= this.replybuffer.length) {
-        message.Debug("Error in 9p: payloadsize exceeds maximum length");
+        Debug("Error in 9p: payloadsize exceeds maximum length");
     }
     //for(var i=0; i<payload.length; i++)
     //    this.replybuffer[7+i] = payload[i];
@@ -543,8 +543,8 @@ Virtio9p.prototype.ReceiveRequest = function (ringidx, index, GetByte) {
             break; 
 
         default:
-            message.Debug("Error in Virtio9p: Unknown id " + id + " received");
-            message.Abort();
+            Debug("Error in Virtio9p: Unknown id " + id + " received");
+            Abort();
             //this.SendError(tag, "Operation i not supported",  ENOTSUPP);
             //this.SendReply(0, index);
             break;
@@ -555,4 +555,4 @@ Virtio9p.prototype.ReceiveRequest = function (ringidx, index, GetByte) {
 }
 
 
-module.exports = Virtio9p;
+export default Virtio9p;

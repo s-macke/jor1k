@@ -65,10 +65,19 @@ onmessage = function(e) {
 Register("Abort", function(){ run = false; });
 Register("WorkingPath", function(data){ workingpath = data; });
 
-module.exports.Register = Register;
-module.exports.Debug = Debug;
-module.exports.Error = DoError;
-module.exports.Warning = Warning;
-module.exports.Abort = Abort;
-module.exports.Send = Send;
-module.exports.GetWorkingPath = function() { return workingpath; };
+function GetWorkingPath() { 
+    return workingpath; 
+}
+
+export { Register, Debug, DoError as Error, Warning, Abort, Send, GetWorkingPath };
+
+// Default export for backward compatibility
+export default {
+    Register,
+    Debug,
+    Error: DoError,
+    Warning,
+    Abort,
+    Send,
+    GetWorkingPath
+};

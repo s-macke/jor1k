@@ -1,4 +1,4 @@
-var Terminal = require("../master/dev/terminal");
+import Terminal from "../master/dev/terminal.js";
 
 function LinuxTerm(termElementId) {
     this.termElementId = termElementId;
@@ -35,4 +35,4 @@ LinuxTerm.prototype.RemoveCharReceiveListener = function () {
     this.term.OnCharReceived = function (){};
 }
 
-module.exports = LinuxTerm;
+export default LinuxTerm;

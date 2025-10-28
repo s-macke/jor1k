@@ -1,4 +1,4 @@
-var message = require('../messagehandler');
+import * as message from '../messagehandler.js';
 
 function SMPCPU(stdlib, foreign, heap) {
 
@@ -1823,4 +1823,4 @@ return {
 
 }
 
-module.exports = SMPCPU;
+export default SMPCPU;

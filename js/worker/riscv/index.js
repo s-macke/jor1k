@@ -3,13 +3,13 @@
  */
 
 "use strict";
-var message = require('../messagehandler'); // global variable
-var utils = require('../utils');
-var imul = require('../imul');
+import * as message from '../messagehandler.js'; // global variable
+import * as utils from '../utils.js';
+import imul from '../imul.js';
 
 // CPUs
-var SafeCPU = require('./safecpu');
-var FastCPU = require('./fastcpu');
+import SafeCPU from './safecpu.js';
+import FastCPU from './fastcpu.js';
 
 var stdlib = {
     Int32Array : Int32Array,
@@ -166,4 +166,4 @@ forwardedMethods.forEach(function(m) {
     };
 });
 
-module.exports = CPU;
+export default CPU;

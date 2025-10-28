@@ -4,8 +4,8 @@
 
 "use strict";
 
-var utils = require('../utils');
-var message = require('../messagehandler');
+import * as utils from '../utils.js';
+import { Debug, Abort } from '../messagehandler.js';
 
 // ata-generic implementation (according to Linux)
 // simulation of a hard disk loaded on demand from the webserver in small chunks.
@@ -193,8 +193,8 @@ ATADev.prototype.ReadReg8 = function(addr) {
             break;
 
         default:
-            message.Debug("ATADev: Error in ReadRegister8: register " + utils.ToHex(addr) + " not supported");
-            message.Abort();
+            Debug("ATADev: Error in ReadRegister8: register " + utils.ToHex(addr) + " not supported");
+            Abort();
             break;
     }    
     return 0x0;
@@ -203,8 +203,8 @@ ATADev.prototype.ReadReg8 = function(addr) {
 ATADev.prototype.GetSector = function()
 {
     if (!(this.DR & 0x40)) {
-        message.Debug("ATADev: CHS mode not supported");
-        message.Abort();
+        Debug("ATADev: CHS mode not supported");
+        Abort();
     }
     return ((this.DR&0x0F) << 24) | (this.hcyl << 16) | (this.lcyl << 8) | this.SCR;
 }
@@ -212,8 +212,8 @@ ATADev.prototype.GetSector = function()
 ATADev.prototype.SetSector = function(sector)
 {
     if (!(this.DR & 0x40)) {
-        message.Debug("ATADev: CHS mode not supported");
-        message.Abort();
+        Debug("ATADev: CHS mode not supported");
+        Abort();
     }
     this.SCR = sector & 0xFF;
     this.lcyl = (sector >> 8) & 0xFF;
@@ -284,8 +284,8 @@ ATADev.prototype.ExecuteCommand = function()
             break;
 
         default:
-            message.Debug("ATADev: Command " + utils.ToHex(this.CR) + " not supported");
-            message.Abort();
+            Debug("ATADev: Command " + utils.ToHex(this.CR) + " not supported");
+            Abort();
             break;
     }
 }
@@ -365,16 +365,16 @@ ATADev.prototype.WriteReg8 = function(addr, x) {
             break;
 
         default:
-            message.Debug("ATADev: Error in WriteRegister8: register " + utils.ToHex(addr) + " not supported (value: " + utils.ToHex(x) + ")");
-            message.Abort();    
+            Debug("ATADev: Error in WriteRegister8: register " + utils.ToHex(addr) + " not supported (value: " + utils.ToHex(x) + ")");
+            Abort();    
             break;
     }
 };
 
 ATADev.prototype.ReadReg16 = function(addr) {
     if (addr != 0) { // data register
-        message.Debug("ATADev: Error in ReadRegister16: register " + utils.ToHex(addr) + " not supported");
-        message.Abort();
+        Debug("ATADev: Error in ReadRegister16: register " + utils.ToHex(addr) + " not supported");
+        Abort();
     }
 
     var val = utils.Swap16(this.readbuffer[this.readbufferindex]);
@@ -399,8 +399,8 @@ ATADev.prototype.ReadReg16 = function(addr) {
 
 ATADev.prototype.WriteReg16 = function(addr, x) {
     if (addr != 0) { // data register
-        message.Debug("ATADev: Error in WriteRegister16: register " + utils.ToHex(addr) + " not supported");
-        message.Abort();
+        Debug("ATADev: Error in WriteRegister16: register " + utils.ToHex(addr) + " not supported");
+        Abort();
     }
     this.readbuffer[this.readbufferindex] = utils.Swap16(x);
     //message.Debug("ATADev: write data register");
@@ -420,14 +420,14 @@ ATADev.prototype.WriteReg16 = function(addr, x) {
 };
 
 ATADev.prototype.ReadReg32 = function(addr) {
-    message.Debug("ATADev: Error in ReadRegister32: register " + utils.ToHex(addr) + " not supported");
-    this.mesage.Abort();
+    Debug("ATADev: Error in ReadRegister32: register " + utils.ToHex(addr) + " not supported");
+    Abort();
 };
 
 ATADev.prototype.WriteReg32 = function(addr, x) {
-    message.Debug("ATADev: Error in WriteRegister32: register " + utils.ToHex(addr) + " not supported");
-    message.Abort()
+    Debug("ATADev: Error in WriteRegister32: register " + utils.ToHex(addr) + " not supported");
+    Abort();
 };
 
 
-module.exports = ATADev;
+export default ATADev;

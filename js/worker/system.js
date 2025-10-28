@@ -4,18 +4,18 @@
 
 "use strict";
 // common
-var message = require('./messagehandler'); // global variable
-var utils = require('./utils');
-var RAM = require('./ram');
-var bzip2 = require('./bzip2');
-var elf = require('./elf');
-var Timer = require('./timer');
-var InitOpenRISC = require('./init_openrisc');
-var InitRISCV = require('./init_riscv');
-var FS = require('./filesystem/filesystem');
+import message from './messagehandler.js';
+import * as utils from './utils.js';
+import RAM from './ram.js';
+import bzip2 from './bzip2.js';
+import elf from './elf.js';
+import Timer from './timer.js';
+import InitOpenRISC from './init_openrisc.js';
+import InitRISCV from './init_riscv.js';
+import FS from './filesystem/filesystem.js';
 
 // Devices
-var Virtio9p = require('./dev/virtio/9p');
+import Virtio9p from './dev/virtio/9p.js';
 
 var SYSTEM_RUN = 0x1;
 var SYSTEM_STOP = 0x2;
@@ -279,4 +279,4 @@ System.prototype.MainLoop = function() {
     // go to worker thread idle state that onmessage is executed
 };
 
-module.exports = System;
+export default System;

@@ -1,14 +1,16 @@
-var TermJS = require("./term");
-var UTF8 = require("../lib/utf8");
+// Note: TermJS dependency "./term" is missing - this plugin may not be functional
+// var TermJS = require("./term"); // Missing dependency
+import { UTF8StreamToUnicode } from "../lib/utf8.js";
 
 function TermJSTerm(termElement) {
     this.termElement = termElement;
-    this.utf8converter = new UTF8.UTF8StreamToUnicode();
+    this.utf8converter = new UTF8StreamToUnicode();
     this.onCharReceived = function (){};
 }
 
 TermJSTerm.prototype.Init = function(jor1kGUI, tty) {
-    this.term = new TermJS({ cols: 80, rows: 24, screenKeys: true, useStyle: true, cursorBlink: false });
+    // Note: TermJS is not available due to missing dependency
+    // this.term = new TermJS({ cols: 80, rows: 24, screenKeys: true, useStyle: true, cursorBlink: false });
     this.term.on("keypress", function(key, ev) {
         if (ev)
             jor1kGUI.terminput.OnKeyPress(ev);
@@ -50,4 +52,4 @@ TermJSTerm.prototype.RemoveCharReceiveListener = function () {
     this.onCharReceived = function (){};
 }
 
-module.exports = TermJSTerm;
+export default TermJSTerm;

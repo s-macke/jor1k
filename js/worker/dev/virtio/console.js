@@ -5,9 +5,9 @@
 
 "use strict";
 
-var message = require('../../messagehandler');
-var utils = require('../../utils');
-var marshall = require('./marshall');
+import { Debug, Abort } from '../../messagehandler.js';
+import * as utils from '../../utils.js';
+import * as marshall from './marshall.js';
 
 var VIRTIO_CONSOLE_DEVICE_READY     = 0;
 var VIRTIO_CONSOLE_PORT_ADD         = 1;
@@ -41,7 +41,7 @@ VirtioConsole.prototype.Reset = function() {
 }
 
 VirtioConsole.prototype.ReceiveRequest = function (queueidx, index, GetByte, size) {
-    message.Debug("Virtio console request of ringbuffer " + queueidx + " " + index + " " + size.read + " " + size.write)
+    Debug("Virtio console request of ringbuffer " + queueidx + " " + index + " " + size.read + " " + size.write)
 
     if (queueidx == 1) {
         var s = "";
@@ -49,7 +49,7 @@ VirtioConsole.prototype.ReceiveRequest = function (queueidx, index, GetByte, siz
         {
             s = s + String.fromCharCode(GetByte());
         }
-        message.Debug("Write: " + s);
+        Debug("Write: " + s);
         this.replybuffersize = 0;
         this.SendReply(queueidx, index);
     }
@@ -65,15 +65,15 @@ VirtioConsole.prototype.ReceiveRequest = function (queueidx, index, GetByte, siz
     var event = request[1]; /* The kind of control event */
     var value = request[2]; /* Extra information for the event */
 
-    message.Debug("virtio console: " + id + " " + event + " " + value);
+    Debug("virtio console: " + id + " " + event + " " + value);
     switch(event) {
         case VIRTIO_CONSOLE_DEVICE_READY:
             this.replybuffersize = 0;
             this.SendReply(queueidx, index);
             break;
         default:
-            message.Debug("Error in virtio console: Unknown event");
-            message.Abort();
+            Debug("Error in virtio console: Unknown event");
+            Abort();
             break;
     }
 
@@ -82,4 +82,4 @@ VirtioConsole.prototype.ReceiveRequest = function (queueidx, index, GetByte, siz
 
 }
 
-module.exports = VirtioConsole;
+export default VirtioConsole;

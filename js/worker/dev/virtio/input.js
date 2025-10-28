@@ -9,9 +9,9 @@
 
 "use strict";
 
-var message = require('../../messagehandler');
-var utils = require('../../utils');
-var marshall = require('./marshall');
+import { Register, Debug, Abort } from '../../messagehandler.js';
+import * as utils from '../../utils.js';
+import * as marshall from './marshall.js';
 
 var VIRTIO_INPUT_CFG_UNSET      = 0x00; 
 var VIRTIO_INPUT_CFG_ID_NAME    = 0x01;  
@@ -42,8 +42,8 @@ function VirtioInput(ramdev) {
     this.hostfeature = 0x0;
 
     // TODO remove old keyboard driver
-    message.Register("virtio.kbd.keydown", this.OnKeyDown.bind(this) );
-    message.Register("virtio.kbd.keyup", this.OnKeyUp.bind(this) );
+    Register("virtio.kbd.keydown", this.OnKeyDown.bind(this) );
+    Register("virtio.kbd.keyup", this.OnKeyUp.bind(this) );
     
     this.replybuffersize = 8;
     this.replybuffer = new Uint8Array(8);
@@ -143,13 +143,13 @@ VirtioInput.prototype.WriteConfig = function (addr, val) {
 
         case VIRTIO_INPUT_CFG_ABS_INFO:
             this.configspace[2] = 0;
-            message.Debug("Virtioinput: abs_info not implemented");
-            message.Abort();
+            Debug("Virtioinput: abs_info not implemented");
+            Abort();
             break;
 
         default:
-            message.Debug("Error in virtio input: Unknown config");
-            message.Abort();
+            Debug("Error in virtio input: Unknown config");
+            Abort();
         break;
     }
 
@@ -159,8 +159,8 @@ VirtioInput.prototype.ReceiveRequest = function (queueidx, index, GetByte, size)
     //message.Debug("Virtio input request " + queueidx + " " + index + " " + size.read + " " + size.write);
 
     if (queueidx >= 1) {
-        message.Debug("Error in Virtio input: Unsupported queue index");
-        message.Abort();
+        Debug("Error in Virtio input: Unsupported queue index");
+        Abort();
     }
 
     if (queueidx == 0) {
@@ -176,4 +176,4 @@ VirtioInput.prototype.ReceiveRequest = function (queueidx, index, GetByte, size)
 
 }
 
-module.exports = VirtioInput;
+export default VirtioInput;

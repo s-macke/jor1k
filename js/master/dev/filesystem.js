@@ -1,6 +1,6 @@
-var message = require('../messagehandler');
-var download = require('../../lib/download');
-var utils = require('../utils');
+import message from '../messagehandler.js';
+import download from '../../lib/download.js';
+import * as utils from '../utils.js';
 
 "use strict";
 
@@ -100,4 +100,4 @@ Filesystem.prototype.WatchDirectory = function(directoryPath, callback) {
   message.Send("WatchDirectory", { name: directoryPath });
 }
 
-module.exports = Filesystem;
+export default Filesystem;

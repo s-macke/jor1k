@@ -4,8 +4,8 @@
 
 "use strict";
 
-var message = require('../messagehandler');
-var utils = require('../utils');
+import message from '../messagehandler.js';
+import * as utils from '../utils.js';
 
 var S_IRWXUGO = 0x1FF;
 var S_IFMT = 0xF000;
@@ -98,4 +98,4 @@ FSLoader.prototype.LoadJSON = function(url)
     utils.LoadTextResource(url, this.OnJSONLoaded.bind(this), function(error){throw error;});
 }
 
-module.exports = FSLoader;
+export default FSLoader;

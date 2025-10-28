@@ -3,10 +3,10 @@
 // -------------------------------------------------
 
 "use strict";
-var message = require('../messagehandler');
-var utils = require('../utils');
-var bzip2 = require('../bzip2');
-var syscalls = require('./syscalls');
+import * as message from '../messagehandler.js';
+import * as utils from '../utils.js';
+import bzip2 from '../bzip2.js';
+import SysCalls from './syscalls.js';
 
 // -------------------------------------------------
 
@@ -102,7 +102,7 @@ function HTIFConsole(ram, SendFunc) {
 function HTIFSyscall(ram, SendFunc) {
     this.ram = ram;
     this.Send = SendFunc;
-    this.syscallHandler = new syscalls(this.ram);
+    this.syscallHandler = new SysCalls(this.ram);
     this.identify = "syscall_proxy";
 
     this.Read = function(value) {
@@ -325,4 +325,4 @@ HTIF.prototype.HandleRequest = function() {
     message.Abort();
 }			
 
-module.exports = HTIF;
+export default HTIF;

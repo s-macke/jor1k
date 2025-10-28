@@ -1,6 +1,6 @@
-var message = require('./messagehandler');
-var utils = require('./utils');
-var marshall = require('./dev/virtio/marshall');
+import message from './messagehandler.js';
+import * as utils from './utils.js';
+import { Unmarshall } from './dev/virtio/marshall.js';
 
 var elf = {};
 
@@ -18,7 +18,7 @@ elf.Extract = function(srcbuffer, ram) {
 
     var offset = 0;
     var output = [];
-    output = marshall.Unmarshall(["w", "b", "b", "b", "b"], srcbuffer, offset);
+    output = Unmarshall(["w", "b", "b", "b", "b"], srcbuffer, offset);
     var ei_class = output[1];
     if (ei_class != 1) {
         message.Debug("Error reading elf binary: 64-Bit not supported");
@@ -34,7 +34,7 @@ elf.Extract = function(srcbuffer, ram) {
 */
 
     offset = 0x10;
-    output = marshall.Unmarshall(["h", "h", "w", "w", "w", "w"], srcbuffer, offset);
+    output = Unmarshall(["h", "h", "w", "w", "w", "w"], srcbuffer, offset);
     var e_entry = output[3]; // virtual address of entry point into program
     var e_phoff = output[4]; // offset for program header
     var e_shoff = output[5]; // offset for section header
@@ -43,13 +43,13 @@ elf.Extract = function(srcbuffer, ram) {
     //message.Debug("e_shoff: " +  utils.ToHex(e_shoff));
 
     offset = 0x28;
-    output = marshall.Unmarshall(["h", "h", "h"], srcbuffer, offset);
+    output = Unmarshall(["h", "h", "h"], srcbuffer, offset);
     var e_ehsize = output[0]; // size of each individual entry in program header table
     var e_phentsize = output[1]; // Contains the size of a program header table entry.
     var e_phnum = output[2]; // Contains the number of entries in the program header table.
 
     offset = 0x2E;
-    output = marshall.Unmarshall(["h", "h", "h"], srcbuffer, offset);
+    output = Unmarshall(["h", "h", "h"], srcbuffer, offset);
     var e_shentsize = output[0]; // size of each individual entry in section header table
     var e_shnum = output[1]; // number of entries in section header table
     var e_shstrndx = output[2]; // section header string table index
@@ -62,7 +62,7 @@ elf.Extract = function(srcbuffer, ram) {
     for (var i = 0; i < e_phnum; i++) {
 
         offset = e_phoff + i*e_phentsize;
-        output = marshall.Unmarshall(["w", "w", "w", "w", "w", "w", "w", "w"], srcbuffer, offset);
+        output = Unmarshall(["w", "w", "w", "w", "w", "w", "w", "w"], srcbuffer, offset);
 
         var section = {};
         section.type = output[0];
@@ -91,7 +91,7 @@ elf.Extract = function(srcbuffer, ram) {
    for (var i = 0; i < e_shnum; i++) {
 
         offset = e_shoff + i*e_shentsize;
-        output = marshall.Unmarshall(["w", "w", "w", "w", "w", "w"], srcbuffer, offset);
+        output = Unmarshall(["w", "w", "w", "w", "w", "w"], srcbuffer, offset);
 
         var section = {};
         section.name = output[0];
@@ -127,4 +127,4 @@ elf.Extract = function(srcbuffer, ram) {
     }
 }
 
-module.exports = elf;
+export default elf;

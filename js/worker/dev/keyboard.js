@@ -4,7 +4,7 @@
 // Emulating the Opencores Keyboard Controller
 
 "use strict";
-var message = require('../messagehandler');
+import { Register } from '../messagehandler.js';
 
 // translation table from Javascript keycodes to Linux keyboard scancodes
 // http://lxr.free-electrons.com/source/include/dt-bindings/input/input.h
@@ -293,8 +293,8 @@ var kc2kc =
 
 function KeyboardDev(intdev) {
     this.intdev = intdev;
-    message.Register("keydown", this.OnKeyDown.bind(this) );
-    message.Register("keyup", this.OnKeyUp.bind(this) );
+    Register("keydown", this.OnKeyDown.bind(this) );
+    Register("keyup", this.OnKeyUp.bind(this) );
     this.Reset();
 }
 
@@ -324,4 +324,4 @@ KeyboardDev.prototype.ReadReg8 = function (addr) {
     return key;
 }
 
-module.exports = KeyboardDev;
+export default KeyboardDev;

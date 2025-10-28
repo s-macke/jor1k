@@ -6,8 +6,8 @@
 
 "use strict";
 
-var message = require('../messagehandler');
-var utils = require('../utils');
+import message from '../messagehandler.js';
+import * as utils from '../utils.js';
 
 // Control register
 // +---------+---------+----------+---------+
@@ -101,4 +101,4 @@ IRQDev.prototype.WriteReg32 = function (addr, value) {
     }
 }
 
-module.exports = IRQDev;
+export default IRQDev;

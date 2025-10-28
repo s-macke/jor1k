@@ -1,6 +1,6 @@
 // Provides a loop sound buffer.
 
-var message = require('../messagehandler');
+import message from '../messagehandler.js';
 
 "use strict";
 
@@ -94,4 +94,4 @@ LoopSoundBuffer.prototype.AddBuffer = function(addbuffer)
     }
 }
 
-module.exports = LoopSoundBuffer;
+export default LoopSoundBuffer;

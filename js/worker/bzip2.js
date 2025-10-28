@@ -26,7 +26,7 @@
   THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-var message = require('./messagehandler');
+import message from './messagehandler.js';
 
 var bzip2 = {};
 
@@ -350,4 +350,4 @@ bzip2.decompress = function(bits, stream, buf, bufsize) {
     return false;
 }
 
-module.exports = bzip2;
+export default bzip2;

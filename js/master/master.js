@@ -1,3 +1,3 @@
-var Jor1k = require('./system');
+import Jor1k from './system.js';
 
-module.exports = Jor1k;
+export default Jor1k;

@@ -1,6 +1,6 @@
 "use strict";
 
-var message = require("../messagehandler");
+import message from "../messagehandler.js";
 
 function LazyUint8Array_length_getter() {
     if (!this.lengthKnown) {
@@ -90,4 +90,4 @@ LazyUint8Array.prototype.CacheLength = function LazyUint8Array_CacheLength() {
     this.lengthKnown = true;
 }
 
-module.exports = LazyUint8Array;
+export default LazyUint8Array;

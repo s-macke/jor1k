@@ -10,18 +10,18 @@ od -A n -t x1 -v riscv.dtb | sed 's/ /,0x/g'
 
 "use strict";
 // common
-var message = require('./messagehandler'); // global variable
-var utils = require('./utils');
+import message from './messagehandler.js';
+import * as utils from './utils.js';
 
 // CPU
-var RISCVCPU = require('./riscv');;
+import RISCVCPU from './riscv/index.js';
 
 // Devices
-var HTIF = require('./riscv/htif');
-var CLINTDev = require('./dev/clint');
-var PLICDev = require('./dev/plic');
-var ROMDev = require('./dev/rom');
-var UARTDev = require('./dev/uart');
+import HTIF from './riscv/htif.js';
+import CLINTDev from './dev/clint.js';
+import PLICDev from './dev/plic.js';
+import ROMDev from './dev/rom.js';
+import UARTDev from './dev/uart.js';
 
 //var IRQDev = require('./dev/irq');
 //var TimerDev = require('./dev/timer');
@@ -32,10 +32,10 @@ var UARTDev = require('./dev/uart');
 //var TouchscreenDev = require('./dev/touchscreen');
 //var KeyboardDev = require('./dev/keyboard');
 //var SoundDev = require('./dev/sound');
-var VirtIODev = require('./dev/virtio');
-var Virtio9p = require('./dev/virtio/9p');
-var VirtioDummy = require('./dev/virtio/dummy');
-var VirtioNET = require('./dev/virtio/net');
+import VirtIODev from './dev/virtio.js';
+import Virtio9p from './dev/virtio/9p.js';
+import VirtioDummy from './dev/virtio/dummy.js';
+import VirtioNET from './dev/virtio/net.js';
 //var VirtioInput = require('./dev/virtio/input');
 //var VirtioBlock = require('./dev/virtio/block');
 //var VirtioGPU = require('./dev/virtio/gpu');
@@ -120,4 +120,4 @@ async function InitRISCV(system, initdata) {
     message.Debug("Init RISC-V SoC finished");
 }
 
-module.exports = InitRISCV;
+export default InitRISCV;

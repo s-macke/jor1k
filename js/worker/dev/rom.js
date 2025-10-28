@@ -4,8 +4,8 @@
 
 /* Basic Read Only Memory (ROM) device */
 
-var utils = require('../utils');
-var message = require('../messagehandler');
+import * as utils from '../utils.js';
+import message from '../messagehandler.js';
 
 // constructor
 function ROMDev(rom) {
@@ -32,6 +32,6 @@ ROMDev.prototype.ReadReg8 = function (addr) {
 
 
 
-module.exports = ROMDev;
+export default ROMDev;
 
 

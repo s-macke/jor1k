@@ -15,9 +15,9 @@
 
 "use strict";
 
-var utils = require('../utils');
-var marshall = require('./virtio/marshall');
-var message = require('../messagehandler');
+import * as utils from '../utils.js';
+import * as marshall from './virtio/marshall.js';
+import { Debug, Abort } from '../messagehandler.js';
 
 var VIRTIO_MAGIC_REG = 0x0;
 var VIRTIO_VERSION_REG = 0x4;
@@ -202,8 +202,8 @@ VirtIODev.prototype.ReadReg32 = function (addr) {
             break;
 
         default:
-            message.Debug("Error in VirtIODev: Attempt to read register " + utils.ToHex(addr));
-            message.Abort();
+            Debug("Error in VirtIODev: Attempt to read register " + utils.ToHex(addr));
+            Abort();
             break;
     }
     if (this.ramdev.nativeendian == "little") {
@@ -266,14 +266,14 @@ VirtIODev.prototype.SendReply = function (queueidx, index) {
         if (desc.flags & 1) { // continuing buffer
             desc = this.GetDescriptor(queueidx, desc.next);
         } else {
-            message.Debug("Error in virtiodev: Descriptor is not continuing");
-            message.Abort();
+            Debug("Error in virtiodev: Descriptor is not continuing");
+            Abort();
         }
     }
     
     if ((desc.flags & VRING_DESC_F_WRITE) == 0) {
-        message.Debug("Error in virtiodev: Descriptor is not allowed to write");
-        message.Abort();
+        Debug("Error in virtiodev: Descriptor is not allowed to write");
+        Abort();
     }
 
     var offset = 0;
@@ -282,8 +282,8 @@ VirtIODev.prototype.SendReply = function (queueidx, index) {
             desc = this.GetDescriptor(0, desc.next);
             offset = 0;            
             if ((desc.flags & VRING_DESC_F_WRITE) == 0) {
-                message.Debug("Error in virtiodev: Descriptor is not allowed to write");
-                message.Abort();
+                Debug("Error in virtiodev: Descriptor is not allowed to write");
+                Abort();
             }
         }
         this.ramdev.Write8(desc.addr+offset, this.dev.replybuffer[i]);
@@ -307,8 +307,8 @@ VirtIODev.prototype.GetDescriptorBufferSize = function (queueidx, index) {
 
     for(;;) {
         if (desc.flags & VRING_DESC_F_INDIRECT) {
-            message.Debug("Error in VirtIO: Indirect descriptors not supported");
-            message.Abort();
+            Debug("Error in VirtIO: Indirect descriptors not supported");
+            Abort();
         }
         if (desc.flags & VRING_DESC_F_WRITE) {
             wsize += desc.len;
@@ -405,8 +405,8 @@ VirtIODev.prototype.WriteReg32 = function (addr, val) {
                             if (desc.flags & 1) { // continuing buffer
                                 desc = this.GetDescriptor(queueidx, desc.next);
                             } else {
-                                message.Debug("Error in virtiodev: Descriptor is not continuing");
-                                message.Abort();
+                                Debug("Error in virtiodev: Descriptor is not continuing");
+                                Abort();
                             }
                         }
                         var x = this.ramdev.Read8(desc.addr + offset);
@@ -453,15 +453,15 @@ VirtIODev.prototype.WriteReg32 = function (addr, val) {
                 case 15: //acknowledge + driver + features Ok + driver_ok (Let's start)
                     break;
                 case 131: // acknowledge + driver + failed
-                    message.Debug("Error: virtio device initialization failed with status " + this.status);
-                    message.Abort();
+                    Debug("Error: virtio device initialization failed with status " + this.status);
+                    Abort();
                 case 139: // acknowledge + driver + features Ok + failed
-                    message.Debug("Error: virtio device initialization failed with status " + this.status);
-                    message.Abort();
+                    Debug("Error: virtio device initialization failed with status " + this.status);
+                    Abort();
                     break;
                 default:
-                    message.Debug("Error in virtio status register: Unknown status " + this.status);
-                    message.Abort();
+                    Debug("Error in virtio status register: Unknown status " + this.status);
+                    Abort();
                     break;
             }
             break;
@@ -490,12 +490,12 @@ VirtIODev.prototype.WriteReg32 = function (addr, val) {
 
 
         default:
-            message.Debug("Error in VirtIODev: Attempt to write register " + utils.ToHex(addr) + ":" + utils.ToHex(val));
-            message.Abort();
+            Debug("Error in VirtIODev: Attempt to write register " + utils.ToHex(addr) + ":" + utils.ToHex(val));
+            Abort();
             break;
     }
 
 };
 
 
-module.exports = VirtIODev;
+export default VirtIODev;

@@ -44,4 +44,4 @@ function UploadBinaryResource(url, filename, data, OnSuccess, OnError) {
     xhr.send(newdata.buffer);
 }
 
-module.exports.UploadBinaryResource = UploadBinaryResource;
+export { UploadBinaryResource };

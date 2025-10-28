@@ -4,9 +4,9 @@
 
 "use strict";
 
-var message = require('../../messagehandler');
-var utils = require('../../utils');
-var marshall = require('./marshall');
+import { Debug, Abort } from '../../messagehandler.js';
+import * as utils from '../../utils.js';
+import * as marshall from './marshall.js';
 
 var VIRTIO_BLK_T_IN          = 0;
 var VIRTIO_BLK_T_OUT         = 1;
@@ -46,8 +46,8 @@ VirtioBlock.prototype.ReceiveRequest = function (queueidx, index, GetByte, size)
     switch(type) {
         case VIRTIO_BLK_T_IN:
             if (size.write > 0x10000) {
-                message.Debug("Error in virtioblock: replybuffer too small");
-                message.Abort();
+                Debug("Error in virtioblock: replybuffer too small");
+                Abort();
             }
             for(var i=0; i<size.write-1; i++) {
                 this.replybuffer[i] = this.buffer[sector*512+i];
@@ -73,11 +73,11 @@ VirtioBlock.prototype.ReceiveRequest = function (queueidx, index, GetByte, size)
             break;
         
         default:
-            message.Debug("Error in VirtioBlock: Unknown request type " + type);
-            message.Abort();
+            Debug("Error in VirtioBlock: Unknown request type " + type);
+            Abort();
             break;
     }
 
 }
 
-module.exports = VirtioBlock;
+export default VirtioBlock;

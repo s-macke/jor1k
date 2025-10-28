@@ -3,8 +3,8 @@
 // -------------------------------------------------
 "use strict";
 
-var message = require('../../messagehandler');
-var utils = require('../../utils');
+import * as message from '../../messagehandler.js';
+import * as utils from '../../utils.js';
 
 // special purpose register index
 var SPR_UPR = 1; // unit present register
@@ -1314,5 +1314,5 @@ DynamicCPU.prototype.Step = function (steps, clockspeed) {
     return 0;
 };
 
-module.exports = DynamicCPU;
+export default DynamicCPU;
 

@@ -4,8 +4,8 @@
 
 "use strict";
 
-var utils = require('../utils');
-var message = require('../messagehandler');
+import * as utils from '../utils.js';
+import { Register, Send } from '../messagehandler.js';
 
 // constructor
 function FBDev(ram) {
@@ -15,7 +15,7 @@ function FBDev(ram) {
     this.addr = 16000000;
     this.n = (this.width * this.height)>>1;
     this.buffer = new Int32Array(this.n);
-    message.Register("GetFB", this.OnGetFB.bind(this) );
+    Register("GetFB", this.OnGetFB.bind(this) );
     //this.buffer = new Uint8Array(0);
 }
 
@@ -40,7 +40,7 @@ FBDev.prototype.WriteReg32 = function (addr, value) {
 };
 
 FBDev.prototype.OnGetFB = function() {
-    message.Send("GetFB", this.GetBuffer() );
+    Send("GetFB", this.GetBuffer() );
 }
 
 FBDev.prototype.GetBuffer = function () {
@@ -55,4 +55,4 @@ FBDev.prototype.GetBuffer = function () {
     return this.buffer;
 }
 
-module.exports = FBDev;
+export default FBDev;

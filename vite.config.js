@@ -1,7 +1,5 @@
 import { defineConfig } from 'vite';
 import { resolve } from 'path';
-import commonjs from '@rollup/plugin-commonjs';
-import { nodeResolve } from '@rollup/plugin-node-resolve';
 
 export default defineConfig(({ command, mode }) => {
   const isProduction = mode === 'production';
@@ -13,13 +11,6 @@ export default defineConfig(({ command, mode }) => {
   // For development server
   if (isDev) {
     return {
-      plugins: [
-        nodeResolve({
-          preferBuiltins: false
-        }),
-        commonjs()
-      ],
-      
       server: {
         port: 3000,
         open: '/demos/main.html',
@@ -54,13 +45,6 @@ export default defineConfig(({ command, mode }) => {
   const globalName = buildTarget === 'worker' ? 'JOR1KWorker' : 'JOR1K';
   
   return {
-    plugins: [
-      nodeResolve({
-        preferBuiltins: false
-      }),
-      commonjs()
-    ],
-    
     build: {
       outDir: 'demos',
       emptyOutDir: false,
@@ -74,17 +58,29 @@ export default defineConfig(({ command, mode }) => {
       rollupOptions: {
         external: [],
         output: {
-          globals: {}
+          globals: {},
+          // Enable tree shaking for better optimization
+          preserveModules: false,
+          // Use named exports to avoid warning about mixed exports
+          exports: 'named'
+        },
+        // Enable tree shaking but preserve side effects for worker
+        treeshake: buildTarget === 'worker' ? {
+          moduleSideEffects: true,
+          propertyReadSideEffects: false,
+          tryCatchDeoptimization: false
+        } : {
+          moduleSideEffects: false,
+          propertyReadSideEffects: false,
+          tryCatchDeoptimization: false
         }
       },
       
       sourcemap: !isProduction,
       minify: isProduction ? 'esbuild' : false,
       
-      commonjsOptions: {
-        include: [/js\/.*\.js$/],
-        transformMixedEsModules: true
-      }
+      // Remove CommonJS options since we're using pure ES modules
+      target: 'es2015'
     },
     
     resolve: {

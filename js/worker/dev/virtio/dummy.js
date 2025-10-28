@@ -4,8 +4,8 @@
 
 "use strict";
 
-var message = require('../../messagehandler');
-var utils = require('../../utils');
+import { Debug, Abort } from '../../messagehandler.js';
+import * as utils from '../../utils.js';
 
 function VirtioDummy(ramdev) {
     this.configspace = [0x0];
@@ -20,4 +20,4 @@ VirtioDummy.prototype.Reset = function() {
 VirtioDummy.prototype.ReceiveRequest = function (index, GetByte) {
 }
 
-module.exports = VirtioDummy;
+export default VirtioDummy;

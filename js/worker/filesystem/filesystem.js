@@ -5,14 +5,14 @@
 
 "use strict";
 
-var TAR = require('./tar');
-var FSLoader = require('./fsloader');
-var utils = require('../utils');
-var bzip2 = require('../bzip2');
-var marshall = require('../dev/virtio/marshall');
-var UTF8 = require('../../lib/utf8');
-var message = require('../messagehandler');
-var LazyUint8Array = require("./lazyUint8Array");
+import TAR from './tar.js';
+import FSLoader from './fsloader.js';
+import * as utils from '../utils.js';
+import bzip2 from '../bzip2.js';
+import { Marshall, Unmarshall } from '../dev/virtio/marshall.js';
+import * as UTF8 from '../../lib/utf8.js';
+import message from '../messagehandler.js';
+import LazyUint8Array from "./lazyUint8Array.js";
 
 var S_IRWXUGO = 0x1FF;
 var S_IFMT = 0xF000;
@@ -793,7 +793,7 @@ FS.prototype.FillDirectory = function(dirid) {
     inode.size = size;
 
     var offset = 0x0;
-    offset += marshall.Marshall(
+    offset += Marshall(
         ["Q", "d", "b", "s"],
         [this.inodes[dirid].qid, 
         offset+13+8+1+2+1, 
@@ -801,7 +801,7 @@ FS.prototype.FillDirectory = function(dirid) {
         "."],
         inode.data, offset);
 
-    offset += marshall.Marshall(
+    offset += Marshall(
         ["Q", "d", "b", "s"],
         [this.inodes[parentid].qid,
         offset+13+8+1+2+2, 
@@ -811,7 +811,7 @@ FS.prototype.FillDirectory = function(dirid) {
 
     var id = this.inodes[dirid].firstid;
     while(id != -1) {
-        offset += marshall.Marshall(
+        offset += Marshall(
         ["Q", "d", "b", "s"],
         [
             this.inodes[id].qid,
@@ -862,4 +862,4 @@ FS.prototype.PrepareCAPs = function(id) {
 }
 
 
-module.exports = FS;
+export default FS;

@@ -1,4 +1,4 @@
-var message = require('../messagehandler');
+import * as message from '../messagehandler.js';
 
 function FastCPU(stdlib, foreign, heap) {
 "use asm";
@@ -1605,4 +1605,4 @@ return {
 
 }
 
-module.exports = FastCPU;
+export default FastCPU;

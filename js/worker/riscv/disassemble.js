@@ -1,7 +1,7 @@
 
 "use strict";
-var message = require('../messagehandler');
-var utils = require('../utils');
+import * as message from '../messagehandler.js';
+import * as utils from '../utils.js';
 
 var PRV_U = 0x00;
 var PRV_S = 0x01;
@@ -604,5 +604,5 @@ function Disassemble(ins,r,csr,pc) {
 
 };
 
-module.exports.Disassemble = Disassemble;
+export { Disassemble };
 

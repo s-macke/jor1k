@@ -3,8 +3,8 @@
 // -------------------------------------------------
 // helper functions for virtio and 9p.
 
-var UTF8 = require('../../../lib/utf8');
-var message = require('../../messagehandler');
+import * as UTF8 from '../../../lib/utf8.js';
+import { Debug } from '../../messagehandler.js';
 
 // Inserts data from an array to a byte aligned struct in memory
 function Marshall(typelist, input, struct, offset) {
@@ -63,7 +63,7 @@ function Marshall(typelist, input, struct, offset) {
                 size += 13;
                 break;
             default:
-                message.Debug("Marshall: Unknown type=" + type[i]);
+                Debug("Marshall: Unknown type=" + typelist[i]);
                 break;
         }
     }
@@ -111,7 +111,7 @@ function Unmarshall(typelist, struct, offset) {
                 output.push(str);
                 break;
             default:
-                message.Debug("Error in Unmarshall: Unknown type=" + typelist[i]);
+                Debug("Error in Unmarshall: Unknown type=" + typelist[i]);
                 break;
         }
     }
@@ -159,7 +159,7 @@ function Unmarshall2(typelist, GetByte) {
                 output.push(str);
                 break;
             default:
-                message.Debug("Error in Unmarshall2: Unknown type=" + typelist[i]);
+                Debug("Error in Unmarshall2: Unknown type=" + typelist[i]);
                 break;
         }
     }
@@ -167,6 +167,4 @@ function Unmarshall2(typelist, GetByte) {
 };
 
 
-module.exports.Marshall = Marshall;
-module.exports.Unmarshall = Unmarshall;
-module.exports.Unmarshall2 = Unmarshall2;
+export { Marshall, Unmarshall, Unmarshall2 };

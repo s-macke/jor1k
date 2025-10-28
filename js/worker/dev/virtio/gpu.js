@@ -8,9 +8,9 @@
 
 "use strict";
 
-var message = require('../../messagehandler');
-var utils = require('../../utils');
-var marshall = require('./marshall');
+import { Debug, Abort } from '../../messagehandler.js';
+import * as utils from '../../utils.js';
+import * as marshall from './marshall.js';
 
 var VIRTIO_GPU_UNDEFINED = 0;
 
@@ -81,19 +81,19 @@ VirtioGPU.prototype.ReplyOk = function(index) {
 
 
 VirtioGPU.prototype.ReceiveRequest = function (queueidx, index, GetByte, size) {
-    message.Debug("");
-    message.Debug("Virtio GPU request of ringbuffer " + queueidx + " " + index + " " + size.read + " " + size.write);
+    Debug("");
+    Debug("Virtio GPU request of ringbuffer " + queueidx + " " + index + " " + size.read + " " + size.write);
 
     if (queueidx != 0) {
-        message.Debug("Error in virtio gpu: queue no. " + queueidx + " unknown");
-        message.Abort();
+        Debug("Error in virtio gpu: queue no. " + queueidx + " unknown");
+        Abort();
     }
     
     // virtio_gpu_ctrl_hdr
     var request = marshall.Unmarshall2(["w", "w", "d", "w", "w"], GetByte);
     var type = request[0];
     var ctx_id = request[3]; // not used in 2D mode
-    message.Debug(
+    Debug(
     "type: " + type + 
     " flags: " + request[1] + 
     " fence: " + request[2] + 
@@ -112,7 +112,7 @@ VirtioGPU.prototype.ReceiveRequest = function (queueidx, index, GetByte, size) {
             }
             // one display connected with 1024x768 enabled=1
             marshall.Marshall(["w", "w", "w", "w", "w", "w"], [0, 0, 1024, 768, 1, 0], this.replybuffer, 24);
-            message.Debug("get display info");
+            Debug("get display info");
             this.replybuffersize = 24 + 16*(16+8);
             this.SendReply(queueidx, index);
             break;
@@ -127,7 +127,7 @@ VirtioGPU.prototype.ReceiveRequest = function (queueidx, index, GetByte, size) {
             var height = request[3];
             var format = request[1];
             if (resource_id == 0) {
-                message.Debug("Error in virtio gpu: resource_id is 0");
+                Debug("Error in virtio gpu: resource_id is 0");
             }
             this.resource[resource_id] = {
                 valid: true, 
@@ -137,7 +137,7 @@ VirtioGPU.prototype.ReceiveRequest = function (queueidx, index, GetByte, size) {
                 addr:0x0, 
                 length: 0x0,
                 scanout_id: -1};
-            message.Debug("create 2d: " + width  + "x" + height + " format: " + format + " resource_id: " + request[0]);
+            Debug("create 2d: " + width  + "x" + height + " format: " + format + " resource_id: " + request[0]);
             this.ReplyOk(index);
             break;
 
@@ -147,7 +147,7 @@ VirtioGPU.prototype.ReceiveRequest = function (queueidx, index, GetByte, size) {
             var resource_id = request[0];
             
             this.resource[resource_id].valid = false;
-            message.Debug("resource unref: resource_id: " + request[0]);
+            Debug("resource unref: resource_id: " + request[0]);
             this.ReplyOk(index);
             break;
 
@@ -158,11 +158,11 @@ VirtioGPU.prototype.ReceiveRequest = function (queueidx, index, GetByte, size) {
             var request = marshall.Unmarshall2(["w", "w"], GetByte);
             var nr_entries = request[1];
             var resource_id = request[0];
-            message.Debug("attach backing: resource_id: " + resource_id + " nr_entries:" + request[1] );
+            Debug("attach backing: resource_id: " + resource_id + " nr_entries:" + request[1] );
             for(var i=0; i<nr_entries; i++) {
                 // struct virtio_gpu_mem_entry
                 var request = marshall.Unmarshall2(["d", "w", "w"], GetByte);
-                message.Debug("attach backing: addr:" + utils.ToHex(request[0]) + " length: " + request[1]);
+                Debug("attach backing: addr:" + utils.ToHex(request[0]) + " length: " + request[1]);
                 this.resource[resource_id].addr = request[0];
                 this.resource[resource_id].length = request[1];
             }
@@ -173,7 +173,7 @@ VirtioGPU.prototype.ReceiveRequest = function (queueidx, index, GetByte, size) {
             // struct virtio_gpu_resource_detach_backing
             var request = marshall.Unmarshall2(["w"], GetByte);
             var resource_id = request[0];
-            message.Debug("detach backing: resource_id: " + resource_id);
+            Debug("detach backing: resource_id: " + resource_id);
             this.resource[resource_id].addr = 0x0;
             this.resource[resource_id].length = 0x0;
             this.ReplyOk(index);
@@ -189,19 +189,19 @@ VirtioGPU.prototype.ReceiveRequest = function (queueidx, index, GetByte, size) {
             var height = request[3];
             var scanout_id = request[4];
             var resource_id = request[5];
-            message.Debug("set scanout: x: " + x + " y: " + y + " width: " + width + " height: " + height + " scanout_id: " + scanout_id + " resource_id: " + resource_id);
+            Debug("set scanout: x: " + x + " y: " + y + " width: " + width + " height: " + height + " scanout_id: " + scanout_id + " resource_id: " + resource_id);
             if (resource_id != 0)
                 this.resource[resource_id].scanout_id = scanout_id;
             this.ReplyOk(index);
             break;
 
         default:
-            message.Debug("Error in virtio gpu: Unknown type " + type);
-            message.Abort();
+            Debug("Error in virtio gpu: Unknown type " + type);
+            Abort();
         break;
     }
 
 
 }
 
-module.exports = VirtioGPU;
+export default VirtioGPU;

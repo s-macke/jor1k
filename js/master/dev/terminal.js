@@ -5,8 +5,8 @@
 
 "use strict";
 
-let UTF8 = require('../../lib/utf8');
-let message = require('../messagehandler');
+import * as UTF8 from '../../lib/utf8.js';
+import message from '../messagehandler.js';
 
 const Colors = ["#000000", "#BB0000", "#00BB00", "#BBBB00",
     "#0000BB", "#BB00BB", "#00BBBB", "#BBBBBB",
@@ -801,4 +801,4 @@ Terminal.prototype.PutChar = function (c) {
     this.OnCharReceived(String.fromCharCode(c));
 };
 
-module.exports = Terminal;
+export default Terminal;

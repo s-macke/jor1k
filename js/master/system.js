@@ -2,14 +2,14 @@
 // -------------------- Master ---------------------
 // -------------------------------------------------
 
-var Terminal = require('./dev/terminal');
-var TerminalInput = require('./dev/terminal-input');
-var Framebuffer = require('./dev/framebuffer');
-var Ethernet = require('./dev/ethernet');
-var LoopSoundBuffer = require('./dev/sound');
-var Filesystem = require('./dev/filesystem');
-var utils = require('./utils');
-var message = require('./messagehandler');
+import Terminal from './dev/terminal.js';
+import TerminalInput from './dev/terminal-input.js';
+import Framebuffer from './dev/framebuffer.js';
+import Ethernet from './dev/ethernet.js';
+import LoopSoundBuffer from './dev/sound.js';
+import Filesystem from './dev/filesystem.js';
+
+import message from './messagehandler.js';
 
 var TERMINAL = 0xDEADBEEF;
 
@@ -267,4 +267,4 @@ jor1kGUI.prototype.FocusTerm = function(tty) {
     this.lastMouseDownTarget = TERMINAL;
 }
 
-module.exports = jor1kGUI;
+export default jor1kGUI;

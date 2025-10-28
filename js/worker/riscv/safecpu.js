@@ -3,9 +3,9 @@
 // -------------------------------------------------
 
 "use strict";
-var message = require('../messagehandler');
-var utils = require('../utils');
-var DebugIns = require('./disassemble');
+import * as message from '../messagehandler.js';
+import * as utils from '../utils.js';
+import { Disassemble as DebugIns } from './disassemble.js';
 
 var PRV_U = 0x00;  // user mode
 var PRV_S = 0x01;  // supervisor mode
@@ -1806,4 +1806,4 @@ this.n = 0;
     return 0;
 };
 
-module.exports = SafeCPU;
+export default SafeCPU;

@@ -74,11 +74,16 @@ function SetWorker(_worker) {
     Register("Debug", function(d){Debug(d);});
 }
 
-module.exports.SetWorker = SetWorker;
-module.exports.Register = Register;
-module.exports.Debug = Debug;
-module.exports.Warning = Warning;
-module.exports.Error = DoError;
-module.exports.Abort = Abort;
-module.exports.Send = Send;
+export { SetWorker, Register, Debug, Warning, DoError as Error, Abort, Send };
+
+// Default export for backward compatibility
+export default {
+    SetWorker,
+    Register,
+    Debug,
+    Warning,
+    Error: DoError,
+    Abort,
+    Send
+};
  

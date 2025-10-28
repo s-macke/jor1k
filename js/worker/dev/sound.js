@@ -6,8 +6,8 @@
 
 "use strict";
 
-var message = require('../messagehandler');
-var utils = require('../utils');
+import { Debug, Send } from '../messagehandler.js';
+import * as utils from '../utils.js';
 
 var REG_CTL            = 0x00; // format
 var REG_ADDR           = 0x04; // pointer to dma buffer
@@ -19,7 +19,7 @@ var REG_CHANNELS       = 0x18; // channels
 var REG_FORMAT         = 0x1C; // format
 
 function SoundDev(intdev, ramdev) {
-    message.Debug("Start sound");
+    Debug("Start sound");
     this.intdev = intdev;
     this.ramdev = ramdev
     this.Reset();
@@ -62,7 +62,7 @@ SoundDev.prototype.Progress = function() {
         if (this.offset == totalperiodbuffer) this.offset = 0;
     }
 
-    message.Send("sound", x);
+    Send("sound", x);
 
     this.lasttotalframe += deltaframes;
     this.nextperiod -= deltaframes;
@@ -89,7 +89,7 @@ SoundDev.prototype.Elapsed = function() {
             if (this.offset == totalperiodbuffer) this.offset = 0;
         }
     }
-    message.Send("sound", x);
+    Send("sound", x);
     
 }
 
@@ -109,7 +109,7 @@ SoundDev.prototype.ReadReg32 = function (addr) {
             break; 
 
         default:
-            message.Debug("Sound: unknown ReadReg32: " + utils.ToHex(addr));
+            Debug("Sound: unknown ReadReg32: " + utils.ToHex(addr));
             return 0x0;
             break;
     }
@@ -125,7 +125,7 @@ SoundDev.prototype.WriteReg32 = function (addr, value) {
             this.starttime = utils.GetMilliseconds();
             this.lasttotalframe = 0;
             this.offset = 0;
-            message.Send("sound.rate", this.rate);
+            Send("sound.rate", this.rate);
             this.Elapsed();
             /*
             message.Debug("rate: "        + this.rate);
@@ -162,10 +162,10 @@ SoundDev.prototype.WriteReg32 = function (addr, value) {
             break;
 
         default:
-            message.Debug("sound: unknown  WriteReg32: " + utils.ToHex(addr) + ": " + utils.ToHex(value));
+            Debug("sound: unknown  WriteReg32: " + utils.ToHex(addr) + ": " + utils.ToHex(value));
             return;
             break;
     }
 }
 
-module.exports = SoundDev;
+export default SoundDev;

@@ -3,8 +3,8 @@
 // -------------------------------------------------
 
 "use strict";
-var message = require('../messagehandler');
-var utils = require('../utils');
+import * as message from '../messagehandler.js';
+import * as utils from '../utils.js';
 
 // special purpose register index
 var SPR_UPR = 1; // unit present register
@@ -1158,4 +1158,4 @@ SafeCPU.prototype.Step = function (steps, clockspeed) {
 };
 
 
-module.exports = SafeCPU;
+export default SafeCPU;

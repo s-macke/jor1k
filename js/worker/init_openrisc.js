@@ -4,30 +4,30 @@
 
 "use strict";
 // common
-var message = require('./messagehandler'); // global variable
-var utils = require('./utils');
+import message from './messagehandler.js';
+import * as utils from './utils.js';
 
 // CPU
-var OR1KCPU = require('./or1k');
+import OR1KCPU from './or1k/index.js';
 
-var UARTDev = require('./dev/uart');
-var IRQDev = require('./dev/irq');
-var TimerDev = require('./dev/timer');
-var FBDev = require('./dev/framebuffer');
-var EthDev = require('./dev/ethmac');
-var ATADev = require('./dev/ata');
-var RTCDev = require('./dev/rtc');
-var TouchscreenDev = require('./dev/touchscreen');
-var KeyboardDev = require('./dev/keyboard');
-var SoundDev = require('./dev/sound');
-var VirtIODev = require('./dev/virtio');
-var Virtio9p = require('./dev/virtio/9p');
-var VirtioDummy = require('./dev/virtio/dummy');
-var VirtioInput = require('./dev/virtio/input');
-var VirtioNET = require('./dev/virtio/net');
-var VirtioBlock = require('./dev/virtio/block');
-var VirtioGPU = require('./dev/virtio/gpu');
-var VirtioConsole = require('./dev/virtio/console');
+import UARTDev from './dev/uart.js';
+import IRQDev from './dev/irq.js';
+import TimerDev from './dev/timer.js';
+import FBDev from './dev/framebuffer.js';
+import EthDev from './dev/ethmac.js';
+import ATADev from './dev/ata.js';
+import RTCDev from './dev/rtc.js';
+import TouchscreenDev from './dev/touchscreen.js';
+import KeyboardDev from './dev/keyboard.js';
+import SoundDev from './dev/sound.js';
+import VirtIODev from './dev/virtio.js';
+import Virtio9p from './dev/virtio/9p.js';
+import VirtioDummy from './dev/virtio/dummy.js';
+import VirtioInput from './dev/virtio/input.js';
+import VirtioNET from './dev/virtio/net.js';
+import VirtioBlock from './dev/virtio/block.js';
+import VirtioGPU from './dev/virtio/gpu.js';
+import VirtioConsole from './dev/virtio/console.js';
 
 /*
     Heap Layout for OpenRISC emulation
@@ -135,4 +135,4 @@ async function InitOpenRISC(system, initdata) {
     message.Debug("Init OpenRISC SoC finished");
 }
 
-module.exports = InitOpenRISC;
+export default InitOpenRISC;

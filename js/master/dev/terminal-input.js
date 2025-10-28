@@ -8,7 +8,7 @@
 
 "use strict";
 
-var UTF8 = require('../../lib/utf8');
+import * as UTF8 from '../../lib/utf8.js';
 
 function TerminalInput(SendChars) {
     this.CTRLpressed = false;
@@ -188,4 +188,4 @@ TerminalInput.prototype.OnKeyDown = function(e) {
 };
 
 
-module.exports = TerminalInput;
+export default TerminalInput;

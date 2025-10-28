@@ -64,8 +64,9 @@
 
 <script>
 
-var Jor1k = require("Jor1k");
-var LinuxTerm = require("LinuxTerm");
+// Use global variables exposed by the UMD bundle
+var Jor1k = window.Jor1k;
+var LinuxTerm = window.LinuxTerm;
 
 var term = new LinuxTerm("tty");
 var jor1kgui = new Jor1k(

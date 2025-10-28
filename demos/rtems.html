@@ -18,8 +18,9 @@ Restart with new binary image:
 
 <script>
 
-var Jor1k = require("Jor1k");
-var LinuxTerm = require("LinuxTerm");
+// Use global variables exposed by the UMD bundle
+var Jor1k = window.Jor1k;
+var LinuxTerm = window.LinuxTerm;
 
 function Start(image)
 {

@@ -5,7 +5,7 @@
 
 "use strict";
 
-var message = require('../messagehandler');
+import message from '../messagehandler.js';
 
 var S_IRWXUGO = 0x1FF;
 var S_IFMT = 0xF000;
@@ -213,4 +213,4 @@ TAR.prototype.Pack = function(path) {
     return buffer;
 }
 
-module.exports = TAR;
+export default TAR;

@@ -1,6 +1,6 @@
 // manages the websocket connection for the ethmac peripheral
 
-var message = require('../messagehandler');
+import message from '../messagehandler.js';
 
 "use strict";
 
@@ -76,4 +76,4 @@ Ethernet.prototype.Close = function() {
     this.socket.close();
 }
 
-module.exports = Ethernet;
+export default Ethernet;

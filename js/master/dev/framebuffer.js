@@ -1,4 +1,4 @@
-var message = require('../messagehandler');
+import message from '../messagehandler.js';
 
 
 "use strict";
@@ -84,4 +84,4 @@ Framebuffer.prototype.Update = function(buffer) {
 }
 
 
-module.exports = Framebuffer;
+export default Framebuffer;

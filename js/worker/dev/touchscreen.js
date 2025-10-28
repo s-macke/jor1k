@@ -5,8 +5,8 @@
 
 "use strict";
 
-var message = require('../messagehandler');
-var utils = require('../utils');
+import { Register } from '../messagehandler.js';
+import * as utils from '../utils.js';
 
 // controller register offsets
 var LPC32XX_TSC_STAT                      = 0x00;
@@ -33,9 +33,9 @@ var LPC32XX_TSC_FIFO_TS_P_LEVEL = (1 << 31) // touched
 function TouchscreenDev(intdev) {
     this.intdev = intdev;
     this.Reset();
-    message.Register("tsmousedown", this.onmousedown.bind(this) );
-    message.Register("tsmouseup", this.onmouseup.bind(this) );
-    message.Register("tsmousemove", this.onmousemove.bind(this) );
+    Register("tsmousedown", this.onmousedown.bind(this) );
+    Register("tsmouseup", this.onmouseup.bind(this) );
+    Register("tsmousemove", this.onmousemove.bind(this) );
 }
 
 TouchscreenDev.prototype.Reset = function() {
@@ -138,4 +138,4 @@ TouchscreenDev.prototype.WriteReg32 = function (addr, value) {
     return;
 }
 
-module.exports = TouchscreenDev;
+export default TouchscreenDev;

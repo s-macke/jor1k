@@ -4,8 +4,8 @@
 // PLIC (Platform-Level Interrupt Controller) device for RISC-V
 
 "use strict";
-var message = require('../messagehandler');
-var utils = require('../utils');
+import message from '../messagehandler.js';
+import * as utils from '../utils.js';
 
 /*
  * 0x0000   Priority Device 0
@@ -63,4 +63,4 @@ PLICDev.prototype.ClearInterrupt = function (line) {
     }
 }
 
-module.exports = PLICDev;
+export default PLICDev;

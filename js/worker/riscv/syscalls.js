@@ -3,8 +3,8 @@
 // -------------------------------------------------
 
 "use strict";
-var message = require('../messagehandler');
-var utils = require('../utils');
+import * as message from '../messagehandler.js';
+import * as utils from '../utils.js';
 
 var SYS_OPENAT      = 56;
 var SYS_CLOSE       = 57;
@@ -168,4 +168,4 @@ SysCalls.prototype.OnFileLoaded = function(buffer) {
     
 };
 
-module.exports = SysCalls;
+export default SysCalls;

@@ -3,15 +3,15 @@
  */
 
 "use strict";
-var message = require('../messagehandler'); // global variable
-var toHex = require('../utils').ToHex;
-var imul = require('../imul');
+import * as message from '../messagehandler.js'; // global variable
+import { ToHex } from '../utils.js';
+import imul from '../imul.js';
 
 // CPUs
-var FastCPU = require('./fastcpu');
-var SafeCPU = require('./safecpu');
-var SMPCPU = require('./smpcpu');
-var DynamicCPU = require('./dynamic/dynamiccpu');
+import FastCPU from './fastcpu.js';
+import SafeCPU from './safecpu.js';
+import SMPCPU from './smpcpu.js';
+import DynamicCPU from './dynamic/dynamiccpu.js';
 
 // The asm.js ("Fast") and SMP cores must be singletons
 // because of Firefox limitations.
@@ -133,8 +133,8 @@ CPU.prototype.toString = function() {
     var str = '';
     str += "Current state of the machine\n";
     //str += "clock: " + toHex(cpu.clock) + "\n";
-    str += "PC: " + toHex(this.cpu.pc<<2) + "\n";
-    str += "next PC: " + toHex(this.cpu.nextpc<<2) + "\n";
+    str += "PC: " + ToHex(this.cpu.pc<<2) + "\n";
+    str += "next PC: " + ToHex(this.cpu.nextpc<<2) + "\n";
     //str += "ins: " + toHex(cpu.ins) + "\n";
     //str += "main opcode: " + toHex(cpu.ins>>>26) + "\n";
     //str += "sf... opcode: " + toHex((cpu.ins>>>21)&0x1F) + "\n";
@@ -142,10 +142,10 @@ CPU.prototype.toString = function() {
 
     for (var i = 0; i < 32; i += 4) {
         str += "   r" + (i + 0) + ": " +
-            toHex(r[i + 0]) + "   r" + (i + 1) + ": " +
-            toHex(r[i + 1]) + "   r" + (i + 2) + ": " +
-            toHex(r[i + 2]) + "   r" + (i + 3) + ": " +
-            toHex(r[i + 3]) + "\n";
+            ToHex(r[i + 0]) + "   r" + (i + 1) + ": " +
+            ToHex(r[i + 1]) + "   r" + (i + 2) + ": " +
+            ToHex(r[i + 2]) + "   r" + (i + 3) + ": " +
+            ToHex(r[i + 3]) + "\n";
     }
 
     if (this.cpu.delayedins) {
@@ -206,4 +206,4 @@ forwardedMethods.forEach(function(m) {
 
 });
 
-module.exports = CPU;
+export default CPU;

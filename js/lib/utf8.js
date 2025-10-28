@@ -118,6 +118,4 @@ function UTF8Length(s)
     return length;
 }
 
-module.exports.UTF8StreamToUnicode = UTF8StreamToUnicode;
-module.exports.UTF8Length = UTF8Length;
-module.exports.UnicodeToUTF8Stream = UnicodeToUTF8Stream;
+export { UTF8StreamToUnicode, UTF8Length, UnicodeToUTF8Stream };

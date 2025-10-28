@@ -201,14 +201,16 @@ function LoadBZIP2Resource(url, OnSuccess, OnError)
 */
 
 
-module.exports.GetMilliseconds = GetMilliseconds;
-module.exports.Swap32 = Swap32;
-module.exports.Swap16 = Swap16;
-module.exports.int32 = int32;
-module.exports.uint32 = uint32;
-module.exports.ToHex = ToHex;
-module.exports.ToBin = ToBin;
-module.exports.LoadBinaryResource = LoadBinaryResource;
-module.exports.LoadBinaryResourceII = LoadBinaryResourceII;
-module.exports.LoadTextResource = LoadTextResource;
+export { 
+    GetMilliseconds, 
+    Swap32, 
+    Swap16, 
+    int32, 
+    uint32, 
+    ToHex, 
+    ToBin, 
+    LoadBinaryResource, 
+    LoadBinaryResourceII, 
+    LoadTextResource 
+};
 

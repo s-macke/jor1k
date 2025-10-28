@@ -5,8 +5,8 @@
 
 "use strict";
 
-var message = require('../messagehandler');
-var utils = require('../utils');
+import { Register, Debug } from '../messagehandler.js';
+import * as utils from '../utils.js';
 
 //REGISTER ADDRESSES
 var ETHMAC_ADDR_MODER = 0x0;
@@ -571,7 +571,7 @@ function EthDev(ram, intdev, mac) {
                     addr <= ETHMAC_ADDR_BD_END) {
                     ret = this.BD[(addr-ETHMAC_ADDR_BD_START)>>>2];
                 } else {
-                    message.Debug("Attempt to access ethmac register beyond 0x800");
+                    Debug("Attempt to access ethmac register beyond 0x800");
                 }
         }
         return ret;
@@ -607,7 +607,7 @@ function EthDev(ram, intdev, mac) {
                 break;
 
             default:
-                message.Debug("Error in ethmac: Unknown mii command detected");
+                Debug("Error in ethmac: Unknown mii command detected");
                 break;
         }
 
@@ -741,14 +741,14 @@ function EthDev(ram, intdev, mac) {
                         }
                     }
                 } else {
-                    message.Debug("Attempt to access ethmac register beyond 0x800");
+                    Debug("Attempt to access ethmac register beyond 0x800");
                 }
         }
     };
 
     this.Reset();
-    message.Register("ethmac", this.Receive.bind(this) );
+    Register("ethmac", this.Receive.bind(this) );
 
 }
 
-module.exports = EthDev;
+export default EthDev;

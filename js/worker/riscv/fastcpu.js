@@ -1,9 +1,9 @@
 // -------------------------------------------------
 // -------------------- CPU ------------------------
 // -------------------------------------------------
-var message = require('../messagehandler');
-var utils = require('../utils');
-var DebugIns = require('./disassemble');
+import * as message from '../messagehandler.js';
+import * as utils from '../utils.js';
+import { Disassemble as DebugIns } from './disassemble.js';
 
 
 // constructor
@@ -2190,4 +2190,4 @@ return {
 
 }
 
-module.exports = FastCPU;
+export default FastCPU;

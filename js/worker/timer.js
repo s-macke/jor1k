@@ -6,8 +6,8 @@
 
 "use strict";
 
-var message = require('./messagehandler'); // global variable
-var utils = require('./utils');
+import message from './messagehandler.js';
+import { GetMilliseconds } from './utils.js';
 
 function Timer(_ticksperms, _loopspersecond) {
     // constants
@@ -67,18 +67,18 @@ Timer.prototype.LocalUpdate = function(_nins, gotoidle) {
 
     // recalibrate timer
     if (this.lastlooptime < 0) {
-        this.lastlooptime = utils.GetMilliseconds();
+        this.lastlooptime = GetMilliseconds();
         this.nins = 0;
         return; // don't calibrate, because we don't have the data
     }
-    var delta = utils.GetMilliseconds() - this.lastlooptime;
+    var delta = GetMilliseconds() - this.lastlooptime;
     if (delta > 50 && this.nins > 2000) // we need statistics for calibration
     {
         this.ipms = this.nins / delta; // ipms (per millisecond) of current run
         this.UpdateTimings();
 
         //reset the integration parameters
-        this.lastlooptime = utils.GetMilliseconds();
+        this.lastlooptime = GetMilliseconds();
         this.nins = 0;
     }    
 }
@@ -94,8 +94,8 @@ Timer.prototype.GlobalUpdate = function(ticks) {
     // ---------------
     // update realtime
     // ---------------
-    if (this.baserealtime <= 0) this.baserealtime = utils.GetMilliseconds();
-    this.realtime = utils.GetMilliseconds() - this.baserealtime;
+    if (this.baserealtime <= 0) this.baserealtime = GetMilliseconds();
+    this.realtime = GetMilliseconds() - this.baserealtime;
         
     // -----------------
     // update systemtime (time in emulator)
@@ -113,7 +113,7 @@ Timer.prototype.GlobalUpdate = function(ticks) {
 
     if (deltaabs > 500) {
         // we are too far off, so do a reset of the timers
-        this.baserealtime = utils.GetMilliseconds();
+        this.baserealtime = GetMilliseconds();
         this.systemtime = 0.;
         this.lastsystemticks = 0.;
     }
@@ -135,4 +135,4 @@ Timer.prototype.GlobalUpdate = function(ticks) {
 }
 
 
-module.exports = Timer;
+export default Timer;

@@ -4,9 +4,9 @@
 
 "use strict";
 
-var message = require('../../messagehandler');
-var utils = require('../../utils');
-var marshall = require('./marshall');
+import { Register, Debug, Send, Abort } from '../../messagehandler.js';
+import * as utils from '../../utils.js';
+import * as marshall from './marshall.js';
 
 function VirtioNET(ramdev) {
     this.configspace = [0x00, 0x0, 0x0, 0x0, 0x0, 0x0]; // mac address
@@ -21,7 +21,7 @@ function VirtioNET(ramdev) {
         this.configspace[i] = Math.floor(Math.random()*256);
     }
 
-    message.Register("ethmac", this.Receive.bind(this) );
+    Register("ethmac", this.Receive.bind(this) );
 
     this.Reset();
 }
@@ -52,8 +52,8 @@ VirtioNET.prototype.HandleReceive = function() {
     var desc = this.receivebufferdesc[0];
 
     if (buffer.length > desc.size.write) {
-        message.Debug("Error in VirtioNET: Received packet is larger than the next receive buffer");
-        message.Abort();
+        Debug("Error in VirtioNET: Received packet is larger than the next receive buffer");
+        Abort();
     }
     
     this.receivebuffer.shift();
@@ -77,8 +77,8 @@ VirtioNET.prototype.ReceiveRequest = function (queueidx, index, GetByte, size) {
     //message.Debug("Virtio network request of ringbuffer " + queueidx + " " + index + " " + size.read + " " + size.write);
 
     if (queueidx > 1) {
-        message.Debug("Error in VirtioNET: Unsupported ringbuffer");
-        message.Abort();
+        Debug("Error in VirtioNET: Unsupported ringbuffer");
+        Abort();
     }
 
     if (queueidx == 0) {
@@ -99,10 +99,10 @@ VirtioNET.prototype.ReceiveRequest = function (queueidx, index, GetByte, size) {
     for(var i=0; i<size.read-12; i++) {
         frame[i] = GetByte();
     }
-    message.Send("ethmac", frame.buffer);
+    Send("ethmac", frame.buffer);
 
     this.replybuffersize = 0;
     this.SendReply(queueidx, index);
 }
 
-module.exports = VirtioNET;
+export default VirtioNET;

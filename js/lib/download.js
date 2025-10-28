@@ -121,4 +121,4 @@ function download(data, strFileName, strMimeType) {
 	return true;
 } /* end download() */
 
-module.exports = download;
+export default download;

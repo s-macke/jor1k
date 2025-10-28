@@ -10,8 +10,8 @@
 // For faster access for the devices we limit the offset of the device to 
 // 0xyy000000 where yy is a number between 0x0 and 0xFF
 
-var message = require('./messagehandler');
-var utils = require('./utils');
+import message from './messagehandler.js';
+import { Swap32, Swap16 } from './utils.js';
 
 // constructor
 function RAM(heap, ramoffset) {
@@ -61,7 +61,7 @@ RAM.prototype.AddDevice = function(device, devaddr, devsize) {
 
 RAM.prototype.Little2Big = function(length) {
     for (var i = 0; i < length >> 2; i++) {
-        this.int32mem[i] = utils.Swap32(this.int32mem[i]);
+        this.int32mem[i] = Swap32(this.int32mem[i]);
     }
     this.Read32 = this.Read32BigTemplate;
     this.Write32 = this.Write32BigTemplate;
@@ -70,10 +70,10 @@ RAM.prototype.Little2Big = function(length) {
     this.Read8 = this.Read8BigTemplate;
     this.Write8 = this.Write8BigTemplate;
 
-    this.Read32Little = function(addr) { return utils.Swap32(this.Read32BigTemplate(addr)); }.bind(this);
-    this.Write32Little = function(addr, x) { this.Write32BigTemplate(addr, utils.Swap32(x)); }.bind(this);
-    this.Read16Little = function(addr) { return utils.Swap16(this.Read16BigTemplate(addr)); }.bind(this);
-    this.Write16Little = function(addr, x) { this.Write16BigTemplate(addr, utils.Swap16(x)); }.bind(this);
+    this.Read32Little = function(addr) { return Swap32(this.Read32BigTemplate(addr)); }.bind(this);
+    this.Write32Little = function(addr, x) { this.Write32BigTemplate(addr, Swap32(x)); }.bind(this);
+    this.Read16Little = function(addr) { return Swap16(this.Read16BigTemplate(addr)); }.bind(this);
+    this.Write16Little = function(addr, x) { this.Write16BigTemplate(addr, Swap16(x)); }.bind(this);
     this.Read8Little = this.Read8BigTemplate.bind(this);
     this.Write8Little = this.Write8BigTemplate.bind(this);
 
@@ -240,4 +240,4 @@ RAM.prototype.Write16LittleTemplate = function(addr, x) {
 
 
 
-module.exports = RAM;
+export default RAM;

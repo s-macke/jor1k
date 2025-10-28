@@ -6,7 +6,7 @@
 
 "use strict";
 
-var message = require('../messagehandler');
+import { Debug } from '../messagehandler.js';
 
 function TimerDev() {
     this.Reset();
@@ -22,7 +22,7 @@ TimerDev.prototype.ReadReg32 = function (addr) {
 }
 
 TimerDev.prototype.WriteReg32 = function (addr, value) {
-    message.Debug("Error in Timer: Write reg " + addr + " : " + value);
+    Debug("Error in Timer: Write reg " + addr + " : " + value);
 }
 
-module.exports = TimerDev;
+export default TimerDev;
