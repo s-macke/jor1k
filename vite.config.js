@@ -11,20 +11,42 @@ export default defineConfig(({ command, mode }) => {
   // For development server
   if (isDev) {
     return {
+      root: '.',
       server: {
         port: 3000,
         open: '/demos/main.html',
         fs: {
-          allow: ['..']
-        }
+          allow: ['..'],
+          strict: false
+        },
+        watch: {
+          ignored: ['**/openrisc-sys/**', '**/riscv-sys/**', '**/utils/**']
+        },
+        middlewareMode: false
       },
       
       publicDir: 'demos',
       
+      // TypeScript support with optimizations
+      esbuild: {
+        target: 'es2020',
+        keepNames: true,
+        // Optimize TypeScript compilation for development
+        tsconfigRaw: {
+          compilerOptions: {
+            moduleResolution: 'bundler',
+            incremental: true,
+            sourceMap: true
+          }
+        }
+      },
+      
       resolve: {
         alias: {
-          '@': resolve(__dirname, 'js')
-        }
+          '@': resolve(__dirname, 'js'),
+          '@js': resolve(__dirname, 'js')
+        },
+        extensions: ['.ts', '.js', '.mjs']
       },
       
       define: {
@@ -34,13 +56,39 @@ export default defineConfig(({ command, mode }) => {
       
       optimizeDeps: {
         include: [],
-        force: true
-      }
+        force: true,
+        exclude: ['openrisc-sys/**', 'riscv-sys/**', 'utils/**']
+      },
+      
+      // Configure which files should be treated as assets vs source
+      assetsInclude: ['**/*.bin', '**/*.bz2', '**/*.wasm'],
+      
+      // Add plugin to handle system directories as static assets
+      plugins: [
+        {
+          name: 'static-system-dirs',
+          configureServer(server) {
+            server.middlewares.use('/openrisc-sys', (req, res, next) => {
+              res.statusCode = 404;
+              res.end('Not found');
+            });
+            server.middlewares.use('/riscv-sys', (req, res, next) => {
+              res.statusCode = 404;
+              res.end('Not found');
+            });
+            server.middlewares.use('/utils', (req, res, next) => {
+              res.statusCode = 404;
+              res.end('Not found');
+            });
+          }
+        }
+      ]
     };
   }
   
   // For production builds - single entry at a time
-  const entryFile = buildTarget === 'worker' ? 'src/worker.js' : 'src/master.js';
+  // Use TypeScript entry points
+  const entryFile = buildTarget === 'worker' ? 'src/worker.ts' : 'src/master.ts';
   const outputFile = buildTarget === 'worker' ? 'jor1k-worker-min.js' : 'jor1k-master-min.js';
   const globalName = buildTarget === 'worker' ? 'JOR1KWorker' : 'JOR1K';
   
@@ -76,17 +124,37 @@ export default defineConfig(({ command, mode }) => {
         }
       },
       
-      sourcemap: !isProduction,
+      sourcemap: true,
       minify: isProduction ? 'esbuild' : false,
       
-      // Remove CommonJS options since we're using pure ES modules
-      target: 'es2015'
+      target: 'es2020'
+    },
+    
+    // TypeScript support with optimizations
+    esbuild: {
+      target: 'es2020',
+      keepNames: true,
+      // Optimize TypeScript compilation
+      tsconfigRaw: {
+        compilerOptions: {
+          // Use bundler module resolution for better tree shaking
+          moduleResolution: 'bundler',
+          // Enable incremental compilation for faster builds
+          incremental: true,
+          // Preserve source maps for debugging
+          sourceMap: true,
+          // Remove comments in production
+          removeComments: isProduction
+        }
+      }
     },
     
     resolve: {
       alias: {
-        '@': resolve(__dirname, 'js')
-      }
+        '@': resolve(__dirname, 'js'),
+        '@js': resolve(__dirname, 'js')
+      },
+      extensions: ['.ts', '.js', '.mjs']
     },
     
     define: {
@@ -96,7 +164,8 @@ export default defineConfig(({ command, mode }) => {
     
     optimizeDeps: {
       include: [],
-      force: true
+      force: true,
+      exclude: ['openrisc-sys', 'riscv-sys', 'utils']
     }
   };
 });

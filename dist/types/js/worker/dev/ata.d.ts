@@ -1,0 +1,40 @@
+import type { InterruptController } from '../../../types/devices.js';
+declare class ATADev {
+    intdev: InterruptController;
+    identifybuffer: Uint16Array;
+    diskbuffer: Uint16Array;
+    heads: number;
+    sectors: number;
+    cylinders: number;
+    nsectors: number;
+    DCR: number;
+    DR: number;
+    SCR: number;
+    SNR: number;
+    SR: number;
+    FR: number;
+    ER: number;
+    CR: number;
+    lcyl: number;
+    hcyl: number;
+    select: number;
+    driveselected: boolean;
+    readbuffer: Uint16Array;
+    readbufferindex: number;
+    readbuffermax: number;
+    constructor(intdev: InterruptController);
+    Reset(): void;
+    SetBuffer(buffer: ArrayBuffer): void;
+    BuildIdentifyBuffer(buffer16: Uint16Array): void;
+    ReadReg8(addr: number): number;
+    GetSector(): number;
+    SetSector(sector: number): void;
+    ExecuteCommand(): void;
+    WriteReg8(addr: number, x: number): void;
+    ReadReg16(addr: number): number;
+    WriteReg16(addr: number, x: number): void;
+    ReadReg32(addr: number): number;
+    WriteReg32(addr: number, x: number): void;
+}
+export default ATADev;
+//# sourceMappingURL=ata.d.ts.map

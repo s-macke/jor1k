@@ -38,19 +38,38 @@
     "url": "git://github.com/s-macke/jor1k.git"
   },
   "main": "index.html",
-  "dependencies": {},
+  "types": "dist/types/src/master.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/types/src/master.d.ts",
+      "default": "./demos/jor1k-master-min.js"
+    },
+    "./worker": {
+      "types": "./dist/types/src/worker.d.ts",
+      "default": "./demos/jor1k-worker-min.js"
+    },
+    "./types": {
+      "types": "./dist/types/types/index.d.ts"
+    }
+  },
   "devDependencies": {
+    "@types/node": "^24.9.2",
+    "typescript": "^5.9.3",
     "vite": "^7.0.0"
   },
   "scripts": {
     "build": "npm run build:master && npm run build:worker",
     "build:master": "BUILD_TARGET=master vite build",
     "build:worker": "BUILD_TARGET=worker vite build",
+    "build:types": "tsc --project tsconfig.build.json",
+    "build:all": "npm run build && npm run build:types",
     "dev": "vite",
     "preview": "vite preview",
-    "postinstall": "npm run build"
+    "postinstall": "npm run build",
+    "type-check": "tsc --noEmit",
+    "type-check:watch": "tsc --noEmit --watch"
   },
   "engines": {
-    "node": ">= 0.8.0"
+    "node": ">= 18.0.0"
   }
 }

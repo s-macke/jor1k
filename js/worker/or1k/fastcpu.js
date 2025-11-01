@@ -1,5 +1,12 @@
 import * as message from '../messagehandler.js';
 
+/**
+ * OpenRISC Fast CPU implementation using asm.js
+ * @param {Object} stdlib - Standard library object with Math and typed array constructors
+ * @param {Object} foreign - Foreign function interface for external calls
+ * @param {ArrayBuffer} heap - Shared heap memory
+ * @returns {Object} CPU instance with methods for emulation
+ */
 function FastCPU(stdlib, foreign, heap) {
 "use asm";
 

@@ -1,0 +1,340 @@
+// -------------------------------------------------
+// -------------------- UART -----------------------
+// -------------------------------------------------
+// uart16550 compatible
+// the driver source is spread in drivers/tty/serial/8250/
+
+// See
+// http://www.tldp.org/HOWTO/Serial-HOWTO-18.html
+// http://www.lammertbies.nl/comm/info/serial-uart.html
+// http://www.freebsd.org/doc/en/articles/serial-uart/
+
+"use strict";
+
+import { Register, Debug, Send, Abort } from '../messagehandler.js';
+import * as utils from '../utils.js';
+import type { InterruptController } from '../../../types/devices.js';
+import type { MessageType } from '../../../types/messages.js';
+
+// Register offsets
+const UART_RXBUF = 0; /* R: Rx buffer, DLAB=0 */
+const UART_TXBUF = 0; /* W: Tx buffer, DLAB=0 (also called transmitter holding register */
+const UART_DLL   = 0; /* R/W: Divisor Latch Low, DLAB=1 */
+const UART_DLH   = 1; /* R/W: Divisor Latch High, DLAB=1 */
+const UART_IER   = 1; /* R/W: Interrupt Enable Register */
+const UART_IIR   = 2; /* R: Interrupt ID Register */
+const UART_FCR   = 2; /* W: FIFO Control Register */
+const UART_LCR   = 3; /* R/W: Line Control Register */
+const UART_MCR   = 4; /* W: Modem Control Register */
+const UART_LSR   = 5; /* R: Line Status Register */
+const UART_MSR   = 6; /* R: Modem Status Register */
+const UART_SCR   = 7; /* R/W: Scratch Register*/
+
+// Line Status register bits
+const UART_LSR_DATA_READY        = 0x01; // data available
+const UART_LSR_TX_EMPTY          = 0x20; // TX (THR) buffer is empty
+const UART_LSR_TRANSMITTER_EMPTY = 0x40; // TX empty and line is idle
+const UART_LSR_INT_ANY           = 0x1E; // Any of the lsr-interrupt-triggering status bits
+
+// Interrupt enable register bits
+const UART_IER_MSI  = 0x08; /* Modem Status Changed int. */
+const UART_IER_RLSI = 0x04; /* Enable Break int. Enable receiver line status interrupt */
+const UART_IER_THRI = 0x02; /* Enable Transmitter holding register int. */
+const UART_IER_RDI  = 0x01; /* Enable receiver data interrupt */
+
+// Interrupt identification register bits
+const UART_IIR_MSI    = 0x00; /* Modem status interrupt (Low priority). Reset by MSR read */
+const UART_IIR_NO_INT = 0x01;
+const UART_IIR_THRI   = 0x02; /* Transmitter holding register empty. Reset by IIR read or THR write */
+const UART_IIR_RDI    = 0x04; /* Receiver data interrupt. Reset by RBR read */
+const UART_IIR_RLSI   = 0x06; /* Receiver line status interrupt (High p.). Reset by LSR read */
+const UART_IIR_CTI    = 0x0c; /* Character timeout. Reset by RBR read */
+
+// Line control register bits
+const UART_LCR_DLAB   = 0x80; /* Divisor latch access bit */
+
+// Modem control register bits
+const UART_MCR_DTR = 0x01; /* Data Terminal Ready - Kernel ready to receive */
+const UART_MCR_RTS = 0x02; /* Request To Send - Kernel ready to receive */
+
+// Modem status register bits
+const UART_MSR_DCD       = 0x80; /* Data Carrier Detect */
+const UART_MSR_DSR       = 0x20; /* Data set Ready */
+const UART_MSR_DELTA_DSR = 0x2;
+const UART_MSR_CTS       = 0x10; /* Clear to Send */
+const UART_MSR_DELTA_CTS = 0x1;
+
+// register descriptions for debug mode
+const MCR_BIT_DESC = ["DataTerminalReady", "RTS", "AuxOut1", "AuxOut2", "Loopback", "Autoflow"/*16750*/];
+const FCR_BIT_DESC = ["FIFO enable", "Reset", "XMIT-FIFO-Reset", "DMA-Mode", "Reserved", "Reserved", "RecrTrig(LSB)", "RecrTrig(MSB)"];
+const LCR_BIT_DESC = ["WordLen", "WordLen", "StopBits", "Parity", "EvenParity", "StickParity", "Break", "DivisorLatch"];
+const MSR_BIT_DESC = ["DeltaCTS", "DeltaDataSetReady", "DeltaRingIndicator", "DeltaCarrierDetect", "ClearToSend", "DataSetReady", "RingIndicator", "CarrierDetect"];
+const LSR_BIT_DESC = ["RxDataAvail", "OverrunErr", "ParityErr", "FrameErr", "BreakSignal", "TxEmpty", "TxEmptyLine", "BadRxFifoData"];
+const IER_BIT_DESC = ["RxAvailableI", "TxEmptyI", "BreakI", "MSI"];
+
+class UARTDev {
+    intno: number;
+    intdev: InterruptController;
+    id: number;
+    verboseuart: boolean;
+    
+    LCR: number;
+    LSR: number;
+    MSR: number;
+    ints: number;
+    IIR: number;
+    IER: number;
+    DLL: number;
+    DLH: number;
+    FCR: number;
+    MCR: number;
+    
+    rxbuf: number[];
+    txbuf: number[];
+
+    constructor(id: number, intdev: InterruptController, intno: number) {
+        this.intno = intno;
+        this.intdev = intdev;
+        this.id = id;
+        this.verboseuart = false;
+        
+        this.LCR = 0;
+        this.LSR = 0;
+        this.MSR = 0;
+        this.ints = 0;
+        this.IIR = 0;
+        this.IER = 0;
+        this.DLL = 0;
+        this.DLH = 0;
+        this.FCR = 0;
+        this.MCR = 0;
+        this.rxbuf = [];
+        this.txbuf = [];
+        
+        Register(("tty" + id) as MessageType, this.ReceiveChar.bind(this));
+        this.Reset();
+    }
+
+    ToBitDescription(val: number, desc: string[]): string {
+        val &= 0xff;
+        let result = ("00000000" + val.toString(2)).substr(-8) + ":";
+        for(let i=0; i < desc.length; i++) {
+            result += " " + desc[i] + ":" + ((val>>i)&1);
+        }
+        return result;
+    }
+
+    Reset(): void {
+        this.LCR = 0x3; // Line Control, reset, character has 8 bits
+        this.LSR = UART_LSR_TRANSMITTER_EMPTY | UART_LSR_TX_EMPTY; // Transmitter serial register empty and Transmitter buffer register empty
+        this.MSR = UART_MSR_DCD | UART_MSR_DSR | UART_MSR_CTS; // modem status register
+        this.ints = 0x0; // internal interrupt pending register
+        this.IIR = UART_IIR_NO_INT; // Interrupt Identification, no interrupt
+        this.IER = 0x0; //Interrupt Enable
+        this.DLL = 0x0;
+        this.DLH = 0x0;
+        this.FCR = 0x0; // FIFO Control;
+        this.MCR = 0x0; // Modem Control
+
+        this.rxbuf = []; // receive fifo buffer.
+        this.txbuf = []; // transmit fifo buffer.
+    }
+
+    Step(): void {
+        if(this.txbuf.length != 0) {
+            Send(("tty" + this.id) as MessageType, this.txbuf);
+            this.txbuf = [];
+        }
+    }
+
+    // To prevent the character from being overwritten we use a javascript array-based fifo and request a character timeout. 
+    ReceiveChar(data: number[]): void {
+        data.forEach((c: number) => {
+            this.rxbuf.push(c&0xFF);
+        });
+        if (this.verboseuart) Debug("Received bytes: " + this.rxbuf.length);
+        if (this.rxbuf.length > 0) {
+            this.LSR |= UART_LSR_DATA_READY;
+            this.ThrowInterrupt(UART_IIR_CTI);
+        }
+    }
+
+    CheckInterrupt(): void {
+        if (this.verboseuart) Debug("Check Interrupt " + this.ints);
+
+        if ((this.LSR & UART_LSR_INT_ANY) && (this.IER & UART_IER_RLSI)) {
+            this.IIR = UART_IIR_RLSI;
+            if (this.verboseuart) Debug('IIR_RLSI ' + this.intno);
+            this.intdev.RaiseInterrupt(this.intno);
+        } else
+        if ((this.ints & (1 << UART_IIR_CTI)) && (this.IER & UART_IER_RDI)) {
+            this.IIR = UART_IIR_CTI;
+            if (this.verboseuart) Debug('IIR_CTI ' + this.intno);
+            this.intdev.RaiseInterrupt(this.intno);
+        } else
+        if ((this.ints & (1 << UART_IIR_THRI)) && (this.IER & UART_IER_THRI)) {
+            this.IIR = UART_IIR_THRI;
+            if (this.verboseuart) Debug('IIR_THRI ' + this.intno);
+            this.intdev.RaiseInterrupt(this.intno);
+        } else
+        if ((this.ints & (1 << UART_IIR_MSI))  && (this.IER & UART_IER_MSI)) {
+            this.IIR = UART_IIR_MSI;
+            if (this.verboseuart) Debug('IIR_MSI ' + this.intno);
+            this.intdev.RaiseInterrupt(this.intno);
+        } else {
+            this.IIR = UART_IIR_NO_INT;
+            if (this.verboseuart) Debug('IIR_NO_INT ' + this.intno);
+            this.intdev.ClearInterrupt(this.intno);
+        }
+    }
+
+    ThrowInterrupt(line: number): void {
+        this.ints |= (1 << line);
+        this.CheckInterrupt();
+    }
+
+    ClearInterrupt(line: number): void {
+        this.ints &= ~(1 << line);
+        this.CheckInterrupt();
+    }
+
+    ReadReg8(addr: number): number {
+
+        if (this.LCR & UART_LCR_DLAB) {  // Divisor latch access bit
+            switch (addr) {
+
+            case UART_DLL:
+                return this.DLL;
+
+            case UART_DLH:
+                return this.DLH;
+            }
+        }
+
+        switch (addr) {
+
+        case UART_RXBUF:
+            let ret = 0x0; // if the buffer is empty, return 0
+            if (this.rxbuf.length > 0) {
+                ret = this.rxbuf.shift()!;
+            }
+            if (this.verboseuart) Debug("Get RXBUF");
+            if (this.rxbuf.length == 0) {
+                this.LSR &= ~UART_LSR_DATA_READY;
+                this.ClearInterrupt(UART_IIR_CTI);
+            }
+            return ret & 0xFF;
+
+        case UART_IER:
+            return this.IER & 0x0F;
+
+        case UART_MSR:
+            ret = this.MSR;
+            this.MSR &= 0xF0; // reset lowest 4 "delta" bits
+            if (this.verboseuart) Debug("Get UART_MSR " + this.ToBitDescription(ret, MSR_BIT_DESC));
+            return ret;
+
+        case UART_IIR:
+            {
+                // the two top bits (fifo enabled) are always set
+                ret = (this.IIR & 0x0F) | 0xC0;
+
+                if (this.IIR == UART_IIR_THRI) {
+                    this.ClearInterrupt(UART_IIR_THRI);
+                }
+
+                return ret;
+            }
+
+        case UART_LCR:
+            return this.LCR;
+
+        case UART_LSR:
+            // This gets polled many times a second, so logging is commented out
+            if (this.verboseuart) Debug("Get UART_LSR " + this.ToBitDescription(this.LSR, LSR_BIT_DESC));
+            return this.LSR;
+
+        default:
+            Debug("Error in ReadRegister: not supported");
+            Abort();
+            break;
+        }
+        return 0;
+    }
+
+    WriteReg8(addr: number, x: number): void {
+        x &= 0xFF;
+
+        if (this.LCR & UART_LCR_DLAB) {
+            switch (addr) {
+
+            case UART_DLL:
+                this.DLL = x;
+                return;
+
+            case UART_DLH:
+                this.DLH = x;
+                return;
+            }
+        }
+
+        switch (addr) {
+
+        case UART_TXBUF: 
+             // we assume here, that the fifo is on
+
+             // In the uart spec we reset UART_IIR_THRI now ...
+            this.LSR &= ~UART_LSR_TRANSMITTER_EMPTY;
+            this.LSR &= ~UART_LSR_TX_EMPTY;
+
+            this.txbuf.push(x);
+            if (this.verboseuart) Debug("send " + x);
+            // the data is sent immediately
+            this.LSR |= UART_LSR_TRANSMITTER_EMPTY | UART_LSR_TX_EMPTY; // txbuffer is empty immediately
+            this.ThrowInterrupt(UART_IIR_THRI);
+            break;
+
+        case UART_IER:
+            // 2 = 10b ,5=101b, 7=111b
+            this.IER = x & 0x0F; // only the first four bits are valid
+            this.ints &= ~(1 << UART_IER_THRI);
+            if (this.verboseuart) Debug("Set UART_IER " + this.ToBitDescription(x, IER_BIT_DESC));
+            // Check immediately if there is a interrupt pending
+            this.CheckInterrupt();
+            break;
+
+        case UART_FCR:
+            if (this.verboseuart) Debug("Set UART_FCR " + this.ToBitDescription(x, FCR_BIT_DESC));
+            this.FCR = x & 0xC9;
+            if (x & 2) {
+                this.ClearInterrupt(UART_IIR_CTI);
+                this.rxbuf = []; // clear receive fifo buffer
+            }
+            if (x & 4) {
+                this.txbuf = []; // clear transmit fifo buffer
+                this.ClearInterrupt(UART_IIR_THRI);
+            }
+            break;
+
+        case UART_LCR:
+            if (this.verboseuart)  Debug("Set UART_LCR " + this.ToBitDescription(x, LCR_BIT_DESC));
+            if ((this.LCR & 3) != 3) {
+                Debug("Warning in UART: Data word length other than 8 bits are not supported");
+            }
+            this.LCR = x;
+            break;
+
+        case UART_MCR:
+            if (this.verboseuart) Debug("Set UART_MCR " + this.ToBitDescription(x,MCR_BIT_DESC));
+            this.MCR = x;
+            break;
+
+        default:
+            Debug("Error in WriteRegister: not supported");
+            Abort();
+            break;
+        }
+    }
+}
+
+export default UARTDev;

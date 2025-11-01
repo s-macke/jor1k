@@ -1,0 +1,54 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2020", "DOM", "WebWorker"],
+    "noEmit": true,
+    "strict": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "strictFunctionTypes": true,
+    "strictBindCallApply": true,
+    "strictPropertyInitialization": true,
+    "noImplicitThis": true,
+    "alwaysStrict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "declaration": false,
+    "declarationMap": false,
+    "sourceMap": true,
+    "removeComments": false,
+    "noEmitOnError": true,
+    "allowSyntheticDefaultImports": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "verbatimModuleSyntax": false,
+    "allowJs": true,
+    "checkJs": false,
+    "incremental": true,
+    "tsBuildInfoFile": "./dist/.tsbuildinfo",
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["js/*"],
+      "@js/*": ["js/*"]
+    },
+    "types": ["node"]
+  },
+  "include": [
+    "src/**/*",
+    "js/**/*",
+    "types/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "demos",
+    "openrisc-sys/**/*",
+    "riscv-sys/**/*",
+    "utils/**/*",
+    "js/worker/or1k/fastcpu.js",
+    "js/worker/riscv/fastcpu.js",
+    "js/worker/riscv/safecpu.ts"
+  ]
+}

@@ -5,7 +5,13 @@ import * as message from '../messagehandler.js';
 import * as utils from '../utils.js';
 import { Disassemble as DebugIns } from './disassemble.js';
 
-
+/**
+ * RISC-V Fast CPU implementation using asm.js
+ * @param {Object} stdlib - Standard library object with Math and typed array constructors
+ * @param {Object} foreign - Foreign function interface for external calls
+ * @param {ArrayBuffer} heap - Shared heap memory
+ * @returns {Object} CPU instance with methods for emulation
+ */
 // constructor
 function FastCPU(stdlib, foreign, heap) {
 "use asm";
