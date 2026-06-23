@@ -7,13 +7,19 @@
 var run = true;
 var workingpath = '';
 
-function Send(command, data) {
-    postMessage(
-    {
+// "transfer" is an optional array of Transferable objects (e.g. ArrayBuffers)
+// whose ownership is handed to the other thread without copying. This avoids
+// the structured-clone deep copy for large payloads such as the framebuffer.
+function Send(command, data, transfer) {
+    var msg = {
         "command" : command,
         "data" : data
+    };
+    if (transfer) {
+        postMessage(msg, transfer);
+    } else {
+        postMessage(msg);
     }
-    );
 }
 
 function Debug(message) {

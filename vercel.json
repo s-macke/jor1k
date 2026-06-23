@@ -1,0 +1,12 @@
+{
+  "rewrites": [
+    {
+      "source": "/openrisc-sys/:path*",
+      "destination": "https://raw.githubusercontent.com/s-macke/jor1k-sysroot/4c4219592a7ea3c9c8510ec00801c24c01f25cc0/:path*"
+    },
+    {
+      "source": "/riscv-sys/:path*",
+      "destination": "https://raw.githubusercontent.com/s-macke/riscv-sysroot/cc6056efb82ef68b88f1d9f28bd5f63184e7e413/:path*"
+    }
+  ]
+}

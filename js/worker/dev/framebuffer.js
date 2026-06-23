@@ -40,7 +40,14 @@ FBDev.prototype.WriteReg32 = function (addr, value) {
 };
 
 FBDev.prototype.OnGetFB = function() {
-    message.Send("GetFB", this.GetBuffer() );
+    // Fill the local buffer from RAM, then hand its backing ArrayBuffer to the
+    // master thread as a Transferable. This replaces a per-frame structured-clone
+    // deep copy (~512 KB at 640x400) with a zero-copy ownership transfer.
+    // The transferred buffer is detached on our side, so allocate a fresh one
+    // for the next frame.
+    var buffer = this.GetBuffer();
+    this.buffer = new Int32Array(this.n);
+    message.Send("GetFB", buffer, [buffer.buffer]);
 }
 
 FBDev.prototype.GetBuffer = function () {

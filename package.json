@@ -40,13 +40,15 @@
   "main": "index.html",
   "dependencies": {},
   "devDependencies": {
-    "browserify": "^8.1.3",
-    "expect": "^1.3.0",
-    "jshint": "latest",
-    "lab": "^5.2.0"
+    "browserify": "^17.0.1",
+    "esbuild": "^0.28.1",
+    "jshint": "latest"
   },
   "scripts": {
-    "test": "lab --ignore onmessage -v test/cpu-facade.js",
+    "test": "node test/cpu-facade.js",
+    "build": "./compile",
+    "build:js": "browserify -r ./js/plugins/terminal-linux.js:LinuxTerm -r ./js/master/master.js:Jor1k -o demos/jor1k-master.bundle.js && esbuild demos/jor1k-master.bundle.js --minify --target=es2017 --outfile=demos/jor1k-master-min.js && browserify js/worker/worker.js -o demos/jor1k-worker.bundle.js && esbuild demos/jor1k-worker.bundle.js --minify --target=es2017 --outfile=demos/jor1k-worker-min.js && rm -f demos/jor1k-*.bundle.js",
+    "serve": "node tools/serve.js",
     "postinstall": "./compile"
   },
   "engines": {

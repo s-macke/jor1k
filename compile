@@ -1,14 +1,49 @@
+#!/bin/sh
+# Build the jor1k WebAssembly CPU cores and the minified browser bundles.
+#
+#   ./compile            build everything (wasm + js)
+#
+# The JavaScript bundles are produced with browserify (which preserves the
+# global require("Jor1k") / require("LinuxTerm") interface the demo HTML relies
+# on) and then minified with esbuild. Minification alone shrinks the worker
+# bundle by roughly two thirds.
 set -e
 
-clang -Os --target=wasm32 -fno-delete-null-pointer-checks -c js/wasm/or1k.c -o or1k.o
-clang -Os --target=wasm32 -fno-delete-null-pointer-checks -c js/wasm/riscv.c -o riscv.o
-wasm-ld --global-base=0 --no-entry --strip-all --import-memory --export-all --allow-undefined or1k.o -o demos/or1k.wasm
-wasm-ld --global-base=0 --no-entry --strip-all --import-memory --export-all --allow-undefined riscv.o -o demos/riscv.wasm
+# Prefer the project-local CLI tools (browserify, esbuild).
+export PATH="$PWD/node_modules/.bin:$PATH"
 
-#emcc -s WASM=1 -s ALLOW_MEMORY_GROWTH=1 -s ERROR_ON_UNDEFINED_SYMBOLS=0 -s TOTAL_MEMORY=32MB -s BINARYEN_IGNORE_IMPLICIT_TRAPS=1 -Os js/wasm/or1k.c -o demos/or1k.wasm
-#emcc -s WASM=1 -s ALLOW_MEMORY_GROWTH=1 -s ERROR_ON_UNDEFINED_SYMBOLS=0 -s TOTAL_MEMORY=32MB -s BINARYEN_IGNORE_IMPLICIT_TRAPS=1 -Os js/wasm/riscv.c -o demos/riscv.wasm
+ESBUILD_FLAGS="--minify --target=es2017"
 
-browserify -r ./js/plugins/terminal-linux.js:LinuxTerm -r ./js/master/master.js:Jor1k -o demos/jor1k-master-min.js
-browserify js/worker/worker.js -o demos/jor1k-worker-min.js
+# ---------------------------------------------------------------------------
+# 1. WebAssembly CPU cores (needs clang + wasm-ld with the wasm32 target).
+#    These power the "wasm" and "dynamic" CPU backends. If the toolchain is
+#    missing we keep any pre-built demos/*.wasm instead of failing the build.
+# ---------------------------------------------------------------------------
+if command -v clang >/dev/null 2>&1 && command -v wasm-ld >/dev/null 2>&1; then
+    echo "Building WebAssembly CPU cores (or1k, riscv)..."
+    TMP="$(mktemp -d)"
+    for core in or1k riscv; do
+        clang -Os --target=wasm32 -fno-delete-null-pointer-checks -c "js/wasm/$core.c" -o "$TMP/$core.o"
+        wasm-ld --global-base=0 --no-entry --strip-all --import-memory \
+            --export-all --allow-undefined "$TMP/$core.o" -o "demos/$core.wasm"
+    done
+    rm -rf "$TMP"
+else
+    echo "clang/wasm-ld not found - keeping existing demos/*.wasm"
+fi
 
-#browserify -r ./js/plugins/terminal-linux.js:LinuxTerm -r ./js/plugins/terminal-termjs.js:TermJSTerm -r ./js/master/master.js:Jor1k -o demos/jor1k-master-min.js
+# ---------------------------------------------------------------------------
+# 2. JavaScript bundles (bundle with browserify, then minify with esbuild).
+# ---------------------------------------------------------------------------
+echo "Bundling + minifying master..."
+browserify -r ./js/plugins/terminal-linux.js:LinuxTerm -r ./js/master/master.js:Jor1k -o demos/jor1k-master.bundle.js
+esbuild demos/jor1k-master.bundle.js $ESBUILD_FLAGS --outfile=demos/jor1k-master-min.js
+rm -f demos/jor1k-master.bundle.js
+
+echo "Bundling + minifying worker..."
+browserify js/worker/worker.js -o demos/jor1k-worker.bundle.js
+esbuild demos/jor1k-worker.bundle.js $ESBUILD_FLAGS --outfile=demos/jor1k-worker-min.js
+rm -f demos/jor1k-worker.bundle.js
+
+echo "Build complete:"
+ls -la demos/jor1k-master-min.js demos/jor1k-worker-min.js demos/or1k.wasm demos/riscv.wasm 2>/dev/null || true

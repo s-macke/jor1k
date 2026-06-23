@@ -1,0 +1,7 @@
+# Cross-origin isolation headers (Netlify / Cloudflare Pages format).
+# These make SharedArrayBuffer available, which the multi-core / shared-memory
+# paths require. GitHub Pages does not support custom headers; use a host that
+# does, or the local "npm run serve" dev server, to enable shared memory.
+/*
+  Cross-Origin-Opener-Policy: same-origin
+  Cross-Origin-Embedder-Policy: require-corp

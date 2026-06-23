@@ -8,13 +8,18 @@ var worker;
 
 var run = true;
 
-function Send(command, data) {
-    worker.postMessage(
-    {
+// "transfer" is an optional array of Transferable objects (e.g. ArrayBuffers)
+// whose ownership is handed to the worker without copying.
+function Send(command, data, transfer) {
+    var msg = {
         "command" : command,
         "data" : data
+    };
+    if (transfer) {
+        worker.postMessage(msg, transfer);
+    } else {
+        worker.postMessage(msg);
     }
-    );
 }
 
 function Debug(message) {

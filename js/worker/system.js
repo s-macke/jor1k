@@ -71,8 +71,26 @@ System.prototype.Init = async function(system) {
         this.memory = new WebAssembly.Memory({initial: this.memorysize*16, maximum: this.memorysize*16});
         this.heap = this.memory.buffer;
     } else {
-        message.Debug("Use arraybuffer memory");
-        this.heap = new ArrayBuffer(this.memorysize*0x100000);
+        // A SharedArrayBuffer lets the heap be shared with the master thread and,
+        // in the future, with one Web Worker per core for true (parallel) SMP.
+        // It is opt-in ("shared: true") and requires the page to be cross-origin
+        // isolated (COOP/COEP). It is NOT enabled for the default asm.js backend
+        // because some engines refuse to apply the asm.js fast path to a shared
+        // heap; the foundation here targets the plain-JS / future threaded cores.
+        var bytes = this.memorysize*0x100000;
+        if (system.shared && (typeof SharedArrayBuffer !== "undefined")) {
+            try {
+                this.heap = new SharedArrayBuffer(bytes);
+                this.shared = true;
+                message.Debug("Use shared arraybuffer memory");
+            } catch (e) {
+                this.heap = new ArrayBuffer(bytes);
+                message.Debug("Use arraybuffer memory (shared unavailable: " + e + ")");
+            }
+        } else {
+            message.Debug("Use arraybuffer memory");
+            this.heap = new ArrayBuffer(bytes);
+        }
     }
     var ramoffset = 0x100000;
     this.memorysize--; // - the lower 1 MB are used for the cpu cores
